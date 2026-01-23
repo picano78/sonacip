@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}CRM Dashboard{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4"><i class="bi bi-briefcase"></i> CRM Dashboard</h1>
+    
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ total_contacts }}</h3>
+                    <p class="mb-0">Contatti Totali</p>
+                    <small>{{ new_contacts }} nuovi</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ converted_contacts }}</h3>
+                    <p class="mb-0">Convertiti</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3>{{ total_opportunities }}</h3>
+                    <p class="mb-0">Opportunità</p>
+                    <small>{{ open_opportunities }} aperte</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h3>€{{ "{:,.2f}".format(total_value) }}</h3>
+                    <p class="mb-0">Valore Pipeline</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Menu CRM</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('crm.contacts') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-people"></i> Contatti
+                    </a>
+                    <a href="{{ url_for('crm.new_contact') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-person-plus"></i> Nuovo Contatto
+                    </a>
+                    <a href="{{ url_for('crm.opportunities') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-graph-up"></i> Opportunità
+                    </a>
+                    <a href="{{ url_for('crm.new_opportunity') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-plus-circle"></i> Nuova Opportunità
+                    </a>
+                    <a href="{{ url_for('crm.new_activity') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-calendar-check"></i> Registra Attività
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Contatti Recenti</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for contact in recent_contacts %}
+                        <a href="{{ url_for('crm.contact_detail', contact_id=contact.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ contact.get_full_name() }}</strong><br>
+                                    <small class="text-muted">{{ contact.email }}</small>
+                                </div>
+                                <span class="badge bg-{{ 'success' if contact.status == 'converted' else 'primary' }}">
+                                    {{ contact.status }}
+                                </span>
+                            </div>
+                        </a>
+                    {% else %}
+                        <div class="list-group-item text-muted">Nessun contatto</div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Opportunità Recenti</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for opp in recent_opportunities %}
+                        <a href="{{ url_for('crm.opportunity_detail', opp_id=opp.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ opp.title }}</strong><br>
+                                    <small class="text-muted">{{ opp.opportunity_type }}</small>
+                                </div>
+                                <div>
+                                    <span class="badge bg-info">{{ opp.stage }}</span>
+                                    {% if opp.value %}
+                                        <br><small>€{{ opp.value }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                    {% else %}
+                        <div class="list-group-item text-muted">Nessuna opportunità</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

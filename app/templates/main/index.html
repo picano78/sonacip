@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Benvenuto - SONACIP{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold">Benvenuto su SONACIP</h1>
+                <p class="lead">La piattaforma completa per la gestione delle società sportive, atleti e appassionati.</p>
+                <div class="mt-4">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg me-2">
+                        <i class="bi bi-person-plus"></i> Registrati
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <img src="https://via.placeholder.com/500x300/007bff/ffffff?text=SONACIP" 
+                     alt="SONACIP" class="img-fluid rounded">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container my-5">
+    <h2 class="text-center mb-5">Funzionalità Principali</h2>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="bi bi-people-fill text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Gestione Utenti</h5>
+                    <p class="card-text">Società sportive, staff, atleti e appassionati in un'unica piattaforma.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="bi bi-calendar-event-fill text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Eventi e Convocazioni</h5>
+                    <p class="card-text">Crea eventi, convoca atleti e gestisci le risposte in tempo reale.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="bi bi-share-fill text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Social Network</h5>
+                    <p class="card-text">Feed, post, like, commenti e sistema di follow stile LinkedIn.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="bg-light py-5">
+    <div class="container text-center">
+        <h2>Pronto a Iniziare?</h2>
+        <p class="lead">Unisciti a SONACIP oggi stesso!</p>
+        <div class="mt-4">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-2">
+                Registrati come Appassionato
+            </a>
+            <a href="{{ url_for('auth.register_society') }}" class="btn btn-success btn-lg">
+                Registra la Tua Società
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

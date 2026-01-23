@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Backup - Admin{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4"><i class="bi bi-database"></i> Gestione Backup</h1>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Crea Nuovo Backup</h5>
+            <form method="POST" action="{{ url_for('backup.create') }}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <select name="backup_type" class="form-select">
+                            <option value="full">Backup Completo</option>
+                            <option value="database">Solo Database</option>
+                            <option value="uploads">Solo File Caricati</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" name="notes" class="form-control" placeholder="Note (opzionale)">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-download"></i> Crea Backup
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Backup Esistenti</h5>
+            <span class="badge bg-info">Totale: {{ total_size }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nome File</th>
+                        <th>Tipo</th>
+                        <th>Dimensione</th>
+                        <th>Data</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for backup in backups %}
+                        <tr>
+                            <td>{{ backup.filename }}</td>
+                            <td><span class="badge bg-secondary">{{ backup.backup_type }}</span></td>
+                            <td>{{ (backup.size / 1024 / 1024)|round(2) }} MB</td>
+                            <td>{{ backup.created_at|datetime_format }}</td>
+                            <td>
+                                <a href="{{ url_for('backup.download', backup_id=backup.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('backup.restore', backup_id=backup.id) }}" class="d-inline" 
+                                      onsubmit="return confirm('Sicuro di voler ripristinare questo backup?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('backup.delete', backup_id=backup.id) }}" class="d-inline"
+                                      onsubmit="return confirm('Sicuro di voler eliminare questo backup?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

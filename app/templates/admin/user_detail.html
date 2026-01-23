@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Dettaglio Utente - Admin{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ user.get_full_name() }}</h1>
+        <div>
+            <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Modifica
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Torna alla Lista</a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-body text-center">
+                    {% if user.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}" class="rounded-circle mb-3" width="150">
+                    {% else %}
+                        <div class="bg-secondary text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                             style="width: 150px; height: 150px;">
+                            <i class="bi bi-person-fill" style="font-size: 4rem;"></i>
+                        </div>
+                    {% endif %}
+                    <h4>{{ user.get_full_name() }}</h4>
+                    <p class="text-muted">@{{ user.username }}</p>
+                    <span class="badge bg-info">{{ user.role }}</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><h6 class="mb-0">Informazioni</h6></div>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                        <small class="text-muted">Email</small><br>
+                        <strong>{{ user.email }}</strong>
+                    </div>
+                    <div class="list-group-item">
+                        <small class="text-muted">Telefono</small><br>
+                        <strong>{{ user.phone or 'N/A' }}</strong>
+                    </div>
+                    <div class="list-group-item">
+                        <small class="text-muted">Registrato</small><br>
+                        <strong>{{ user.created_at|datetime_format }}</strong>
+                    </div>
+                    <div class="list-group-item">
+                        <small class="text-muted">Stato</small><br>
+                        <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                            {{ 'Attivo' if user.is_active else 'Disattivato' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3>{{ stats.posts_count }}</h3>
+                            <small>Post</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3>{{ stats.followers_count }}</h3>
+                            <small>Follower</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3>{{ stats.events_count }}</h3>
+                            <small>Eventi</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3>{{ stats.comments_count }}</h3>
+                            <small>Commenti</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-header"><h6 class="mb-0">Post Recenti</h6></div>
+                <div class="list-group list-group-flush">
+                    {% for post in recent_posts %}
+                        <div class="list-group-item">
+                            <p class="mb-1">{{ post.content[:100] }}...</p>
+                            <small class="text-muted">{{ post.created_at|timeago }}</small>
+                        </div>
+                    {% else %}
+                        <div class="list-group-item text-muted">Nessun post</div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><h6 class="mb-0">Attività Recente</h6></div>
+                <div class="list-group list-group-flush">
+                    {% for log in recent_logs %}
+                        <div class="list-group-item">
+                            <span class="badge bg-secondary">{{ log.action }}</span>
+                            {{ log.details }}
+                            <br><small class="text-muted">{{ log.created_at|timeago }}</small>
+                        </div>
+                    {% else %}
+                        <div class="list-group-item text-muted">Nessuna attività registrata</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

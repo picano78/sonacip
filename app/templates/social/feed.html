@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Feed - SONACIP{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Crea un Post</h5>
+                    <form method="POST" action="{{ url_for('social.create_post') }}" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        {{ form.content(class="form-control mb-3", rows="3", placeholder="Cosa vuoi condividere?") }}
+                        {{ form.image(class="form-control mb-2") }}
+                        <div class="form-check mb-2">
+                            {{ form.is_public(class="form-check-input") }}
+                            {{ form.is_public.label(class="form-check-label") }}
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Pubblica
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% for post in posts %}
+                {% include 'components/post_card.html' %}
+            {% endfor %}
+            {% if pagination.pages > 1 %}
+                <nav>
+                    <ul class="pagination">
+                        {% if pagination.has_prev %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('social.feed', page=pagination.prev_num) }}">Precedente</a></li>
+                        {% endif %}
+                        {% for page_num in pagination.iter_pages() %}
+                            {% if page_num %}
+                                <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                    <a class="page-link" href="{{ url_for('social.feed', page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if pagination.has_next %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('social.feed', page=pagination.next_num) }}">Successivo</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Il Mio Profilo</h5>
+                    <p class="mb-1"><strong>{{ current_user.get_full_name() }}</strong></p>
+                    <p class="small text-muted">@{{ current_user.username }}</p>
+                    <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="btn btn-sm btn-outline-primary w-100">
+                        Vedi Profilo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

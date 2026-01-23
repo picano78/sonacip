@@ -1,0 +1,126 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
+            <i class="bi bi-trophy-fill"></i> SONACIP
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            {% if current_user.is_authenticated %}
+                <!-- Authenticated Navigation -->
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('social.feed') }}">
+                            <i class="bi bi-house-fill"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('social.explore') }}">
+                            <i class="bi bi-compass"></i> Esplora
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('events.index') }}">
+                            <i class="bi bi-calendar-event"></i> Eventi
+                        </a>
+                    </li>
+                    {% if current_user.role in ['super_admin', 'societa', 'staff'] %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('crm.index') }}">
+                                <i class="bi bi-briefcase"></i> CRM
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if current_user.is_admin() %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+                                <i class="bi bi-gear-fill"></i> Admin
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <!-- Search -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('social.search') }}">
+                            <i class="bi bi-search"></i>
+                        </a>
+                    </li>
+                    
+                    <!-- Notifications -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link position-relative" href="#" id="notificationsDropdown" 
+                           role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell-fill"></i>
+                            {% set unread_count = get_unread_notifications_count() %}
+                            {% if unread_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ unread_count }}
+                                </span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">Notifiche</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('notifications.index') }}">
+                                Vedi tutte
+                            </a></li>
+                        </ul>
+                    </li>
+                    
+                    <!-- User Menu -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" 
+                           role="button" data-bs-toggle="dropdown">
+                            {% if current_user.avatar %}
+                                <img src="{{ url_for('static', filename='uploads/' + current_user.avatar) }}" 
+                                     alt="Avatar" class="rounded-circle" width="30" height="30">
+                            {% else %}
+                                <i class="bi bi-person-circle"></i>
+                            {% endif %}
+                            {{ current_user.get_full_name() }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('social.profile', user_id=current_user.id) }}">
+                                    <i class="bi bi-person"></i> Il Mio Profilo
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('social.edit_profile') }}">
+                                    <i class="bi bi-pencil"></i> Modifica Profilo
+                                </a>
+                            </li>
+                            {% if current_user.is_society() %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('social.society_dashboard') }}">
+                                        <i class="bi bi-speedometer2"></i> Dashboard Società
+                                    </a>
+                                </li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            {% else %}
+                <!-- Guest Navigation -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.register') }}">Registrati</a>
+                    </li>
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ user.get_full_name() }} - Profilo{% endblock %}
+{% block content %}
+<div class="container my-4">
+    {% if user.cover_photo %}
+        <div class="mb-3">
+            <img src="{{ url_for('static', filename='uploads/' + user.cover_photo) }}" class="w-100" style="max-height: 300px; object-fit: cover;" alt="Cover">
+        </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if user.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}" class="rounded-circle mb-3" width="150" height="150" alt="Avatar">
+                    {% else %}
+                        <div class="bg-secondary text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
+                            <i class="bi bi-person-fill" style="font-size: 4rem;"></i>
+                        </div>
+                    {% endif %}
+                    <h4>{{ user.get_full_name() }}</h4>
+                    <p class="text-muted">@{{ user.username }}</p>
+                    {% if user.bio %}
+                        <p class="small">{{ user.bio }}</p>
+                    {% endif %}
+                    <div class="d-flex justify-content-around mb-3">
+                        <div>
+                            <strong>{{ stats.posts_count }}</strong><br>
+                            <small>Post</small>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('social.followers', user_id=user.id) }}" class="text-decoration-none">
+                                <strong>{{ stats.followers_count }}</strong><br>
+                                <small>Follower</small>
+                            </a>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('social.following', user_id=user.id) }}" class="text-decoration-none">
+                                <strong>{{ stats.following_count }}</strong><br>
+                                <small>Seguiti</small>
+                            </a>
+                        </div>
+                    </div>
+                    {% if current_user.id == user.id %}
+                        <a href="{{ url_for('social.edit_profile') }}" class="btn btn-primary w-100">
+                            <i class="bi bi-pencil"></i> Modifica Profilo
+                        </a>
+                    {% else %}
+                        <form method="POST" action="{{ url_for('social.follow' if not is_following else 'social.unfollow', user_id=user.id) }}">
+                            <button type="submit" class="btn btn-{{ 'outline-' if is_following }}primary w-100">
+                                {{ 'Smetti di seguire' if is_following else 'Segui' }}
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <h5 class="mb-3">Post di {{ user.get_full_name() }}</h5>
+            {% for post in posts %}
+                {% include 'components/post_card.html' %}
+            {% else %}
+                <p class="text-muted">Nessun post ancora.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

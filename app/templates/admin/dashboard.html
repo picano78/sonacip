@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4"><i class="bi bi-speedometer2"></i> Admin Dashboard</h1>
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ stats.total_users }}</h3>
+                    <p class="mb-0">Utenti Totali</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ stats.total_societies }}</h3>
+                    <p class="mb-0">Società</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3>{{ stats.total_athletes }}</h3>
+                    <p class="mb-0">Atleti</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h3>{{ stats.total_posts }}</h3>
+                    <p class="mb-0">Post</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>Utenti Recenti</h5></div>
+                <div class="list-group list-group-flush">
+                    {% for user in recent_users %}
+                        <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="list-group-item list-group-item-action">
+                            <strong>{{ user.get_full_name() }}</strong> - {{ user.role }}
+                            <small class="text-muted float-end">{{ user.created_at|timeago }}</small>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5>Menu Rapido</h5></div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('admin.users') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-people"></i> Gestione Utenti
+                    </a>
+                    <a href="{{ url_for('admin.posts') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-file-post"></i> Gestione Post
+                    </a>
+                    <a href="{{ url_for('admin.events') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-calendar"></i> Gestione Eventi
+                    </a>
+                    <a href="{{ url_for('backup.index') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-database"></i> Backup
+                    </a>
+                    <a href="{{ url_for('admin.logs') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-file-text"></i> Log Audit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

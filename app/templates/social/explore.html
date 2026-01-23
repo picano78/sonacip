@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Esplora - SONACIP{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4"><i class="bi bi-compass"></i> Esplora</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <h3 class="mb-3">Società Sportive Popolari</h3>
+            <div class="row">
+                {% for society in societies %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    {% if society.avatar %}
+                                        <img src="{{ url_for('static', filename='uploads/' + society.avatar) }}" 
+                                             class="rounded-circle me-3" width="60" height="60">
+                                    {% else %}
+                                        <div class="bg-primary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                                             style="width: 60px; height: 60px;">
+                                            <i class="bi bi-building" style="font-size: 2rem;"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">
+                                            <a href="{{ url_for('social.profile', user_id=society.id) }}" class="text-decoration-none">
+                                                {{ society.company_name }}
+                                            </a>
+                                        </h6>
+                                        <small class="text-muted">{{ society.followers.count() }} follower</small>
+                                    </div>
+                                    {% if current_user.id != society.id %}
+                                        <form method="POST" action="{{ url_for('social.follow' if not current_user.is_following(society) else 'social.unfollow', user_id=society.id) }}">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                {{ 'Seguendo' if current_user.is_following(society) else 'Segui' }}
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <h3 class="mb-3">Post Recenti</h3>
+            {% for post in recent_posts %}
+                <div class="card mb-2">
+                    <div class="card-body py-2">
+                        <small>
+                            <strong>{{ post.author.get_full_name() }}</strong><br>
+                            {{ post.content[:100] }}{{ '...' if post.content|length > 100 }}
+                        </small>
+                        <div class="mt-1">
+                            <a href="{{ url_for('social.view_post', post_id=post.id) }}" class="btn btn-sm btn-link p-0">Vedi</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

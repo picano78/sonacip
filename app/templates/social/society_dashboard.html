@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Società - {{ current_user.company_name }}{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4"><i class="bi bi-building"></i> Dashboard Società</h1>
+    
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ stats.followers_count }}</h3>
+                    <p class="mb-0">Follower</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ stats.athletes_count }}</h3>
+                    <p class="mb-0">Atleti</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3>{{ stats.staff_count }}</h3>
+                    <p class="mb-0">Staff</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h3>{{ stats.events_count }}</h3>
+                    <p class="mb-0">Eventi</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Staff</h5>
+                    <span class="badge bg-info">{{ staff|length }}</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for member in staff %}
+                        <div class="list-group-item">
+                            <strong>{{ member.get_full_name() }}</strong><br>
+                            <small class="text-muted">{{ member.staff_role or 'Staff' }}</small>
+                        </div>
+                    {% else %}
+                        <div class="list-group-item text-muted">Nessuno staff registrato</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Atleti</h5>
+                    <span class="badge bg-success">{{ athletes|length }}</span>
+                </div>
+                <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                    {% for athlete in athletes %}
+                        <a href="{{ url_for('social.profile', user_id=athlete.id) }}" class="list-group-item list-group-item-action">
+                            {{ athlete.get_full_name() }}
+                        </a>
+                    {% else %}
+                        <div class="list-group-item text-muted">Nessun atleta registrato</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Eventi Recenti</h5>
+            <a href="{{ url_for('events.create') }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-circle"></i> Nuovo Evento
+            </a>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for event in events %}
+                <a href="{{ url_for('events.detail', event_id=event.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ event.title }}</strong><br>
+                            <small class="text-muted">{{ event.start_date|datetime_format }}</small>
+                        </div>
+                        <span class="badge bg-{{ 'primary' if event.event_type == 'allenamento' else 'success' }}">
+                            {{ event.event_type }}
+                        </span>
+                    </div>
+                </a>
+            {% else %}
+                <div class="list-group-item text-muted">Nessun evento creato</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Convoca Atleti - {{ event.title }}{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4">Convoca Atleti</h1>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>{{ event.title }}</h5>
+            <p class="text-muted">{{ event.start_date|datetime_format }}</p>
+        </div>
+    </div>
+    
+    {% if athletes %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Seleziona Atleti da Convocare</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="list-group mb-3">
+                        {% for athlete in athletes %}
+                            <label class="list-group-item">
+                                <input type="checkbox" name="athletes" value="{{ athlete.id }}" class="form-check-input me-2">
+                                {{ athlete.get_full_name() }} - @{{ athlete.username }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">Convoca Selezionati</button>
+                    <a href="{{ url_for('events.detail', event_id=event.id) }}" class="btn btn-secondary">Annulla</a>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            Nessun atleta disponibile per la convocazione.
+        </div>
+        <a href="{{ url_for('events.detail', event_id=event.id) }}" class="btn btn-secondary">Torna all'Evento</a>
+    {% endif %}
+</div>
+{% endblock %}

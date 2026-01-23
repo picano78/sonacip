@@ -1,0 +1,218 @@
+"""
+Backup routes
+Create, restore, manage backups
+"""
+from flask import render_template, redirect, url_for, flash, request, send_file, jsonify
+from flask_login import login_required, current_user
+from app import db
+from app.backup import bp
+from app.backup.utils import (
+    create_backup, restore_backup, validate_backup, 
+    delete_backup, get_backup_size_formatted
+)
+from app.models import Backup, AuditLog
+from app.admin.utils import admin_required
+
+
+@bp.route('/')
+@login_required
+@admin_required
+def index():
+    """Backup management page"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    pagination = Backup.query.order_by(Backup.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    backups = pagination.items
+    
+    # Calculate total backup size
+    total_size = db.session.query(db.func.sum(Backup.size)).scalar() or 0
+    
+    return render_template('backup/index.html',
+                         backups=backups,
+                         pagination=pagination,
+                         total_size=get_backup_size_formatted(total_size))
+
+
+@bp.route('/create', methods=['POST'])
+@login_required
+@admin_required
+def create():
+    """Create new backup"""
+    backup_type = request.form.get('backup_type', 'full')
+    notes = request.form.get('notes', '')
+    
+    if backup_type not in ['full', 'database', 'uploads']:
+        flash('Tipo di backup non valido.', 'danger')
+        return redirect(url_for('backup.index'))
+    
+    # Create backup
+    backup = create_backup(
+        created_by_id=current_user.id,
+        backup_type=backup_type,
+        notes=notes
+    )
+    
+    if backup:
+        # Log the action
+        log = AuditLog(
+            user_id=current_user.id,
+            action='create_backup',
+            entity_type='Backup',
+            entity_id=backup.id,
+            details=f'Created {backup_type} backup: {backup.filename}',
+            ip_address=request.remote_addr
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        flash(f'Backup creato con successo: {backup.filename}', 'success')
+    else:
+        flash('Errore durante la creazione del backup.', 'danger')
+    
+    return redirect(url_for('backup.index'))
+
+
+@bp.route('/<int:backup_id>/restore', methods=['POST'])
+@login_required
+@admin_required
+def restore(backup_id):
+    """Restore from backup"""
+    backup = Backup.query.get_or_404(backup_id)
+    
+    # Validate first
+    is_valid, message = validate_backup(backup_id)
+    
+    if not is_valid:
+        flash(f'Backup non valido: {message}', 'danger')
+        return redirect(url_for('backup.index'))
+    
+    # Perform restore
+    success, message = restore_backup(backup_id)
+    
+    if success:
+        # Log the action
+        log = AuditLog(
+            user_id=current_user.id,
+            action='restore_backup',
+            entity_type='Backup',
+            entity_id=backup.id,
+            details=f'Restored backup: {backup.filename}',
+            ip_address=request.remote_addr
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        flash(message, 'success')
+        flash('ATTENZIONE: Il database è stato ripristinato. Ricarica la pagina.', 'warning')
+    else:
+        flash(f'Errore: {message}', 'danger')
+    
+    return redirect(url_for('backup.index'))
+
+
+@bp.route('/<int:backup_id>/validate', methods=['POST'])
+@login_required
+@admin_required
+def validate(backup_id):
+    """Validate backup"""
+    backup = Backup.query.get_or_404(backup_id)
+    
+    is_valid, message = validate_backup(backup_id)
+    
+    # Update backup record
+    backup.is_valid = is_valid
+    backup.validation_message = message
+    db.session.commit()
+    
+    if is_valid:
+        flash(f'Backup valido: {message}', 'success')
+    else:
+        flash(f'Backup non valido: {message}', 'warning')
+    
+    return redirect(url_for('backup.index'))
+
+
+@bp.route('/<int:backup_id>/download')
+@login_required
+@admin_required
+def download(backup_id):
+    """Download backup file"""
+    backup = Backup.query.get_or_404(backup_id)
+    
+    import os
+    if not os.path.exists(backup.filepath):
+        flash('File di backup non trovato.', 'danger')
+        return redirect(url_for('backup.index'))
+    
+    # Log the action
+    log = AuditLog(
+        user_id=current_user.id,
+        action='download_backup',
+        entity_type='Backup',
+        entity_id=backup.id,
+        details=f'Downloaded backup: {backup.filename}',
+        ip_address=request.remote_addr
+    )
+    db.session.add(log)
+    db.session.commit()
+    
+    return send_file(
+        backup.filepath,
+        as_attachment=True,
+        download_name=backup.filename
+    )
+
+
+@bp.route('/<int:backup_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete(backup_id):
+    """Delete backup"""
+    backup = Backup.query.get_or_404(backup_id)
+    backup_name = backup.filename
+    
+    success, message = delete_backup(backup_id)
+    
+    if success:
+        # Log the action
+        log = AuditLog(
+            user_id=current_user.id,
+            action='delete_backup',
+            entity_type='Backup',
+            entity_id=backup_id,
+            details=f'Deleted backup: {backup_name}',
+            ip_address=request.remote_addr
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        flash(message, 'success')
+    else:
+        flash(f'Errore: {message}', 'danger')
+    
+    return redirect(url_for('backup.index'))
+
+
+@bp.route('/cleanup-old', methods=['POST'])
+@login_required
+@admin_required
+def cleanup_old():
+    """Delete backups older than X days"""
+    from datetime import datetime, timedelta
+    
+    days = request.form.get('days', 30, type=int)
+    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    
+    old_backups = Backup.query.filter(Backup.created_at < cutoff_date).all()
+    
+    deleted_count = 0
+    for backup in old_backups:
+        success, _ = delete_backup(backup.id)
+        if success:
+            deleted_count += 1
+    
+    flash(f'{deleted_count} backup vecchi eliminati.', 'success')
+    return redirect(url_for('backup.index'))

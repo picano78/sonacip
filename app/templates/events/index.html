@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Eventi{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-calendar-event"></i> Eventi</h1>
+        {% if current_user.is_society() or current_user.is_staff() or current_user.is_admin() %}
+            <a href="{{ url_for('events.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Crea Evento
+            </a>
+        {% endif %}
+    </div>
+    <div class="row">
+        {% for event in events %}
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ event.title }}</h5>
+                        <p class="card-text">
+                            <span class="badge bg-{{ 'primary' if event.event_type == 'allenamento' else 'success' if event.event_type == 'partita' else 'warning' }}">
+                                {{ event.event_type|title }}
+                            </span>
+                        </p>
+                        <p class="card-text">
+                            <i class="bi bi-calendar"></i> {{ event.start_date|datetime_format }}
+                        </p>
+                        {% if event.location %}
+                            <p class="card-text">
+                                <i class="bi bi-geo-alt"></i> {{ event.location }}
+                            </p>
+                        {% endif %}
+                        <a href="{{ url_for('events.detail', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">
+                            Dettagli
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">Nessun evento trovato.</div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

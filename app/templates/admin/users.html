@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Gestione Utenti - Admin{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4">Gestione Utenti</h1>
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="GET">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        {{ form.query(class="form-control", placeholder="Cerca utente...") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.role(class="form-select") }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.status(class="form-select") }}
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Cerca</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome/Società</th>
+                        <th>Email</th>
+                        <th>Ruolo</th>
+                        <th>Stato</th>
+                        <th>Creato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td><a href="{{ url_for('admin.user_detail', user_id=user.id) }}">{{ user.get_full_name() }}</a></td>
+                            <td>{{ user.email }}</td>
+                            <td><span class="badge bg-info">{{ user.role }}</span></td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
+                                    {{ 'Attivo' if user.is_active else 'Disattivato' }}
+                                </span>
+                            </td>
+                            <td>{{ user.created_at|datetime_format('%d/%m/%Y') }}</td>
+                            <td>
+                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary">Modifica</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

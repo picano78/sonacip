@@ -527,8 +527,8 @@ class Contact(db.Model):
 
 class Opportunity(db.Model):
     """
-    CRM Opportunity model
-    Sales opportunities, partnerships, sponsorships
+    CRM Opportunity model - ADVANCED (Salesforce-level)
+    Sales opportunities, partnerships, sponsorships with forecasting
     """
     __tablename__ = 'opportunity'
     
@@ -542,9 +542,19 @@ class Opportunity(db.Model):
     value = db.Column(db.String(50))  # Estimated value
     probability = db.Column(db.String(10))  # Win probability percentage
     
+    # ADVANCED: Forecasting & Pipeline
+    weighted_value = db.Column(db.Float)  # value * probability for forecasting
+    forecast_category = db.Column(db.String(20))  # pipeline, best_case, committed, closed
+    priority = db.Column(db.String(20), default='medium')  # low, medium, high, critical
+    stage_history = db.Column(db.Text)  # JSON: track stage progression
+    days_in_stage = db.Column(db.Integer, default=0)
+    competitors = db.Column(db.Text)  # JSON array of competitor names
+    deal_size_category = db.Column(db.String(20))  # small, medium, large, enterprise
+    
     # Dates
     expected_close_date = db.Column(db.Date)
     actual_close_date = db.Column(db.Date)
+    stage_changed_at = db.Column(db.DateTime)
     
     # Related contact
     contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'))
@@ -847,3 +857,326 @@ class Society(db.Model):
     
     def __repr__(self):
         return f'<Society {self.legal_name}>'
+
+
+
+
+class Template(db.Model):
+    """
+    Templates for tasks, events, messages, etc.
+    """
+    __tablename__ = 'template'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Template details
+    template_type = db.Column(db.String(50), nullable=False)  # task, event, email, workflow
+    content = db.Column(db.Text, nullable=False)  # JSON template data
+    
+    # Ownership
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Sharing
+    is_public = db.Column(db.Boolean, default=False)
+    is_system = db.Column(db.Boolean, default=False)  # System templates
+    
+    # Usage stats
+    usage_count = db.Column(db.Integer, default=0)
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Template {self.name}>'
+
+
+class Task(db.Model):
+    """
+    Advanced Task Management (Asana/Monday.com/ClickUp level)
+    """
+    __tablename__ = 'task'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Assignment
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Status and priority
+    status = db.Column(db.String(20), default='todo')  # todo, in_progress, review, blocked, done
+    priority = db.Column(db.String(20), default='medium')  # low, medium, high, urgent
+    
+    # Planning
+    due_date = db.Column(db.DateTime)
+    start_date = db.Column(db.DateTime)
+    estimated_hours = db.Column(db.Float)
+    actual_hours = db.Column(db.Float)
+    
+    # Organization
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+    sprint_id = db.Column(db.Integer)
+    tags = db.Column(db.Text)  # JSON array
+    
+    # Kanban
+    board_column = db.Column(db.String(50))
+    position = db.Column(db.Integer, default=0)
+    
+    # Collaboration
+    watchers = db.Column(db.Text)  # JSON array of user IDs
+    attachments = db.Column(db.Text)  # JSON array
+    dependencies = db.Column(db.Text)  # JSON: task IDs this depends on
+    
+    # Subtasks support
+    parent_task_id = db.Column(db.Integer, db.ForeignKey('task.id'))
+    
+    # Progress
+    progress_percentage = db.Column(db.Integer, default=0)
+    
+    # Metadata
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    creator = db.relationship('User', foreign_keys=[created_by], backref='tasks_created')
+    assignee = db.relationship('User', foreign_keys=[assigned_to], backref='tasks_assigned')
+    subtasks = db.relationship('Task', backref=db.backref('parent', remote_side=[id]))
+    
+    def __repr__(self):
+        return f'<Task {self.title}>'
+
+
+class Project(db.Model):
+    """
+    Project Management (Monday.com/Asana Boards)
+    """
+    __tablename__ = 'project'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Ownership
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Project details
+    status = db.Column(db.String(20), default='active')  # active, on_hold, completed, archived
+    project_type = db.Column(db.String(50))  # training, event, campaign, season
+    color = db.Column(db.String(7), default='#3498db')  # Hex color
+    icon = db.Column(db.String(50))
+    
+    # Timeline
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    
+    # Progress
+    progress_percentage = db.Column(db.Integer, default=0)
+    
+    # Team
+    team_members = db.Column(db.Text)  # JSON array of user IDs
+    
+    # Views and settings
+    default_view = db.Column(db.String(20), default='list')  # list, board, timeline, calendar
+    is_public = db.Column(db.Boolean, default=False)
+    allow_comments = db.Column(db.Boolean, default=True)
+    
+    # Budget tracking
+    budget = db.Column(db.Float)
+    spent = db.Column(db.Float, default=0)
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    tasks = db.relationship('Task', backref='project', lazy='dynamic')
+    
+    def __repr__(self):
+        return f'<Project {self.name}>'
+
+
+class Analytics(db.Model):
+    """
+    Advanced Analytics & Metrics (Power BI/Tableau style)
+    """
+    __tablename__ = 'analytics'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    entity_type = db.Column(db.String(50), nullable=False)  # user, post, event, crm, task
+    entity_id = db.Column(db.Integer)
+    metric_name = db.Column(db.String(100), nullable=False)
+    metric_value = db.Column(db.Float)
+    metric_data = db.Column(db.Text)  # JSON for complex metrics
+    
+    # Context
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Time dimensions
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    period = db.Column(db.String(20))  # hourly, daily, weekly, monthly, yearly
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Analytics {self.metric_name}: {self.metric_value}>'
+
+
+class Automation(db.Model):
+    """
+    Workflow Automation (Zapier/Make.com/n8n level)
+    """
+    __tablename__ = 'automation'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Ownership
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Trigger configuration
+    trigger_type = db.Column(db.String(50), nullable=False)  # contact_created, opportunity_won, task_completed, etc.
+    trigger_conditions = db.Column(db.Text)  # JSON: when to fire
+    
+    # Actions to perform
+    actions = db.Column(db.Text, nullable=False)  # JSON array: email, create_task, update_field, webhook, etc.
+    
+    # Control
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Execution stats
+    execution_count = db.Column(db.Integer, default=0)
+    success_count = db.Column(db.Integer, default=0)
+    failure_count = db.Column(db.Integer, default=0)
+    last_executed_at = db.Column(db.DateTime)
+    last_error = db.Column(db.Text)
+    
+    # Limits
+    max_executions = db.Column(db.Integer)  # Rate limiting
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Automation {self.name}>'
+
+
+class Team(db.Model):
+    """
+    Team Collaboration (Slack/Teams style groups)
+    """
+    __tablename__ = 'team'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Ownership
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    leader_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Members with roles
+    members = db.Column(db.Text)  # JSON: [{user_id, role, joined_at}]
+    
+    # Settings
+    is_public = db.Column(db.Boolean, default=False)
+    avatar = db.Column(db.String(255))
+    color = db.Column(db.String(7), default='#9b59b6')
+    
+    # Stats
+    member_count = db.Column(db.Integer, default=0)
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Team {self.name}>'
+
+
+class Dashboard(db.Model):
+    """
+    Custom Dashboards (Databox/Klipfolio style)
+    """
+    __tablename__ = 'dashboard'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Ownership
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Layout
+    widgets = db.Column(db.Text, nullable=False)  # JSON: widget configs
+    layout = db.Column(db.String(20), default='grid')  # grid, flex
+    
+    # Sharing
+    is_public = db.Column(db.Boolean, default=False)
+    is_default = db.Column(db.Boolean, default=False)
+    
+    # Refresh
+    auto_refresh = db.Column(db.Boolean, default=False)
+    refresh_interval = db.Column(db.Integer, default=300)  # seconds
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Dashboard {self.name}>'
+
+
+class Goal(db.Model):
+    """
+    OKR and Goals Tracking (Lattice/Betterworks style)
+    """
+    __tablename__ = 'goal'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Goal type
+    goal_type = db.Column(db.String(50))  # okr, smart, kpi, milestone
+    
+    # Ownership
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
+    
+    # Objective and Key Results
+    objective = db.Column(db.Text)
+    key_results = db.Column(db.Text)  # JSON array
+    
+    # Progress
+    current_value = db.Column(db.Float)
+    target_value = db.Column(db.Float)
+    progress_percentage = db.Column(db.Integer, default=0)
+    
+    # Timeline
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    
+    # Status
+    status = db.Column(db.String(20), default='in_progress')  # in_progress, achieved, at_risk, missed
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Goal {self.title}>'

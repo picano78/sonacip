@@ -118,6 +118,14 @@ def register_blueprints(app):
     # Subscription
     from app.subscription import bp as subscription_bp
     app.register_blueprint(subscription_bp, url_prefix='/subscription')
+    
+    # Tasks & Projects (Advanced Planning)
+    from app.tasks import bp as tasks_bp
+    app.register_blueprint(tasks_bp, url_prefix='/tasks')
+    
+    # Analytics & BI
+    from app.analytics import bp as analytics_bp
+    app.register_blueprint(analytics_bp, url_prefix='/analytics')
 
 
 def register_error_handlers(app):

@@ -1,24 +1,8 @@
 """
 Admin utilities and decorators
 """
-from functools import wraps
-from flask import flash, redirect, url_for
-from flask_login import current_user
+# Import common decorators from app.utils for consistency
+from app.utils import admin_required, can_manage_user, can_view_user
 
-
-def admin_required(f):
-    """
-    Decorator to require admin role
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash('Effettua il login per accedere a questa pagina.', 'warning')
-            return redirect(url_for('auth.login'))
-        
-        if not current_user.is_admin():
-            flash('Accesso negato. Area riservata agli amministratori.', 'danger')
-            return redirect(url_for('main.dashboard'))
-        
-        return f(*args, **kwargs)
-    return decorated_function
+# Re-export for backward compatibility
+__all__ = ['admin_required', 'can_manage_user', 'can_view_user']

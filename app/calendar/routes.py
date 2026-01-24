@@ -156,4 +156,3 @@ def create():
         return redirect(url_for('calendar.index'))
 
     return render_template('calendar/create.html', form=form)
-*** End Patch

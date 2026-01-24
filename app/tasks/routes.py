@@ -9,7 +9,7 @@ from app.tasks import bp
 from app.models import Task, Project, User, Team
 from app.utils import role_required
 from app.models import Event
-from app.automation.utils import execute_automations
+from app.automation.utils import execute_automations, execute_rules
 from datetime import datetime, timedelta
 import json
 
@@ -187,6 +187,7 @@ def create_task():
 
         # Fire automations for task creation
         execute_automations('task_created', society_id=task.society_id or current_user.society_id, payload={'task_id': task.id})
+        execute_rules('task_created', payload={'task_id': task.id, 'assigned_to': task.assigned_to, 'status': task.status})
         
         flash('Task created successfully!', 'success')
         return redirect(url_for('tasks.index'))
@@ -256,6 +257,7 @@ def update_task(task_id):
 
     # Fire automations for task updates
     execute_automations('task_updated', society_id=task.society_id or current_user.society_id, payload={'task_id': task.id, 'status': task.status})
+    execute_rules('task_updated', payload={'task_id': task.id, 'status': task.status, 'assigned_to': task.assigned_to})
     
     return jsonify({'success': True, 'message': 'Task updated'})
 

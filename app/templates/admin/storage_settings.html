@@ -35,6 +35,23 @@
                     {{ form.preferred_video_format.label(class='form-label') }}
                     {{ form.preferred_video_format(class='form-control', placeholder='mp4') }}
                 </div>
+                <div class="col-md-4">
+                    {{ form.video_bitrate.label(class='form-label') }}
+                    {{ form.video_bitrate(class='form-control', placeholder='1200000') }}
+                    <div class="form-text">Bitrate massimo (bps) per ricompressione video.</div>
+                </div>
+                <div class="col-md-4">
+                    {{ form.video_max_width.label(class='form-label') }}
+                    {{ form.video_max_width(class='form-control', placeholder='1280') }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.max_image_mb.label(class='form-label') }}
+                    {{ form.max_image_mb(class='form-control', placeholder='8') }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.max_video_mb.label(class='form-label') }}
+                    {{ form.max_video_mb(class='form-control', placeholder='64') }}
+                </div>
             </div>
             <div class="mt-4 d-flex justify-content-end">
                 <button type="submit" class="btn btn-dark"><i class="bi bi-save"></i> Salva</button>

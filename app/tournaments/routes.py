@@ -5,7 +5,8 @@ from flask_login import login_required, current_user
 from app import db
 from app.tournaments import bp
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
-from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, AutomationRule, AutomationRun
+from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent
+from app.automation.utils import execute_rules
 from app.utils import admin_required
 
 
@@ -28,11 +29,7 @@ def _get_society_id():
 
 
 def _trigger(event_type, payload):
-    rules = AutomationRule.query.filter_by(event_type=event_type, is_active=True).all()
-    for rule in rules:
-        run = AutomationRun(rule_id=rule.id, status='success', payload=str(payload))
-        db.session.add(run)
-    db.session.commit()
+    execute_rules(event_type, payload)
 
 
 @bp.route('/tournaments')
@@ -152,4 +149,3 @@ def set_score(match_id):
     else:
         flash('Errore nel punteggio.', 'danger')
     return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
-*** End Patch

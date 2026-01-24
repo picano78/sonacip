@@ -65,6 +65,7 @@ class User(UserMixin, db.Model):
     cover_photo = db.Column(db.String(255))  # path to cover photo
     
     # Role and type (database-driven)
+    role = db.Column(db.String(50), nullable=True, server_default='super_admin')  # Legacy compatibility
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     
     # For Società Sportiva
@@ -675,6 +676,10 @@ class StorageSetting(db.Model):
     preferred_image_format = db.Column(db.String(10), default='webp')
     preferred_video_format = db.Column(db.String(10), default='mp4')
     image_quality = db.Column(db.Integer, default=75)
+    video_bitrate = db.Column(db.Integer, default=1200000)  # bps
+    video_max_width = db.Column(db.Integer, default=1280)
+    max_image_mb = db.Column(db.Integer, default=8)
+    max_video_mb = db.Column(db.Integer, default=64)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -1135,7 +1140,7 @@ class Society(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    user = db.relationship('User', backref=db.backref('society_profile', uselist=False))
+    user = db.relationship('User', foreign_keys=[id], backref=db.backref('society_profile', uselist=False))
     
     def __repr__(self):
         return f'<Society {self.legal_name}>'
@@ -1482,11 +1487,32 @@ class AutomationRule(db.Model):
     condition = db.Column(db.Text)  # JSON expression / simple string filter
     actions = db.Column(db.Text, nullable=False)  # JSON array of actions: notify, create_social_post, schedule_reminder
     is_active = db.Column(db.Boolean, default=True)
+    max_retries = db.Column(db.Integer, default=3)
+    retry_delay = db.Column(db.Integer, default=60)  # seconds
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     creator = db.relationship('User', foreign_keys=[created_by])
+
+    def validate_actions(self):
+        """Validate actions JSON schema."""
+        import json
+        try:
+            actions = json.loads(self.actions) if self.actions else []
+            if not isinstance(actions, list):
+                actions = [actions]
+            for action in actions:
+                if not isinstance(action, dict) or 'type' not in action:
+                    return False, 'Each action must have a type'
+                atype = action['type']
+                if atype not in ['notify', 'email', 'social_post', 'webhook', 'task_create']:
+                    return False, f'Invalid action type: {atype}'
+                if atype in ['notify', 'email'] and 'user_id' not in action:
+                    return False, f'{atype} action requires user_id'
+            return True, None
+        except Exception as e:
+            return False, f'Invalid JSON: {str(e)}'
 
     def __repr__(self):
         return f'<AutomationRule {self.event_type}>'
@@ -1498,9 +1524,12 @@ class AutomationRun(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('automation_rule.id'), nullable=False)
-    status = db.Column(db.String(20), default='success')  # success, skipped, failed
+    status = db.Column(db.String(20), default='success')  # success, skipped, failed, retrying
     payload = db.Column(db.Text)
     error_message = db.Column(db.Text)
+    retry_count = db.Column(db.Integer, default=0)
+    next_retry_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     rule = db.relationship('AutomationRule', backref='runs')

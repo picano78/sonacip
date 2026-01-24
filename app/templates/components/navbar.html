@@ -60,6 +60,12 @@
                             <i class="bi bi-search"></i>
                         </a>
                     </li>
+                    <!-- Theme toggle -->
+                    <li class="nav-item">
+                        <button class="nav-link btn btn-link p-0" type="button" data-theme-toggle aria-label="Tema">
+                            <i class="bi bi-moon"></i>
+                        </button>
+                    </li>
                     
                     <!-- Notifications -->
                     <li class="nav-item dropdown">
@@ -94,7 +100,7 @@
                            role="button" data-bs-toggle="dropdown">
                             {% if current_user.avatar %}
                                 <img src="{{ url_for('static', filename='uploads/' + current_user.avatar) }}" 
-                                     alt="Avatar" class="rounded-circle" width="30" height="30">
+                                     alt="Avatar" class="rounded-circle" width="30" height="30" loading="lazy" decoding="async">
                             {% else %}
                                 <i class="bi bi-person-circle"></i>
                             {% endif %}

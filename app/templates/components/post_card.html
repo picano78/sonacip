@@ -4,7 +4,7 @@
             <a href="{{ url_for('social.profile', user_id=post.author.id) }}">
                 {% if post.author.avatar %}
                     <img src="{{ url_for('static', filename='uploads/' + post.author.avatar) }}" 
-                         class="rounded-circle me-3" width="50" height="50" alt="Avatar">
+                         class="rounded-circle me-3" width="50" height="50" alt="Avatar" loading="lazy" decoding="async">
                 {% else %}
                     <div class="bg-secondary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" 
                          style="width: 50px; height: 50px;">
@@ -26,7 +26,7 @@
         </div>
         <p class="card-text">{{ post.content }}</p>
         {% if post.image %}
-            <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid rounded mb-3" alt="Post image">
+            <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid rounded mb-3" alt="Post image" loading="lazy" decoding="async">
         {% endif %}
         <div class="d-flex gap-3">
             <form method="POST" action="{{ url_for('social.like_post', post_id=post.id) }}" class="d-inline">

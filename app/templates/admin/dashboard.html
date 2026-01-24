@@ -55,6 +55,9 @@
             <div class="card">
                 <div class="card-header"><h5>Menu Rapido</h5></div>
                 <div class="list-group list-group-flush">
+                    <a href="{{ url_for('admin.analytics') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-graph-up"></i> Analytics
+                    </a>
                     <a href="{{ url_for('admin.users') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-people"></i> Gestione Utenti
                     </a>
@@ -76,6 +79,11 @@
                     <a href="{{ url_for('admin.logs') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-file-text"></i> Log Audit
                     </a>
+                    <form action="{{ url_for('admin.reset_system') }}" method="post" class="list-group-item d-flex align-items-center justify-content-between">
+                        {{ csrf_token() }}
+                        <div><i class="bi bi-arrow-repeat"></i> Reset/Restart</div>
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Eseguire un reset veloce? I servizi ripartiranno in pochi secondi.')">Esegui</button>
+                    </form>
                 </div>
             </div>
         </div>

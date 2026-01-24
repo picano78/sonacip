@@ -4,6 +4,7 @@ Creates and configures the Flask application instance
 """
 import os
 from datetime import datetime
+import time
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -60,9 +61,10 @@ def create_app(config_name=None):
     # Register template filters and context processors
     register_template_utilities(app)
     
-    # Create database tables if they don't exist
+    # Create database tables if they don't exist and patch legacy schemas
     with app.app_context():
         db.create_all()
+        ensure_schema_columns()
         create_super_admin()
 
     # Lightweight auto-backup check on each request (once per hour max)
@@ -75,6 +77,26 @@ def create_app(config_name=None):
             return None
         run_scheduled_backup_if_due(now)
         app.config['_AUTO_BACKUP_LAST_CHECK'] = now
+
+    # Simple IP-based rate limiting (in-memory, lightweight)
+    @app.before_request
+    def rate_limit_middleware():
+        # Skip static files
+        if request.endpoint and request.endpoint.startswith('static'):
+            return None
+        limit = app.config.get('RATE_LIMIT_REQUESTS', 300)
+        window = app.config.get('RATE_LIMIT_WINDOW', 300)
+        if not limit or not window:
+            return None
+        store = app.config.setdefault('_RATE_LIMIT_STORE', {})
+        now_ts = time.time()
+        key = request.remote_addr or 'anon'
+        history = store.get(key, [])
+        history = [ts for ts in history if now_ts - ts < window]
+        history.append(now_ts)
+        store[key] = history
+        if len(history) > limit:
+            return ('Too Many Requests', 429)
 
     # Security headers
     @app.after_request
@@ -106,6 +128,52 @@ def ensure_directories(app):
     
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
+
+
+def ensure_schema_columns():
+    """Ensure legacy databases have required columns (lightweight patch)."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+
+    def add_column_if_missing(table: str, column: str, ddl: str):
+        cols = [c['name'] for c in inspector.get_columns(table)]
+        if column not in cols:
+            db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+
+    # User: role_id was added in newer schema
+    try:
+        add_column_if_missing('user', 'role_id', 'INTEGER')
+    except Exception:
+        db.session.rollback()
+
+    # StorageSetting new governance fields
+    try:
+        add_column_if_missing('storage_setting', 'video_bitrate', 'INTEGER DEFAULT 1200000')
+        add_column_if_missing('storage_setting', 'video_max_width', 'INTEGER DEFAULT 1280')
+        add_column_if_missing('storage_setting', 'max_image_mb', 'INTEGER DEFAULT 8')
+        add_column_if_missing('storage_setting', 'max_video_mb', 'INTEGER DEFAULT 64')
+    except Exception:
+        db.session.rollback()
+
+    # AutomationRule retry controls
+    try:
+        add_column_if_missing('automation_rule', 'max_retries', 'INTEGER DEFAULT 3')
+        add_column_if_missing('automation_rule', 'retry_delay', 'INTEGER DEFAULT 60')
+    except Exception:
+        db.session.rollback()
+
+    # AutomationRun retry tracking
+    try:
+        add_column_if_missing('automation_run', 'retry_count', 'INTEGER DEFAULT 0')
+        add_column_if_missing('automation_run', 'next_retry_at', 'DATETIME')
+        add_column_if_missing('automation_run', 'completed_at', 'DATETIME')
+    except Exception:
+        db.session.rollback()
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 def register_blueprints(app):
@@ -301,7 +369,7 @@ def create_super_admin():
         db.session.commit()
 
     # Create super admin user on empty databases
-    admin = User.query.filter_by(role='super_admin').first()
+    admin = User.query.join(Role, User.role_id == Role.id).filter(Role.name == 'super_admin').first()
     if not admin:
         super_admin_role = Role.query.filter_by(name='super_admin').first()
         admin = User(
@@ -309,6 +377,7 @@ def create_super_admin():
             username='admin',
             first_name='Super',
             last_name='Admin',
+            role='super_admin',
             role_obj=super_admin_role,
             is_active=True,
             is_verified=True

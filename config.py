@@ -30,8 +30,18 @@ class Config:
     MEDIA_PREFERRED_IMAGE_FORMAT = os.environ.get('MEDIA_PREFERRED_IMAGE_FORMAT', 'webp')
     MEDIA_PREFERRED_VIDEO_FORMAT = os.environ.get('MEDIA_PREFERRED_VIDEO_FORMAT', 'mp4')
     MEDIA_IMAGE_QUALITY = int(os.environ.get('MEDIA_IMAGE_QUALITY', '75'))
+    MEDIA_MAX_IMAGE_MB = int(os.environ.get('MEDIA_MAX_IMAGE_MB', '8'))
+    MEDIA_MAX_VIDEO_MB = int(os.environ.get('MEDIA_MAX_VIDEO_MB', '64'))
+    MEDIA_VIDEO_MAX_BITRATE = int(os.environ.get('MEDIA_VIDEO_MAX_BITRATE', '1200000'))  # bps
+    MEDIA_VIDEO_MAX_WIDTH = int(os.environ.get('MEDIA_VIDEO_MAX_WIDTH', '1280'))
+    RATE_LIMIT_REQUESTS = int(os.environ.get('RATE_LIMIT_REQUESTS', '300'))
+    RATE_LIMIT_WINDOW = int(os.environ.get('RATE_LIMIT_WINDOW', '300'))  # seconds
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx'}
+
+    # Caching / Redis
+    REDIS_URL = os.environ.get('REDIS_URL') or os.environ.get('CACHE_REDIS_URL')
+    CACHE_DEFAULT_TTL = int(os.environ.get('CACHE_DEFAULT_TTL', '300'))
 
     # Plug-in modules folder (safe discovery)
     MODULES_FOLDER = os.environ.get('MODULES_FOLDER') or os.path.join(BASE_DIR, 'app', 'modules')

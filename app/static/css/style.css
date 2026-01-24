@@ -184,3 +184,43 @@ main {
         display: none !important;
     }
 }
+
+/* Dark theme overrides */
+body[data-theme="dark"] {
+    background: #0b1220;
+    color: #e2e8f0;
+}
+
+body[data-theme="dark"] a { color: #93c5fd; }
+
+body[data-theme="dark"] .card,
+body[data-theme="dark"] .glass-card,
+body[data-theme="dark"] .modal-content {
+    background: rgba(17, 24, 39, 0.9);
+    color: #e5e7eb;
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+body[data-theme="dark"] .section-hero {
+    color: #e5e7eb;
+}
+
+body[data-theme="dark"] .navbar,
+body[data-theme="dark"] .footer,
+body[data-theme="dark"] footer {
+    background-color: #0f172a !important;
+}
+
+body[data-theme="dark"] .table { color: #e5e7eb; }
+
+body[data-theme="dark"] .form-control,
+body[data-theme="dark"] .form-select {
+    background-color: #0f172a;
+    color: #e5e7eb;
+    border-color: #1f2937;
+}
+
+body[data-theme="dark"] .btn-outline-dark {
+    color: #e5e7eb;
+    border-color: #4b5563;
+}

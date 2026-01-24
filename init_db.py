@@ -1,0 +1,145 @@
+"""Script to initialize or upgrade database schema."""
+import os
+import sys
+from app import create_app, db
+from app.models import (
+    User, Post, Comment, Event, Notification, AuditLog, Backup, Message,
+    Contact, Opportunity, CRMActivity, Subscription, Payment,
+    Society, Template, Task, Project, SocialSetting, AppearanceSetting,
+    StorageSetting, PrivacySetting, AdsSetting, Analytics, Automation,
+    AutomationRule, AutomationRun, Team, Role, SocietyCalendarEvent,
+    Tournament, TournamentTeam, TournamentMatch, TournamentStanding
+)
+
+
+def init_db():
+    """Initialize database with all tables."""
+    app = create_app()
+    
+    with app.app_context():
+        print("Creating all database tables...")
+        db.create_all()
+        print("✓ Database tables created successfully")
+        
+        # Create default records
+        print("\nCreating default settings...")
+        
+        # Storage settings
+        storage = StorageSetting.query.first()
+        if not storage:
+            storage = StorageSetting(
+                backend='local',
+                local_path=app.config['UPLOAD_FOLDER'],
+                preferred_image_format='webp',
+                preferred_video_format='mp4',
+                image_quality=75,
+                video_bitrate=1200000,
+                video_max_width=1280,
+                max_image_mb=8,
+                max_video_mb=64
+            )
+            db.session.add(storage)
+            print("  ✓ Storage settings created")
+        
+        # Privacy settings
+        privacy = PrivacySetting.query.first()
+        if not privacy:
+            privacy = PrivacySetting(banner_enabled=True)
+            db.session.add(privacy)
+            print("  ✓ Privacy settings created")
+        
+        # Ads settings
+        ads = AdsSetting.query.first()
+        if not ads:
+            ads = AdsSetting(ads_enabled=False)
+            db.session.add(ads)
+            print("  ✓ Ads settings created")
+        
+        # Social settings
+        social = SocialSetting.query.first()
+        if not social:
+            social = SocialSetting(
+                comments_enabled=True,
+                posts_moderated=False,
+                allow_anonymous_view=False
+            )
+            db.session.add(social)
+            print("  ✓ Social settings created")
+        
+        # Appearance settings
+        appearance = AppearanceSetting.query.first()
+        if not appearance:
+            appearance = AppearanceSetting(
+                theme='light',
+                primary_color='#007bff',
+                site_name='SONACIP'
+            )
+            db.session.add(appearance)
+            print("  ✓ Appearance settings created")
+        
+        db.session.commit()
+        print("\n✓ Database initialization complete!")
+        return True
+
+
+def add_migration_columns():
+    """Add new columns for recent updates."""
+    app = create_app()
+    
+    with app.app_context():
+        print("Checking for missing columns...")
+        
+        # Check AutomationRule columns
+        from sqlalchemy import inspect, Integer, DateTime
+        inspector = inspect(db.engine)
+        
+        automation_cols = [col['name'] for col in inspector.get_columns('automation_rule')]
+        if 'max_retries' not in automation_cols:
+            print("Adding max_retries to automation_rule...")
+            db.session.execute(db.text('ALTER TABLE automation_rule ADD COLUMN max_retries INTEGER DEFAULT 3'))
+        
+        if 'retry_delay' not in automation_cols:
+            print("Adding retry_delay to automation_rule...")
+            db.session.execute(db.text('ALTER TABLE automation_rule ADD COLUMN retry_delay INTEGER DEFAULT 60'))
+        
+        # Check AutomationRun columns
+        run_cols = [col['name'] for col in inspector.get_columns('automation_run')]
+        if 'retry_count' not in run_cols:
+            print("Adding retry_count to automation_run...")
+            db.session.execute(db.text('ALTER TABLE automation_run ADD COLUMN retry_count INTEGER DEFAULT 0'))
+        
+        if 'next_retry_at' not in run_cols:
+            print("Adding next_retry_at to automation_run...")
+            db.session.execute(db.text('ALTER TABLE automation_run ADD COLUMN next_retry_at DATETIME'))
+        
+        if 'completed_at' not in run_cols:
+            print("Adding completed_at to automation_run...")
+            db.session.execute(db.text('ALTER TABLE automation_run ADD COLUMN completed_at DATETIME'))
+        
+        # Check StorageSetting columns
+        storage_cols = [col['name'] for col in inspector.get_columns('storage_setting')]
+        if 'video_bitrate' not in storage_cols:
+            print("Adding video_bitrate to storage_setting...")
+            db.session.execute(db.text('ALTER TABLE storage_setting ADD COLUMN video_bitrate INTEGER DEFAULT 1200000'))
+        
+        if 'video_max_width' not in storage_cols:
+            print("Adding video_max_width to storage_setting...")
+            db.session.execute(db.text('ALTER TABLE storage_setting ADD COLUMN video_max_width INTEGER DEFAULT 1280'))
+        
+        if 'max_image_mb' not in storage_cols:
+            print("Adding max_image_mb to storage_setting...")
+            db.session.execute(db.text('ALTER TABLE storage_setting ADD COLUMN max_image_mb INTEGER DEFAULT 8'))
+        
+        if 'max_video_mb' not in storage_cols:
+            print("Adding max_video_mb to storage_setting...")
+            db.session.execute(db.text('ALTER TABLE storage_setting ADD COLUMN max_video_mb INTEGER DEFAULT 64'))
+        
+        db.session.commit()
+        print("✓ Migration columns added successfully")
+
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] == 'migrate':
+        add_migration_columns()
+    else:
+        init_db()

@@ -199,4 +199,24 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+
+    // Theme toggle (light/dark)
+    const themeToggle = document.querySelector('[data-theme-toggle]');
+    const rootBody = document.body;
+    const savedTheme = localStorage.getItem('sonacipTheme');
+    if (savedTheme) {
+        rootBody.setAttribute('data-theme', savedTheme);
+    }
+    if (themeToggle) {
+        const applyTheme = (mode) => {
+            rootBody.setAttribute('data-theme', mode);
+            localStorage.setItem('sonacipTheme', mode);
+            themeToggle.innerHTML = mode === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
+        };
+        applyTheme(rootBody.getAttribute('data-theme') || 'light');
+        themeToggle.addEventListener('click', () => {
+            const next = rootBody.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+        });
+    }
 });

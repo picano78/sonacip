@@ -106,3 +106,7 @@ class StorageSettingsForm(FlaskForm):
     preferred_image_format = SelectField('Formato immagini', choices=[('webp', 'WEBP'), ('jpeg', 'JPEG'), ('jpg', 'JPG')], validators=[Optional()])
     image_quality = StringField('Qualità immagini (1-100)', validators=[Optional(), Length(max=3)])
     preferred_video_format = StringField('Formato video', validators=[Optional(), Length(max=10)])
+    video_bitrate = StringField('Bitrate video (bps)', validators=[Optional(), Length(max=10)])
+    video_max_width = StringField('Larghezza max video (px)', validators=[Optional(), Length(max=5)])
+    max_image_mb = StringField('Limite immagini (MB)', validators=[Optional(), Length(max=4)])
+    max_video_mb = StringField('Limite video (MB)', validators=[Optional(), Length(max=4)])

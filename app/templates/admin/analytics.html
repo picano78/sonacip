@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0"><i class="bi bi-graph-up"></i> Analytics</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">Torna alla dashboard</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Ultimi {{ days }} giorni</h6>
+                    <h3 class="mb-0">Iscrizioni giornaliere</h3>
+                </div>
+                <div class="card-body pt-0">
+                    <canvas id="signupChart" height="160"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Distribuzione ruoli</h6>
+                    <h3 class="mb-3">Segmentazione</h3>
+                    <canvas id="roleChart" height="160"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Attività ultimi 7 giorni</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Post</span>
+                        <span class="fw-bold">{{ activity_summary.posts }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Eventi</span>
+                        <span class="fw-bold">{{ activity_summary.events }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Commenti</span>
+                        <span class="fw-bold">{{ activity_summary.comments }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" integrity="sha384-eU8pAeytd4/fqGZ4Obdhg4jW3SmT3ZNJtwFkCnv4RfZp9XSuSSaC+4njGdHOJv1H" crossorigin="anonymous"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const signupLabels = {{ signup_data | map(attribute='date') | list | tojson }};
+        const signupValues = {{ signup_data | map(attribute='count') | list | tojson }};
+        const roleLabels = {{ role_data | map(attribute='role') | list | tojson }};
+        const roleValues = {{ role_data | map(attribute='count') | list | tojson }};
+
+        new Chart(document.getElementById('signupChart'), {
+            type: 'line',
+            data: {
+                labels: signupLabels,
+                datasets: [{
+                    label: 'Iscritti',
+                    data: signupValues,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13,110,253,0.1)',
+                    tension: 0.25,
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false }},
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        new Chart(document.getElementById('roleChart'), {
+            type: 'doughnut',
+            data: {
+                labels: roleLabels,
+                datasets: [{
+                    data: roleValues,
+                    backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#fd7e14', '#6f42c1', '#adb5bd']
+                }]
+            },
+            options: {
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -8,7 +8,7 @@ from app import db
 from app.events import bp
 from app.events.forms import EventForm
 from app.models import Event, User, Notification
-from app.automation.utils import execute_automations
+from app.automation.utils import execute_automations, execute_rules
 from datetime import datetime
 
 
@@ -76,6 +76,7 @@ def create():
 
         # Fire automations on event creation
         execute_automations('event_created', society_id=current_user.id if current_user.is_society() else None, payload={'event_id': event.id})
+        execute_rules('event_created', payload={'event_id': event.id, 'creator_id': current_user.id})
         
         flash('Evento creato! Ora puoi convocare gli atleti.', 'success')
         return redirect(url_for('events.detail', event_id=event.id))

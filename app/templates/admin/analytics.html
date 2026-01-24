@@ -52,12 +52,32 @@
 
 <!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" integrity="sha384-eU8pAeytd4/fqGZ4Obdhg4jW3SmT3ZNJtwFkCnv4RfZp9XSuSSaC+4njGdHOJv1H" crossorigin="anonymous"></script>
+
+<script id="analytics-data" type="application/json">
+{{ {
+    'signup_labels': signup_data | map(attribute='date') | list,
+    'signup_values': signup_data | map(attribute='count') | list,
+    'role_labels': role_data | map(attribute='role') | list,
+    'role_values': role_data | map(attribute='count') | list
+} | tojson }}
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const signupLabels = {{ signup_data | map(attribute='date') | list | tojson }};
-        const signupValues = {{ signup_data | map(attribute='count') | list | tojson }};
-        const roleLabels = {{ role_data | map(attribute='role') | list | tojson }};
-        const roleValues = {{ role_data | map(attribute='count') | list | tojson }};
+        const dataEl = document.getElementById('analytics-data');
+        let analyticsData = { signup_labels: [], signup_values: [], role_labels: [], role_values: [] };
+        if (dataEl && dataEl.textContent) {
+            try {
+                analyticsData = JSON.parse(dataEl.textContent);
+            } catch (err) {
+                console.error('Analytics data parse error', err);
+            }
+        }
+
+        const signupLabels = analyticsData.signup_labels || [];
+        const signupValues = analyticsData.signup_values || [];
+        const roleLabels = analyticsData.role_labels || [];
+        const roleValues = analyticsData.role_values || [];
 
         new Chart(document.getElementById('signupChart'), {
             type: 'line',

@@ -1,14 +1,14 @@
 """
 Admin routes
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func, desc
 from app import db
 from app.admin import bp
 from app.admin.utils import admin_required
-from app.admin.forms import UserEditForm, UserSearchForm, PrivacySettingsForm, AdsSettingsForm
-from app.models import User, Post, Event, Notification, AuditLog, Backup, Comment, PrivacySetting, AdsSetting, Society
+from app.admin.forms import UserEditForm, UserSearchForm, PrivacySettingsForm, AdsSettingsForm, SocialSettingsAdminForm, AppearanceSettingsForm, StorageSettingsForm
+from app.models import User, Post, Event, Notification, AuditLog, Backup, Comment, PrivacySetting, AdsSetting, Society, SocialSetting, AppearanceSetting, StorageSetting
 from datetime import datetime, timedelta
 import os
 
@@ -70,6 +70,45 @@ def privacy_settings():
         return redirect(url_for('admin.privacy_settings'))
     
     return render_template('admin/privacy.html', form=form, settings=settings)
+
+
+@bp.route('/storage', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def storage_settings():
+    """Configurazione percorso e formato salvataggi media."""
+    settings = StorageSetting.query.first()
+    if not settings:
+        settings = StorageSetting(
+            storage_backend=current_app.config.get('STORAGE_BACKEND', 'local'),
+            base_path=current_app.config.get('STORAGE_LOCAL_PATH') or current_app.config.get('UPLOAD_FOLDER'),
+            preferred_image_format=current_app.config.get('MEDIA_PREFERRED_IMAGE_FORMAT', 'webp'),
+            preferred_video_format=current_app.config.get('MEDIA_PREFERRED_VIDEO_FORMAT', 'mp4'),
+            image_quality=current_app.config.get('MEDIA_IMAGE_QUALITY', 75)
+        )
+        db.session.add(settings)
+        db.session.commit()
+
+    form = StorageSettingsForm(obj=settings)
+    if not form.base_path.data:
+        form.base_path.data = settings.base_path or current_app.config.get('STORAGE_LOCAL_PATH')
+
+    if form.validate_on_submit():
+        settings.storage_backend = form.storage_backend.data
+        settings.base_path = form.base_path.data
+        settings.preferred_image_format = form.preferred_image_format.data or settings.preferred_image_format
+        settings.preferred_video_format = form.preferred_video_format.data or settings.preferred_video_format
+        try:
+            settings.image_quality = int(form.image_quality.data) if form.image_quality.data else settings.image_quality
+        except ValueError:
+            flash('Qualità immagini non valida, lasciare vuoto per il default.', 'warning')
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('Impostazioni storage aggiornate.', 'success')
+        return redirect(url_for('admin.storage_settings'))
+
+    return render_template('admin/storage_settings.html', form=form, settings=settings)
 
 
 @bp.route('/users')
@@ -339,6 +378,50 @@ def ads_settings():
         return redirect(url_for('admin.ads_settings'))
 
     return render_template('admin/ads_settings.html', form=form, settings=settings)
+
+
+@bp.route('/social-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def social_settings():
+    settings = SocialSetting.query.first()
+    if not settings:
+        settings = SocialSetting()
+        db.session.add(settings)
+        db.session.commit()
+
+    form = SocialSettingsAdminForm(obj=settings)
+    if form.validate_on_submit():
+        form.populate_obj(settings)
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('Impostazioni social aggiornate.', 'success')
+        return redirect(url_for('admin.social_settings'))
+
+    return render_template('admin/social_settings.html', form=form, settings=settings)
+
+
+@bp.route('/appearance-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def appearance_settings():
+    settings = AppearanceSetting.query.filter_by(scope='global').first()
+    if not settings:
+        settings = AppearanceSetting(scope='global')
+        db.session.add(settings)
+        db.session.commit()
+
+    form = AppearanceSettingsForm(obj=settings)
+    if form.validate_on_submit():
+        form.populate_obj(settings)
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('Tema globale aggiornato.', 'success')
+        return redirect(url_for('admin.appearance_settings'))
+
+    return render_template('admin/appearance_settings.html', form=form, settings=settings)
 
 
 @bp.route('/search')

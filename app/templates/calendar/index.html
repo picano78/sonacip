@@ -3,16 +3,25 @@
 
 {% block content %}
 <div class="container my-4">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
-            <h1 class="h3 mb-1">Calendario Società</h1>
-            <p class="text-muted mb-0">Panoramica strategica della società, separata dal planner campi.</p>
+    <div class="section-hero mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <div class="pill mb-2"><i class="bi bi-calendar3"></i> Calendario strategico</div>
+                <h1 class="h3 mb-1">Calendario Società</h1>
+                <p class="text-muted mb-0">Vista compatta e grafica degli impegni chiave, distinta dal planner campi.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="stat-tile text-center">
+                    <div class="small text-muted">Filtro attivo</div>
+                    <div class="fw-bold">{{ view|capitalize }}</div>
+                </div>
+                {% if current_user.is_admin() or current_user.is_society_admin() %}
+                    <a href="{{ url_for('calendar.create') }}" class="btn btn-dark">
+                        <i class="bi bi-plus-lg"></i> Nuovo evento
+                    </a>
+                {% endif %}
+            </div>
         </div>
-        {% if current_user.is_admin() or current_user.is_society_admin() %}
-            <a href="{{ url_for('calendar.create') }}" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> Nuovo evento
-            </a>
-        {% endif %}
     </div>
 
     <form class="row g-2 align-items-end mb-4" method="get">
@@ -48,42 +57,46 @@
     </form>
 
     {% if events_by_date %}
-        {% for day, events in events_by_date.items()|sort %}
-            <div class="card mb-3">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <div class="fw-semibold">{{ day.strftime('%A %d %B %Y') }}</div>
-                    <span class="badge bg-info text-dark">{{ events|length }} eventi</span>
-                </div>
-                <div class="list-group list-group-flush">
-                    {% for event in events %}
-                        <a href="{{ url_for('calendar.detail', event_id=event.id) }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <div class="fw-semibold">{{ event.title }}</div>
-                                    <div class="small text-muted">
-                                        <i class="bi bi-clock"></i> {{ event.start_datetime.strftime('%H:%M') }}
-                                        {% if event.end_datetime %}- {{ event.end_datetime.strftime('%H:%M') }}{% endif %}
-                                        &middot; <i class="bi bi-geo-alt"></i> {{ event.location_text or 'Luogo da definire' }}
-                                    </div>
-                                    <div class="small">
-                                        <span class="badge bg-primary text-uppercase">{{ event.event_type }}</span>
-                                        {% if event.team %}<span class="badge bg-secondary">{{ event.team }}</span>{% endif %}
-                                        {% if event.category %}<span class="badge bg-light text-dark">{{ event.category }}</span>{% endif %}
-                                        {% if event.competition_name %}<span class="badge bg-warning text-dark">{{ event.competition_name }}</span>{% endif %}
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    {% if event.share_to_social %}
-                                        <span class="badge bg-success"><i class="bi bi-megaphone"></i> Social</span>
-                                    {% endif %}
-                                    <div class="small text-muted">Società ID {{ event.society_id }}</div>
-                                </div>
+        <div class="row g-3">
+            {% for day, events in events_by_date.items()|sort %}
+                <div class="col-lg-6">
+                    <div class="glass-card p-3 card-hover h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="fw-semibold"><i class="bi bi-sun"></i> {{ day.strftime('%A %d %B %Y') }}</div>
+                            <span class="chip">{{ events|length }} eventi</span>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <div class="timeline-line rounded"></div>
+                            <div class="flex-grow-1 d-flex flex-column gap-3">
+                                {% for event in events %}
+                                    <a href="{{ url_for('calendar.detail', event_id=event.id) }}" class="text-decoration-none text-dark">
+                                        <div class="d-flex gap-3 align-items-start card-hover p-3 border rounded">
+                                            <div class="timeline-dot mt-1"></div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="fw-semibold">{{ event.title }}</div>
+                                                    <span class="badge bg-dark text-uppercase">{{ event.event_type }}</span>
+                                                </div>
+                                                <div class="small text-muted mb-2">
+                                                    <i class="bi bi-clock"></i> {{ event.start_datetime.strftime('%H:%M') }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%H:%M') }}{% endif %}
+                                                    &middot; <i class="bi bi-geo-alt"></i> {{ event.location_text or 'Luogo da definire' }}
+                                                </div>
+                                                <div class="d-flex flex-wrap gap-1 small">
+                                                    {% if event.team %}<span class="badge bg-primary-subtle text-primary">{{ event.team }}</span>{% endif %}
+                                                    {% if event.category %}<span class="badge bg-secondary">{{ event.category }}</span>{% endif %}
+                                                    {% if event.competition_name %}<span class="badge bg-warning text-dark">{{ event.competition_name }}</span>{% endif %}
+                                                    {% if event.share_to_social %}<span class="badge bg-success"><i class="bi bi-megaphone"></i> Social</span>{% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% endfor %}
                             </div>
-                        </a>
-                    {% endfor %}
+                        </div>
+                    </div>
                 </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
     {% else %}
         <div class="alert alert-info">Nessun evento trovato per l'intervallo selezionato.</div>
     {% endif %}

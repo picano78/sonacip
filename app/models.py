@@ -641,6 +641,76 @@ class AdsSetting(db.Model):
         return f'<AdsSetting CPM={self.price_per_thousand_views}>'
 
 
+class SocialSetting(db.Model):
+    """Global social governance controlled by super admin."""
+    __tablename__ = 'social_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    feed_enabled = db.Column(db.Boolean, default=True)
+    allow_likes = db.Column(db.Boolean, default=True)
+    allow_comments = db.Column(db.Boolean, default=True)
+    allow_shares = db.Column(db.Boolean, default=True)
+    boost_official = db.Column(db.Boolean, default=True)
+    mute_user_posts = db.Column(db.Boolean, default=False)
+    max_posts_per_day = db.Column(db.Integer, default=20)
+    boosted_types = db.Column(db.Text)  # JSON list of types to prioritize (tournaments, matches)
+    muted_types = db.Column(db.Text)    # JSON list of types to suppress
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<SocialSetting feed={self.feed_enabled}>'
+
+
+class StorageSetting(db.Model):
+    """Media storage governance (path, formats, quality)."""
+    __tablename__ = 'storage_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    storage_backend = db.Column(db.String(50), default='local')
+    base_path = db.Column(db.String(255))
+    preferred_image_format = db.Column(db.String(10), default='webp')
+    preferred_video_format = db.Column(db.String(10), default='mp4')
+    image_quality = db.Column(db.Integer, default=75)
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<StorageSetting backend={self.storage_backend}>'
+
+
+class AppearanceSetting(db.Model):
+    """Global and per-society visual customization."""
+    __tablename__ = 'appearance_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    scope = db.Column(db.String(20), default='global')  # global or society
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
+
+    primary_color = db.Column(db.String(7), default='#0d6efd')
+    secondary_color = db.Column(db.String(7), default='#6c757d')
+    accent_color = db.Column(db.String(7), default='#20c997')
+    font_family = db.Column(db.String(100), default='Inter, system-ui, -apple-system, sans-serif')
+    logo_url = db.Column(db.String(255))
+    favicon_url = db.Column(db.String(255))
+    layout_style = db.Column(db.String(50), default='standard')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    society = db.relationship('Society', backref=db.backref('appearance_settings', lazy='dynamic'))
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<AppearanceSetting {self.scope}>'
+
+
 class PrivacySetting(db.Model):
     """
     Privacy and cookie consent configuration managed by super admin
@@ -1165,6 +1235,123 @@ class Task(db.Model):
         return f'<Task {self.title}>'
 
 
+# =============================================================
+# Tournament System (strategic, multi-format, society-owned)
+# =============================================================
+
+class Tournament(db.Model):
+    __tablename__ = 'tournament'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    format = db.Column(db.String(50), nullable=False)  # round_robin, knockout, groups_finals
+    season = db.Column(db.String(50))
+    status = db.Column(db.String(20), default='draft')  # draft, scheduled, running, completed, archived
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+
+    auto_select_criteria = db.Column(db.Text)  # JSON criteria for auto team selection
+    linked_planner_event_id = db.Column(db.Integer, db.ForeignKey('event.id'))
+    linked_calendar_event_id = db.Column(db.Integer, db.ForeignKey('society_calendar_event.id'))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    society = db.relationship('Society', backref=db.backref('tournaments', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+    matches = db.relationship('TournamentMatch', backref='tournament', lazy='dynamic', cascade='all, delete-orphan')
+    standings = db.relationship('TournamentStanding', backref='tournament', lazy='dynamic', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<Tournament {self.name} ({self.format})>'
+
+
+class TournamentTeam(db.Model):
+    __tablename__ = 'tournament_team'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(100))
+    external_ref = db.Column(db.String(100))
+
+    tournament = db.relationship('Tournament', backref=db.backref('teams', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f'<TournamentTeam {self.name}>'
+
+
+class TournamentMatch(db.Model):
+    __tablename__ = 'tournament_match'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
+    home_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=False)
+    away_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=False)
+
+    round_label = db.Column(db.String(100))  # group A, quarterfinal, etc.
+    match_date = db.Column(db.DateTime)
+    location = db.Column(db.String(255))
+
+    home_score = db.Column(db.Integer)
+    away_score = db.Column(db.Integer)
+    status = db.Column(db.String(20), default='scheduled')  # scheduled, played, cancelled
+
+    calendar_event_id = db.Column(db.Integer, db.ForeignKey('society_calendar_event.id'))
+
+    home_team = db.relationship('TournamentTeam', foreign_keys=[home_team_id])
+    away_team = db.relationship('TournamentTeam', foreign_keys=[away_team_id])
+
+    def set_score(self, home, away):
+        self.home_score = home
+        self.away_score = away
+        self.status = 'played'
+
+    def __repr__(self):
+        return f'<TournamentMatch {self.home_team_id} vs {self.away_team_id}>'
+
+
+class TournamentStanding(db.Model):
+    __tablename__ = 'tournament_standing'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
+    team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=False)
+    played = db.Column(db.Integer, default=0)
+    won = db.Column(db.Integer, default=0)
+    drawn = db.Column(db.Integer, default=0)
+    lost = db.Column(db.Integer, default=0)
+    goals_for = db.Column(db.Integer, default=0)
+    goals_against = db.Column(db.Integer, default=0)
+    points = db.Column(db.Integer, default=0)
+
+    team = db.relationship('TournamentTeam')
+
+    def update_from_match(self, match: 'TournamentMatch'):
+        self.played += 1
+        if match.home_team_id == self.team_id:
+            gf, ga = match.home_score, match.away_score
+        else:
+            gf, ga = match.away_score, match.home_score
+        self.goals_for += gf
+        self.goals_against += ga
+        if gf > ga:
+            self.won += 1
+            self.points += 3
+        elif gf == ga:
+            self.drawn += 1
+            self.points += 1
+        else:
+            self.lost += 1
+
+    def __repr__(self):
+        return f'<Standing team={self.team_id} pts={self.points}>'
+
+
 class Project(db.Model):
     """
     Project Management (Monday.com/Asana Boards)
@@ -1283,6 +1470,43 @@ class Automation(db.Model):
     
     def __repr__(self):
         return f'<Automation {self.name}>'
+
+
+class AutomationRule(db.Model):
+    """Declarative automation rules triggered by platform events."""
+    __tablename__ = 'automation_rule'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    event_type = db.Column(db.String(100), nullable=False)  # tournament.created, match.scored, event.upcoming, social.posted
+    condition = db.Column(db.Text)  # JSON expression / simple string filter
+    actions = db.Column(db.Text, nullable=False)  # JSON array of actions: notify, create_social_post, schedule_reminder
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<AutomationRule {self.event_type}>'
+
+
+class AutomationRun(db.Model):
+    """Audit log of automation executions to keep flows safe and traceable."""
+    __tablename__ = 'automation_run'
+
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(db.Integer, db.ForeignKey('automation_rule.id'), nullable=False)
+    status = db.Column(db.String(20), default='success')  # success, skipped, failed
+    payload = db.Column(db.Text)
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    rule = db.relationship('AutomationRule', backref='runs')
+
+    def __repr__(self):
+        return f'<AutomationRun rule={self.rule_id} status={self.status}>'
 
 
 class Team(db.Model):

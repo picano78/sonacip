@@ -2,24 +2,53 @@
 {% block title %}Feed - SONACIP{% endblock %}
 {% block content %}
 <div class="container my-4">
+    <div class="section-hero mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="pill mb-2"><i class="bi bi-stars"></i> Social Hub</div>
+            <h1 class="h4 mb-0">Feed della società</h1>
+            <p class="text-muted mb-0">Condividi novità, momenti e risultati in un layout più visuale.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="chip">{{ pagination.total or posts|length }} contenuti</span>
+            <span class="chip">{{ current_user.username }}</span>
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Crea un Post</h5>
-                    <form method="POST" action="{{ url_for('social.create_post') }}" enctype="multipart/form-data">
-                        {{ form.hidden_tag() }}
-                        {{ form.content(class="form-control mb-3", rows="3", placeholder="Cosa vuoi condividere?") }}
-                        {{ form.image(class="form-control mb-2") }}
-                        <div class="form-check mb-2">
-                            {{ form.is_public(class="form-check-input") }}
-                            {{ form.is_public.label(class="form-check-label") }}
+            <div class="glass-card p-3 mb-4 card-hover">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="avatar-ring">
+                        <img src="{{ current_user.avatar_url or url_for('static', filename='img/default-avatar.png') }}" class="rounded-circle avatar-sm" alt="avatar">
+                    </div>
+                    <div>
+                        <div class="fw-semibold">Crea un Post</div>
+                        <div class="small text-muted">Racconta cosa sta succedendo adesso</div>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('social.create_post') }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    {{ form.content(class="form-control mb-3", rows="3", placeholder="Cosa vuoi condividere?") }}
+                    <div class="row g-2 align-items-center mb-2">
+                        <div class="col">
+                            {{ form.image(class="form-control") }}
                         </div>
-                        <button type="submit" class="btn btn-primary">
+                        <div class="col-auto">
+                            <div class="form-check mb-0">
+                                {{ form.is_public(class="form-check-input") }}
+                                {{ form.is_public.label(class="form-check-label") }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex gap-2 small text-muted">
+                            <span><i class="bi bi-image"></i> Media</span>
+                            <span><i class="bi bi-geo"></i> Location</span>
+                        </div>
+                        <button type="submit" class="btn btn-dark">
                             <i class="bi bi-send"></i> Pubblica
                         </button>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
             {% for post in posts %}
                 {% include 'components/post_card.html' %}
@@ -45,14 +74,24 @@
             {% endif %}
         </div>
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5>Il Mio Profilo</h5>
-                    <p class="mb-1"><strong>{{ current_user.get_full_name() }}</strong></p>
-                    <p class="small text-muted">@{{ current_user.username }}</p>
-                    <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="btn btn-sm btn-outline-primary w-100">
-                        Vedi Profilo
-                    </a>
+            <div class="glass-card p-3 mb-3 card-hover">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="avatar-ring">
+                        <img src="{{ current_user.avatar_url or url_for('static', filename='img/default-avatar.png') }}" class="rounded-circle avatar-sm" alt="avatar">
+                    </div>
+                    <div>
+                        <div class="fw-semibold">{{ current_user.get_full_name() }}</div>
+                        <div class="small text-muted">@{{ current_user.username }}</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="btn btn-sm btn-dark w-100">Vedi Profilo</a>
+            </div>
+            <div class="glass-card p-3 card-hover">
+                <div class="fw-semibold mb-2">Azioni rapide</div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('calendar.index') }}"><i class="bi bi-calendar-event"></i> Eventi</a>
+                    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('tournaments.index') }}"><i class="bi bi-trophy"></i> Tornei</a>
+                    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('messages.inbox') if 'messages' in current_app.blueprints else '#' }}"><i class="bi bi-chat"></i> Messaggi</a>
                 </div>
             </div>
         </div>

@@ -9,7 +9,7 @@ from app import db
 from app.social import bp
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.utils import save_picture
-from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment
+from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment, SocialSetting, TournamentMatch
 from datetime import datetime, timedelta
 from datetime import datetime
 import os
@@ -21,6 +21,11 @@ def feed():
     """Main social feed"""
     page = request.args.get('page', 1, type=int)
     per_page = 20
+
+    settings = SocialSetting.query.first()
+    if settings and not settings.feed_enabled and not current_user.is_admin():
+        flash('Il feed sociale è disabilitato dall\'amministratore.', 'warning')
+        return redirect(url_for('main.dashboard'))
     
     # Get posts from followed users + own posts
     try:
@@ -32,12 +37,34 @@ def feed():
     # Fetch extra to allow custom sorting
     raw_posts = posts_query.limit(per_page * 3).all()
 
+    boosted_types = []
+    muted_types = []
+    if settings:
+        try:
+            import json
+            boosted_types = json.loads(settings.boosted_types or '[]')
+            muted_types = json.loads(settings.muted_types or '[]')
+        except Exception:
+            boosted_types = []
+            muted_types = []
+
     def engagement_score(p):
         age_hours = max((datetime.utcnow() - p.created_at).total_seconds() / 3600, 0.1)
         recency = max(0, 48 - age_hours) / 48  # 0-1
         score = (p.likes_count * 2) + (p.comments_count * 3) + recency * 5
         if p.is_promoted and p.promotion_ends_at and p.promotion_ends_at > datetime.utcnow():
             score += 20
+        # Governance: boost tournament/match/official posts
+        if p.is_promoted and settings and settings.boost_official:
+            score += 5
+        if boosted_types:
+            for t in boosted_types:
+                if t in (p.notification_type or ''):
+                    score += 5
+        if muted_types:
+            for t in muted_types:
+                if t in (p.notification_type or ''):
+                    score -= 10
         return score
 
     sorted_posts = sorted(raw_posts, key=engagement_score, reverse=True)
@@ -87,6 +114,10 @@ def feed():
 def create_post():
     """Create a new post"""
     form = PostForm()
+    settings = SocialSetting.query.first()
+    if settings and not settings.feed_enabled and not current_user.is_admin():
+        flash('Pubblicazione disabilitata dall\'amministratore.', 'warning')
+        return redirect(url_for('social.feed'))
     
     if form.validate_on_submit():
         post = Post(

@@ -94,13 +94,14 @@ def create_app(config_name=None):
 
 def ensure_directories(app):
     """Ensure all required directories exist"""
+    storage_root = app.config.get('STORAGE_LOCAL_PATH', app.config['UPLOAD_FOLDER'])
     directories = [
-        app.config['UPLOAD_FOLDER'],
+        storage_root,
         app.config['BACKUP_FOLDER'],
         app.config['LOGS_FOLDER'],
-        os.path.join(app.config['UPLOAD_FOLDER'], 'avatars'),
-        os.path.join(app.config['UPLOAD_FOLDER'], 'covers'),
-        os.path.join(app.config['UPLOAD_FOLDER'], 'posts'),
+        os.path.join(storage_root, 'avatars'),
+        os.path.join(storage_root, 'covers'),
+        os.path.join(storage_root, 'posts'),
     ]
     
     for directory in directories:
@@ -157,9 +158,17 @@ def register_blueprints(app):
     from app.analytics import bp as analytics_bp
     app.register_blueprint(analytics_bp, url_prefix='/analytics')
 
+    # Tournaments (enterprise-grade)
+    from app.tournaments import bp as tournaments_bp
+    app.register_blueprint(tournaments_bp, url_prefix='/tournaments')
+
     # Society Calendar (strategic, separate from field planner)
     from app.calendar import bp as calendar_bp
     app.register_blueprint(calendar_bp)
+
+    # Optional external modules (safe discovery)
+    from app import module_loader
+    module_loader.discover_and_register_modules(app)
 
 
 def register_error_handlers(app):
@@ -238,22 +247,58 @@ def register_template_utilities(app):
             if not settings:
                 settings = PrivacySetting()
             return settings
+
+        def get_social_settings():
+            from app.models import SocialSetting
+            settings = SocialSetting.query.first()
+            if not settings:
+                settings = SocialSetting(feed_enabled=True)
+                db.session.add(settings)
+                db.session.commit()
+            return settings
+
+        def get_appearance_settings():
+            from app.models import AppearanceSetting
+            society_id = None
+            if current_user.is_authenticated:
+                society = current_user.get_primary_society()
+                society_id = society.id if society else None
+            settings = None
+            if society_id:
+                settings = AppearanceSetting.query.filter_by(scope='society', society_id=society_id).first()
+            if not settings:
+                settings = AppearanceSetting.query.filter_by(scope='global').first()
+            if not settings:
+                settings = AppearanceSetting()
+                db.session.add(settings)
+                db.session.commit()
+            return settings
         
         return dict(
             get_unread_notifications_count=get_unread_notifications_count,
             get_privacy_settings=get_privacy_settings,
+            get_social_settings=get_social_settings,
+            get_appearance_settings=get_appearance_settings,
             now=datetime.utcnow
         )
 
 
 def create_super_admin():
     """Create default super admin and initialize base data if not exists"""
-    from app.models import User, Role, Permission, Plan
+    from app.models import User, Role, Permission, Plan, SocialSetting, AppearanceSetting
 
     # Initialize base roles/permissions/plans (idempotent)
     init_roles()
     init_permissions()
     init_plans()
+
+    # Ensure governance defaults
+    if not SocialSetting.query.first():
+        db.session.add(SocialSetting())
+        db.session.commit()
+    if not AppearanceSetting.query.filter_by(scope='global').first():
+        db.session.add(AppearanceSetting(scope='global'))
+        db.session.commit()
 
     # Create super admin user on empty databases
     admin = User.query.filter_by(role='super_admin').first()

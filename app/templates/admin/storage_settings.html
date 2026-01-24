@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Storage Media{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="section-hero mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <div class="pill mb-2"><i class="bi bi-hdd"></i> Storage</div>
+            <h1 class="h4 mb-0">Percorso salvataggi media</h1>
+            <p class="text-muted mb-0">Imposta dove salvare foto e video e con quale formato compresso.</p>
+        </div>
+    </div>
+    <div class="glass-card p-4 card-hover">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    {{ form.storage_backend.label(class='form-label') }}
+                    {{ form.storage_backend(class='form-select') }}
+                </div>
+                <div class="col-md-8">
+                    {{ form.base_path.label(class='form-label') }}
+                    {{ form.base_path(class='form-control') }}
+                    <div class="form-text">Percorso assoluto per gli upload. Verrà creato se non esiste.</div>
+                </div>
+                <div class="col-md-4">
+                    {{ form.preferred_image_format.label(class='form-label') }}
+                    {{ form.preferred_image_format(class='form-select') }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.image_quality.label(class='form-label') }}
+                    {{ form.image_quality(class='form-control', placeholder='75') }}
+                    <div class="form-text">Numero da 1 a 100. Valore più basso = file più leggero.</div>
+                </div>
+                <div class="col-md-4">
+                    {{ form.preferred_video_format.label(class='form-label') }}
+                    {{ form.preferred_video_format(class='form-control', placeholder='mp4') }}
+                </div>
+            </div>
+            <div class="mt-4 d-flex justify-content-end">
+                <button type="submit" class="btn btn-dark"><i class="bi bi-save"></i> Salva</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

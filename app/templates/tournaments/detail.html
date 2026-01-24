@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}{{ tournament.name }} | Torneo{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="section-hero mb-4 card-hover">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div class="d-flex gap-3 align-items-center">
+        <div class="avatar-ring">
+          <div class="bg-white rounded-circle d-flex align-items-center justify-content-center" style="width:64px;height:64px;">
+            <i class="bi bi-trophy-fill fs-3 text-warning"></i>
+          </div>
+        </div>
+        <div>
+          <div class="pill mb-2">{{ tournament.format }}</div>
+          <h1 class="h3 mb-0">{{ tournament.name }}</h1>
+          <div class="text-muted small">Stagione {{ tournament.season or 'n/d' }}</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <span class="badge bg-dark text-uppercase">{{ tournament.status }}</span>
+        <span class="chip">{{ teams|length }} squadre</span>
+        <span class="chip">{{ matches|length }} partite</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-8">
+      <div class="glass-card h-100 p-3 card-hover">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="fw-semibold"><i class="bi bi-controller"></i> Partite</span>
+          {% if current_user.is_admin() or current_user.is_society_admin() %}
+            <form class="d-flex flex-wrap gap-2 align-items-center" method="post" action="{{ url_for('tournaments.add_match', tournament_id=tournament.id) }}">
+              {{ csrf_token() }}
+              <input type="number" name="home_team_id" class="form-control form-control-sm" placeholder="Casa" required>
+              <input type="number" name="away_team_id" class="form-control form-control-sm" placeholder="Trasferta" required>
+              <input type="text" name="round_label" class="form-control form-control-sm" placeholder="Turno">
+              <input type="date" name="match_date" class="form-control form-control-sm">
+              <input type="text" name="location" class="form-control form-control-sm" placeholder="Luogo">
+              <button class="btn btn-sm btn-dark" type="submit">Aggiungi</button>
+            </form>
+          {% endif %}
+        </div>
+        <div class="d-flex flex-column gap-3">
+          {% for m in matches %}
+            <div class="p-3 border rounded card-hover">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <div class="fw-semibold">{{ m.home_team.name }} vs {{ m.away_team.name }}</div>
+                <span class="badge bg-dark text-uppercase">{{ m.status }}</span>
+              </div>
+              <div class="small text-muted mb-2">{{ m.round_label or 'Turno' }} | {{ m.match_date.strftime('%d/%m/%Y') if m.match_date else 'Data da definire' }} | {{ m.location or 'Luogo da definire' }}</div>
+              <div class="d-flex align-items-center gap-3">
+                {% if m.status != 'played' and (current_user.is_admin() or current_user.is_society_admin()) %}
+                  <form class="d-flex align-items-center gap-2" method="post" action="{{ url_for('tournaments.set_score', match_id=m.id) }}">
+                    {{ csrf_token() }}
+                    <input type="number" name="home_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol casa" required>
+                    <input type="number" name="away_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol trasf" required>
+                    <button class="btn btn-sm btn-success" type="submit">Salva</button>
+                  </form>
+                {% else %}
+                  <div class="fw-bold fs-5">{{ m.home_score }} - {{ m.away_score }}</div>
+                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <div class="text-muted">Nessuna partita.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="glass-card p-3 mb-3 card-hover">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold">Squadre</span>
+          {% if current_user.is_admin() or current_user.is_society_admin() %}
+            <form class="d-flex flex-wrap gap-2" method="post" action="{{ url_for('tournaments.add_team', tournament_id=tournament.id) }}">
+              {{ csrf_token() }}
+              <input type="text" name="name" class="form-control form-control-sm" placeholder="Nome" required>
+              <input type="text" name="category" class="form-control form-control-sm" placeholder="Categoria">
+              <button class="btn btn-sm btn-dark" type="submit">+</button>
+            </form>
+          {% endif %}
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for team in teams %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ team.name }}</span>
+              <span class="small text-muted">{{ team.category or '' }}</span>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted">Nessuna squadra.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="glass-card p-3 card-hover">
+        <div class="fw-semibold mb-2">Classifica</div>
+        <div class="table-responsive">
+          <table class="table mb-0 align-middle">
+            <thead>
+              <tr><th>Team</th><th>Pt</th><th>GF</th><th>GS</th></tr>
+            </thead>
+            <tbody>
+              {% for s in standings %}
+                <tr>
+                  <td>{{ s.team.name }}</td>
+                  <td>{{ s.points }}</td>
+                  <td>{{ s.goals_for }}</td>
+                  <td>{{ s.goals_against }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4" class="text-muted">Classifica non disponibile.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -28,6 +28,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('tournaments.list_tournaments') }}">
+                            <i class="bi bi-trophy"></i> Tornei
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('calendar.index') }}">
                             <i class="bi bi-calendar3-range"></i> Calendario Società
                         </a>
@@ -106,6 +111,13 @@
                                     <i class="bi bi-pencil"></i> Modifica Profilo
                                 </a>
                             </li>
+                            {% if current_user.is_admin() %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.storage_settings') }}">
+                                        <i class="bi bi-hdd"></i> Storage media
+                                    </a>
+                                </li>
+                            {% endif %}
                             {% if current_user.is_society() %}
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('social.society_dashboard') }}">

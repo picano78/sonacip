@@ -11,6 +11,19 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% set appearance = get_appearance_settings() %}
+    <style>
+        :root {
+            --primary-color: {{ appearance.primary_color or '#0d6efd' }};
+            --secondary-color: {{ appearance.secondary_color or '#6c757d' }};
+            --accent-color: {{ appearance.accent_color or '#20c997' }};
+            --app-font: {{ appearance.font_family or 'Inter, system-ui, -apple-system, sans-serif' }};
+        }
+        body { font-family: var(--app-font); }
+        .navbar, .btn-primary { background-color: var(--primary-color) !important; border-color: var(--primary-color) !important; }
+        .btn-secondary { background-color: var(--secondary-color) !important; border-color: var(--secondary-color) !important; }
+        a { color: var(--primary-color); }
+    </style>
     
     {% block extra_css %}{% endblock %}
 </head>

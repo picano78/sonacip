@@ -25,8 +25,16 @@ class Config:
     
     # File upload configuration
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    STORAGE_BACKEND = os.environ.get('STORAGE_BACKEND', 'local')
+    STORAGE_LOCAL_PATH = os.environ.get('STORAGE_LOCAL_PATH') or UPLOAD_FOLDER
+    MEDIA_PREFERRED_IMAGE_FORMAT = os.environ.get('MEDIA_PREFERRED_IMAGE_FORMAT', 'webp')
+    MEDIA_PREFERRED_VIDEO_FORMAT = os.environ.get('MEDIA_PREFERRED_VIDEO_FORMAT', 'mp4')
+    MEDIA_IMAGE_QUALITY = int(os.environ.get('MEDIA_IMAGE_QUALITY', '75'))
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx'}
+
+    # Plug-in modules folder (safe discovery)
+    MODULES_FOLDER = os.environ.get('MODULES_FOLDER') or os.path.join(BASE_DIR, 'app', 'modules')
     
     # Backup configuration
     BACKUP_FOLDER = os.path.join(BASE_DIR, 'backups')

@@ -466,14 +466,14 @@ def society_dashboard():
         return redirect(url_for('social.feed'))
     
     # Get society's staff and athletes
-    staff = User.query.filter_by(
-        role='staff',
-        society_id=current_user.id
+    staff = User.query.filter(
+        User.role.in_(['staff', 'coach']),
+        User.society_id == current_user.id
     ).all()
-    
-    athletes = User.query.filter_by(
-        role='atleta',
-        athlete_society_id=current_user.id
+
+    athletes = User.query.filter(
+        User.role.in_(['atleta', 'athlete']),
+        User.athlete_society_id == current_user.id
     ).all()
     
     # Get society's events
@@ -503,7 +503,10 @@ def society_dashboard():
 def explore():
     """Explore page - discover societies and users"""
     # Get top societies by followers
-    societies = User.query.filter_by(role='societa', is_active=True).all()
+    societies = User.query.filter(
+        User.role.in_(['societa', 'society_admin']),
+        User.is_active == True
+    ).all()
     societies = sorted(societies, key=lambda u: u.followers.count(), reverse=True)[:20]
     
     # Get recent posts

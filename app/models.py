@@ -3,6 +3,7 @@ Database Models
 All SQLAlchemy models for SONACIP platform
 """
 from datetime import datetime
+from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
@@ -29,11 +30,24 @@ event_athletes = db.Table('event_athletes',
     db.Column('responded_at', db.DateTime)
 )
 
+# Society Calendar association tables (director-level calendar, not field planner)
+society_calendar_event_staff = db.Table('society_calendar_event_staff',
+    db.Column('event_id', db.Integer, db.ForeignKey('society_calendar_event.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+)
+
+society_calendar_event_athletes = db.Table('society_calendar_event_athletes',
+    db.Column('event_id', db.Integer, db.ForeignKey('society_calendar_event.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+)
+
 
 class User(UserMixin, db.Model):
     """
     User model - handles all user types
-    Roles: super_admin, societa, staff, atleta, appassionato
+    Roles live in the Role table (super_admin, society_admin, coach, athlete, staff, etc.)
     """
     __tablename__ = 'user'
     
@@ -50,9 +64,8 @@ class User(UserMixin, db.Model):
     avatar = db.Column(db.String(255))  # path to avatar image
     cover_photo = db.Column(db.String(255))  # path to cover photo
     
-    # Role and type
-    role = db.Column(db.String(20), nullable=False, default='appassionato')
-    # Roles: super_admin, societa, staff, atleta, appassionato
+    # Role and type (database-driven)
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     
     # For Società Sportiva
     company_name = db.Column(db.String(200))  # Nome società
@@ -67,12 +80,12 @@ class User(UserMixin, db.Model):
     
     # For Staff
     staff_role = db.Column(db.String(50))     # coach, dirigente, etc.
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Link to società
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))  # Link to società
     
     # For Atleta
     birth_date = db.Column(db.Date)
     sport = db.Column(db.String(100))
-    athlete_society_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Link to società
+    athlete_society_id = db.Column(db.Integer, db.ForeignKey('society.id'))  # Link to società
     
     # Account status
     is_active = db.Column(db.Boolean, default=True)
@@ -82,6 +95,9 @@ class User(UserMixin, db.Model):
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
+    role_obj = db.relationship('Role', foreign_keys=[role_id])
+    society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('staff_members', lazy='dynamic'))
+    athlete_society = db.relationship('Society', foreign_keys=[athlete_society_id], backref=db.backref('athletes', lazy='dynamic'))
     posts = db.relationship('Post', backref='author', lazy='dynamic', 
                            foreign_keys='Post.user_id')
     comments = db.relationship('Comment', backref='author', lazy='dynamic')
@@ -132,25 +148,61 @@ class User(UserMixin, db.Model):
         own_posts = Post.query.filter_by(user_id=self.id)
         return followed_posts.union(own_posts).order_by(Post.created_at.desc())
     
+    @hybrid_property
+    def role(self):
+        """Return role name (derived from Role table)."""
+        return self.role_obj.name if self.role_obj else None
+
+    @role.expression
+    def role(cls):
+        return (
+            db.select(Role.name)
+            .where(Role.id == cls.role_id)
+            .scalar_subquery()
+        )
+
+    @role.setter
+    def role(self, role_name):
+        from app.models import Role
+        role_obj = Role.query.filter_by(name=role_name).first()
+        if not role_obj:
+            # Fallback to base role to avoid invalid references
+            role_obj = Role.query.filter_by(name='appassionato').first()
+        self.role_obj = role_obj
+
+    @property
+    def role_display_name(self):
+        return self.role_obj.display_name if self.role_obj else None
+
     def is_admin(self):
         """Check if user is super admin"""
         return self.role == 'super_admin'
-    
+
     def is_society(self):
-        """Check if user is a società"""
-        return self.role == 'societa'
-    
+        """Check if user is a società/society admin"""
+        return self.role in ('societa', 'society_admin')
+
+    def is_society_admin(self):
+        """Check if user is society admin"""
+        return self.role in ('society_admin', 'societa')
+
     def is_staff(self):
-        """Check if user is staff"""
-        return self.role == 'staff'
-    
+        """Check if user is staff or coach"""
+        return self.role in ('staff', 'coach')
+
+    def is_coach(self):
+        """Check if user is coach"""
+        return self.role == 'coach'
+
     def is_athlete(self):
         """Check if user is an athlete"""
-        return self.role == 'atleta'
+        return self.role in ('atleta', 'athlete')
     
     def get_full_name(self):
         """Get full name or company name"""
-        if self.role == 'societa' and self.company_name:
+        if self.is_society() and self.society_profile and self.society_profile.legal_name:
+            return self.society_profile.legal_name
+        if self.is_society() and self.company_name:
             return self.company_name
         elif self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
@@ -165,8 +217,7 @@ class User(UserMixin, db.Model):
             return True
         
         # Get role object from database
-        role_obj = Role.query.filter_by(name=self.role).first()
-        if not role_obj:
+        if not self.role_obj:
             return False
         
         # Check if role has the permission
@@ -174,13 +225,31 @@ class User(UserMixin, db.Model):
         if not perm:
             return False
         
-        return perm in role_obj.permissions.all()
+        return perm in self.role_obj.permissions.all()
+
+    def get_primary_society(self):
+        """Return Society entity for this user, if any."""
+        if self.is_society() and self.society_profile:
+            return self.society_profile
+        if self.society_id:
+            return self.society
+        if self.athlete_society_id:
+            return self.athlete_society
+        return None
     
     def get_active_subscription(self):
         """Get user's active subscription"""
         from app.models import Subscription
+        society = self.get_primary_society()
+        if society:
+            sub = Subscription.query.filter_by(
+                society_id=society.id,
+                status='active'
+            ).first()
+            if sub:
+                return sub
         return Subscription.query.filter_by(
-            user_id=self.id, 
+            user_id=self.id,
             status='active'
         ).first()
     
@@ -388,6 +457,66 @@ class Event(db.Model):
         return f'<Event {self.title}>'
 
 
+class SocietyCalendarEvent(db.Model):
+    """
+    Director-level society calendar (separate from field planner)
+    Allows multiple concurrent events across locations for a society.
+    """
+    __tablename__ = 'society_calendar_event'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    title = db.Column(db.String(200), nullable=False)
+    team = db.Column(db.String(100))  # textual team/category label
+    category = db.Column(db.String(100))
+    event_type = db.Column(db.String(50), nullable=False)  # match, tournament, meeting, travel, other
+    competition_name = db.Column(db.String(200))
+
+    start_datetime = db.Column(db.DateTime, nullable=False)
+    end_datetime = db.Column(db.DateTime)
+
+    location_text = db.Column(db.String(255))
+    notes = db.Column(db.Text)
+
+    share_to_social = db.Column(db.Boolean, default=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    society = db.relationship('Society', backref=db.backref('calendar_events', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+    staff_members = db.relationship(
+        'User', secondary=society_calendar_event_staff,
+        backref=db.backref('calendar_events_as_staff', lazy='dynamic'),
+        lazy='dynamic'
+    )
+    athletes = db.relationship(
+        'User', secondary=society_calendar_event_athletes,
+        backref=db.backref('calendar_events_as_athlete', lazy='dynamic'),
+        lazy='dynamic'
+    )
+
+    def is_visible_to(self, user):
+        """Apply role-based visibility rules for the society calendar."""
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_admin():
+            return True
+        if user.is_society_admin() and user.get_primary_society() and user.get_primary_society().id == self.society_id:
+            return True
+        if user.is_staff() or user.is_coach():
+            return self.staff_members.filter_by(id=user.id).count() > 0 or self.created_by == user.id
+        if user.is_athlete():
+            return self.athletes.filter_by(id=user.id).count() > 0
+        return False
+
+    def __repr__(self):
+        return f'<SocietyCalendarEvent {self.title} ({self.event_type})>'
+
+
 class Notification(db.Model):
     """
     Internal notification system
@@ -587,7 +716,7 @@ class Contact(db.Model):
     notes = db.Column(db.Text)
     
     # Ownership
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Timestamps
@@ -595,7 +724,7 @@ class Contact(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    society = db.relationship('User', foreign_keys=[society_id], backref='crm_contacts')
+    society = db.relationship('Society', foreign_keys=[society_id], backref='crm_contacts')
     creator = db.relationship('User', foreign_keys=[created_by])
     
     def get_full_name(self):
@@ -640,7 +769,7 @@ class Opportunity(db.Model):
     contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'))
     
     # Ownership
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Timestamps
@@ -649,7 +778,7 @@ class Opportunity(db.Model):
     
     # Relationships
     contact = db.relationship('Contact', backref='opportunities')
-    society = db.relationship('User', foreign_keys=[society_id], backref='crm_opportunities')
+    society = db.relationship('Society', foreign_keys=[society_id], backref='crm_opportunities')
     creator = db.relationship('User', foreign_keys=[created_by])
     
     def __repr__(self):
@@ -806,7 +935,8 @@ class Subscription(db.Model):
     __tablename__ = 'subscription'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
     
     # Subscription details
@@ -832,6 +962,7 @@ class Subscription(db.Model):
     
     # Relationships
     user = db.relationship('User', backref=db.backref('subscriptions', lazy='dynamic'))
+    society = db.relationship('Society', backref=db.backref('subscriptions', lazy='dynamic'))
     plan = db.relationship('Plan', backref='subscriptions')
     
     def is_active(self):
@@ -854,6 +985,7 @@ class Payment(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'))
     
     # Payment details
@@ -880,6 +1012,7 @@ class Payment(db.Model):
     
     # Relationships
     user = db.relationship('User', backref='payments')
+    society = db.relationship('Society', backref='payments')
     subscription = db.relationship('Subscription', backref='payments')
     
     def __repr__(self):
@@ -893,8 +1026,7 @@ class Society(db.Model):
     """
     __tablename__ = 'society'
     
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     
     # Legal information
     legal_name = db.Column(db.String(200), nullable=False)
@@ -957,7 +1089,7 @@ class Template(db.Model):
     
     # Ownership
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     
     # Sharing
     is_public = db.Column(db.Boolean, default=False)
@@ -987,7 +1119,7 @@ class Task(db.Model):
     # Assignment
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     
     # Status and priority
     status = db.Column(db.String(20), default='todo')  # todo, in_progress, review, blocked, done
@@ -1044,7 +1176,7 @@ class Project(db.Model):
     description = db.Column(db.Text)
     
     # Ownership
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     
     # Project details
@@ -1097,7 +1229,7 @@ class Analytics(db.Model):
     metric_data = db.Column(db.Text)  # JSON for complex metrics
     
     # Context
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     
     # Time dimensions
@@ -1122,7 +1254,7 @@ class Automation(db.Model):
     description = db.Column(db.Text)
     
     # Ownership
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     
     # Trigger configuration
@@ -1164,7 +1296,7 @@ class Team(db.Model):
     description = db.Column(db.Text)
     
     # Ownership
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
     leader_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     
     # Members with roles
@@ -1198,7 +1330,7 @@ class Dashboard(db.Model):
     
     # Ownership
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     
     # Layout
     widgets = db.Column(db.Text, nullable=False)  # JSON: widget configs
@@ -1235,7 +1367,7 @@ class Goal(db.Model):
     
     # Ownership
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    society_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'))
     
     # Objective and Key Results

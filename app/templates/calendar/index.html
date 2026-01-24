@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Calendario Società | SONACIP{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h1 class="h3 mb-1">Calendario Società</h1>
+            <p class="text-muted mb-0">Panoramica strategica della società, separata dal planner campi.</p>
+        </div>
+        {% if current_user.is_admin() or current_user.is_society_admin() %}
+            <a href="{{ url_for('calendar.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Nuovo evento
+            </a>
+        {% endif %}
+    </div>
+
+    <form class="row g-2 align-items-end mb-4" method="get">
+        <div class="col-md-2">
+            <label class="form-label">Data inizio</label>
+            <input type="date" class="form-control" name="start" value="{{ start_date.strftime('%Y-%m-%d') }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Vista</label>
+            <select class="form-select" name="view">
+                <option value="day" {% if view=='day' %}selected{% endif %}>Giorno</option>
+                <option value="week" {% if view=='week' %}selected{% endif %}>Settimana</option>
+                <option value="month" {% if view=='month' %}selected{% endif %}>Mese</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Squadra</label>
+            <input type="text" class="form-control" name="team" value="{{ filters.team }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Categoria</label>
+            <input type="text" class="form-control" name="category" value="{{ filters.category }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Competizione</label>
+            <input type="text" class="form-control" name="competition" value="{{ filters.competition }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-funnel"></i> Filtra
+            </button>
+        </div>
+    </form>
+
+    {% if events_by_date %}
+        {% for day, events in events_by_date.items()|sort %}
+            <div class="card mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div class="fw-semibold">{{ day.strftime('%A %d %B %Y') }}</div>
+                    <span class="badge bg-info text-dark">{{ events|length }} eventi</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for event in events %}
+                        <a href="{{ url_for('calendar.detail', event_id=event.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-semibold">{{ event.title }}</div>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-clock"></i> {{ event.start_datetime.strftime('%H:%M') }}
+                                        {% if event.end_datetime %}- {{ event.end_datetime.strftime('%H:%M') }}{% endif %}
+                                        &middot; <i class="bi bi-geo-alt"></i> {{ event.location_text or 'Luogo da definire' }}
+                                    </div>
+                                    <div class="small">
+                                        <span class="badge bg-primary text-uppercase">{{ event.event_type }}</span>
+                                        {% if event.team %}<span class="badge bg-secondary">{{ event.team }}</span>{% endif %}
+                                        {% if event.category %}<span class="badge bg-light text-dark">{{ event.category }}</span>{% endif %}
+                                        {% if event.competition_name %}<span class="badge bg-warning text-dark">{{ event.competition_name }}</span>{% endif %}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    {% if event.share_to_social %}
+                                        <span class="badge bg-success"><i class="bi bi-megaphone"></i> Social</span>
+                                    {% endif %}
+                                    <div class="small text-muted">Società ID {{ event.society_id }}</div>
+                                </div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">Nessun evento trovato per l'intervallo selezionato.</div>
+    {% endif %}
+</div>
+{% endblock %}

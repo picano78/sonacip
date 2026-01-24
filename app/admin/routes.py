@@ -8,7 +8,7 @@ from app import db
 from app.admin import bp
 from app.admin.utils import admin_required
 from app.admin.forms import UserEditForm, UserSearchForm, PrivacySettingsForm, AdsSettingsForm
-from app.models import User, Post, Event, Notification, AuditLog, Backup, Comment, PrivacySetting, AdsSetting
+from app.models import User, Post, Event, Notification, AuditLog, Backup, Comment, PrivacySetting, AdsSetting, Society
 from datetime import datetime, timedelta
 import os
 
@@ -21,8 +21,8 @@ def dashboard():
     # Get statistics
     stats = {
         'total_users': User.query.count(),
-        'total_societies': User.query.filter_by(role='societa').count(),
-        'total_athletes': User.query.filter_by(role='atleta').count(),
+        'total_societies': Society.query.count(),
+        'total_athletes': User.query.filter(User.role.in_(['atleta', 'athlete'])).count(),
         'total_posts': Post.query.count(),
         'total_events': Event.query.count(),
         'active_users_today': User.query.filter(
@@ -426,8 +426,12 @@ def stats():
     
     # Top societies by followers
     try:
-        societies = User.query.filter_by(role='societa').limit(10).all()
-        top_societies = sorted(societies, key=lambda u: u.followers.count(), reverse=True)[:10]
+        societies = Society.query.limit(10).all()
+        top_societies = sorted(
+            societies,
+            key=lambda s: s.user.followers.count() if s.user else 0,
+            reverse=True
+        )[:10]
     except Exception as e:
         top_societies = []
         print(f"Error fetching societies: {e}")

@@ -197,22 +197,22 @@ def convocate(event_id):
     # For society: their own athletes
     # For staff: athletes of their society
     if current_user.is_society():
-        available_athletes = User.query.filter_by(
-            role='atleta',
-            athlete_society_id=current_user.id,
-            is_active=True
+        available_athletes = User.query.filter(
+            User.role.in_(['atleta', 'athlete']),
+            User.athlete_society_id == current_user.id,
+            User.is_active == True
         ).all()
     elif current_user.is_staff():
-        available_athletes = User.query.filter_by(
-            role='atleta',
-            athlete_society_id=current_user.society_id,
-            is_active=True
+        available_athletes = User.query.filter(
+            User.role.in_(['atleta', 'athlete']),
+            User.athlete_society_id == current_user.society_id,
+            User.is_active == True
         ).all()
     else:
         # Admin can convocate any athlete
-        available_athletes = User.query.filter_by(
-            role='atleta',
-            is_active=True
+        available_athletes = User.query.filter(
+            User.role.in_(['atleta', 'athlete']),
+            User.is_active == True
         ).all()
     
     # Remove already convocated

@@ -157,6 +157,10 @@ def register_blueprints(app):
     from app.analytics import bp as analytics_bp
     app.register_blueprint(analytics_bp, url_prefix='/analytics')
 
+    # Society Calendar (strategic, separate from field planner)
+    from app.calendar import bp as calendar_bp
+    app.register_blueprint(calendar_bp)
+
 
 def register_error_handlers(app):
     """Register error handlers"""
@@ -245,25 +249,22 @@ def register_template_utilities(app):
 def create_super_admin():
     """Create default super admin and initialize base data if not exists"""
     from app.models import User, Role, Permission, Plan
-    
-    # Initialize base roles
+
+    # Initialize base roles/permissions/plans (idempotent)
     init_roles()
-    
-    # Initialize base permissions
     init_permissions()
-    
-    # Initialize default plans
     init_plans()
-    
-    # Create super admin user
+
+    # Create super admin user on empty databases
     admin = User.query.filter_by(role='super_admin').first()
     if not admin:
+        super_admin_role = Role.query.filter_by(name='super_admin').first()
         admin = User(
             email='admin@sonacip.it',
             username='admin',
             first_name='Super',
             last_name='Admin',
-            role='super_admin',
+            role_obj=super_admin_role,
             is_active=True,
             is_verified=True
         )
@@ -286,6 +287,13 @@ def init_roles():
             'is_system': True
         },
         {
+            'name': 'society_admin',
+            'display_name': 'Admin Società',
+            'description': 'Gestione amministrativa della società sportiva',
+            'level': 80,
+            'is_system': True
+        },
+        {
             'name': 'societa',
             'display_name': 'Società Sportiva',
             'description': 'Gestione completa della propria società',
@@ -300,9 +308,23 @@ def init_roles():
             'is_system': True
         },
         {
+            'name': 'coach',
+            'display_name': 'Coach',
+            'description': 'Allenatore affiliato a una società',
+            'level': 35,
+            'is_system': True
+        },
+        {
             'name': 'atleta',
             'display_name': 'Atleta',
             'description': 'Atleta affiliato a una società',
+            'level': 20,
+            'is_system': True
+        },
+        {
+            'name': 'athlete',
+            'display_name': 'Athlete',
+            'description': 'Atleta (alias inglese)',
             'level': 20,
             'is_system': True
         },
@@ -374,6 +396,27 @@ def init_permissions():
         for perm in all_perms:
             if perm not in super_admin_role.permissions:
                 super_admin_role.permissions.append(perm)
+        db.session.commit()
+
+    # Give society administrators ownership permissions
+    society_admin_role = Role.query.filter_by(name='society_admin').first()
+    if society_admin_role:
+        default_perm_names = [
+            'society_manage',
+            'society_manage_staff',
+            'society_manage_athletes',
+            'events_create',
+            'events_manage',
+            'events_view',
+            'crm_access',
+            'crm_manage',
+            'social_post',
+            'social_comment'
+        ]
+        perms = Permission.query.filter(Permission.name.in_(default_perm_names)).all()
+        for perm in perms:
+            if perm not in society_admin_role.permissions:
+                society_admin_role.permissions.append(perm)
         db.session.commit()
 
 

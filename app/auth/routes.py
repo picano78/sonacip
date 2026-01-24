@@ -6,7 +6,7 @@ from flask_login import login_user, logout_user, current_user
 from app import db
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, SocietyRegistrationForm
-from app.models import User, AuditLog
+from app.models import User, AuditLog, Society, Subscription, Plan
 from datetime import datetime
 
 
@@ -73,8 +73,26 @@ def register():
             is_verified=False
         )
         user.set_password(form.password.data)
-        
+
         db.session.add(user)
+        db.session.flush()
+
+        # Auto-attach free plan subscription for individuals
+        free_plan = Plan.query.filter_by(slug='free').first()
+        if free_plan:
+            existing_sub = Subscription.query.filter_by(user_id=user.id, status='active').first()
+            if not existing_sub:
+                sub = Subscription(
+                    user_id=user.id,
+                    plan_id=free_plan.id,
+                    status='active',
+                    billing_cycle='monthly',
+                    start_date=datetime.utcnow(),
+                    amount=0,
+                    auto_renew=False
+                )
+                db.session.add(sub)
+
         db.session.commit()
         
         # Log the registration
@@ -107,7 +125,7 @@ def register_society():
             email=form.email.data,
             username=form.username.data,
             phone=form.phone.data,
-            role='societa',
+            role='society_admin',
             is_active=True,
             is_verified=False,
             # Society specific fields
@@ -124,6 +142,41 @@ def register_society():
         user.set_password(form.password.data)
         
         db.session.add(user)
+        db.session.flush()
+
+        # Create society profile (shared primary key with User)
+        society = Society(
+            id=user.id,
+            legal_name=form.company_name.data,
+            company_type=form.company_type.data,
+            vat_number=form.vat_number.data or None,
+            fiscal_code=form.fiscal_code.data,
+            email=form.email.data,
+            phone=form.phone.data,
+            website=form.website.data or None,
+            address=form.address.data,
+            city=form.city.data,
+            province=form.province.data.upper(),
+            postal_code=form.postal_code.data
+        )
+        db.session.add(society)
+
+        # Auto-attach free plan subscription to the new society
+        free_plan = Plan.query.filter_by(slug='free').first()
+        if free_plan:
+            existing_sub = Subscription.query.filter_by(society_id=society.id, status='active').first()
+            if not existing_sub:
+                sub = Subscription(
+                    society_id=society.id,
+                    plan_id=free_plan.id,
+                    status='active',
+                    billing_cycle='monthly',
+                    start_date=datetime.utcnow(),
+                    amount=0,
+                    auto_renew=False
+                )
+                db.session.add(sub)
+
         db.session.commit()
         
         # Log the registration

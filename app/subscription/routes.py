@@ -50,8 +50,10 @@ def subscribe(plan_id):
     amount = plan.price_monthly if billing_cycle == 'monthly' else plan.price_yearly
     
     # Create subscription
+    society = current_user.get_primary_society()
     subscription = Subscription(
-        user_id=current_user.id,
+        user_id=None if society else current_user.id,
+        society_id=society.id if society else None,
         plan_id=plan.id,
         status='active' if amount == 0 else 'pending',  # Free plans are immediately active
         billing_cycle=billing_cycle,
@@ -86,10 +88,17 @@ def subscribe(plan_id):
 def my_subscription():
     """View current subscription details"""
     subscription = current_user.get_active_subscription()
-    all_subscriptions = Subscription.query.filter_by(user_id=current_user.id)\
-        .order_by(Subscription.created_at.desc()).all()
-    payments = Payment.query.filter_by(user_id=current_user.id)\
-        .order_by(Payment.created_at.desc()).limit(10).all()
+    society = current_user.get_primary_society()
+    if society:
+        all_subscriptions = Subscription.query.filter_by(society_id=society.id)\
+            .order_by(Subscription.created_at.desc()).all()
+        payments = Payment.query.filter_by(society_id=society.id)\
+            .order_by(Payment.created_at.desc()).limit(10).all()
+    else:
+        all_subscriptions = Subscription.query.filter_by(user_id=current_user.id)\
+            .order_by(Subscription.created_at.desc()).all()
+        payments = Payment.query.filter_by(user_id=current_user.id)\
+            .order_by(Payment.created_at.desc()).limit(10).all()
     
     return render_template('subscription/my_subscription.html',
                          subscription=subscription,
@@ -104,9 +113,16 @@ def cancel_subscription(subscription_id):
     subscription = Subscription.query.get_or_404(subscription_id)
     
     # Verify ownership
-    if subscription.user_id != current_user.id and not current_user.is_admin():
-        flash('Accesso negato.', 'danger')
-        return redirect(url_for('subscription.my_subscription'))
+    society = current_user.get_primary_society()
+    if not current_user.is_admin():
+        if society and subscription.society_id != society.id:
+            flash('Accesso negato.', 'danger')
+            return redirect(url_for('subscription.my_subscription'))
+        if not society and subscription.user_id != current_user.id:
+            flash('Accesso negato.', 'danger')
+            return redirect(url_for('subscription.my_subscription'))
+    else:
+        pass
     
     if subscription.status not in ['active', 'trial']:
         flash('Questa sottoscrizione non può essere annullata.', 'warning')
@@ -133,7 +149,11 @@ def payment(subscription_id):
     subscription = Subscription.query.get_or_404(subscription_id)
     
     # Verify ownership
-    if subscription.user_id != current_user.id:
+    society = current_user.get_primary_society()
+    if society and subscription.society_id != society.id:
+        flash('Accesso negato.', 'danger')
+        return redirect(url_for('subscription.plans'))
+    if not society and subscription.user_id != current_user.id:
         flash('Accesso negato.', 'danger')
         return redirect(url_for('subscription.plans'))
     
@@ -147,7 +167,11 @@ def process_payment(subscription_id):
     subscription = Subscription.query.get_or_404(subscription_id)
     
     # Verify ownership
-    if subscription.user_id != current_user.id:
+    society = current_user.get_primary_society()
+    if society and subscription.society_id != society.id:
+        flash('Accesso negato.', 'danger')
+        return redirect(url_for('subscription.plans'))
+    if not society and subscription.user_id != current_user.id:
         flash('Accesso negato.', 'danger')
         return redirect(url_for('subscription.plans'))
     
@@ -157,6 +181,7 @@ def process_payment(subscription_id):
     # Create payment record
     payment = Payment(
         user_id=current_user.id,
+        society_id=society.id if society else None,
         subscription_id=subscription.id,
         amount=subscription.amount,
         currency='EUR',

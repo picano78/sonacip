@@ -4,6 +4,28 @@ Admin forms
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, BooleanField, TextAreaField, PasswordField
 from wtforms.validators import DataRequired, Email, Optional, Length
+from app.models import Role
+
+
+def _load_role_choices(include_empty=False):
+    """Load active roles from DB with safe fallback."""
+    try:
+        roles = Role.query.filter_by(is_active=True).order_by(Role.level.desc()).all()
+        choices = [(r.name, r.display_name or r.name) for r in roles]
+    except Exception:
+        choices = [
+            ('super_admin', 'Super Admin'),
+            ('society_admin', 'Admin Società'),
+            ('societa', 'Società Sportiva'),
+            ('coach', 'Coach'),
+            ('staff', 'Staff'),
+            ('athlete', 'Athlete'),
+            ('atleta', 'Atleta'),
+            ('appassionato', 'Appassionato')
+        ]
+    if include_empty:
+        return [('', 'Tutti')] + choices
+    return choices
 
 
 class UserEditForm(FlaskForm):
@@ -13,28 +35,19 @@ class UserEditForm(FlaskForm):
     first_name = StringField('Nome', validators=[Optional()])
     last_name = StringField('Cognome', validators=[Optional()])
     phone = StringField('Telefono', validators=[Optional()])
-    role = SelectField('Ruolo', choices=[
-        ('super_admin', 'Super Admin'),
-        ('societa', 'Società Sportiva'),
-        ('staff', 'Staff'),
-        ('atleta', 'Atleta'),
-        ('appassionato', 'Appassionato')
-    ], validators=[DataRequired()])
+    role = SelectField('Ruolo', choices=[], validators=[DataRequired()])
     is_active = BooleanField('Account Attivo')
     is_verified = BooleanField('Account Verificato')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.role.choices = _load_role_choices()
 
 
 class UserSearchForm(FlaskForm):
     """Form for searching users"""
     query = StringField('Cerca', validators=[Optional()])
-    role = SelectField('Ruolo', choices=[
-        ('', 'Tutti'),
-        ('super_admin', 'Super Admin'),
-        ('societa', 'Società Sportiva'),
-        ('staff', 'Staff'),
-        ('atleta', 'Atleta'),
-        ('appassionato', 'Appassionato')
-    ], validators=[Optional()])
+    role = SelectField('Ruolo', choices=[], validators=[Optional()])
     status = SelectField('Stato', choices=[
         ('', 'Tutti'),
         ('active', 'Attivi'),
@@ -42,6 +55,10 @@ class UserSearchForm(FlaskForm):
         ('verified', 'Verificati'),
         ('unverified', 'Non Verificati')
     ], validators=[Optional()])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.role.choices = _load_role_choices(include_empty=True)
 
 
 class PrivacySettingsForm(FlaskForm):

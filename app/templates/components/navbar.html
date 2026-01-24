@@ -27,6 +27,11 @@
                             <i class="bi bi-calendar-event"></i> Eventi
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('calendar.index') }}">
+                            <i class="bi bi-calendar3-range"></i> Calendario Società
+                        </a>
+                    </li>
                     {% if current_user.role in ['super_admin', 'societa', 'staff'] %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('crm.index') }}">

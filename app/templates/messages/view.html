@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ message.subject or 'Messaggio' }}{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h4 class="mb-0">{{ message.subject or 'Senza oggetto' }}</h4>
+                    <p class="text-muted mb-1">Da: {{ message.sender.get_full_name() }} · A: {{ message.recipient.get_full_name() }}</p>
+                    <small class="text-muted">{{ message.created_at|datetime_format }}</small>
+                </div>
+                <a href="{{ url_for('messages.compose') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-reply"></i> Nuovo</a>
+            </div>
+            <hr>
+            <p class="mb-0" style="white-space: pre-wrap;">{{ message.body }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

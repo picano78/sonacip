@@ -8,10 +8,12 @@ from app import db
 from app.backup import bp
 from app.backup.utils import (
     create_backup, restore_backup, validate_backup, 
-    delete_backup, get_backup_size_formatted
+    delete_backup, get_backup_size_formatted, get_backup_settings,
+    run_scheduled_backup_if_due
 )
-from app.models import Backup, AuditLog
+from app.models import Backup, AuditLog, BackupSetting
 from app.admin.utils import admin_required
+from datetime import datetime
 
 
 @bp.route('/')
@@ -30,10 +32,12 @@ def index():
     # Calculate total backup size
     total_size = db.session.query(db.func.sum(Backup.size)).scalar() or 0
     
+    settings = get_backup_settings()
     return render_template('backup/index.html',
                          backups=backups,
                          pagination=pagination,
-                         total_size=get_backup_size_formatted(total_size))
+                         total_size=get_backup_size_formatted(total_size),
+                         settings=settings)
 
 
 @bp.route('/create', methods=['POST'])
@@ -72,6 +76,39 @@ def create():
     else:
         flash('Errore durante la creazione del backup.', 'danger')
     
+    return redirect(url_for('backup.index'))
+
+
+@bp.route('/settings', methods=['POST'])
+@login_required
+@admin_required
+def save_settings():
+    """Update auto-backup settings"""
+    settings = get_backup_settings()
+    settings.auto_enabled = bool(request.form.get('auto_enabled'))
+    settings.frequency = request.form.get('frequency', 'weekly')
+    settings.backup_type = request.form.get('backup_type', 'full')
+    settings.retention_days = request.form.get('retention_days', type=int) or 30
+    settings.run_hour_utc = request.form.get('run_hour_utc', type=int) or 2
+    settings.updated_by = current_user.id
+    settings.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash('Impostazioni backup aggiornate.', 'success')
+    return redirect(url_for('backup.index'))
+
+
+@bp.route('/run-now', methods=['POST'])
+@login_required
+@admin_required
+def run_now():
+    """Manually trigger backup respecting selected type"""
+    settings = get_backup_settings()
+    backup_type = request.form.get('backup_type') or settings.backup_type or 'full'
+    backup = create_backup(created_by_id=current_user.id, backup_type=backup_type, notes='Eseguito manualmente')
+    if backup:
+        flash(f'Backup creato: {backup.filename}', 'success')
+    else:
+        flash('Errore nella creazione del backup.', 'danger')
     return redirect(url_for('backup.index'))
 
 
@@ -215,4 +252,14 @@ def cleanup_old():
             deleted_count += 1
     
     flash(f'{deleted_count} backup vecchi eliminati.', 'success')
+    return redirect(url_for('backup.index'))
+
+
+@bp.route('/auto-check', methods=['POST'])
+@login_required
+@admin_required
+def auto_check():
+    """Force a scheduled backup check now"""
+    ran = run_scheduled_backup_if_due()
+    flash('Backup automatico eseguito.' if ran else 'Nessun backup dovuto ora.', 'info')
     return redirect(url_for('backup.index'))

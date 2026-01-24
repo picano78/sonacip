@@ -4,10 +4,10 @@ Backup utilities
 import os
 import shutil
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import current_app
 from app import db
-from app.models import Backup as BackupModel
+from app.models import Backup as BackupModel, BackupSetting
 import tempfile
 
 
@@ -88,6 +88,62 @@ def create_backup(created_by_id, backup_type='full', notes=None):
     except Exception as e:
         current_app.logger.error(f'Backup failed: {str(e)}')
         return None
+
+
+def get_backup_settings(create_if_missing=True):
+    """Return BackupSetting singleton"""
+    settings = BackupSetting.query.first()
+    if not settings and create_if_missing:
+        settings = BackupSetting()
+        db.session.add(settings)
+        db.session.commit()
+    return settings
+
+
+def run_scheduled_backup_if_due(now=None):
+    """Run automated backup if enabled and schedule is due. Returns bool indicating execution."""
+    from datetime import datetime
+    now = now or datetime.utcnow()
+    settings = get_backup_settings(create_if_missing=False)
+    if not settings or not settings.auto_enabled:
+        return False
+
+    # Check hour match and last run
+    if settings.run_hour_utc is not None and now.hour != settings.run_hour_utc:
+        return False
+
+    if settings.last_run_at:
+        delta_days = (now.date() - settings.last_run_at.date()).days
+        if settings.frequency == 'daily' and delta_days < 1:
+            return False
+        if settings.frequency == 'weekly' and delta_days < 7:
+            return False
+
+    backup = create_backup(
+        created_by_id=settings.updated_by or 1,  # fallback to super admin ID 1
+        backup_type=settings.backup_type or 'full',
+        notes='Auto-backup'
+    )
+    if backup:
+        settings.last_run_at = now
+        db.session.commit()
+        cleanup_old_backups(settings.retention_days)
+        return True
+    return False
+
+
+def cleanup_old_backups(retention_days):
+    """Delete backups older than retention_days"""
+    if not retention_days or retention_days <= 0:
+        return 0
+    cutoff = datetime.utcnow() - timedelta(days=retention_days)
+    old_backups = BackupModel.query.filter(BackupModel.created_at < cutoff).all()
+    count = 0
+    for b in old_backups:
+        success, _ = delete_backup(b.id)
+        if success:
+            count += 1
+    return count
 
 
 def restore_backup(backup_id):

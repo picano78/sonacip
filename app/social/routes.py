@@ -7,9 +7,10 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, desc
 from app import db
 from app.social import bp
-from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm
+from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.utils import save_picture
-from app.models import User, Post, Comment, Notification, AuditLog
+from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment
+from datetime import datetime, timedelta
 from datetime import datetime
 import os
 
@@ -24,14 +25,53 @@ def feed():
     # Get posts from followed users + own posts
     try:
         posts_query = current_user.get_feed_posts()
-        pagination = posts_query.paginate(page=page, per_page=per_page, error_out=False)
-        posts = pagination.items
     except Exception as e:
         print(f"Error loading feed: {e}")
-        # Fallback to own posts only
         posts_query = Post.query.filter_by(user_id=current_user.id)
-        pagination = posts_query.paginate(page=page, per_page=per_page, error_out=False)
-        posts = pagination.items
+
+    # Fetch extra to allow custom sorting
+    raw_posts = posts_query.limit(per_page * 3).all()
+
+    def engagement_score(p):
+        age_hours = max((datetime.utcnow() - p.created_at).total_seconds() / 3600, 0.1)
+        recency = max(0, 48 - age_hours) / 48  # 0-1
+        score = (p.likes_count * 2) + (p.comments_count * 3) + recency * 5
+        if p.is_promoted and p.promotion_ends_at and p.promotion_ends_at > datetime.utcnow():
+            score += 20
+        return score
+
+    sorted_posts = sorted(raw_posts, key=engagement_score, reverse=True)
+    total = len(sorted_posts)
+    start = (page - 1) * per_page
+    end = start + per_page
+    posts = sorted_posts[start:end]
+
+    # Update promotion views and disable expired ones
+    for p in posts:
+        if p.is_promoted:
+            if p.promotion_ends_at and p.promotion_ends_at < datetime.utcnow():
+                p.is_promoted = False
+            else:
+                p.promotion_views = (p.promotion_views or 0) + 1
+                if p.promotion_views_target and p.promotion_views >= p.promotion_views_target:
+                    p.is_promoted = False
+    db.session.commit()
+
+    # Fake pagination object
+    class SimplePagination:
+        def __init__(self, page, per_page, total):
+            self.page = page
+            self.per_page = per_page
+            self.total = total
+            self.pages = (total + per_page - 1) // per_page
+            self.has_prev = page > 1
+            self.has_next = page < self.pages
+            self.prev_num = page - 1
+            self.next_num = page + 1
+        def iter_pages(self):
+            return range(1, self.pages + 1)
+
+    pagination = SimplePagination(page, per_page, total)
     
     # Post form
     form = PostForm()
@@ -80,6 +120,61 @@ def view_post(post_id):
     form = CommentForm()
     
     return render_template('social/view_post.html', post=post, form=form)
+
+
+@bp.route('/post/<int:post_id>/promote', methods=['GET', 'POST'])
+@login_required
+def promote_post(post_id):
+    """Promote a post with paid insertion (simulated payment)"""
+    post = Post.query.get_or_404(post_id)
+    if post.user_id != current_user.id and not current_user.is_admin():
+        flash('Puoi sponsorizzare solo i tuoi post.', 'danger')
+        return redirect(url_for('social.view_post', post_id=post_id))
+
+    settings = AdsSetting.query.first()
+    if not settings:
+        settings = AdsSetting()
+        db.session.add(settings)
+        db.session.commit()
+
+    form = PromotePostForm()
+    if form.validate_on_submit():
+        duration = form.duration_days.data
+        views = form.views.data
+        cost = settings.price_per_day * duration + (settings.price_per_thousand_views / 1000.0) * views
+
+        # Simulate payment success
+        payment = Payment(
+            user_id=current_user.id,
+            amount=cost,
+            currency='EUR',
+            status='completed',
+            payment_method='manual',
+            description=f'Promozione post {post.id}'
+        )
+        db.session.add(payment)
+
+        post.is_promoted = True
+        post.promotion_starts_at = datetime.utcnow()
+        post.promotion_ends_at = datetime.utcnow() + timedelta(days=duration)
+        post.promotion_views_target = views
+        post.promotion_amount = cost
+        post.promotion_views = 0
+
+        db.session.commit()
+        flash(f'Post sponsorizzato! Costo €{cost:.2f}', 'success')
+        return redirect(url_for('social.view_post', post_id=post_id))
+
+    # Prefill defaults
+    if not form.duration_days.data:
+        form.duration_days.data = settings.default_duration_days
+    if not form.views.data:
+        form.views.data = settings.default_views
+
+    cost_preview = settings.price_per_day * (form.duration_days.data or settings.default_duration_days) + \
+        (settings.price_per_thousand_views / 1000.0) * (form.views.data or settings.default_views)
+
+    return render_template('social/promote.html', form=form, post=post, settings=settings, cost_preview=cost_preview)
 
 
 @bp.route('/post/<int:post_id>/like', methods=['POST'])

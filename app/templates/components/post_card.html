@@ -19,6 +19,9 @@
                     </a>
                 </h6>
                 <small class="text-muted">{{ post.created_at|timeago }}</small>
+                {% if post.is_promoted %}
+                    <span class="badge bg-warning text-dark ms-2">Sponsorizzato</span>
+                {% endif %}
             </div>
         </div>
         <p class="card-text">{{ post.content }}</p>
@@ -35,6 +38,11 @@
             <a href="{{ url_for('social.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-chat"></i> {{ post.comments_count }}
             </a>
+            {% if current_user.id == post.user_id or current_user.is_admin() %}
+                <a href="{{ url_for('social.promote_post', post_id=post.id) }}" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-megaphone"></i> Sponsorizza
+                </a>
+            {% endif %}
         </div>
     </div>
 </div>

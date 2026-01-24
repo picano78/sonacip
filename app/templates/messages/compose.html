@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Nuovo messaggio{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="mb-3">Nuovo messaggio</h2>
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.recipient.label(class="form-label") }}
+                            {{ form.recipient(class="form-control") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.subject.label(class="form-label") }}
+                            {{ form.subject(class="form-control") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.body.label(class="form-label") }}
+                            {{ form.body(class="form-control", rows="6") }}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Invia</button>
+                        <a href="{{ url_for('messages.inbox') }}" class="btn btn-secondary">Annulla</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

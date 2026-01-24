@@ -3,8 +3,8 @@ Social forms
 """
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import TextAreaField, StringField, BooleanField
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms import TextAreaField, StringField, BooleanField, IntegerField
+from wtforms.validators import DataRequired, Length, Optional, NumberRange
 
 
 class PostForm(FlaskForm):
@@ -45,3 +45,9 @@ class ProfileEditForm(FlaskForm):
 class SearchForm(FlaskForm):
     """Form for searching users/societies"""
     query = StringField('Cerca', validators=[Optional()])
+
+
+class PromotePostForm(FlaskForm):
+    """Form per sponsorizzare un post"""
+    duration_days = IntegerField('Durata (giorni)', validators=[DataRequired(), NumberRange(min=1, max=30)])
+    views = IntegerField('Impression desiderate', validators=[DataRequired(), NumberRange(min=100, max=50000)])

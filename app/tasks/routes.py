@@ -8,6 +8,8 @@ from app import db
 from app.tasks import bp
 from app.models import Task, Project, User, Team
 from app.utils import role_required
+from app.models import Event
+from app.automation.utils import execute_automations
 from datetime import datetime, timedelta
 import json
 
@@ -46,6 +48,26 @@ def index():
                          created_tasks=created_tasks,
                          projects=projects,
                          stats=stats)
+
+
+@bp.route('/planner')
+@login_required
+def planner():
+    """Unified planner for tasks and events"""
+    # Upcoming events: admin sees all, society sees own, others see convocated
+    if current_user.is_admin():
+        events_query = Event.query
+    elif current_user.is_society() or current_user.is_staff():
+        events_query = Event.query.filter_by(creator_id=current_user.id)
+    else:
+        events_query = current_user.events
+
+    events = events_query.order_by(Event.start_date.asc()).limit(20).all()
+
+    # Tasks assigned to me
+    tasks = Task.query.filter_by(assigned_to=current_user.id).order_by(Task.due_date).limit(20).all()
+
+    return render_template('tasks/planner.html', events=events, tasks=tasks)
 
 
 @bp.route('/kanban')
@@ -162,6 +184,9 @@ def create_task():
         
         db.session.add(task)
         db.session.commit()
+
+        # Fire automations for task creation
+        execute_automations('task_created', society_id=task.society_id or current_user.society_id, payload={'task_id': task.id})
         
         flash('Task created successfully!', 'success')
         return redirect(url_for('tasks.index'))
@@ -228,6 +253,9 @@ def update_task(task_id):
     
     task.updated_at = datetime.utcnow()
     db.session.commit()
+
+    # Fire automations for task updates
+    execute_automations('task_updated', society_id=task.society_id or current_user.society_id, payload={'task_id': task.id, 'status': task.status})
     
     return jsonify({'success': True, 'message': 'Task updated'})
 

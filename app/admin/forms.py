@@ -42,3 +42,19 @@ class UserSearchForm(FlaskForm):
         ('verified', 'Verificati'),
         ('unverified', 'Non Verificati')
     ], validators=[Optional()])
+
+
+class PrivacySettingsForm(FlaskForm):
+    """Form per gestire banner privacy/cookie"""
+    banner_enabled = BooleanField('Mostra banner privacy')
+    consent_message = TextAreaField('Messaggio banner', validators=[DataRequired(), Length(max=2000)])
+    privacy_url = StringField('Link privacy policy', validators=[Optional(), Length(max=255)])
+    cookie_url = StringField('Link cookie policy', validators=[Optional(), Length(max=255)])
+
+
+class AdsSettingsForm(FlaskForm):
+    """Form per tariffe inserzioni/promo post"""
+    price_per_day = StringField('Prezzo per giorno (€)', validators=[DataRequired()])
+    price_per_thousand_views = StringField('Prezzo per 1000 visualizzazioni (€)', validators=[DataRequired()])
+    default_duration_days = StringField('Durata predefinita (giorni)', validators=[DataRequired()])
+    default_views = StringField('Impression predefinite', validators=[DataRequired()])

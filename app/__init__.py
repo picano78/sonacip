@@ -3,11 +3,13 @@ Application Factory
 Creates and configures the Flask application instance
 """
 import os
+from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_mail import Mail
+from flask import request
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -62,6 +64,30 @@ def create_app(config_name=None):
     with app.app_context():
         db.create_all()
         create_super_admin()
+
+    # Lightweight auto-backup check on each request (once per hour max)
+    from app.backup.utils import run_scheduled_backup_if_due
+    @app.before_request
+    def auto_backup_middleware():
+        now = datetime.utcnow()
+        last_check = app.config.get('_AUTO_BACKUP_LAST_CHECK')
+        if last_check and (now - last_check).total_seconds() < 3600:
+            return None
+        run_scheduled_backup_if_due(now)
+        app.config['_AUTO_BACKUP_LAST_CHECK'] = now
+
+    # Security headers
+    @app.after_request
+    def apply_security_headers(response):
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+        # Basic CSP; adjust if you add external assets
+        response.headers.setdefault('Content-Security-Policy', "default-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net")
+        if request.is_secure:
+            response.headers.setdefault('Strict-Transport-Security', 'max-age=63072000; includeSubDomains')
+        return response
     
     return app
 
@@ -106,6 +132,10 @@ def register_blueprints(app):
     # Notifications
     from app.notifications import bp as notifications_bp
     app.register_blueprint(notifications_bp, url_prefix='/notifications')
+
+    # Messages
+    from app.messages import bp as messages_bp
+    app.register_blueprint(messages_bp, url_prefix='/messages')
     
     # Backup
     from app.backup import bp as backup_bp
@@ -186,6 +216,7 @@ def register_template_utilities(app):
     def utility_processor():
         """Add utility functions to template context"""
         from flask_login import current_user
+        from app.models import PrivacySetting
         
         def get_unread_notifications_count():
             """Get count of unread notifications for current user"""
@@ -196,9 +227,17 @@ def register_template_utilities(app):
                     is_read=False
                 ).count()
             return 0
+
+        def get_privacy_settings():
+            """Return privacy banner settings with safe defaults"""
+            settings = PrivacySetting.query.first()
+            if not settings:
+                settings = PrivacySetting()
+            return settings
         
         return dict(
             get_unread_notifications_count=get_unread_notifications_count,
+            get_privacy_settings=get_privacy_settings,
             now=datetime.utcnow
         )
 

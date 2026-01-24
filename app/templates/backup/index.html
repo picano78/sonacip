@@ -3,6 +3,8 @@
 {% block content %}
 <div class="container my-4">
     <h1 class="mb-4"><i class="bi bi-database"></i> Gestione Backup</h1>
+    <div class="row g-4">
+        <div class="col-lg-6">
     <div class="card mb-4">
         <div class="card-body">
             <h5 class="card-title">Crea Nuovo Backup</h5>
@@ -25,6 +27,57 @@
                     </div>
                 </div>
             </form>
+            <div class="mt-3">
+                <form method="POST" action="{{ url_for('backup.run_now') }}">
+                    <input type="hidden" name="backup_type" value="{{ settings.backup_type }}">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-lightning"></i> Esegui ora</button>
+                    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('backup.auto_check') }}">Verifica schedulazione</a>
+                </form>
+            </div>
+        </div>
+    </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Backup Automatici</h5>
+                    <form method="POST" action="{{ url_for('backup.save_settings') }}">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="auto_enabled" name="auto_enabled" {% if settings.auto_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="auto_enabled">Abilita backup automatici</label>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Frequenza</label>
+                                <select name="frequency" class="form-select" aria-label="Frequenza">
+                                    <option value="daily" {% if settings.frequency == 'daily' %}selected{% endif %}>Giornaliero</option>
+                                    <option value="weekly" {% if settings.frequency == 'weekly' %}selected{% endif %}>Settimanale</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ora esecuzione (UTC)</label>
+                                <input type="number" min="0" max="23" name="run_hour_utc" class="form-control" value="{{ settings.run_hour_utc or 2 }}">
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo di backup</label>
+                                <select name="backup_type" class="form-select">
+                                    <option value="full" {% if settings.backup_type == 'full' %}selected{% endif %}>Completo</option>
+                                    <option value="database" {% if settings.backup_type == 'database' %}selected{% endif %}>Solo DB</option>
+                                    <option value="uploads" {% if settings.backup_type == 'uploads' %}selected{% endif %}>Solo Upload</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Retention (giorni)</label>
+                                <input type="number" min="1" name="retention_days" class="form-control" value="{{ settings.retention_days or 30 }}">
+                            </div>
+                        </div>
+                        <p class="small text-muted mt-2">Ultimo backup automatico: {{ settings.last_run_at|datetime_format if settings.last_run_at else 'mai' }}</p>
+                        <button type="submit" class="btn btn-primary">Salva impostazioni</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     <div class="card">

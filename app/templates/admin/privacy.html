@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni Privacy{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="mb-3">Banner Privacy e Cookie</h2>
+                    <p class="text-muted">Configura il messaggio mostrato agli utenti e i link alle informative. Solo il super admin può modificare queste impostazioni.</p>
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        <div class="form-check form-switch mb-3">
+                            {{ form.banner_enabled(class="form-check-input", id="bannerEnabled") }}
+                            <label class="form-check-label" for="bannerEnabled">Mostra banner privacy/cookie</label>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.consent_message.label(class="form-label") }}
+                            {{ form.consent_message(class="form-control", rows="4") }}
+                            <small class="text-muted">Testo mostrato nel popup di consenso.</small>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.privacy_url.label(class="form-label") }}
+                            {{ form.privacy_url(class="form-control", placeholder="https://...") }}
+                            <small class="text-muted">Link alla privacy policy</small>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.cookie_url.label(class="form-label") }}
+                            {{ form.cookie_url(class="form-control", placeholder="https://...") }}
+                            <small class="text-muted">Link alla cookie policy</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salva impostazioni</button>
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Annulla</a>
+                        <p class="text-muted mt-3 small">Ultimo aggiornamento: {{ settings.updated_at|datetime_format if settings.updated_at else 'Mai' }}</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

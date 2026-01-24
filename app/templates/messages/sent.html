@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Messaggi inviati{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-send"></i> Messaggi inviati</h2>
+        <a href="{{ url_for('messages.compose') }}" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Nuovo</a>
+    </div>
+    {% if messages %}
+        <div class="list-group">
+            {% for m in messages %}
+                <a href="{{ url_for('messages.view_message', message_id=m.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ m.subject or 'Senza oggetto' }}</h6>
+                        <small class="text-muted">{{ m.created_at|timeago }}</small>
+                    </div>
+                    <p class="mb-1 text-muted">A: {{ m.recipient.get_full_name() }}</p>
+                </a>
+            {% endfor %}
+        </div>
+        {% if pagination.pages > 1 %}
+            <nav class="mt-3" aria-label="Paginazione">
+                <ul class="pagination">
+                    {% if pagination.has_prev %}
+                        <li class="page-item"><a class="page-link" href="{{ url_for('messages.sent', page=pagination.prev_num) }}">&laquo;</a></li>
+                    {% endif %}
+                    {% for p in pagination.iter_pages() %}
+                        {% if p %}
+                            <li class="page-item {% if p == pagination.page %}active{% endif %}"><a class="page-link" href="{{ url_for('messages.sent', page=p) }}">{{ p }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if pagination.has_next %}
+                        <li class="page-item"><a class="page-link" href="{{ url_for('messages.sent', page=pagination.next_num) }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">Nessun messaggio inviato.</div>
+    {% endif %}
+</div>
+{% endblock %}

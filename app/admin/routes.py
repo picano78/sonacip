@@ -7,8 +7,8 @@ from sqlalchemy import or_, func, desc
 from app import db
 from app.admin import bp
 from app.admin.utils import admin_required
-from app.admin.forms import UserEditForm, UserSearchForm
-from app.models import User, Post, Event, Notification, AuditLog, Backup, Comment
+from app.admin.forms import UserEditForm, UserSearchForm, PrivacySettingsForm, AdsSettingsForm
+from app.models import User, Post, Event, Notification, AuditLog, Backup, Comment, PrivacySetting, AdsSetting
 from datetime import datetime, timedelta
 import os
 
@@ -44,6 +44,32 @@ def dashboard():
                          stats=stats,
                          recent_users=recent_users,
                          recent_logs=recent_logs)
+
+
+@bp.route('/privacy', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def privacy_settings():
+    """Gestione banner privacy e cookie"""
+    settings = PrivacySetting.query.first()
+    if not settings:
+        settings = PrivacySetting()
+        db.session.add(settings)
+        db.session.commit()
+    
+    form = PrivacySettingsForm(obj=settings)
+    if form.validate_on_submit():
+        settings.banner_enabled = form.banner_enabled.data
+        settings.consent_message = form.consent_message.data
+        settings.privacy_url = form.privacy_url.data or None
+        settings.cookie_url = form.cookie_url.data or None
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('Impostazioni privacy aggiornate.', 'success')
+        return redirect(url_for('admin.privacy_settings'))
+    
+    return render_template('admin/privacy.html', form=form, settings=settings)
 
 
 @bp.route('/users')
@@ -287,6 +313,32 @@ def logs():
                          pagination=pagination,
                          actions=actions,
                          current_action=action_filter)
+
+
+@bp.route('/ads-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def ads_settings():
+    """Gestione tariffe inserzioni/promo post"""
+    settings = AdsSetting.query.first()
+    if not settings:
+        settings = AdsSetting()
+        db.session.add(settings)
+        db.session.commit()
+
+    form = AdsSettingsForm(obj=settings)
+    if form.validate_on_submit():
+        settings.price_per_day = float(form.price_per_day.data)
+        settings.price_per_thousand_views = float(form.price_per_thousand_views.data)
+        settings.default_duration_days = int(form.default_duration_days.data)
+        settings.default_views = int(form.default_views.data)
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('Tariffe inserzioni aggiornate.', 'success')
+        return redirect(url_for('admin.ads_settings'))
+
+    return render_template('admin/ads_settings.html', form=form, settings=settings)
 
 
 @bp.route('/search')

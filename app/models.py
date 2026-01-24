@@ -247,6 +247,14 @@ class Post(db.Model):
     
     # Visibility
     is_public = db.Column(db.Boolean, default=True)
+
+    # Promotion/ads
+    is_promoted = db.Column(db.Boolean, default=False)
+    promotion_starts_at = db.Column(db.DateTime)
+    promotion_ends_at = db.Column(db.DateTime)
+    promotion_views_target = db.Column(db.Integer)
+    promotion_views = db.Column(db.Integer, default=0)
+    promotion_amount = db.Column(db.Float)  # amount paid for promotion
     
     # Engagement
     likes_count = db.Column(db.Integer, default=0)
@@ -460,6 +468,69 @@ class Backup(db.Model):
     
     def __repr__(self):
         return f'<Backup {self.filename}>'
+
+
+class BackupSetting(db.Model):
+    """
+    Settings for automated backups
+    """
+    __tablename__ = 'backup_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    auto_enabled = db.Column(db.Boolean, default=False)
+    frequency = db.Column(db.String(20), default='weekly')  # daily, weekly
+    backup_type = db.Column(db.String(20), default='full')
+    retention_days = db.Column(db.Integer, default=30)
+    last_run_at = db.Column(db.DateTime)
+    run_hour_utc = db.Column(db.Integer, default=2)  # 0-23 UTC
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<BackupSetting enabled={self.auto_enabled} freq={self.frequency}>'
+
+
+class AdsSetting(db.Model):
+    """
+    Settings for paid insertions/promoted posts
+    """
+    __tablename__ = 'ads_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    price_per_day = db.Column(db.Float, default=5.0)  # EUR per day
+    price_per_thousand_views = db.Column(db.Float, default=2.0)  # CPM
+    default_duration_days = db.Column(db.Integer, default=7)
+    default_views = db.Column(db.Integer, default=500)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<AdsSetting CPM={self.price_per_thousand_views}>'
+
+
+class PrivacySetting(db.Model):
+    """
+    Privacy and cookie consent configuration managed by super admin
+    """
+    __tablename__ = 'privacy_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    banner_enabled = db.Column(db.Boolean, default=True)
+    consent_message = db.Column(db.Text, nullable=False, default='Usiamo cookie tecnici per migliorare la tua esperienza. Leggi l\'informativa privacy per i dettagli.')
+    privacy_url = db.Column(db.String(255))
+    cookie_url = db.Column(db.String(255))
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<PrivacySetting {self.id}>'
 
 
 class Message(db.Model):

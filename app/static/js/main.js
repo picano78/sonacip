@@ -179,4 +179,24 @@ document.addEventListener('DOMContentLoaded', function() {
     backToTopButton.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+
+    // Privacy banner modal handling (configurable by super admin)
+    const privacyModalEl = document.getElementById('privacyModal');
+    if (privacyModalEl) {
+        const currentVersion = privacyModalEl.dataset.privacyVersion || 'v1';
+        const storedVersion = localStorage.getItem('sonacipPrivacyVersion');
+        const privacyModal = new bootstrap.Modal(privacyModalEl);
+        const acceptBtn = document.getElementById('acceptPrivacyBtn');
+
+        if (storedVersion !== currentVersion) {
+            privacyModal.show();
+        }
+
+        if (acceptBtn) {
+            acceptBtn.addEventListener('click', () => {
+                localStorage.setItem('sonacipPrivacyVersion', currentVersion);
+                privacyModal.hide();
+            });
+        }
+    }
 });

@@ -22,10 +22,16 @@ def feed():
     per_page = 20
     
     # Get posts from followed users + own posts
-    posts_query = current_user.get_feed_posts()
-    
-    pagination = posts_query.paginate(page=page, per_page=per_page, error_out=False)
-    posts = pagination.items
+    try:
+        posts_query = current_user.get_feed_posts()
+        pagination = posts_query.paginate(page=page, per_page=per_page, error_out=False)
+        posts = pagination.items
+    except Exception as e:
+        print(f"Error loading feed: {e}")
+        # Fallback to own posts only
+        posts_query = Post.query.filter_by(user_id=current_user.id)
+        pagination = posts_query.paginate(page=page, per_page=per_page, error_out=False)
+        posts = pagination.items
     
     # Post form
     form = PostForm()

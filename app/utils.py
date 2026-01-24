@@ -156,3 +156,83 @@ def get_user_society(user):
         return User.query.get(user.athlete_society_id)
     
     return None
+
+
+def permission_required(resource, action):
+    """
+    Decorator to require a specific permission
+    Usage: @permission_required('users', 'edit')
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                flash('Effettua il login per accedere a questa pagina.', 'warning')
+                return redirect(url_for('auth.login'))
+            
+            if not current_user.has_permission(resource, action):
+                flash('Non hai i permessi necessari per questa azione.', 'danger')
+                abort(403)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+def feature_required(feature_name):
+    """
+    Decorator to require a specific plan feature
+    Usage: @feature_required('crm')
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                flash('Effettua il login per accedere a questa pagina.', 'warning')
+                return redirect(url_for('auth.login'))
+            
+            if not current_user.has_feature(feature_name):
+                flash(f'Questa funzionalità richiede un piano superiore.', 'warning')
+                return redirect(url_for('main.dashboard'))
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+def safe_get_or_404(model, entity_id, error_message=None):
+    """
+    Safely get an entity or return 404
+    """
+    entity = model.query.get(entity_id)
+    if not entity:
+        if error_message:
+            flash(error_message, 'warning')
+        abort(404)
+    return entity
+
+
+def log_action(action, entity_type=None, entity_id=None, details=None):
+    """
+    Log an action to the audit log
+    """
+    from app.models import AuditLog
+    from app import db
+    from flask import request
+    
+    if current_user.is_authenticated:
+        log = AuditLog(
+            user_id=current_user.id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            details=details,
+            ip_address=request.remote_addr if request else None
+        )
+        db.session.add(log)
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            # Log to console but don't fail the main operation
+            print(f"Warning: Failed to log action: {e}")

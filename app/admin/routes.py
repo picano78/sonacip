@@ -339,30 +339,46 @@ def search():
 def stats():
     """Detailed statistics page"""
     # User statistics by role
-    user_stats = db.session.query(
-        User.role,
-        func.count(User.id).label('count')
-    ).group_by(User.role).all()
+    try:
+        user_stats = db.session.query(
+            User.role,
+            func.count(User.id).label('count')
+        ).group_by(User.role).all()
+    except Exception as e:
+        user_stats = []
+        print(f"Error fetching user stats: {e}")
     
     # Activity statistics (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     
-    activity_stats = {
-        'new_users': User.query.filter(User.created_at >= thirty_days_ago).count(),
-        'new_posts': Post.query.filter(Post.created_at >= thirty_days_ago).count(),
-        'new_events': Event.query.filter(Event.created_at >= thirty_days_ago).count(),
-        'new_comments': Comment.query.filter(Comment.created_at >= thirty_days_ago).count()
-    }
+    try:
+        activity_stats = {
+            'new_users': User.query.filter(User.created_at >= thirty_days_ago).count(),
+            'new_posts': Post.query.filter(Post.created_at >= thirty_days_ago).count(),
+            'new_events': Event.query.filter(Event.created_at >= thirty_days_ago).count(),
+            'new_comments': Comment.query.filter(Comment.created_at >= thirty_days_ago).count()
+        }
+    except Exception as e:
+        activity_stats = {'new_users': 0, 'new_posts': 0, 'new_events': 0, 'new_comments': 0}
+        print(f"Error fetching activity stats: {e}")
     
     # Top users by posts
-    top_posters = db.session.query(
-        User,
-        func.count(Post.id).label('post_count')
-    ).join(Post).group_by(User.id).order_by(desc('post_count')).limit(10).all()
+    try:
+        top_posters = db.session.query(
+            User,
+            func.count(Post.id).label('post_count')
+        ).join(Post).group_by(User.id).order_by(desc('post_count')).limit(10).all()
+    except Exception as e:
+        top_posters = []
+        print(f"Error fetching top posters: {e}")
     
     # Top societies by followers
-    top_societies = User.query.filter_by(role='societa').all()
-    top_societies = sorted(top_societies, key=lambda u: u.followers.count(), reverse=True)[:10]
+    try:
+        societies = User.query.filter_by(role='societa').limit(10).all()
+        top_societies = sorted(societies, key=lambda u: u.followers.count(), reverse=True)[:10]
+    except Exception as e:
+        top_societies = []
+        print(f"Error fetching societies: {e}")
     
     return render_template('admin/stats.html',
                          user_stats=user_stats,

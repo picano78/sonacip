@@ -40,7 +40,10 @@ def index():
     open_opportunities = len([o for o in opportunities if o.stage not in ['closed_won', 'closed_lost']])
     won_opportunities = len([o for o in opportunities if o.stage == 'closed_won'])
     
-    total_value = sum([float(o.value or 0) for o in opportunities if o.stage not in ['closed_lost']])
+    try:
+        total_value = sum([float(o.value or 0) for o in opportunities if o.value and o.stage not in ['closed_lost']])
+    except (ValueError, TypeError):
+        total_value = 0
     
     return render_template('crm/index.html',
                          total_contacts=total_contacts,

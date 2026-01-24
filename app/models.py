@@ -156,6 +156,80 @@ class User(UserMixin, db.Model):
             return f"{self.first_name} {self.last_name}"
         return self.username
     
+    def has_permission(self, resource, action):
+        """
+        Check if user has a specific permission
+        Super admin always has all permissions
+        """
+        if self.is_admin():
+            return True
+        
+        # Get role object from database
+        role_obj = Role.query.filter_by(name=self.role).first()
+        if not role_obj:
+            return False
+        
+        # Check if role has the permission
+        perm = Permission.query.filter_by(resource=resource, action=action).first()
+        if not perm:
+            return False
+        
+        return perm in role_obj.permissions.all()
+    
+    def get_active_subscription(self):
+        """Get user's active subscription"""
+        from app.models import Subscription
+        return Subscription.query.filter_by(
+            user_id=self.id, 
+            status='active'
+        ).first()
+    
+    def has_feature(self, feature_name):
+        """
+        Check if user has access to a specific feature based on their plan
+        """
+        if self.is_admin():
+            return True
+        
+        subscription = self.get_active_subscription()
+        if not subscription or not subscription.plan:
+            # No active subscription - check free plan limits
+            return False
+        
+        plan = subscription.plan
+        feature_map = {
+            'crm': plan.has_crm,
+            'advanced_stats': plan.has_advanced_stats,
+            'api_access': plan.has_api_access,
+            'white_label': plan.has_white_label,
+            'priority_support': plan.has_priority_support
+        }
+        
+        return feature_map.get(feature_name, False)
+    
+    def can_add_athlete(self):
+        """Check if user can add more athletes based on plan limits"""
+        if self.is_admin():
+            return True
+        
+        if not self.is_society():
+            return False
+        
+        subscription = self.get_active_subscription()
+        if not subscription or not subscription.plan:
+            return False
+        
+        plan = subscription.plan
+        if plan.max_athletes is None:  # Unlimited
+            return True
+        
+        current_athletes = User.query.filter_by(
+            athlete_society_id=self.id,
+            is_active=True
+        ).count()
+        
+        return current_athletes < plan.max_athletes
+    
     def __repr__(self):
         return f'<User {self.username}>'
 
@@ -526,3 +600,250 @@ class CRMActivity(db.Model):
     
     def __repr__(self):
         return f'<CRMActivity {self.id}: {self.activity_type}>'
+
+
+# ================================================================================
+# SAAS MODELS - Roles, Permissions, Plans, Subscriptions, Payments
+# ================================================================================
+
+class Role(db.Model):
+    """
+    Role model for RBAC (Role-Based Access Control)
+    Provides more granular control than simple string roles
+    """
+    __tablename__ = 'role'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    display_name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Role hierarchy level (higher = more permissions)
+    level = db.Column(db.Integer, default=0)
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True)
+    is_system = db.Column(db.Boolean, default=False)  # System roles cannot be deleted
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Role {self.name}>'
+
+
+# Association table for roles and permissions
+role_permissions = db.Table('role_permissions',
+    db.Column('role_id', db.Integer, db.ForeignKey('role.id'), primary_key=True),
+    db.Column('permission_id', db.Integer, db.ForeignKey('permission.id'), primary_key=True),
+    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+)
+
+
+class Permission(db.Model):
+    """
+    Permission model for fine-grained access control
+    """
+    __tablename__ = 'permission'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    resource = db.Column(db.String(50), nullable=False)  # users, posts, events, crm, etc.
+    action = db.Column(db.String(50), nullable=False)  # create, read, update, delete, manage
+    description = db.Column(db.Text)
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    roles = db.relationship('Role', secondary=role_permissions,
+                           backref=db.backref('permissions', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<Permission {self.resource}:{self.action}>'
+
+
+class Plan(db.Model):
+    """
+    Subscription plan model for SaaS monetization
+    """
+    __tablename__ = 'plan'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    
+    # Pricing
+    price_monthly = db.Column(db.Float, default=0)
+    price_yearly = db.Column(db.Float, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+    
+    # Features and limits
+    max_users = db.Column(db.Integer)  # null = unlimited
+    max_athletes = db.Column(db.Integer)
+    max_events = db.Column(db.Integer)
+    max_storage_mb = db.Column(db.Integer)
+    
+    # Feature flags
+    has_crm = db.Column(db.Boolean, default=False)
+    has_advanced_stats = db.Column(db.Boolean, default=False)
+    has_api_access = db.Column(db.Boolean, default=False)
+    has_white_label = db.Column(db.Boolean, default=False)
+    has_priority_support = db.Column(db.Boolean, default=False)
+    
+    # Display and ordering
+    is_active = db.Column(db.Boolean, default=True)
+    is_featured = db.Column(db.Boolean, default=False)
+    display_order = db.Column(db.Integer, default=0)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Plan {self.name}>'
+
+
+class Subscription(db.Model):
+    """
+    Subscription model linking users to plans
+    """
+    __tablename__ = 'subscription'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+    
+    # Subscription details
+    status = db.Column(db.String(20), default='active')  # active, cancelled, expired, trial, suspended
+    billing_cycle = db.Column(db.String(20), default='monthly')  # monthly, yearly
+    
+    # Dates
+    start_date = db.Column(db.DateTime, default=datetime.utcnow)
+    end_date = db.Column(db.DateTime)
+    trial_end_date = db.Column(db.DateTime)
+    cancelled_at = db.Column(db.DateTime)
+    
+    # Billing
+    next_billing_date = db.Column(db.DateTime)
+    amount = db.Column(db.Float)
+    
+    # Auto-renewal
+    auto_renew = db.Column(db.Boolean, default=True)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('subscriptions', lazy='dynamic'))
+    plan = db.relationship('Plan', backref='subscriptions')
+    
+    def is_active(self):
+        """Check if subscription is currently active"""
+        return self.status == 'active' and (not self.end_date or self.end_date > datetime.utcnow())
+    
+    def is_trial(self):
+        """Check if subscription is in trial period"""
+        return self.status == 'trial' and (not self.trial_end_date or self.trial_end_date > datetime.utcnow())
+    
+    def __repr__(self):
+        return f'<Subscription {self.id}: User {self.user_id} - Plan {self.plan_id}>'
+
+
+class Payment(db.Model):
+    """
+    Payment transaction model
+    """
+    __tablename__ = 'payment'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'))
+    
+    # Payment details
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='EUR')
+    status = db.Column(db.String(20), default='pending')  # pending, completed, failed, refunded
+    payment_method = db.Column(db.String(50))  # card, paypal, bank_transfer, etc.
+    
+    # Transaction references
+    transaction_id = db.Column(db.String(255), unique=True)
+    gateway = db.Column(db.String(50))  # stripe, paypal, etc.
+    gateway_response = db.Column(db.Text)  # JSON response from payment gateway
+    
+    # Dates
+    payment_date = db.Column(db.DateTime)
+    
+    # Description and metadata
+    description = db.Column(db.String(255))
+    payment_metadata = db.Column(db.Text)  # JSON metadata (renamed from 'metadata' to avoid SQLAlchemy reserved word)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='payments')
+    subscription = db.relationship('Subscription', backref='payments')
+    
+    def __repr__(self):
+        return f'<Payment {self.id}: {self.amount} {self.currency} - {self.status}>'
+
+
+class Society(db.Model):
+    """
+    Society (Sports Club) extended model
+    Separates society data from User model for better organization
+    """
+    __tablename__ = 'society'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    
+    # Legal information
+    legal_name = db.Column(db.String(200), nullable=False)
+    company_type = db.Column(db.String(50))  # ASD, SSD, SRL, etc.
+    vat_number = db.Column(db.String(50), unique=True)
+    fiscal_code = db.Column(db.String(50), unique=True)
+    registration_number = db.Column(db.String(100))
+    
+    # Contact information
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    pec = db.Column(db.String(120))  # Certified email for Italian companies
+    website = db.Column(db.String(255))
+    
+    # Address
+    address = db.Column(db.String(255))
+    city = db.Column(db.String(100))
+    province = db.Column(db.String(2))
+    postal_code = db.Column(db.String(10))
+    country = db.Column(db.String(2), default='IT')
+    
+    # Sports information
+    sport_categories = db.Column(db.Text)  # JSON array of sports
+    foundation_year = db.Column(db.Integer)
+    
+    # Settings
+    logo = db.Column(db.String(255))
+    brand_color = db.Column(db.String(7))  # Hex color
+    
+    # Stats and metadata
+    total_athletes = db.Column(db.Integer, default=0)
+    total_staff = db.Column(db.Integer, default=0)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('society_profile', uselist=False))
+    
+    def __repr__(self):
+        return f'<Society {self.legal_name}>'

@@ -114,6 +114,10 @@ def register_blueprints(app):
     # CRM
     from app.crm import bp as crm_bp
     app.register_blueprint(crm_bp, url_prefix='/crm')
+    
+    # Subscription
+    from app.subscription import bp as subscription_bp
+    app.register_blueprint(subscription_bp, url_prefix='/subscription')
 
 
 def register_error_handlers(app):
@@ -192,9 +196,19 @@ def register_template_utilities(app):
 
 
 def create_super_admin():
-    """Create default super admin if not exists"""
-    from app.models import User
+    """Create default super admin and initialize base data if not exists"""
+    from app.models import User, Role, Permission, Plan
     
+    # Initialize base roles
+    init_roles()
+    
+    # Initialize base permissions
+    init_permissions()
+    
+    # Initialize default plans
+    init_plans()
+    
+    # Create super admin user
     admin = User.query.filter_by(role='super_admin').first()
     if not admin:
         admin = User(
@@ -209,4 +223,197 @@ def create_super_admin():
         admin.set_password('admin123')  # Change this in production!
         db.session.add(admin)
         db.session.commit()
-        print('Super Admin created: admin@sonacip.it / admin123')
+        print('✓ Super Admin created: admin@sonacip.it / admin123')
+
+
+def init_roles():
+    """Initialize base roles"""
+    from app.models import Role
+    
+    base_roles = [
+        {
+            'name': 'super_admin',
+            'display_name': 'Super Amministratore',
+            'description': 'Accesso completo a tutte le funzionalità del sistema',
+            'level': 100,
+            'is_system': True
+        },
+        {
+            'name': 'societa',
+            'display_name': 'Società Sportiva',
+            'description': 'Gestione completa della propria società',
+            'level': 50,
+            'is_system': True
+        },
+        {
+            'name': 'staff',
+            'display_name': 'Staff',
+            'description': 'Membro dello staff di una società',
+            'level': 30,
+            'is_system': True
+        },
+        {
+            'name': 'atleta',
+            'display_name': 'Atleta',
+            'description': 'Atleta affiliato a una società',
+            'level': 20,
+            'is_system': True
+        },
+        {
+            'name': 'appassionato',
+            'display_name': 'Appassionato',
+            'description': 'Utente base della piattaforma',
+            'level': 10,
+            'is_system': True
+        }
+    ]
+    
+    for role_data in base_roles:
+        existing = Role.query.filter_by(name=role_data['name']).first()
+        if not existing:
+            role = Role(**role_data)
+            db.session.add(role)
+    
+    db.session.commit()
+
+
+def init_permissions():
+    """Initialize base permissions"""
+    from app.models import Permission, Role
+    
+    base_permissions = [
+        # User management
+        {'name': 'users_view_all', 'resource': 'users', 'action': 'view_all', 'description': 'Visualizzare tutti gli utenti'},
+        {'name': 'users_create', 'resource': 'users', 'action': 'create', 'description': 'Creare nuovi utenti'},
+        {'name': 'users_edit', 'resource': 'users', 'action': 'edit', 'description': 'Modificare utenti'},
+        {'name': 'users_delete', 'resource': 'users', 'action': 'delete', 'description': 'Eliminare utenti'},
+        
+        # Society management
+        {'name': 'society_manage', 'resource': 'society', 'action': 'manage', 'description': 'Gestire la propria società'},
+        {'name': 'society_manage_staff', 'resource': 'society', 'action': 'manage_staff', 'description': 'Gestire lo staff'},
+        {'name': 'society_manage_athletes', 'resource': 'society', 'action': 'manage_athletes', 'description': 'Gestire gli atleti'},
+        
+        # Events
+        {'name': 'events_create', 'resource': 'events', 'action': 'create', 'description': 'Creare eventi'},
+        {'name': 'events_manage', 'resource': 'events', 'action': 'manage', 'description': 'Gestire eventi'},
+        {'name': 'events_view', 'resource': 'events', 'action': 'view', 'description': 'Visualizzare eventi'},
+        
+        # CRM
+        {'name': 'crm_access', 'resource': 'crm', 'action': 'access', 'description': 'Accedere al CRM'},
+        {'name': 'crm_manage', 'resource': 'crm', 'action': 'manage', 'description': 'Gestire contatti e opportunità'},
+        
+        # Social
+        {'name': 'social_post', 'resource': 'social', 'action': 'post', 'description': 'Pubblicare post'},
+        {'name': 'social_comment', 'resource': 'social', 'action': 'comment', 'description': 'Commentare'},
+        
+        # Admin
+        {'name': 'admin_access', 'resource': 'admin', 'action': 'access', 'description': 'Accedere al pannello admin'},
+        {'name': 'admin_logs', 'resource': 'admin', 'action': 'logs', 'description': 'Visualizzare i log'},
+        {'name': 'admin_backup', 'resource': 'admin', 'action': 'backup', 'description': 'Gestire i backup'},
+    ]
+    
+    for perm_data in base_permissions:
+        existing = Permission.query.filter_by(name=perm_data['name']).first()
+        if not existing:
+            perm = Permission(**perm_data)
+            db.session.add(perm)
+    
+    db.session.commit()
+    
+    # Assign permissions to super_admin role
+    super_admin_role = Role.query.filter_by(name='super_admin').first()
+    if super_admin_role:
+        all_perms = Permission.query.all()
+        for perm in all_perms:
+            if perm not in super_admin_role.permissions:
+                super_admin_role.permissions.append(perm)
+        db.session.commit()
+
+
+def init_plans():
+    """Initialize default subscription plans"""
+    from app.models import Plan
+    
+    base_plans = [
+        {
+            'name': 'Free',
+            'slug': 'free',
+            'description': 'Piano base gratuito',
+            'price_monthly': 0,
+            'price_yearly': 0,
+            'max_users': 5,
+            'max_athletes': 20,
+            'max_events': 10,
+            'max_storage_mb': 100,
+            'has_crm': False,
+            'has_advanced_stats': False,
+            'has_api_access': False,
+            'has_white_label': False,
+            'has_priority_support': False,
+            'is_active': True,
+            'display_order': 1
+        },
+        {
+            'name': 'Basic',
+            'slug': 'basic',
+            'description': 'Piano per piccole società sportive',
+            'price_monthly': 29.99,
+            'price_yearly': 299.99,
+            'max_users': 20,
+            'max_athletes': 100,
+            'max_events': 50,
+            'max_storage_mb': 1000,
+            'has_crm': True,
+            'has_advanced_stats': False,
+            'has_api_access': False,
+            'has_white_label': False,
+            'has_priority_support': False,
+            'is_active': True,
+            'display_order': 2
+        },
+        {
+            'name': 'Professional',
+            'slug': 'professional',
+            'description': 'Piano completo per società professionali',
+            'price_monthly': 79.99,
+            'price_yearly': 799.99,
+            'max_users': None,  # unlimited
+            'max_athletes': None,
+            'max_events': None,
+            'max_storage_mb': 10000,
+            'has_crm': True,
+            'has_advanced_stats': True,
+            'has_api_access': True,
+            'has_white_label': False,
+            'has_priority_support': True,
+            'is_active': True,
+            'is_featured': True,
+            'display_order': 3
+        },
+        {
+            'name': 'Enterprise',
+            'slug': 'enterprise',
+            'description': 'Soluzione personalizzata per grandi organizzazioni',
+            'price_monthly': 199.99,
+            'price_yearly': 1999.99,
+            'max_users': None,
+            'max_athletes': None,
+            'max_events': None,
+            'max_storage_mb': None,
+            'has_crm': True,
+            'has_advanced_stats': True,
+            'has_api_access': True,
+            'has_white_label': True,
+            'has_priority_support': True,
+            'is_active': True,
+            'display_order': 4
+        }
+    ]
+    
+    for plan_data in base_plans:
+        existing = Plan.query.filter_by(slug=plan_data['slug']).first()
+        if not existing:
+            plan = Plan(**plan_data)
+            db.session.add(plan)
+    
+    db.session.commit()

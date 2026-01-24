@@ -1,7 +1,7 @@
 """
 Comprehensive test suite for automation system.
 """
-import pytest
+import pytest  # type: ignore
 import json
 from datetime import datetime
 from app import create_app, db

@@ -354,6 +354,7 @@ def register_template_utilities(app):
 def create_super_admin():
     """Create default super admin and initialize base data if not exists"""
     from app.models import User, Role, Permission, Plan, SocialSetting, AppearanceSetting
+    from flask import current_app
 
     # Initialize base roles/permissions/plans (idempotent)
     init_roles()
@@ -367,6 +368,19 @@ def create_super_admin():
     if not AppearanceSetting.query.filter_by(scope='global').first():
         db.session.add(AppearanceSetting(scope='global'))
         db.session.commit()
+
+    # Sync legacy role column to role_id when missing
+    try:
+        users_missing_role = User.query.filter(User.role_id.is_(None)).all()
+        if users_missing_role:
+            for user in users_missing_role:
+                legacy_name = getattr(user, 'role_legacy', None) or 'appassionato'
+                role_obj = Role.query.filter_by(name=legacy_name).first() or Role.query.filter_by(name='appassionato').first()
+                if role_obj:
+                    user.role_obj = role_obj
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
 
     # Create super admin user on empty databases
     admin = User.query.join(Role, User.role_id == Role.id).filter(Role.name == 'super_admin').first()
@@ -385,7 +399,14 @@ def create_super_admin():
         admin.set_password('admin123')  # Change this in production!
         db.session.add(admin)
         db.session.commit()
-        print('✓ Super Admin created: admin@sonacip.it / admin123')
+        current_app.logger.info('Bootstrap: Super Admin created (admin@sonacip.it)')
+
+    # Log bootstrap execution when DB is empty
+    try:
+        if User.query.count() == 1 and Role.query.count() > 0 and Permission.query.count() > 0 and Plan.query.count() > 0:
+            current_app.logger.info('Bootstrap: base roles, permissions, plans initialized')
+    except Exception:
+        pass
 
 
 def init_roles():
@@ -493,6 +514,20 @@ def init_permissions():
         {'name': 'admin_access', 'resource': 'admin', 'action': 'access', 'description': 'Accedere al pannello admin'},
         {'name': 'admin_logs', 'resource': 'admin', 'action': 'logs', 'description': 'Visualizzare i log'},
         {'name': 'admin_backup', 'resource': 'admin', 'action': 'backup', 'description': 'Gestire i backup'},
+
+        # Analytics
+        {'name': 'analytics_access', 'resource': 'analytics', 'action': 'access', 'description': 'Accedere alle analytics'},
+
+        # Tasks/Projects
+        {'name': 'tasks_manage', 'resource': 'tasks', 'action': 'manage', 'description': 'Gestire task e progetti'},
+
+        # Tournaments
+        {'name': 'tournaments_view', 'resource': 'tournaments', 'action': 'view', 'description': 'Visualizzare tornei'},
+        {'name': 'tournaments_manage', 'resource': 'tournaments', 'action': 'manage', 'description': 'Gestire tornei'},
+
+        # Society Calendar
+        {'name': 'calendar_view', 'resource': 'calendar', 'action': 'view', 'description': 'Visualizzare calendario società'},
+        {'name': 'calendar_manage', 'resource': 'calendar', 'action': 'manage', 'description': 'Gestire calendario società'},
     ]
     
     for perm_data in base_permissions:
@@ -525,12 +560,82 @@ def init_permissions():
             'crm_access',
             'crm_manage',
             'social_post',
-            'social_comment'
+            'social_comment',
+            'analytics_access',
+            'tasks_manage',
+            'tournaments_view',
+            'tournaments_manage',
+            'calendar_view',
+            'calendar_manage'
         ]
         perms = Permission.query.filter(Permission.name.in_(default_perm_names)).all()
         for perm in perms:
             if perm not in society_admin_role.permissions:
                 society_admin_role.permissions.append(perm)
+        db.session.commit()
+
+    # Give staff/coaches limited permissions
+    staff_role = Role.query.filter_by(name='staff').first()
+    if staff_role:
+        staff_perm_names = [
+            'events_view',
+            'events_create',
+            'crm_access',
+            'crm_manage',
+            'social_post',
+            'social_comment',
+            'tasks_manage',
+            'tournaments_view',
+            'calendar_view'
+        ]
+        perms = Permission.query.filter(Permission.name.in_(staff_perm_names)).all()
+        for perm in perms:
+            if perm not in staff_role.permissions:
+                staff_role.permissions.append(perm)
+        db.session.commit()
+
+    coach_role = Role.query.filter_by(name='coach').first()
+    if coach_role:
+        coach_perm_names = [
+            'events_view',
+            'events_create',
+            'social_post',
+            'social_comment',
+            'tournaments_view',
+            'calendar_view'
+        ]
+        perms = Permission.query.filter(Permission.name.in_(coach_perm_names)).all()
+        for perm in perms:
+            if perm not in coach_role.permissions:
+                coach_role.permissions.append(perm)
+        db.session.commit()
+
+    athlete_role = Role.query.filter_by(name='atleta').first()
+    if athlete_role:
+        athlete_perm_names = [
+            'events_view',
+            'social_post',
+            'social_comment',
+            'calendar_view'
+        ]
+        perms = Permission.query.filter(Permission.name.in_(athlete_perm_names)).all()
+        for perm in perms:
+            if perm not in athlete_role.permissions:
+                athlete_role.permissions.append(perm)
+        db.session.commit()
+
+    athlete_en_role = Role.query.filter_by(name='athlete').first()
+    if athlete_en_role:
+        athlete_perm_names = [
+            'events_view',
+            'social_post',
+            'social_comment',
+            'calendar_view'
+        ]
+        perms = Permission.query.filter(Permission.name.in_(athlete_perm_names)).all()
+        for perm in perms:
+            if perm not in athlete_en_role.permissions:
+                athlete_en_role.permissions.append(perm)
         db.session.commit()
 
 

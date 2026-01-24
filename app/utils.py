@@ -7,75 +7,34 @@ from flask_login import current_user
 
 
 def admin_required(f):
-    """
-    Decorator to require super_admin role
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash('Effettua il login per accedere a questa pagina.', 'warning')
-            return redirect(url_for('auth.login'))
-        
-        if not current_user.is_admin():
-            flash('Accesso negato. Area riservata agli amministratori.', 'danger')
-            return redirect(url_for('main.dashboard'))
-        
-        return f(*args, **kwargs)
-    return decorated_function
+    """Decorator to require admin access permission."""
+    return permission_required('admin', 'access')(f)
 
 
 def society_required(f):
-    """
-    Decorator to require societa role
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash('Effettua il login per accedere a questa pagina.', 'warning')
-            return redirect(url_for('auth.login'))
-        
-        if not current_user.is_society():
-            flash('Accesso negato. Area riservata alle società sportive.', 'danger')
-            return redirect(url_for('main.dashboard'))
-        
-        return f(*args, **kwargs)
-    return decorated_function
+    """Decorator to require society management permission."""
+    return permission_required('society', 'manage')(f)
 
 
 def staff_or_society_required(f):
-    """
-    Decorator to require staff or societa role
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash('Effettua il login per accedere a questa pagina.', 'warning')
-            return redirect(url_for('auth.login'))
-        
-        if not (current_user.is_staff() or current_user.is_society()):
-            flash('Accesso negato. Area riservata a staff e società.', 'danger')
-            return redirect(url_for('main.dashboard'))
-        
-        return f(*args, **kwargs)
-    return decorated_function
+    """Decorator to require society staff management permission."""
+    return permission_required('society', 'manage_staff')(f)
 
 
 def role_required(*allowed_roles):
-    """
-    Decorator to require specific roles
-    Usage: @role_required('super_admin', 'societa', 'staff')
-    """
+    """Legacy role-based decorator (deprecated). Prefer permission_required."""
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 flash('Effettua il login per accedere a questa pagina.', 'warning')
                 return redirect(url_for('auth.login'))
-            
+            # Fallback to permission checks mapped to legacy role expectations
+            if current_user.is_admin():
+                return f(*args, **kwargs)
             if current_user.role not in allowed_roles:
                 flash('Accesso negato. Non hai i permessi necessari.', 'danger')
                 return redirect(url_for('main.dashboard'))
-            
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -90,6 +49,10 @@ def can_manage_user(user):
     if not current_user.is_authenticated:
         return False
     
+    # Permission required to manage users
+    if not current_user.has_permission('users', 'edit'):
+        return False
+
     # Super admin can manage everyone
     if current_user.is_admin():
         return True
@@ -99,10 +62,11 @@ def can_manage_user(user):
         return False
     
     # Society can manage their staff and athletes
-    if current_user.is_society():
-        if user.is_staff() and user.society_id == current_user.id:
+    society = current_user.get_primary_society()
+    if society:
+        if user.is_staff() and user.society_id == society.id:
             return True
-        if user.is_athlete() and user.athlete_society_id == current_user.id:
+        if user.is_athlete() and user.athlete_society_id == society.id:
             return True
     
     return False
@@ -115,8 +79,8 @@ def can_view_user(user):
     if not current_user.is_authenticated:
         return False
     
-    # Super admin can view everyone
-    if current_user.is_admin():
+    # Permission to view all users
+    if current_user.has_permission('users', 'view_all'):
         return True
     
     # Everyone can view their own profile
@@ -124,10 +88,11 @@ def can_view_user(user):
         return True
     
     # Society can view their staff and athletes
-    if current_user.is_society():
-        if user.is_staff() and user.society_id == current_user.id:
+    society = current_user.get_primary_society()
+    if society:
+        if user.is_staff() and user.society_id == society.id:
             return True
-        if user.is_athlete() and user.athlete_society_id == current_user.id:
+        if user.is_athlete() and user.athlete_society_id == society.id:
             return True
     
     # Staff can view athletes of their society
@@ -158,9 +123,9 @@ def get_user_society(user):
     return None
 
 
-def permission_required(resource, action):
+def permission_required(resource, action, society_id_param=None, society_id_func=None):
     """
-    Decorator to require a specific permission
+    Decorator to require a specific permission with optional society scoping.
     Usage: @permission_required('users', 'edit')
     """
     def decorator(f):
@@ -169,11 +134,22 @@ def permission_required(resource, action):
             if not current_user.is_authenticated:
                 flash('Effettua il login per accedere a questa pagina.', 'warning')
                 return redirect(url_for('auth.login'))
-            
+
             if not current_user.has_permission(resource, action):
                 flash('Non hai i permessi necessari per questa azione.', 'danger')
                 abort(403)
-            
+
+            # Society scope enforcement
+            if not current_user.is_admin():
+                scope_id = None
+                if society_id_param:
+                    scope_id = kwargs.get(society_id_param)
+                elif society_id_func:
+                    scope_id = society_id_func(*args, **kwargs)
+                if scope_id and not current_user.can_access_society(scope_id):
+                    flash('Permessi limitati alla tua società.', 'danger')
+                    abort(403)
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator

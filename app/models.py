@@ -65,7 +65,7 @@ class User(UserMixin, db.Model):
     cover_photo = db.Column(db.String(255))  # path to cover photo
     
     # Role and type (database-driven)
-    role = db.Column(db.String(50), nullable=True, server_default='super_admin')  # Legacy compatibility
+    role_legacy = db.Column('role', db.String(50), nullable=True, server_default='super_admin')  # Legacy compatibility
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     
     # For Società Sportiva
@@ -97,6 +97,7 @@ class User(UserMixin, db.Model):
     
     # Relationships
     role_obj = db.relationship('Role', foreign_keys=[role_id])
+    permission_overrides = db.relationship('UserPermissionOverride', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('staff_members', lazy='dynamic'))
     athlete_society = db.relationship('Society', foreign_keys=[athlete_society_id], backref=db.backref('athletes', lazy='dynamic'))
     posts = db.relationship('Post', backref='author', lazy='dynamic', 
@@ -170,6 +171,7 @@ class User(UserMixin, db.Model):
             # Fallback to base role to avoid invalid references
             role_obj = Role.query.filter_by(name='appassionato').first()
         self.role_obj = role_obj
+        self.role_legacy = role_name
 
     @property
     def role_display_name(self):
@@ -226,7 +228,21 @@ class User(UserMixin, db.Model):
         if not perm:
             return False
         
-        return perm in self.role_obj.permissions.all()
+        base_allowed = perm in self.role_obj.permissions.all()
+        override = UserPermissionOverride.query.filter_by(user_id=self.id, permission_id=perm.id).first()
+        if override:
+            return True if override.effect == 'allow' else False
+
+        return base_allowed
+
+    def can_access_society(self, society_id: int | None) -> bool:
+        """Return True if user is scoped to the given society (or no scope requested)."""
+        if not society_id:
+            return True
+        society = self.get_primary_society()
+        if not society:
+            return False
+        return society.id == society_id
 
     def get_primary_society(self):
         """Return Society entity for this user, if any."""
@@ -959,6 +975,24 @@ class Permission(db.Model):
     
     def __repr__(self):
         return f'<Permission {self.resource}:{self.action}>'
+
+
+class UserPermissionOverride(db.Model):
+    """
+    Per-user permission overrides (allow/deny) applied after role permissions.
+    """
+    __tablename__ = 'user_permission_override'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    permission_id = db.Column(db.Integer, db.ForeignKey('permission.id'), nullable=False)
+    effect = db.Column(db.String(10), default='allow')  # allow or deny
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    permission = db.relationship('Permission', backref=db.backref('user_overrides', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<UserPermissionOverride user={self.user_id} perm={self.permission_id} {self.effect}>'
 
 
 class Plan(db.Model):

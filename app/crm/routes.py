@@ -8,25 +8,35 @@ from app import db
 from app.crm import bp
 from app.crm.forms import ContactForm, OpportunityForm, ActivityForm
 from app.models import Contact, Opportunity, CRMActivity, User, AuditLog
+from app.utils import permission_required
 from datetime import datetime
+
+
+def _society_scope_id():
+    if current_user.is_admin():
+        return None
+    society = current_user.get_primary_society()
+    return society.id if society else None
+
+
+def _enforce_scope(entity_society_id, redirect_endpoint):
+    scope_id = _society_scope_id()
+    if scope_id and entity_society_id != scope_id:
+        flash('Accesso non autorizzato.', 'danger')
+        return redirect(url_for(redirect_endpoint))
+    return None
 
 
 @bp.route('/')
 @login_required
+@permission_required('crm', 'access')
 def index():
     """CRM Dashboard"""
-    # Only società and staff can access CRM
-    if current_user.role not in ['super_admin', 'societa', 'staff']:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('main.index'))
-    
     # Get statistics
-    if current_user.role == 'societa':
-        contacts = Contact.query.filter_by(society_id=current_user.id).all()
-        opportunities = Opportunity.query.filter_by(society_id=current_user.id).all()
-    elif current_user.role == 'staff' and current_user.society_id:
-        contacts = Contact.query.filter_by(society_id=current_user.society_id).all()
-        opportunities = Opportunity.query.filter_by(society_id=current_user.society_id).all()
+    scope_id = _society_scope_id()
+    if scope_id:
+        contacts = Contact.query.filter_by(society_id=scope_id).all()
+        opportunities = Opportunity.query.filter_by(society_id=scope_id).all()
     else:
         contacts = Contact.query.all()
         opportunities = Opportunity.query.all()
@@ -59,17 +69,13 @@ def index():
 
 @bp.route('/contacts')
 @login_required
+@permission_required('crm', 'access')
 def contacts():
     """List all contacts"""
-    if current_user.role not in ['super_admin', 'societa', 'staff']:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('main.index'))
-    
     # Filter by society
-    if current_user.role == 'societa':
-        contacts = Contact.query.filter_by(society_id=current_user.id).order_by(Contact.created_at.desc()).all()
-    elif current_user.role == 'staff' and current_user.society_id:
-        contacts = Contact.query.filter_by(society_id=current_user.society_id).order_by(Contact.created_at.desc()).all()
+    scope_id = _society_scope_id()
+    if scope_id:
+        contacts = Contact.query.filter_by(society_id=scope_id).order_by(Contact.created_at.desc()).all()
     else:
         contacts = Contact.query.order_by(Contact.created_at.desc()).all()
     
@@ -83,22 +89,14 @@ def contacts():
 
 @bp.route('/contacts/new', methods=['GET', 'POST'])
 @login_required
+@permission_required('crm', 'manage')
 def new_contact():
     """Create new contact"""
-    if current_user.role not in ['super_admin', 'societa', 'staff']:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('main.index'))
-    
     form = ContactForm()
     
     if form.validate_on_submit():
         # Determine society_id
-        if current_user.role == 'societa':
-            society_id = current_user.id
-        elif current_user.role == 'staff' and current_user.society_id:
-            society_id = current_user.society_id
-        else:
-            society_id = None
+        society_id = _society_scope_id()
         
         contact = Contact(
             first_name=form.first_name.data,
@@ -129,17 +127,14 @@ def new_contact():
 
 @bp.route('/contacts/<int:contact_id>')
 @login_required
+@permission_required('crm', 'access')
 def contact_detail(contact_id):
     """View contact details"""
     contact = Contact.query.get_or_404(contact_id)
-    
-    # Check access
-    if current_user.role == 'societa' and contact.society_id != current_user.id:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('crm.contacts'))
-    elif current_user.role == 'staff' and contact.society_id != current_user.society_id:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('crm.contacts'))
+
+    scoped = _enforce_scope(contact.society_id, 'crm.contacts')
+    if scoped:
+        return scoped
     
     # Get related opportunities and activities
     opportunities = Opportunity.query.filter_by(contact_id=contact_id).all()
@@ -153,17 +148,14 @@ def contact_detail(contact_id):
 
 @bp.route('/contacts/<int:contact_id>/edit', methods=['GET', 'POST'])
 @login_required
+@permission_required('crm', 'manage')
 def edit_contact(contact_id):
     """Edit contact"""
     contact = Contact.query.get_or_404(contact_id)
-    
-    # Check access
-    if current_user.role == 'societa' and contact.society_id != current_user.id:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('crm.contacts'))
-    elif current_user.role == 'staff' and contact.society_id != current_user.society_id:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('crm.contacts'))
+
+    scoped = _enforce_scope(contact.society_id, 'crm.contacts')
+    if scoped:
+        return scoped
     
     form = ContactForm(obj=contact)
     
@@ -193,17 +185,13 @@ def edit_contact(contact_id):
 
 @bp.route('/opportunities')
 @login_required
+@permission_required('crm', 'access')
 def opportunities():
     """List all opportunities"""
-    if current_user.role not in ['super_admin', 'societa', 'staff']:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('main.index'))
-    
     # Filter by society
-    if current_user.role == 'societa':
-        opportunities = Opportunity.query.filter_by(society_id=current_user.id).order_by(Opportunity.created_at.desc()).all()
-    elif current_user.role == 'staff' and current_user.society_id:
-        opportunities = Opportunity.query.filter_by(society_id=current_user.society_id).order_by(Opportunity.created_at.desc()).all()
+    scope_id = _society_scope_id()
+    if scope_id:
+        opportunities = Opportunity.query.filter_by(society_id=scope_id).order_by(Opportunity.created_at.desc()).all()
     else:
         opportunities = Opportunity.query.order_by(Opportunity.created_at.desc()).all()
     
@@ -212,19 +200,15 @@ def opportunities():
 
 @bp.route('/opportunities/new', methods=['GET', 'POST'])
 @login_required
+@permission_required('crm', 'manage')
 def new_opportunity():
     """Create new opportunity"""
-    if current_user.role not in ['super_admin', 'societa', 'staff']:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('main.index'))
-    
     form = OpportunityForm()
     
     # Populate contact choices
-    if current_user.role == 'societa':
-        contacts = Contact.query.filter_by(society_id=current_user.id).all()
-    elif current_user.role == 'staff' and current_user.society_id:
-        contacts = Contact.query.filter_by(society_id=current_user.society_id).all()
+    scope_id = _society_scope_id()
+    if scope_id:
+        contacts = Contact.query.filter_by(society_id=scope_id).all()
     else:
         contacts = Contact.query.all()
     
@@ -232,12 +216,7 @@ def new_opportunity():
     
     if form.validate_on_submit():
         # Determine society_id
-        if current_user.role == 'societa':
-            society_id = current_user.id
-        elif current_user.role == 'staff' and current_user.society_id:
-            society_id = current_user.society_id
-        else:
-            society_id = None
+        society_id = _society_scope_id()
         
         opportunity = Opportunity(
             title=form.title.data,
@@ -263,17 +242,14 @@ def new_opportunity():
 
 @bp.route('/opportunities/<int:opp_id>')
 @login_required
+@permission_required('crm', 'access')
 def opportunity_detail(opp_id):
     """View opportunity details"""
     opportunity = Opportunity.query.get_or_404(opp_id)
-    
-    # Check access
-    if current_user.role == 'societa' and opportunity.society_id != current_user.id:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('crm.opportunities'))
-    elif current_user.role == 'staff' and opportunity.society_id != current_user.society_id:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('crm.opportunities'))
+
+    scoped = _enforce_scope(opportunity.society_id, 'crm.opportunities')
+    if scoped:
+        return scoped
     
     # Get related activities
     activities = CRMActivity.query.filter_by(opportunity_id=opp_id).order_by(CRMActivity.created_at.desc()).all()
@@ -285,21 +261,16 @@ def opportunity_detail(opp_id):
 
 @bp.route('/activities/new', methods=['GET', 'POST'])
 @login_required
+@permission_required('crm', 'manage')
 def new_activity():
     """Log new activity"""
-    if current_user.role not in ['super_admin', 'societa', 'staff']:
-        flash('Accesso non autorizzato.', 'danger')
-        return redirect(url_for('main.index'))
-    
     form = ActivityForm()
     
     # Populate choices
-    if current_user.role == 'societa':
-        contacts = Contact.query.filter_by(society_id=current_user.id).all()
-        opportunities = Opportunity.query.filter_by(society_id=current_user.id).all()
-    elif current_user.role == 'staff' and current_user.society_id:
-        contacts = Contact.query.filter_by(society_id=current_user.society_id).all()
-        opportunities = Opportunity.query.filter_by(society_id=current_user.society_id).all()
+    scope_id = _society_scope_id()
+    if scope_id:
+        contacts = Contact.query.filter_by(society_id=scope_id).all()
+        opportunities = Opportunity.query.filter_by(society_id=scope_id).all()
     else:
         contacts = Contact.query.all()
         opportunities = Opportunity.query.all()

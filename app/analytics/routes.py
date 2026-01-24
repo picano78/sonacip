@@ -11,14 +11,14 @@ from app.models import (
     Analytics, User, Post, Event, Contact, Opportunity,
     Task, Project, Subscription, Payment
 )
-from app.utils import admin_required, role_required
+from app.utils import admin_required, permission_required
 from datetime import datetime, timedelta
 import json
 
 
 @bp.route('/')
 @login_required
-@role_required('super_admin', 'societa')
+@permission_required('analytics', 'access')
 def dashboard():
     """Advanced analytics dashboard"""
     
@@ -52,7 +52,7 @@ def dashboard():
 
 @bp.route('/crm')
 @login_required
-@role_required('super_admin', 'societa', 'staff')
+@permission_required('analytics', 'access')
 def crm_analytics():
     """CRM-specific analytics (Salesforce-level insights)"""
     
@@ -83,7 +83,7 @@ def crm_analytics():
 
 @bp.route('/social')
 @login_required
-@role_required('super_admin', 'societa')
+@permission_required('analytics', 'access')
 def social_analytics():
     """Social network analytics (LinkedIn/Instagram Insights level)"""
     
@@ -110,7 +110,7 @@ def social_analytics():
 
 @bp.route('/tasks')
 @login_required
-@role_required('super_admin', 'societa', 'staff')
+@permission_required('analytics', 'access')
 def task_analytics():
     """Task and project analytics (Monday.com Insights level)"""
     
@@ -139,7 +139,7 @@ def task_analytics():
 
 @bp.route('/export')
 @login_required
-@role_required('super_admin', 'societa')
+@permission_required('analytics', 'access')
 def export_data():
     """Export analytics data (CSV, Excel, PDF)"""
     export_type = request.args.get('type', 'csv')

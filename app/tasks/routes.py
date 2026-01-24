@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.tasks import bp
 from app.models import Task, Project, User, Team
-from app.utils import role_required
+from app.utils import permission_required
 from app.models import Event
 from app.automation.utils import execute_automations, execute_rules
 from datetime import datetime, timedelta
@@ -264,7 +264,7 @@ def update_task(task_id):
 
 @bp.route('/project/create', methods=['GET', 'POST'])
 @login_required
-@role_required('super_admin', 'societa', 'staff')
+@permission_required('tasks', 'manage')
 def create_project():
     """Create new project"""
     if request.method == 'POST':

@@ -38,7 +38,7 @@
             <a href="{{ url_for('social.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-chat"></i> {{ post.comments_count }}
             </a>
-            {% if current_user.id == post.user_id or current_user.is_admin() %}
+            {% if current_user.id == post.user_id or current_user.has_permission('admin', 'access') %}
                 <a href="{{ url_for('social.promote_post', post_id=post.id) }}" class="btn btn-sm btn-outline-warning">
                     <i class="bi bi-megaphone"></i> Sponsorizza
                 </a>

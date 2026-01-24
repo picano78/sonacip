@@ -15,7 +15,7 @@
                     <div class="small text-muted">Filtro attivo</div>
                     <div class="fw-bold">{{ view|capitalize }}</div>
                 </div>
-                {% if current_user.is_admin() or current_user.is_society_admin() %}
+                {% if current_user.has_permission('calendar', 'manage') %}
                     <a href="{{ url_for('calendar.create') }}" class="btn btn-dark">
                         <i class="bi bi-plus-lg"></i> Nuovo evento
                     </a>

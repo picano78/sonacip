@@ -9,22 +9,24 @@ from app.events import bp
 from app.events.forms import EventForm
 from app.models import Event, User, Notification
 from app.automation.utils import execute_automations, execute_rules
+from app.utils import permission_required
 from datetime import datetime
 
 
 @bp.route('/')
 @login_required
+@permission_required('events', 'view')
 def index():
     """List all events"""
     page = request.args.get('page', 1, type=int)
     per_page = 15
     
-    # Filter based on user role
+    # Filter based on user scope
     if current_user.is_admin():
         # Admin sees all events
         events_query = Event.query
-    elif current_user.is_society() or current_user.is_staff():
-        # Society/staff see their own events
+    elif current_user.get_primary_society():
+        # Society/staff see events created by their society users
         events_query = Event.query.filter_by(creator_id=current_user.id)
     else:
         # Athletes see events they're convocated to
@@ -42,13 +44,9 @@ def index():
 
 @bp.route('/create', methods=['GET', 'POST'])
 @login_required
+@permission_required('events', 'create')
 def create():
     """Create a new event"""
-    # Only societies and staff can create events
-    if not (current_user.is_society() or current_user.is_staff() or current_user.is_admin()):
-        flash('Solo le società e lo staff possono creare eventi.', 'warning')
-        return redirect(url_for('events.index'))
-    
     form = EventForm()
     
     if form.validate_on_submit():
@@ -75,7 +73,8 @@ def create():
         db.session.commit()
 
         # Fire automations on event creation
-        execute_automations('event_created', society_id=current_user.id if current_user.is_society() else None, payload={'event_id': event.id})
+        society = current_user.get_primary_society()
+        execute_automations('event_created', society_id=society.id if society else None, payload={'event_id': event.id})
         execute_rules('event_created', payload={'event_id': event.id, 'creator_id': current_user.id})
         
         flash('Evento creato! Ora puoi convocare gli atleti.', 'success')
@@ -86,6 +85,7 @@ def create():
 
 @bp.route('/<int:event_id>')
 @login_required
+@permission_required('events', 'view')
 def detail(event_id):
     """Event detail page"""
     event = Event.query.get_or_404(event_id)
@@ -100,7 +100,7 @@ def detail(event_id):
         })
     
     # Check if current user can manage this event
-    can_manage = (current_user.id == event.creator_id or current_user.is_admin())
+    can_manage = (current_user.id == event.creator_id or current_user.has_permission('events', 'manage'))
     
     # Check if current user is convocated
     is_convocated = current_user in event.convocated_athletes
@@ -124,6 +124,7 @@ def detail(event_id):
 
 @bp.route('/<int:event_id>/edit', methods=['GET', 'POST'])
 @login_required
+@permission_required('events', 'manage')
 def edit(event_id):
     """Edit event"""
     event = Event.query.get_or_404(event_id)
@@ -162,6 +163,7 @@ def edit(event_id):
 
 @bp.route('/<int:event_id>/convocate', methods=['GET', 'POST'])
 @login_required
+@permission_required('events', 'manage')
 def convocate(event_id):
     """Convocate athletes to event"""
     event = Event.query.get_or_404(event_id)
@@ -226,6 +228,7 @@ def convocate(event_id):
 
 @bp.route('/<int:event_id>/respond/<string:response>', methods=['POST'])
 @login_required
+@permission_required('events', 'view')
 def respond(event_id, response):
     """Athlete responds to convocation (accept/reject)"""
     event = Event.query.get_or_404(event_id)
@@ -260,6 +263,7 @@ def respond(event_id, response):
 
 @bp.route('/<int:event_id>/delete', methods=['POST'])
 @login_required
+@permission_required('events', 'manage')
 def delete(event_id):
     """Delete event"""
     event = Event.query.get_or_404(event_id)
@@ -278,6 +282,7 @@ def delete(event_id):
 
 @bp.route('/<int:event_id>/cancel', methods=['POST'])
 @login_required
+@permission_required('events', 'manage')
 def cancel(event_id):
     """Cancel event"""
     event = Event.query.get_or_404(event_id)
@@ -309,6 +314,7 @@ def cancel(event_id):
 
 @bp.route('/my-events')
 @login_required
+@permission_required('events', 'view')
 def my_events():
     """View my events (as athlete)"""
     if not current_user.is_athlete():

@@ -5,12 +5,12 @@ from flask_login import login_required, current_user
 from app import db
 from app.tournaments import bp
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
-from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent
+from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity
 from app.automation.utils import execute_rules
-from app.utils import admin_required
+from app.utils import permission_required
 
 
-def _require_society_admin_or_admin(tournament: Tournament = None):
+def _require_society_scope(tournament: Tournament = None):
     if current_user.is_admin():
         return
     society = current_user.get_primary_society()
@@ -34,6 +34,7 @@ def _trigger(event_type, payload):
 
 @bp.route('/tournaments')
 @login_required
+@permission_required('tournaments', 'view')
 def list_tournaments():
     sid = _get_society_id()
     query = Tournament.query
@@ -45,6 +46,7 @@ def list_tournaments():
 
 @bp.route('/tournaments/new', methods=['GET', 'POST'])
 @login_required
+@permission_required('tournaments', 'manage')
 def create_tournament():
     sid = _get_society_id()
     if not sid:
@@ -65,6 +67,18 @@ def create_tournament():
         )
         db.session.add(tournament)
         db.session.commit()
+        # CRM activity log for key action
+        try:
+            activity = CRMActivity(
+                activity_type='note',
+                subject='Torneo creato',
+                description=f'Torneo "{tournament.name}" creato da {current_user.get_full_name()}',
+                created_by=current_user.id
+            )
+            db.session.add(activity)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
         _trigger('tournament.created', {'tournament_id': tournament.id})
         flash('Torneo creato.', 'success')
         return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
@@ -73,9 +87,10 @@ def create_tournament():
 
 @bp.route('/tournaments/<int:tournament_id>')
 @login_required
+@permission_required('tournaments', 'view')
 def view_tournament(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
-    _require_society_admin_or_admin(tournament)
+    _require_society_scope(tournament)
     teams = tournament.teams.order_by(TournamentTeam.name.asc()).all()
     matches = tournament.matches.order_by(TournamentMatch.match_date.asc()).all()
     standings = tournament.standings.order_by(TournamentStanding.points.desc(), TournamentStanding.goals_for.desc()).all()
@@ -84,9 +99,10 @@ def view_tournament(tournament_id):
 
 @bp.route('/tournaments/<int:tournament_id>/teams/add', methods=['POST'])
 @login_required
+@permission_required('tournaments', 'manage')
 def add_team(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
-    _require_society_admin_or_admin(tournament)
+    _require_society_scope(tournament)
     form = TournamentTeamForm()
     if form.validate_on_submit():
         team = TournamentTeam(
@@ -108,9 +124,10 @@ def add_team(tournament_id):
 
 @bp.route('/tournaments/<int:tournament_id>/matches/add', methods=['POST'])
 @login_required
+@permission_required('tournaments', 'manage')
 def add_match(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
-    _require_society_admin_or_admin(tournament)
+    _require_society_scope(tournament)
     form = TournamentMatchForm()
     if form.validate_on_submit():
         match = TournamentMatch(
@@ -132,10 +149,11 @@ def add_match(tournament_id):
 
 @bp.route('/tournaments/<int:match_id>/score', methods=['POST'])
 @login_required
+@permission_required('tournaments', 'manage')
 def set_score(match_id):
     match = TournamentMatch.query.get_or_404(match_id)
     tournament = match.tournament
-    _require_society_admin_or_admin(tournament)
+    _require_society_scope(tournament)
     form = MatchScoreForm()
     if form.validate_on_submit():
         match.set_score(form.home_score.data, form.away_score.data)
@@ -143,6 +161,26 @@ def set_score(match_id):
         for standing in tournament.standings:
             if standing.team_id in (match.home_team_id, match.away_team_id):
                 standing.update_from_match(match)
+        # Social post for tournament result
+        try:
+            home_team = match.home_team.name if match.home_team else 'Casa'
+            away_team = match.away_team.name if match.away_team else 'Ospiti'
+            content = f'Risultato torneo "{tournament.name}": {home_team} {match.home_score} - {match.away_score} {away_team}'
+            post = Post(user_id=current_user.id, content=content, is_public=True)
+            db.session.add(post)
+        except Exception:
+            pass
+        # CRM activity log
+        try:
+            activity = CRMActivity(
+                activity_type='note',
+                subject='Risultato torneo aggiornato',
+                description=f'Punteggio aggiornato per {tournament.name}: {match.home_score}-{match.away_score}',
+                created_by=current_user.id
+            )
+            db.session.add(activity)
+        except Exception:
+            pass
         db.session.commit()
         _trigger('tournament.match_scored', {'match_id': match.id})
         flash('Risultato salvato e classifica aggiornata.', 'success')

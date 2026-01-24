@@ -6,7 +6,8 @@ from sqlalchemy import or_, and_
 from app import db
 from app.calendar import bp
 from app.calendar.forms import SocietyCalendarEventForm
-from app.models import SocietyCalendarEvent, society_calendar_event_staff, society_calendar_event_athletes, User
+from app.models import SocietyCalendarEvent, society_calendar_event_staff, society_calendar_event_athletes, User, Notification, Post
+from app.utils import permission_required
 
 
 def _date_range(view_mode: str, start_date: datetime.date):
@@ -52,6 +53,7 @@ def _base_query_for_user():
 
 @bp.route('/calendar')
 @login_required
+@permission_required('calendar', 'view')
 def index():
     view = request.args.get('view', 'week')
     try:
@@ -101,6 +103,7 @@ def index():
 
 @bp.route('/calendar/<int:event_id>')
 @login_required
+@permission_required('calendar', 'view')
 def detail(event_id):
     event = SocietyCalendarEvent.query.get_or_404(event_id)
     if not event.is_visible_to(current_user):
@@ -110,10 +113,8 @@ def detail(event_id):
 
 @bp.route('/calendar/new', methods=['GET', 'POST'])
 @login_required
+@permission_required('calendar', 'manage')
 def create():
-    if not (current_user.is_admin() or current_user.is_society_admin()):
-        abort(403)
-
     form = SocietyCalendarEventForm(current_user=current_user)
 
     if form.validate_on_submit():
@@ -152,6 +153,35 @@ def create():
                 event.athletes.append(athlete)
 
         db.session.commit()
+
+        # Notify staff and athletes linked to the event
+        try:
+            recipients = event.staff_members.all() + event.athletes.all()
+            for recipient in recipients:
+                notification = Notification(
+                    user_id=recipient.id,
+                    title='Nuovo evento calendario società',
+                    message=f'{event.title} - {event.start_datetime.strftime("%d/%m/%Y %H:%M")}',
+                    notification_type='calendar',
+                    link=url_for('calendar.detail', event_id=event.id)
+                )
+                db.session.add(notification)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # Optional social post
+        if event.share_to_social:
+            try:
+                post = Post(
+                    user_id=current_user.id,
+                    content=f'Nuovo evento in calendario: {event.title} ({event.start_datetime.strftime("%d/%m/%Y")})',
+                    is_public=True
+                )
+                db.session.add(post)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         flash('Evento inserito nel Calendario Società.', 'success')
         return redirect(url_for('calendar.index'))
 

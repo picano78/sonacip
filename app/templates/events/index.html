@@ -21,6 +21,16 @@
                                 {{ event.event_type|title }}
                             </span>
                         </p>
+                        {% if event.tournament_name or event.opponent_name %}
+                            <p class="card-text small text-muted">
+                                {% if event.tournament_name %}
+                                    <i class="bi bi-trophy"></i> {{ event.tournament_name }}{% if event.tournament_phase %} · {{ event.tournament_phase }}{% endif %}
+                                {% endif %}
+                                {% if event.opponent_name %}
+                                    <br><i class="bi bi-shield"></i> Vs {{ event.opponent_name }}
+                                {% endif %}
+                            </p>
+                        {% endif %}
                         <p class="card-text">
                             <i class="bi bi-calendar"></i> {{ event.start_date|datetime_format }}
                         </p>

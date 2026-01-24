@@ -29,6 +29,52 @@
                     {% endif %}
                 </div>
             </div>
+            {% if event.tournament_name or event.opponent_name or event.home_away or event.score_for or event.score_against or event.bracket_url %}
+                <hr>
+                <h5>Dettagli Partita/Torneo</h5>
+                <div class="row">
+                    {% if event.tournament_name %}
+                        <div class="col-md-6">
+                            <p><strong><i class="bi bi-trophy"></i> Torneo:</strong> {{ event.tournament_name }}</p>
+                        </div>
+                    {% endif %}
+                    {% if event.tournament_phase %}
+                        <div class="col-md-6">
+                            <p><strong><i class="bi bi-diagram-3"></i> Fase:</strong> {{ event.tournament_phase }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="row">
+                    {% if event.opponent_name %}
+                        <div class="col-md-6">
+                            <p><strong><i class="bi bi-shield"></i> Avversario:</strong> {{ event.opponent_name }}</p>
+                        </div>
+                    {% endif %}
+                    {% if event.home_away %}
+                        <div class="col-md-6">
+                            <p><strong><i class="bi bi-house"></i> Campo:</strong> {{ 'Casa' if event.home_away == 'home' else 'Trasferta' if event.home_away == 'away' else 'Campo neutro' }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="row">
+                    {% if event.score_for or event.score_against %}
+                        <div class="col-md-6">
+                            <p><strong><i class="bi bi-activity"></i> Risultato:</strong>
+                                {% if event.score_for and event.score_against %}
+                                    {{ event.score_for }} - {{ event.score_against }}
+                                {% else %}
+                                    Non impostato
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                    {% if event.bracket_url %}
+                        <div class="col-md-6">
+                            <p><strong><i class="bi bi-link-45deg"></i> Tabellone:</strong> <a href="{{ event.bracket_url }}" target="_blank" rel="noopener">Apri</a></p>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
             <hr>
             <h5>Statistiche Convocazioni</h5>
             <p>Totale: {{ stats.total_convocated }} | Accettati: {{ stats.accepted }} | In Attesa: {{ stats.pending }}</p>

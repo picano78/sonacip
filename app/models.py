@@ -296,6 +296,15 @@ class Event(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     event_type = db.Column(db.String(50), nullable=False)  # allenamento, partita, torneo
+
+    # Tournament/Match metadata
+    tournament_name = db.Column(db.String(200))
+    tournament_phase = db.Column(db.String(50))  # girone, quarti, semifinale, finale
+    opponent_name = db.Column(db.String(200))
+    home_away = db.Column(db.String(10))  # home, away, neutral
+    score_for = db.Column(db.Integer)
+    score_against = db.Column(db.Integer)
+    bracket_url = db.Column(db.String(255))
     
     # Date and time
     start_date = db.Column(db.DateTime, nullable=False)

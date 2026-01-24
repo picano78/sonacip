@@ -18,6 +18,18 @@ class EventForm(FlaskForm):
         ('meeting', 'Riunione'),
         ('altro', 'Altro')
     ], validators=[DataRequired()])
+    tournament_name = StringField('Nome Torneo', validators=[Optional(), Length(max=200)])
+    tournament_phase = StringField('Fase Torneo', validators=[Optional(), Length(max=50)])
+    opponent_name = StringField('Avversario', validators=[Optional(), Length(max=200)])
+    home_away = SelectField('Casa/Trasferta', choices=[
+        ('', '---'),
+        ('home', 'Casa'),
+        ('away', 'Trasferta'),
+        ('neutral', 'Campo neutro')
+    ], validators=[Optional()])
+    score_for = StringField('Punteggio Pro', validators=[Optional(), Length(max=10)])
+    score_against = StringField('Punteggio Contro', validators=[Optional(), Length(max=10)])
+    bracket_url = StringField('Link Tabellone', validators=[Optional(), Length(max=255)])
     start_date = DateTimeLocalField('Data e Ora Inizio', format='%Y-%m-%dT%H:%M', validators=[DataRequired()])
     end_date = DateTimeLocalField('Data e Ora Fine', format='%Y-%m-%dT%H:%M', validators=[Optional()])
     location = StringField('Località', validators=[Optional(), Length(max=255)])

@@ -59,6 +59,13 @@ def create():
             end_date=form.end_date.data,
             location=form.location.data,
             address=form.address.data,
+            tournament_name=form.tournament_name.data or None,
+            tournament_phase=form.tournament_phase.data or None,
+            opponent_name=form.opponent_name.data or None,
+            home_away=form.home_away.data or None,
+            score_for=form.score_for.data or None,
+            score_against=form.score_against.data or None,
+            bracket_url=form.bracket_url.data or None,
             creator_id=current_user.id,
             status='scheduled'
         )
@@ -131,6 +138,13 @@ def edit(event_id):
         event.end_date = form.end_date.data
         event.location = form.location.data
         event.address = form.address.data
+        event.tournament_name = form.tournament_name.data or None
+        event.tournament_phase = form.tournament_phase.data or None
+        event.opponent_name = form.opponent_name.data or None
+        event.home_away = form.home_away.data or None
+        event.score_for = form.score_for.data or None
+        event.score_against = form.score_against.data or None
+        event.bracket_url = form.bracket_url.data or None
         event.updated_at = datetime.utcnow()
         
         db.session.commit()

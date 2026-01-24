@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Crea Evento{% endblock %}
+{% block title %}Modifica Evento{% endblock %}
 {% block content %}
 <div class="container my-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
-                    <h2 class="mb-4">Crea Nuovo Evento</h2>
+                    <h2 class="mb-4">Modifica Evento</h2>
                     <form method="POST">
                         {{ form.hidden_tag() }}
                         <div class="mb-3">
@@ -78,8 +78,8 @@
                             {{ form.address.label(class="form-label") }}
                             {{ form.address(class="form-control") }}
                         </div>
-                        <button type="submit" class="btn btn-primary">Crea Evento</button>
-                        <a href="{{ url_for('events.index') }}" class="btn btn-secondary">Annulla</a>
+                        <button type="submit" class="btn btn-primary">Salva</button>
+                        <a href="{{ url_for('events.detail', event_id=event.id) }}" class="btn btn-secondary">Annulla</a>
                     </form>
                 </div>
             </div>

@@ -2,7 +2,7 @@
 Social routes
 Profiles, feed, posts, follows, likes, comments
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import or_, desc
 from app import db
@@ -10,6 +10,7 @@ from app.social import bp
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.utils import save_picture
 from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment, SocialSetting, TournamentMatch
+from app.cache import get_cache
 from datetime import datetime, timedelta
 from datetime import datetime
 import os
@@ -21,21 +22,27 @@ def feed():
     """Main social feed"""
     page = request.args.get('page', 1, type=int)
     per_page = 20
+    cache_ttl = current_app.config.get('CACHE_DEFAULT_TTL', 120)
+    cache = get_cache()
 
     settings = SocialSetting.query.first()
     if settings and not settings.feed_enabled and not current_user.is_admin():
         flash('Il feed sociale è disabilitato dall\'amministratore.', 'warning')
         return redirect(url_for('main.dashboard'))
     
-    # Get posts from followed users + own posts
-    try:
-        posts_query = current_user.get_feed_posts()
-    except Exception as e:
-        print(f"Error loading feed: {e}")
-        posts_query = Post.query.filter_by(user_id=current_user.id)
+    cache_key = f"feed:{current_user.id}:p{page}"
+    cached_ids = cache.get(cache_key)
 
-    # Fetch extra to allow custom sorting
-    raw_posts = posts_query.limit(per_page * 3).all()
+    if cached_ids is None:
+        # Get posts from followed users + own posts
+        try:
+            posts_query = current_user.get_feed_posts()
+        except Exception as e:
+            print(f"Error loading feed: {e}")
+            posts_query = Post.query.filter_by(user_id=current_user.id)
+
+        # Fetch extra to allow custom sorting
+        raw_posts = posts_query.limit(per_page * 4).all()
 
     boosted_types = []
     muted_types = []
@@ -57,6 +64,13 @@ def feed():
         # Governance: boost tournament/match/official posts
         if p.is_promoted and settings and settings.boost_official:
             score += 5
+        # Priority tiers: official society content > tournaments/matches > automations > personal
+        if p.author and p.author.is_society():
+            score += 30
+        if p.notification_type and any(token in p.notification_type for token in ['tournament', 'match']):
+            score += 20
+        if p.notification_type and 'automation' in p.notification_type:
+            score += 10
         if boosted_types:
             for t in boosted_types:
                 if t in (p.notification_type or ''):
@@ -66,23 +80,34 @@ def feed():
                 if t in (p.notification_type or ''):
                     score -= 10
         return score
+    if cached_ids is None:
+        sorted_posts = sorted(raw_posts, key=engagement_score, reverse=True)
+        total = len(sorted_posts)
+        start = (page - 1) * per_page
+        end = start + per_page
+        page_ids = [p.id for p in sorted_posts[start:end]]
+        cache.set(cache_key, {'ids': page_ids, 'total': total}, ttl=cache_ttl)
+    else:
+        page_ids = cached_ids.get('ids', [])
+        total = cached_ids.get('total', 0)
 
-    sorted_posts = sorted(raw_posts, key=engagement_score, reverse=True)
-    total = len(sorted_posts)
-    start = (page - 1) * per_page
-    end = start + per_page
-    posts = sorted_posts[start:end]
+    if page_ids:
+        posts_map = {p.id: p for p in Post.query.filter(Post.id.in_(page_ids)).all()}
+        posts = [posts_map[i] for i in page_ids if i in posts_map]
+    else:
+        posts = []
 
-    # Update promotion views and disable expired ones
-    for p in posts:
-        if p.is_promoted:
-            if p.promotion_ends_at and p.promotion_ends_at < datetime.utcnow():
-                p.is_promoted = False
-            else:
-                p.promotion_views = (p.promotion_views or 0) + 1
-                if p.promotion_views_target and p.promotion_views >= p.promotion_views_target:
+    # Update promotion views and disable expired ones (no-op if empty)
+    if posts:
+        for p in posts:
+            if p.is_promoted:
+                if p.promotion_ends_at and p.promotion_ends_at < datetime.utcnow():
                     p.is_promoted = False
-    db.session.commit()
+                else:
+                    p.promotion_views = (p.promotion_views or 0) + 1
+                    if p.promotion_views_target and p.promotion_views >= p.promotion_views_target:
+                        p.is_promoted = False
+        db.session.commit()
 
     # Fake pagination object
     class SimplePagination:

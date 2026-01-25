@@ -18,7 +18,7 @@ Tutti i test passano con successo. Il sistema è:
 
 ```bash
 # Ambiente di sviluppo
-python run.py
+flask --app run run
 
 # Produzione con Gunicorn
 gunicorn -c gunicorn_config.py run:app
@@ -34,12 +34,12 @@ Il server sarà disponibile su:
 
 | Ruolo | Email | Password | Descrizione |
 |-------|-------|----------|-------------|
-| Super Admin | admin@sonacip.it | admin123 | Accesso completo al sistema |
+| Super Admin | admin@sonacip.it | impostata via SUPERADMIN_PASSWORD oppure generata e riportata nei log | Accesso completo al sistema |
 | Società | test@societa.it | test123 | Società sportiva di test |
 | Atleta | test@atleta.it | test123 | Atleta associato alla società |
 | Appassionato | test@fan.it | test123 | Utente generico |
 
-**⚠️ IMPORTANTE**: Cambiare la password dell'admin in produzione!
+**⚠️ IMPORTANTE**: Impostare `SUPERADMIN_PASSWORD` prima del primo avvio e ruotare la password dopo il primo accesso.
 
 ---
 
@@ -243,7 +243,7 @@ Testing relationships...
 1. **Login come Admin**
    - Vai su `http://localhost:5000/auth/login`
    - Email: `admin@sonacip.it`
-   - Password: `admin123`
+   - Password: impostata via `SUPERADMIN_PASSWORD` o riportata nei log di avvio
    - Verifica accesso a `/admin/dashboard`
 
 2. **Login come Società**

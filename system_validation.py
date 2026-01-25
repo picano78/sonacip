@@ -3,6 +3,7 @@
 SONACIP System Validation Script
 Comprehensive test to ensure the system is production-ready
 """
+import os
 import sys
 from app import create_app, db
 from app.models import (
@@ -86,12 +87,16 @@ def test_database_initialization():
             print('  ✗ Super Admin NOT found!')
             return False
         
-        # Test admin password
-        if admin.check_password('admin123'):
-            print('  ✓ Admin password is correct')
+        # Test admin password (if provided via env)
+        admin_password = os.environ.get('SUPERADMIN_PASSWORD')
+        if admin_password:
+            if admin.check_password(admin_password):
+                print('  ✓ Admin password is correct (from SUPERADMIN_PASSWORD)')
+            else:
+                print('  ✗ Admin password check failed (SUPERADMIN_PASSWORD)')
+                return False
         else:
-            print('  ✗ Admin password check failed!')
-            return False
+            print('  ⚠ SUPERADMIN_PASSWORD not set; skipping password verification')
     
     return True
 
@@ -116,9 +121,14 @@ def test_routes():
         
         # Login as admin
         print('\n  Logging in as Super Admin...')
+        admin_password = os.environ.get('SUPERADMIN_PASSWORD')
+        if not admin_password:
+            print('    ⚠ SUPERADMIN_PASSWORD not set; skipping authenticated route checks')
+            return True
+
         response = client.post('/auth/login', data={
             'email': 'admin@sonacip.it',
-            'password': 'admin123'
+            'password': admin_password
         }, follow_redirects=False)
         
         if response.status_code != 302:
@@ -268,8 +278,8 @@ def main():
         print('\n  🎉 ALL TESTS PASSED! SONACIP IS PRODUCTION READY!')
         print('\n  Credentials:')
         print('    Email: admin@sonacip.it')
-        print('    Password: admin123')
-        print('\n  Start with: python run.py')
+        print('    Password: <SUPERADMIN_PASSWORD>')
+        print('\n  Start with: flask --app run run')
         print('=' * 70)
         return 0
     else:

@@ -2,6 +2,7 @@
 """
 Test script to verify all routes are accessible
 """
+import os
 from app import create_app
 from app.models import User
 
@@ -46,9 +47,14 @@ def test_routes():
         print('\n=== TESTING AS AUTHENTICATED SUPER ADMIN ===')
         
         # Simulate login
+        admin_password = os.environ.get('SUPERADMIN_PASSWORD')
+        if not admin_password:
+            print('⚠ SUPERADMIN_PASSWORD not set; skipping authenticated admin route checks')
+            return
+
         response = client.post('/auth/login', data={
             'email': 'admin@sonacip.it',
-            'password': 'admin123'
+            'password': admin_password
         }, follow_redirects=False)
         
         if response.status_code == 302:

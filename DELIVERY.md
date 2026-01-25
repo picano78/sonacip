@@ -132,7 +132,7 @@ cd /workspaces/sonacip
 ```bash
 cd /workspaces/sonacip
 pip3 install -r requirements.txt
-python3 run.py
+flask --app run run
 ```
 
 ### Option 3: Run Tests First
@@ -143,7 +143,7 @@ cd /workspaces/sonacip
 ```
 
 **Access:** http://localhost:5000  
-**Admin Login:** admin@sonacip.it / admin123
+**Admin Login:** admin@sonacip.it / <SUPERADMIN_PASSWORD>
 
 ---
 

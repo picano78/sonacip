@@ -16,7 +16,7 @@
 - ✅ Risolto errore `metadata` (campo riservato SQLAlchemy) → rinominato in `payment_metadata`
 - ✅ Corretti errori di sintassi nelle stringhe escapate
 - ✅ Tutti i modelli ora registrati correttamente
-- ✅ L'applicazione si avvia senza errori: `python run.py`
+- ✅ L'applicazione si avvia senza errori: `flask --app run run`
 
 ---
 
@@ -46,7 +46,7 @@
 
 4. **create_super_admin()** - Crea automaticamente Super Admin:
    - Email: `admin@sonacip.it`
-   - Password: `admin123` (da cambiare in produzione)
+   - Password: impostata via `SUPERADMIN_PASSWORD` o generata e riportata nei log
 
 ---
 
@@ -143,11 +143,11 @@ cleanup_old_notifications(days=90)          # Pulizia automatica
 
 ### Sviluppo
 ```bash
-python run.py
+flask --app run run
 ```
 Accedi con:
 - Email: `admin@sonacip.it`
-- Password: `admin123`
+- Password: impostata via `SUPERADMIN_PASSWORD` o riportata nei log
 
 ### Produzione
 ```bash
@@ -247,7 +247,7 @@ MAIL_PASSWORD=your-app-password
 SONACIP è ora:
 - ✅ **Coherente**: Architettura uniforme e ben strutturata
 - ✅ **Stabile**: Nessun crash al runtime, error handling robusto
-- ✅ **Startable**: Si avvia correttamente con `python run.py`
+- ✅ **Startable**: Si avvia correttamente con `flask --app run run`
 - ✅ **Maintainable**: Codice pulito, documentato, estendibile
 - ✅ **SaaS-Ready**: Sistema completo di subscription e payment
 

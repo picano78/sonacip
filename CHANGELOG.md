@@ -123,13 +123,13 @@ python -c "from app.backup.utils import create_backup; create_backup(1, 'full', 
 rm sonacip.db
 
 # Avviare app per auto-initialization
-python run.py
+flask --app run run
 ```
 
 ### 📝 Note di Upgrade
 
 1. **Database Reset Raccomandato**: Per beneficiare di tutti i nuovi modelli
-2. **Password Admin**: Cambiare `admin123` in produzione
+2. **Password Admin**: Impostare `SUPERADMIN_PASSWORD` prima del primo avvio e ruotare la password dopo il primo accesso
 3. **Secret Key**: Impostare SECRET_KEY sicura in produzione
 4. **Email Config**: Configurare SMTP per notifiche email
 

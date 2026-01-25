@@ -13,6 +13,7 @@ from flask_mail import Mail
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from dotenv import load_dotenv
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -28,6 +29,7 @@ def create_app(config_name=None):
     Application factory pattern
     Creates and configures the Flask application
     """
+    load_dotenv()
     app = Flask(__name__)
     
     # Load configuration

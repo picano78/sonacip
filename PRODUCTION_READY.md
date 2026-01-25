@@ -2,8 +2,8 @@
 
 ## ✅ SYSTEM VALIDATION COMPLETE
 
-**Date:** 2026-01-24  
-**Status:** PRODUCTION READY ✓
+**Date:** 2026-01-25  
+**Status:** PRODUCTION READY ✓ (dopo configurazione variabili ambiente obbligatorie)
 
 ---
 
@@ -30,7 +30,7 @@ All critical tests have passed:
 ### 1. Start the Application
 
 ```bash
-python run.py
+flask --app run run
 ```
 
 The application will:
@@ -41,11 +41,11 @@ The application will:
 
 ### 2. Default Credentials
 
-**Super Admin Account:**
+**Super Admin Account (bootstrap):**
 - Email: `admin@sonacip.it`
-- Password: `admin123`
+- Password: impostata via `SUPERADMIN_PASSWORD` oppure generata automaticamente e riportata nei log di avvio.
 
-⚠️ **IMPORTANT:** Change the admin password immediately in production!
+⚠️ **IMPORTANT:** Imposta `SUPERADMIN_PASSWORD` prima del primo avvio e ruota la password dopo il primo accesso.
 
 ### 3. Access the System
 
@@ -190,7 +190,7 @@ The system auto-initializes with:
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.11+
 - PostgreSQL (recommended) or SQLite
 - SMTP server for emails
 - Web server (Nginx/Apache)
@@ -201,6 +201,7 @@ The system auto-initializes with:
 Create a `.env` file:
 
 ```bash
+APP_ENV=production
 FLASK_ENV=production
 SECRET_KEY=<your-secret-key>
 DATABASE_URL=postgresql://user:pass@localhost/sonacip
@@ -208,6 +209,9 @@ MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USERNAME=<your-email>
 MAIL_PASSWORD=<your-password>
+REDIS_URL=redis://localhost:6379/0
+RATELIMIT_STORAGE_URI=redis://localhost:6379/1
+SUPERADMIN_PASSWORD=<set-once-then-rotate>
 ```
 
 ### Install Dependencies
@@ -374,5 +378,5 @@ For issues or questions:
 
 **SONACIP is now a stable, coherent, and production-ready SaaS platform.**
 
-Last Validation: 2026-01-24  
+Last Validation: 2026-01-25  
 Status: ✅ APPROVED FOR PRODUCTION TESTING

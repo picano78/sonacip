@@ -2,9 +2,9 @@
 
 Sistema completo di gestione per società sportive, staff, atleti e appassionati.
 
-**✅ PRODUCTION-READY - Piattaforma completamente funzionale e testata**  
-**📅 Validato:** 2026-01-24  
-**🚀 Status:** Pronto per deployment VPS
+**✅ PRODUCTION-READY - Piattaforma funzionale e consolidata**  
+**📅 Validato:** 2026-01-25  
+**🚀 Status:** Pronto per deployment VPS dopo configurazione variabili ambiente obbligatorie
 
 ## 🚀 Caratteristiche
 
@@ -19,7 +19,7 @@ Sistema completo di gestione per società sportive, staff, atleti e appassionati
 
 ## 📋 Requisiti
 
-- Python 3.12+
+- Python 3.11+
 - SQLite (default) o PostgreSQL
 - Nginx (produzione)
 - Gunicorn (produzione)
@@ -32,16 +32,16 @@ Sistema completo di gestione per società sportive, staff, atleti e appassionati
 
 # Metodo 2: Manuale
 pip3 install -r requirements.txt
-python3 run.py
+flask --app run run
 ```
 
 **Accedi a:** http://localhost:5000
 
-**Credenziali Admin Default:**
+**Credenziali Super Admin (bootstrap):**
 - Email: `admin@sonacip.it`
-- Password: `admin123`
+- Password: impostata tramite variabile ambiente `SUPERADMIN_PASSWORD` oppure generata automaticamente e riportata nei log di avvio.
 
-⚠️ **CAMBIA LA PASSWORD IN PRODUZIONE!**
+⚠️ **Imposta `SUPERADMIN_PASSWORD` prima del primo avvio e ruota la password dopo il primo accesso.**
 
 ## 🔧 Installazione Completa (Sviluppo)
 
@@ -64,7 +64,7 @@ cp .env.example .env
 python3 -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all()"
 
 # Avvia server di sviluppo
-python3 run.py
+flask --app run run
 ```
 
 ## 🚢 Deployment Produzione (Ubuntu 24.04)
@@ -121,7 +121,7 @@ sudo certbot --nginx -d yourdomain.com
 
 ```
 /opt/sonacip/
-├── run.py                 # Entry point unico
+├── run.py                 # Entry point unico (app factory)
 ├── config.py              # Configurazione (Dev/Prod)
 ├── requirements.txt       # Dipendenze Python
 ├── start.sh              # Script avvio rapido
@@ -185,11 +185,15 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 File `.env`:
 ```
 SECRET_KEY=generated-key
+DATABASE_URL=postgresql://user:pass@localhost/sonacip
 MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USE_TLS=true
 MAIL_USERNAME=email@gmail.com
 MAIL_PASSWORD=app-password
+REDIS_URL=redis://localhost:6379/0
+RATELIMIT_STORAGE_URI=redis://localhost:6379/1
+SUPERADMIN_PASSWORD=change-me-after-first-login
 ```
 
 ## 📝 Note Importanti

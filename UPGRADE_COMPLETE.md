@@ -382,13 +382,13 @@ Per completare l'esperienza visiva world-class:
 
 QUICK START:
 ```bash
-python run.py
+flask --app run run
 ```
 
 LOGIN:
 - URL: http://localhost:5000
 - Email: admin@sonacip.it
-- Password: admin123
+- Password: impostata via SUPERADMIN_PASSWORD oppure generata e riportata nei log
 
 DATABASE:
 - Auto-initialized ✓

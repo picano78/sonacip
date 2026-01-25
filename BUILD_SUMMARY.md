@@ -259,7 +259,7 @@ app/
 ### Manual Setup
 ```bash
 pip3 install -r requirements.txt
-python3 run.py
+flask --app run run
 ```
 
 ### Production Deployment (Ubuntu 24.04)
@@ -301,9 +301,9 @@ sudo certbot --nginx -d yourdomain.com
 
 **Super Admin Account:**
 - Email: `admin@sonacip.it`
-- Password: `admin123`
+- Password: impostata via `SUPERADMIN_PASSWORD` oppure generata e riportata nei log
 
-⚠️ **CRITICAL:** Change this password immediately after first login!
+⚠️ **CRITICAL:** Imposta `SUPERADMIN_PASSWORD` prima del primo avvio e ruota la password dopo il primo accesso.
 
 ---
 

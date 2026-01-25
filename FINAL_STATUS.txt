@@ -23,7 +23,7 @@ QUICK START
 ════════════════════════════════════════════════════════════════════════
 
 Start application:
-$ python run.py
+$ flask --app run run
 
 Run validation:
 $ python system_validation.py
@@ -33,7 +33,7 @@ $ sudo ./deploy_vps.sh
 
 Login credentials:
 - Email: admin@sonacip.it
-- Password: admin123
+- Password: impostata via SUPERADMIN_PASSWORD o riportata nei log
 
 ════════════════════════════════════════════════════════════════════════
 KEY ACHIEVEMENTS

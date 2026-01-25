@@ -23,7 +23,7 @@ FASE 1 - CORE FIXES
   ✅ Creazione 6 nuovi modelli SaaS
   ✅ Correzione errori SQLAlchemy
   ✅ Fix import inconsistencies
-  ✅ Applicazione avviabile: python run.py
+  ✅ Applicazione avviabile: flask --app run run
 
 FASE 2 - DATABASE & INITIALIZATION
   ✅ Funzioni init_roles() - 5 ruoli
@@ -75,7 +75,7 @@ STABILITY (Stabilità)
   ✅ Database constraints corretti
 
 STARTABILITY (Avviabilità)
-  ✅ python run.py funziona senza errori
+  ✅ flask --app run run funziona senza errori
   ✅ Auto-initialization database
   ✅ Super Admin creato automaticamente
   ✅ Nessun import error
@@ -131,10 +131,10 @@ Helper Functions:        15+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 SVILUPPO:
-  $ python run.py
+  $ flask --app run run
   
   Login: admin@sonacip.it
-  Password: admin123
+  Password: impostata via SUPERADMIN_PASSWORD o riportata nei log
 
 UTENTI TEST:
   $ python create_test_users.py

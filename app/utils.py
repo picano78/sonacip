@@ -6,6 +6,33 @@ from flask import flash, redirect, url_for, abort
 from flask_login import current_user
 
 
+def check_permission(user, resource, action, society_id=None):
+    """Centralized permission resolver with optional society scoping."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+
+    if user.is_admin():
+        return True
+
+    allowed = user.has_permission(resource, action)
+    if not allowed:
+        return False
+
+    if society_id:
+        return user.can_access_society(society_id)
+
+    return True
+
+
+def enforce_permission(resource, action, society_id=None, user=None):
+    """Abort with 403 when the requested permission/scope is not granted."""
+    actor = user or current_user
+    if check_permission(actor, resource, action, society_id):
+        return True
+    flash('Non hai i permessi necessari per questa azione.', 'danger')
+    abort(403)
+
+
 def admin_required(f):
     """Decorator to require admin access permission."""
     return permission_required('admin', 'access')(f)
@@ -48,28 +75,20 @@ def can_manage_user(user):
     """
     if not current_user.is_authenticated:
         return False
-    
-    # Permission required to manage users
-    if not current_user.has_permission('users', 'edit'):
+
+    target_society = user.get_primary_society()
+    target_society_id = target_society.id if target_society else None
+
+    if not check_permission(current_user, 'users', 'edit', target_society_id):
         return False
 
-    # Super admin can manage everyone
-    if current_user.is_admin():
-        return True
-    
-    # Can't manage yourself through admin interface
     if current_user.id == user.id:
         return False
-    
-    # Society can manage their staff and athletes
-    society = current_user.get_primary_society()
-    if society:
-        if user.is_staff() and user.society_id == society.id:
-            return True
-        if user.is_athlete() and user.athlete_society_id == society.id:
-            return True
-    
-    return False
+
+    if target_society_id:
+        return current_user.can_access_society(target_society_id)
+
+    return True
 
 
 def can_view_user(user):
@@ -78,30 +97,20 @@ def can_view_user(user):
     """
     if not current_user.is_authenticated:
         return False
-    
-    # Permission to view all users
-    if current_user.has_permission('users', 'view_all'):
+
+    target_society = user.get_primary_society()
+    target_society_id = target_society.id if target_society else None
+
+    if check_permission(current_user, 'users', 'view_all', target_society_id):
         return True
-    
-    # Everyone can view their own profile
+
     if current_user.id == user.id:
         return True
-    
-    # Society can view their staff and athletes
-    society = current_user.get_primary_society()
-    if society:
-        if user.is_staff() and user.society_id == society.id:
-            return True
-        if user.is_athlete() and user.athlete_society_id == society.id:
-            return True
-    
-    # Staff can view athletes of their society
-    if current_user.is_staff() and current_user.society_id:
-        if user.is_athlete() and user.athlete_society_id == current_user.society_id:
-            return True
-    
-    # Public profiles (for social features)
-    return True
+
+    if target_society_id and current_user.can_access_society(target_society_id):
+        return True
+
+    return False
 
 
 def get_user_society(user):
@@ -135,20 +144,15 @@ def permission_required(resource, action, society_id_param=None, society_id_func
                 flash('Effettua il login per accedere a questa pagina.', 'warning')
                 return redirect(url_for('auth.login'))
 
-            if not current_user.has_permission(resource, action):
+            scope_id = None
+            if society_id_param:
+                scope_id = kwargs.get(society_id_param)
+            elif society_id_func:
+                scope_id = society_id_func(*args, **kwargs)
+
+            if not check_permission(current_user, resource, action, scope_id):
                 flash('Non hai i permessi necessari per questa azione.', 'danger')
                 abort(403)
-
-            # Society scope enforcement
-            if not current_user.is_admin():
-                scope_id = None
-                if society_id_param:
-                    scope_id = kwargs.get(society_id_param)
-                elif society_id_func:
-                    scope_id = society_id_func(*args, **kwargs)
-                if scope_id and not current_user.can_access_society(scope_id):
-                    flash('Permessi limitati alla tua società.', 'danger')
-                    abort(403)
 
             return f(*args, **kwargs)
         return decorated_function

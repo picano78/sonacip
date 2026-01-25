@@ -2,28 +2,24 @@
 from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
+from sqlalchemy import false
 from app import db
 from app.tournaments import bp
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
 from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity
 from app.automation.utils import execute_rules
-from app.utils import permission_required
+from app.utils import permission_required, check_permission
 
 
-def _require_society_scope(tournament: Tournament = None):
-    if current_user.is_admin():
-        return
-    society = current_user.get_primary_society()
-    if not society:
-        abort(403)
-    if tournament and tournament.society_id != society.id:
+def _require_society_scope(tournament: Tournament = None, action: str = 'view'):
+    scope_id = tournament.society_id if tournament else None
+    if not check_permission(current_user, 'tournaments', action, scope_id):
         abort(403)
 
 
 def _get_society_id():
-    if current_user.is_admin():
-        sid = request.args.get('society_id', type=int)
-        return sid
+    if current_user.has_permission('admin', 'access'):
+        return request.args.get('society_id', type=int)
     society = current_user.get_primary_society()
     return society.id if society else None
 
@@ -38,8 +34,10 @@ def _trigger(event_type, payload):
 def list_tournaments():
     sid = _get_society_id()
     query = Tournament.query
-    if not current_user.is_admin():
+    if sid:
         query = query.filter_by(society_id=sid)
+    elif not current_user.has_permission('admin', 'access'):
+        query = query.filter(false())
     tournaments = query.order_by(Tournament.created_at.desc()).all()
     return render_template('tournaments/index.html', tournaments=tournaments)
 
@@ -90,7 +88,7 @@ def create_tournament():
 @permission_required('tournaments', 'view')
 def view_tournament(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
-    _require_society_scope(tournament)
+    _require_society_scope(tournament, 'view')
     teams = tournament.teams.order_by(TournamentTeam.name.asc()).all()
     matches = tournament.matches.order_by(TournamentMatch.match_date.asc()).all()
     standings = tournament.standings.order_by(TournamentStanding.points.desc(), TournamentStanding.goals_for.desc()).all()
@@ -102,7 +100,7 @@ def view_tournament(tournament_id):
 @permission_required('tournaments', 'manage')
 def add_team(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
-    _require_society_scope(tournament)
+    _require_society_scope(tournament, 'manage')
     form = TournamentTeamForm()
     if form.validate_on_submit():
         team = TournamentTeam(
@@ -127,7 +125,7 @@ def add_team(tournament_id):
 @permission_required('tournaments', 'manage')
 def add_match(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
-    _require_society_scope(tournament)
+    _require_society_scope(tournament, 'manage')
     form = TournamentMatchForm()
     if form.validate_on_submit():
         match = TournamentMatch(
@@ -153,7 +151,7 @@ def add_match(tournament_id):
 def set_score(match_id):
     match = TournamentMatch.query.get_or_404(match_id)
     tournament = match.tournament
-    _require_society_scope(tournament)
+    _require_society_scope(tournament, 'manage')
     form = MatchScoreForm()
     if form.validate_on_submit():
         match.set_score(form.home_score.data, form.away_score.data)

@@ -8,12 +8,12 @@ from app import db
 from app.crm import bp
 from app.crm.forms import ContactForm, OpportunityForm, ActivityForm
 from app.models import Contact, Opportunity, CRMActivity, User, AuditLog
-from app.utils import permission_required
+from app.utils import permission_required, check_permission
 from datetime import datetime
 
 
 def _society_scope_id():
-    if current_user.is_admin():
+    if check_permission(current_user, 'admin', 'access'):
         return None
     society = current_user.get_primary_society()
     return society.id if society else None
@@ -29,7 +29,7 @@ def _enforce_scope(entity_society_id, redirect_endpoint):
 
 @bp.route('/')
 @login_required
-@permission_required('crm', 'access')
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
 def index():
     """CRM Dashboard"""
     # Get statistics
@@ -38,8 +38,12 @@ def index():
         contacts = Contact.query.filter_by(society_id=scope_id).all()
         opportunities = Opportunity.query.filter_by(society_id=scope_id).all()
     else:
-        contacts = Contact.query.all()
-        opportunities = Opportunity.query.all()
+        if check_permission(current_user, 'admin', 'access'):
+            contacts = Contact.query.all()
+            opportunities = Opportunity.query.all()
+        else:
+            contacts = []
+            opportunities = []
     
     # Calculate stats
     total_contacts = len(contacts)
@@ -69,7 +73,7 @@ def index():
 
 @bp.route('/contacts')
 @login_required
-@permission_required('crm', 'access')
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
 def contacts():
     """List all contacts"""
     # Filter by society
@@ -77,7 +81,7 @@ def contacts():
     if scope_id:
         contacts = Contact.query.filter_by(society_id=scope_id).order_by(Contact.created_at.desc()).all()
     else:
-        contacts = Contact.query.order_by(Contact.created_at.desc()).all()
+        contacts = Contact.query.order_by(Contact.created_at.desc()).all() if check_permission(current_user, 'admin', 'access') else []
     
     # Filter by status if requested
     status_filter = request.args.get('status')
@@ -89,7 +93,7 @@ def contacts():
 
 @bp.route('/contacts/new', methods=['GET', 'POST'])
 @login_required
-@permission_required('crm', 'manage')
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
 def new_contact():
     """Create new contact"""
     form = ContactForm()
@@ -127,7 +131,7 @@ def new_contact():
 
 @bp.route('/contacts/<int:contact_id>')
 @login_required
-@permission_required('crm', 'access')
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
 def contact_detail(contact_id):
     """View contact details"""
     contact = Contact.query.get_or_404(contact_id)
@@ -148,7 +152,7 @@ def contact_detail(contact_id):
 
 @bp.route('/contacts/<int:contact_id>/edit', methods=['GET', 'POST'])
 @login_required
-@permission_required('crm', 'manage')
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
 def edit_contact(contact_id):
     """Edit contact"""
     contact = Contact.query.get_or_404(contact_id)
@@ -185,7 +189,7 @@ def edit_contact(contact_id):
 
 @bp.route('/opportunities')
 @login_required
-@permission_required('crm', 'access')
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
 def opportunities():
     """List all opportunities"""
     # Filter by society
@@ -200,7 +204,7 @@ def opportunities():
 
 @bp.route('/opportunities/new', methods=['GET', 'POST'])
 @login_required
-@permission_required('crm', 'manage')
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
 def new_opportunity():
     """Create new opportunity"""
     form = OpportunityForm()
@@ -242,7 +246,7 @@ def new_opportunity():
 
 @bp.route('/opportunities/<int:opp_id>')
 @login_required
-@permission_required('crm', 'access')
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
 def opportunity_detail(opp_id):
     """View opportunity details"""
     opportunity = Opportunity.query.get_or_404(opp_id)
@@ -261,7 +265,7 @@ def opportunity_detail(opp_id):
 
 @bp.route('/activities/new', methods=['GET', 'POST'])
 @login_required
-@permission_required('crm', 'manage')
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
 def new_activity():
     """Log new activity"""
     form = ActivityForm()

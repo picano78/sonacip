@@ -4,13 +4,21 @@ Create events, convocate athletes, manage responses
 """
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import or_, and_
 from app import db
 from app.events import bp
 from app.events.forms import EventForm
-from app.models import Event, User, Notification
+from app.models import Event, User, Notification, event_athletes
 from app.automation.utils import execute_automations, execute_rules
-from app.utils import permission_required
+from app.utils import permission_required, check_permission
 from datetime import datetime
+
+
+def _event_scope_id(event: Event | None):
+    if event and event.creator:
+        society = event.creator.get_primary_society()
+        return society.id if society else None
+    return None
 
 
 @bp.route('/')
@@ -20,23 +28,22 @@ def index():
     """List all events"""
     page = request.args.get('page', 1, type=int)
     per_page = 15
-    
-    # Filter based on user scope
-    if current_user.is_admin():
-        # Admin sees all events
+
+    admin_access = check_permission(current_user, 'admin', 'access')
+    scope = current_user.get_primary_society()
+
+    if admin_access:
         events_query = Event.query
-    elif current_user.get_primary_society():
-        # Society/staff see events created by their society users
+    elif scope:
         events_query = Event.query.filter_by(creator_id=current_user.id)
     else:
-        # Athletes see events they're convocated to
         events_query = current_user.events
-    
+
     pagination = events_query.order_by(Event.start_date.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     events = pagination.items
-    
+
     return render_template('events/index.html',
                          events=events,
                          pagination=pagination)
@@ -100,7 +107,7 @@ def detail(event_id):
         })
     
     # Check if current user can manage this event
-    can_manage = (current_user.id == event.creator_id or current_user.has_permission('events', 'manage'))
+    can_manage = current_user.id == event.creator_id or check_permission(current_user, 'events', 'manage', _event_scope_id(event))
     
     # Check if current user is convocated
     is_convocated = current_user in event.convocated_athletes
@@ -129,8 +136,8 @@ def edit(event_id):
     """Edit event"""
     event = Event.query.get_or_404(event_id)
     
-    # Check permissions
-    if event.creator_id != current_user.id and not current_user.is_admin():
+    allowed_manage = event.creator_id == current_user.id or check_permission(current_user, 'events', 'manage', _event_scope_id(event))
+    if not allowed_manage:
         flash('Non hai i permessi per modificare questo evento.', 'danger')
         return redirect(url_for('events.detail', event_id=event_id))
     
@@ -168,8 +175,8 @@ def convocate(event_id):
     """Convocate athletes to event"""
     event = Event.query.get_or_404(event_id)
     
-    # Check permissions
-    if event.creator_id != current_user.id and not current_user.is_admin():
+    allowed_manage = event.creator_id == current_user.id or check_permission(current_user, 'events', 'manage', _event_scope_id(event))
+    if not allowed_manage:
         flash('Non hai i permessi per convocare atleti.', 'danger')
         return redirect(url_for('events.detail', event_id=event_id))
     
@@ -199,24 +206,16 @@ def convocate(event_id):
     # Get available athletes
     # For society: their own athletes
     # For staff: athletes of their society
-    if current_user.is_society():
-        available_athletes = User.query.filter(
-            User.role.in_(['atleta', 'athlete']),
-            User.athlete_society_id == current_user.id,
-            User.is_active == True
-        ).all()
-    elif current_user.is_staff():
-        available_athletes = User.query.filter(
-            User.role.in_(['atleta', 'athlete']),
-            User.athlete_society_id == current_user.society_id,
-            User.is_active == True
-        ).all()
+    scope = current_user.get_primary_society()
+    scope_id = scope.id if scope else None
+    base_q = User.query.filter(
+        User.role.in_(['atleta', 'athlete']),
+        User.is_active == True
+    )
+    if scope_id and not check_permission(current_user, 'admin', 'access'):
+        available_athletes = base_q.filter(User.athlete_society_id == scope_id).all()
     else:
-        # Admin can convocate any athlete
-        available_athletes = User.query.filter(
-            User.role.in_(['atleta', 'athlete']),
-            User.is_active == True
-        ).all()
+        available_athletes = base_q.all()
     
     # Remove already convocated
     available_athletes = [a for a in available_athletes if a not in event.convocated_athletes]
@@ -268,8 +267,8 @@ def delete(event_id):
     """Delete event"""
     event = Event.query.get_or_404(event_id)
     
-    # Check permissions
-    if event.creator_id != current_user.id and not current_user.is_admin():
+    allowed_manage = event.creator_id == current_user.id or check_permission(current_user, 'events', 'manage', _event_scope_id(event))
+    if not allowed_manage:
         flash('Non hai i permessi per eliminare questo evento.', 'danger')
         return redirect(url_for('events.detail', event_id=event_id))
     
@@ -287,8 +286,8 @@ def cancel(event_id):
     """Cancel event"""
     event = Event.query.get_or_404(event_id)
     
-    # Check permissions
-    if event.creator_id != current_user.id and not current_user.is_admin():
+    allowed_manage = event.creator_id == current_user.id or check_permission(current_user, 'events', 'manage', _event_scope_id(event))
+    if not allowed_manage:
         flash('Non hai i permessi per cancellare questo evento.', 'danger')
         return redirect(url_for('events.detail', event_id=event_id))
     
@@ -317,9 +316,6 @@ def cancel(event_id):
 @permission_required('events', 'view')
 def my_events():
     """View my events (as athlete)"""
-    if not current_user.is_athlete():
-        return redirect(url_for('events.index'))
-    
     page = request.args.get('page', 1, type=int)
     per_page = 15
     

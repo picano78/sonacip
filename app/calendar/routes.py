@@ -7,7 +7,7 @@ from app import db
 from app.calendar import bp
 from app.calendar.forms import SocietyCalendarEventForm
 from app.models import SocietyCalendarEvent, society_calendar_event_staff, society_calendar_event_athletes, User, Notification, Post
-from app.utils import permission_required
+from app.utils import permission_required, check_permission
 
 
 def _date_range(view_mode: str, start_date: datetime.date):
@@ -22,33 +22,14 @@ def _date_range(view_mode: str, start_date: datetime.date):
 
 def _base_query_for_user():
     q = SocietyCalendarEvent.query
-    if current_user.is_admin():
+    if check_permission(current_user, 'admin', 'access'):
         return q
 
     society = current_user.get_primary_society()
     if not society:
         return q.filter(False)
 
-    if current_user.is_society_admin():
-        return q.filter(SocietyCalendarEvent.society_id == society.id)
-
-    if current_user.is_staff() or current_user.is_coach():
-        return q.filter(
-            and_(
-                SocietyCalendarEvent.society_id == society.id,
-                or_(
-                    SocietyCalendarEvent.created_by == current_user.id,
-                    SocietyCalendarEvent.staff_members.any(User.id == current_user.id)
-                )
-            )
-        )
-
-    if current_user.is_athlete():
-        return q.filter(
-            SocietyCalendarEvent.athletes.any(User.id == current_user.id)
-        )
-
-    return q.filter(False)
+    return q.filter(SocietyCalendarEvent.society_id == society.id)
 
 
 @bp.route('/calendar')
@@ -116,8 +97,14 @@ def detail(event_id):
 @permission_required('calendar', 'manage')
 def create():
     form = SocietyCalendarEventForm(current_user=current_user)
+    scope = current_user.get_primary_society()
+    scope_id = scope.id if scope else None
 
     if form.validate_on_submit():
+        if scope_id and not check_permission(current_user, 'admin', 'access') and form.society_id.data != scope_id:
+            flash('Non puoi creare eventi per una società diversa.', 'danger')
+            return redirect(url_for('calendar.index'))
+
         start_dt = datetime.combine(form.start_date.data, form.start_time.data)
         end_dt = None
         if form.end_date.data and form.end_time.data:

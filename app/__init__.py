@@ -61,11 +61,11 @@ def create_app(config_name=None):
     # Register template filters and context processors
     register_template_utilities(app)
     
-    # Create database tables if they don't exist and patch legacy schemas
+    # Create database tables if they don't exist and run bootstrap (idempotent)
     with app.app_context():
         db.create_all()
         ensure_schema_columns()
-        create_super_admin()
+        bootstrap_system(app)
 
     # Lightweight auto-backup check on each request (once per hour max)
     from app.backup.utils import run_scheduled_backup_if_due
@@ -351,17 +351,19 @@ def register_template_utilities(app):
         )
 
 
-def create_super_admin():
-    """Create default super admin and initialize base data if not exists"""
+def bootstrap_system(app=None):
+    """Deterministic bootstrap: roles, permissions, plans, super admin."""
     from app.models import User, Role, Permission, Plan, SocialSetting, AppearanceSetting
     from flask import current_app
 
-    # Initialize base roles/permissions/plans (idempotent)
+    if app and app.config.get('_BOOTSTRAP_DONE'):
+        return
+
     init_roles()
     init_permissions()
     init_plans()
 
-    # Ensure governance defaults
+    # Governance defaults
     if not SocialSetting.query.first():
         db.session.add(SocialSetting())
         db.session.commit()
@@ -382,7 +384,7 @@ def create_super_admin():
     except Exception:
         db.session.rollback()
 
-    # Create super admin user on empty databases
+    # Create super admin only when missing
     admin = User.query.join(Role, User.role_id == Role.id).filter(Role.name == 'super_admin').first()
     if not admin:
         super_admin_role = Role.query.filter_by(name='super_admin').first()
@@ -401,12 +403,15 @@ def create_super_admin():
         db.session.commit()
         current_app.logger.info('Bootstrap: Super Admin created (admin@sonacip.it)')
 
-    # Log bootstrap execution when DB is empty
+    # Log bootstrap execution on empty DB
     try:
         if User.query.count() == 1 and Role.query.count() > 0 and Permission.query.count() > 0 and Plan.query.count() > 0:
             current_app.logger.info('Bootstrap: base roles, permissions, plans initialized')
     except Exception:
         pass
+
+    if app:
+        app.config['_BOOTSTRAP_DONE'] = True
 
 
 def init_roles():

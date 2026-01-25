@@ -30,9 +30,8 @@ def contact():
 @login_required
 def dashboard():
     """User dashboard - redirect to appropriate view"""
-    if current_user.is_admin():
+    if current_user.has_permission('admin', 'access'):
         return redirect(url_for('admin.dashboard'))
-    elif current_user.is_society():
+    if current_user.has_permission('society', 'manage'):
         return redirect(url_for('social.society_dashboard'))
-    else:
-        return redirect(url_for('social.feed'))
+    return redirect(url_for('social.feed'))

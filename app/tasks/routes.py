@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.tasks import bp
 from app.models import Task, Project, User, Team
-from app.utils import permission_required
+from app.utils import permission_required, check_permission
 from app.models import Event
 from app.automation.utils import execute_automations, execute_rules
 from datetime import datetime, timedelta
@@ -25,7 +25,7 @@ def index():
     created_tasks = Task.query.filter_by(created_by=current_user.id).all()
     
     # Get projects
-    if current_user.is_admin():
+    if check_permission(current_user, 'admin', 'access'):
         projects = Project.query.all()
     elif current_user.is_society():
         projects = Project.query.filter_by(society_id=current_user.id).all()
@@ -55,7 +55,7 @@ def index():
 def planner():
     """Unified planner for tasks and events"""
     # Upcoming events: admin sees all, society sees own, others see convocated
-    if current_user.is_admin():
+    if check_permission(current_user, 'admin', 'access'):
         events_query = Event.query
     elif current_user.is_society() or current_user.is_staff():
         events_query = Event.query.filter_by(creator_id=current_user.id)
@@ -324,7 +324,7 @@ def view_project(project_id):
 # Helper functions
 def can_view_task(user, task):
     """Check if user can view task"""
-    if user.is_admin():
+    if check_permission(user, 'admin', 'access'):
         return True
     if task.created_by == user.id or task.assigned_to == user.id:
         return True
@@ -335,7 +335,7 @@ def can_view_task(user, task):
 
 def can_edit_task(user, task):
     """Check if user can edit task"""
-    if user.is_admin():
+    if check_permission(user, 'admin', 'access'):
         return True
     if task.created_by == user.id or task.assigned_to == user.id:
         return True

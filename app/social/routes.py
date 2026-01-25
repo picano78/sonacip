@@ -256,7 +256,7 @@ def promote_post(post_id):
 @login_required
 @permission_required('social', 'comment')
 def like_post(post_id):
-    """Like/unlike a post"""
+    """Like/unlike a post (supports HTMX)"""
     post = Post.query.get_or_404(post_id)
     
     if post.is_liked_by(current_user):
@@ -282,6 +282,22 @@ def like_post(post_id):
             db.session.add(notification)
     
     db.session.commit()
+    
+    # HTMX Response
+    if 'HX-Request' in request.headers:
+        btn_class = 'btn-primary' if liked else 'btn-outline-primary'
+        icon_class = 'bi-heart-fill' if liked else 'bi-heart'
+        
+        button_html = f"""
+        <button class="btn btn-sm {btn_class}"
+                hx-post="{url_for('social.like_post', post_id=post.id)}"
+                hx-swap="outerHTML"
+                hx-target="this">
+            <i class="bi {icon_class}"></i>
+            <span>{post.likes_count}</span>
+        </button>
+        """
+        return button_html
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({

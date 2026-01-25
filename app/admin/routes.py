@@ -3,7 +3,7 @@ Admin routes
 """
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from sqlalchemy import or_, func, desc
+from sqlalchemy import or_, and_, func, desc
 from app import db
 from app.admin import bp
 from app.admin.utils import admin_required
@@ -404,41 +404,112 @@ def search():
 @admin_required
 def stats():
     """Detailed statistics page"""
-    # User statistics by role
+    days = 30
+    start_date = datetime.utcnow() - timedelta(days=days)
+
+    # 1. Signup Data (Daily for chart)
+    signup_map = {}
+    # Initialize all days with 0
+    for i in range(days):
+        d = (datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d')
+        signup_map[d] = 0
+            
     try:
-        user_stats = db.session.query(
+        users_last_days = User.query.filter(User.created_at >= start_date).all()
+        for u in users_last_days:
+            if u.created_at:
+                d = u.created_at.strftime('%Y-%m-%d')
+                if d in signup_map:
+                    signup_map[d] += 1
+    except Exception as e:
+        print(f"Error fetching signup stats: {e}")
+
+    signup_data = [{'date': k, 'count': v} for k, v in sorted(signup_map.items())]
+
+    # 2. Role Data
+    role_data = []
+    try:
+        user_stats_query = db.session.query(
             User.role,
             func.count(User.id).label('count')
         ).group_by(User.role).all()
+        role_data = [{'role': r, 'count': c} for r, c in user_stats_query]
     except Exception as e:
-        user_stats = []
         print(f"Error fetching user stats: {e}")
     
-    # Activity statistics (last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    # 3. Activity Summary & Growth
+    activity_summary = {'posts': 0, 'events': 0, 'comments': 0}
+    growth_stats = {}
     
-    try:
-        activity_stats = {
-            'new_users': User.query.filter(User.created_at >= thirty_days_ago).count(),
-            'new_posts': Post.query.filter(Post.created_at >= thirty_days_ago).count(),
-            'new_events': Event.query.filter(Event.created_at >= thirty_days_ago).count(),
-            'new_comments': Comment.query.filter(Comment.created_at >= thirty_days_ago).count()
+    def calculate_growth(model, current_start, prev_start):
+        curr_count = model.query.filter(model.created_at >= current_start).count()
+        prev_count = model.query.filter(and_(model.created_at >= prev_start, model.created_at < current_start)).count()
+        
+        diff = curr_count - prev_count
+        percent = 0
+        if prev_count > 0:
+            percent = (diff / prev_count) * 100
+        elif curr_count > 0:
+            percent = 100
+        
+        return {
+            'value': curr_count,
+            'prev': prev_count,
+            'diff': diff,
+            'percent': round(percent, 1),
+            'trend': 'up' if diff >= 0 else 'down'
         }
+
+    try:
+        prev_start = start_date - timedelta(days=days)
+        
+        growth_stats = {
+            'users': calculate_growth(User, start_date, prev_start),
+            'posts': calculate_growth(Post, start_date, prev_start),
+            'events': calculate_growth(Event, start_date, prev_start)
+        }
+        
+        # Activity Trend (Daily)
+        activity_map = {}
+        for i in range(days):
+            d = (datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d')
+            activity_map[d] = {'posts': 0, 'events': 0}
+            
+        posts_period = Post.query.filter(Post.created_at >= start_date).all()
+        for p in posts_period:
+            d = p.created_at.strftime('%Y-%m-%d')
+            if d in activity_map:
+                activity_map[d]['posts'] += 1
+                
+        events_period = Event.query.filter(Event.created_at >= start_date).all()
+        for e in events_period:
+            d = e.created_at.strftime('%Y-%m-%d')
+            if d in activity_map:
+                activity_map[d]['events'] += 1
+                
+        activity_trend = [{'date': k, 'posts': v['posts'], 'events': v['events']} for k, v in sorted(activity_map.items())]
+
     except Exception as e:
-        activity_stats = {'new_users': 0, 'new_posts': 0, 'new_events': 0, 'new_comments': 0}
         print(f"Error fetching activity stats: {e}")
+        activity_trend = []
+        growth_stats = {
+            'users': {'value': 0, 'percent': 0, 'trend': 'up'},
+            'posts': {'value': 0, 'percent': 0, 'trend': 'up'},
+            'events': {'value': 0, 'percent': 0, 'trend': 'up'}
+        }
     
-    # Top users by posts
+    # 4. Top users by posts
+    top_posters = []
     try:
         top_posters = db.session.query(
             User,
             func.count(Post.id).label('post_count')
         ).join(Post).group_by(User.id).order_by(desc('post_count')).limit(10).all()
     except Exception as e:
-        top_posters = []
         print(f"Error fetching top posters: {e}")
     
-    # Top societies by followers
+    # 5. Top societies by followers
+    top_societies = []
     try:
         societies = Society.query.limit(10).all()
         top_societies = sorted(
@@ -447,12 +518,14 @@ def stats():
             reverse=True
         )[:10]
     except Exception as e:
-        top_societies = []
         print(f"Error fetching societies: {e}")
     
-    return render_template('admin/stats.html',
-                         user_stats=user_stats,
-                         activity_stats=activity_stats,
+    return render_template('admin/analytics.html',
+                         days=days,
+                         signup_data=signup_data,
+                         role_data=role_data,
+                         growth_stats=growth_stats,
+                         activity_trend=activity_trend,
                          top_posters=top_posters,
                          top_societies=top_societies)
 

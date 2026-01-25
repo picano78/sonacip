@@ -7,43 +7,133 @@
         <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">Torna alla dashboard</a>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 mb-4">
+        <!-- Metric Cards -->
+        {% for entity, stats in growth_stats.items() %}
         <div class="col-md-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <h6 class="text-muted">Ultimi {{ days }} giorni</h6>
-                    <h3 class="mb-0">Iscrizioni giornaliere</h3>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="text-uppercase text-muted mb-0 small">{{ entity }}</h6>
+                        <span class="badge {{ 'bg-success-subtle text-success' if stats.trend == 'up' else 'bg-danger-subtle text-danger' }} rounded-pill">
+                            <i class="bi {{ 'bi-arrow-up' if stats.trend == 'up' else 'bi-arrow-down' }}"></i> {{ stats.percent }}%
+                        </span>
+                    </div>
+                    <h2 class="mb-0 fw-bold">{{ stats.value }}</h2>
+                    <div class="small text-muted mt-2">vs {{ stats.prev }} prev {{ days }}d</div>
                 </div>
-                <div class="card-body pt-0">
-                    <canvas id="signupChart" height="160"></canvas>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom-0 py-3">
+                    <h5 class="mb-0">Trend Attività Giornaliera</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="activityChart" height="120"></canvas>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom-0 py-3">
+                    <h5 class="mb-0">Distribuzione Ruoli</h5>
+                </div>
                 <div class="card-body">
-                    <h6 class="text-muted">Distribuzione ruoli</h6>
-                    <h3 class="mb-3">Segmentazione</h3>
-                    <canvas id="roleChart" height="160"></canvas>
+                    <canvas id="roleChart" height="200"></canvas>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card shadow-sm">
+    </div>
+    
+    <div class="row g-4 mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm border-0">
+                 <div class="card-header bg-white border-bottom-0 py-3">
+                    <h5 class="mb-0">Nuovi Iscritti</h5>
+                </div>
                 <div class="card-body">
-                    <h6 class="text-muted">Attività ultimi 7 giorni</h6>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>Post</span>
-                        <span class="fw-bold">{{ activity_summary.posts }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span>Eventi</span>
-                        <span class="fw-bold">{{ activity_summary.events }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span>Commenti</span>
-                        <span class="fw-bold">{{ activity_summary.comments }}</span>
-                    </div>
+                    <canvas id="signupChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0">
+                    <h5 class="card-title mb-0"><i class="bi bi-people"></i> Top Utenti (Post)</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Utente</th>
+                                <th class="text-end">Post</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user, count in top_posters %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if user.avatar %}
+                                        <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}" class="rounded-circle me-2" width="32" height="32" alt="{{ user.username }}">
+                                        {% else %}
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                            <span class="small text-muted">{{ user.username[:2].upper() }}</span>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ user.username }}</div>
+                                            <div class="small text-muted">{{ user.role }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-bold">{{ count }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center text-muted">Nessun dato</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white border-bottom-0">
+                    <h5 class="card-title mb-0"><i class="bi bi-building"></i> Top Società (Follower)</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Società</th>
+                                <th class="text-end">Follower</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for society in top_societies %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ society.name }}</div>
+                                    <div class="small text-muted">{{ society.city }}</div>
+                                </td>
+                                <td class="text-end fw-bold">
+                                    {{ society.user.followers.count() if society.user else 0 }}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center text-muted">Nessun dato</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -58,59 +148,112 @@
     'signup_labels': signup_data | map(attribute='date') | list,
     'signup_values': signup_data | map(attribute='count') | list,
     'role_labels': role_data | map(attribute='role') | list,
-    'role_values': role_data | map(attribute='count') | list
+    'role_values': role_data | map(attribute='count') | list,
+    'dates': activity_trend | map(attribute='date') | list,
+    'posts': activity_trend | map(attribute='posts') | list,
+    'events': activity_trend | map(attribute='events') | list
 } | tojson }}
 </script>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const dataEl = document.getElementById('analytics-data');
-        let analyticsData = { signup_labels: [], signup_values: [], role_labels: [], role_values: [] };
+        let data = {};
         if (dataEl && dataEl.textContent) {
             try {
-                analyticsData = JSON.parse(dataEl.textContent);
+                data = JSON.parse(dataEl.textContent);
             } catch (err) {
                 console.error('Analytics data parse error', err);
             }
         }
 
-        const signupLabels = analyticsData.signup_labels || [];
-        const signupValues = analyticsData.signup_values || [];
-        const roleLabels = analyticsData.role_labels || [];
-        const roleValues = analyticsData.role_values || [];
+        const commonOptions = {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: { boxWidth: 10, usePointStyle: true }
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            }
+        };
 
-        new Chart(document.getElementById('signupChart'), {
-            type: 'line',
+        // Activity Trend Chart
+        new Chart(document.getElementById('activityChart'), {
+            type: 'bar',
             data: {
-                labels: signupLabels,
-                datasets: [{
-                    label: 'Iscritti',
-                    data: signupValues,
-                    borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13,110,253,0.1)',
-                    tension: 0.25,
-                    fill: true,
-                    borderWidth: 2,
-                    pointRadius: 3
-                }]
+                labels: data.dates || [],
+                datasets: [
+                    {
+                        label: 'Post',
+                        data: data.posts || [],
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Eventi',
+                        data: data.events || [],
+                        backgroundColor: '#fd7e14',
+                        borderRadius: 4
+                    }
+                ]
             },
             options: {
-                plugins: { legend: { display: false }},
-                scales: { y: { beginAtZero: true } }
+                ...commonOptions,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, border: { display: false } }
+                }
             }
         });
 
-        new Chart(document.getElementById('roleChart'), {
-            type: 'doughnut',
+        // Signup Chart
+        new Chart(document.getElementById('signupChart'), {
+            type: 'line',
             data: {
-                labels: roleLabels,
+                labels: data.signup_labels || [],
                 datasets: [{
-                    data: roleValues,
-                    backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#fd7e14', '#6f42c1', '#adb5bd']
+                    label: 'Nuovi Iscritti',
+                    data: data.signup_values || [],
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
                 }]
             },
             options: {
-                plugins: { legend: { position: 'bottom' } }
+                ...commonOptions,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Role Chart
+        new Chart(document.getElementById('roleChart'), {
+            type: 'doughnut',
+            data: {
+                labels: data.role_labels || [],
+                datasets: [{
+                    data: data.role_values || [],
+                    backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#fd7e14', '#6f42c1', '#adb5bd'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '70%',
+                plugins: { 
+                    legend: { position: 'bottom', labels: { boxWidth: 12 } } 
+                }
             }
         });
     });

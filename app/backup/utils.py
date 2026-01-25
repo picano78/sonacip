@@ -4,6 +4,7 @@ Backup utilities
 import os
 import shutil
 import zipfile
+import hashlib
 from datetime import datetime, timedelta
 from flask import current_app
 from app import db
@@ -66,8 +67,9 @@ def create_backup(created_by_id, backup_type='full', notes=None):
                         arcname = os.path.relpath(file_path, temp_dir)
                         zipf.write(file_path, arcname)
         
-        # Get file size
+        # Get file size and checksum
         file_size = os.path.getsize(backup_path)
+        checksum = calculate_checksum(backup_path)
         
         # Create backup record
         backup = BackupModel(
@@ -75,6 +77,7 @@ def create_backup(created_by_id, backup_type='full', notes=None):
             filepath=backup_path,
             size=file_size,
             backup_type=backup_type,
+            checksum=checksum,
             created_by=created_by_id,
             notes=notes,
             is_valid=True
@@ -144,6 +147,15 @@ def cleanup_old_backups(retention_days):
         if success:
             count += 1
     return count
+
+
+def calculate_checksum(file_path):
+    """Return SHA256 hex digest for a file"""
+    sha = hashlib.sha256()
+    with open(file_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            sha.update(chunk)
+    return sha.hexdigest()
 
 
 def restore_backup(backup_id):
@@ -225,6 +237,12 @@ def validate_backup(backup_id):
         
         if not zipfile.is_zipfile(backup.filepath):
             return False, 'File zip non valido'
+
+        # Verify checksum if stored
+        if backup.checksum:
+            current_sum = calculate_checksum(backup.filepath)
+            if current_sum != backup.checksum:
+                return False, 'Checksum non corrisponde'
         
         # Check if zip can be opened and contains expected files
         with zipfile.ZipFile(backup.filepath, 'r') as zipf:

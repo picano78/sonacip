@@ -27,6 +27,12 @@ def contact():
     return render_template('main/contact.html')
 
 
+@bp.route('/healthz')
+def healthz():
+    """Lightweight health check for uptime monitoring"""
+    return {'status': 'ok'}, 200
+
+
 @bp.route('/dashboard')
 @login_required
 def dashboard():

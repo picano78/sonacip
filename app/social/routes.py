@@ -4,7 +4,7 @@ Profiles, feed, posts, follows, likes, comments
 """
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
-from sqlalchemy import or_, desc
+from sqlalchemy.orm import joinedload
 from app import db
 from app.social import bp
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
@@ -35,6 +35,7 @@ def feed():
     cache_key = f"feed:{current_user.id}:p{page}"
     cached_ids = cache.get(cache_key)
 
+    start = (page - 1) * per_page
     if cached_ids is None:
         # Get posts from followed users + own posts
         try:
@@ -43,8 +44,22 @@ def feed():
             print(f"Error loading feed: {e}")
             posts_query = Post.query.filter_by(user_id=current_user.id)
 
-        # Fetch extra to allow custom sorting
-        raw_posts = posts_query.limit(per_page * 4).all()
+        fetch_limit = per_page * 5 + start
+        now = datetime.utcnow()
+        promoted = Post.query.filter(
+            Post.is_promoted == True,
+            Post.promotion_ends_at.isnot(None),
+            Post.promotion_ends_at > now
+        ).order_by(Post.created_at.desc()).limit(per_page * 2).all()
+
+        raw_posts = posts_query.order_by(Post.created_at.desc()).limit(fetch_limit).all()
+
+        combined = []
+        seen = set()
+        for p in promoted + raw_posts:
+            if p.id not in seen:
+                combined.append(p)
+                seen.add(p.id)
 
     boosted_types = []
     muted_types = []
@@ -83,18 +98,17 @@ def feed():
                     score -= 10
         return score
     if cached_ids is None:
-        sorted_posts = sorted(raw_posts, key=engagement_score, reverse=True)
-        total = len(sorted_posts)
-        start = (page - 1) * per_page
+        sorted_posts = sorted(combined, key=engagement_score, reverse=True)
+        total = posts_query.count() if 'posts_query' in locals() else len(sorted_posts)
         end = start + per_page
-        page_ids = [p.id for p in sorted_posts[start:end]]
+        page_ids = [p.id for p in sorted_posts[start:end]] if start < len(sorted_posts) else []
         cache.set(cache_key, {'ids': page_ids, 'total': total}, ttl=cache_ttl)
     else:
         page_ids = cached_ids.get('ids', [])
         total = cached_ids.get('total', 0)
 
     if page_ids:
-        posts_map = {p.id: p for p in Post.query.filter(Post.id.in_(page_ids)).all()}
+        posts_map = {p.id: p for p in Post.query.filter(Post.id.in_(page_ids)).options(joinedload(Post.author)).all()}
         posts = [posts_map[i] for i in page_ids if i in posts_map]
     else:
         posts = []
@@ -546,9 +560,9 @@ def society_dashboard():
     
     # Get society's events
     from app.models import Event
-        events = Event.query.filter_by(
-            creator_id=current_user.id
-        ).order_by(Event.start_date.desc()).limit(10).all()
+    events = Event.query.filter_by(
+        creator_id=current_user.id
+    ).order_by(Event.start_date.desc()).limit(10).all()
     
     # Statistics
     stats = {

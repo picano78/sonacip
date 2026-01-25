@@ -66,6 +66,19 @@ def privacy_settings():
         settings.updated_by = current_user.id
         settings.updated_at = datetime.utcnow()
         db.session.commit()
+        
+        # Log admin action
+        log = AuditLog(
+            user_id=current_user.id,
+            action='update_privacy_settings',
+            entity_type='PrivacySetting',
+            entity_id=settings.id,
+            details='Updated privacy and cookie settings',
+            ip_address=request.remote_addr
+        )
+        db.session.add(log)
+        db.session.commit()
+        
         flash('Impostazioni privacy aggiornate.', 'success')
         return redirect(url_for('admin.privacy_settings'))
     

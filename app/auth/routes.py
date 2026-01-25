@@ -3,7 +3,7 @@ Authentication routes
 """
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
-from app import db
+from app import db, limiter
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, SocietyRegistrationForm
 from app.models import User, AuditLog, Society, Subscription, Plan
@@ -11,6 +11,7 @@ from datetime import datetime
 
 
 @bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def login():
     """Login page"""
     if current_user.is_authenticated:
@@ -55,6 +56,7 @@ def login():
 
 
 @bp.route('/register', methods=['GET', 'POST'])
+@limiter.limit("3 per hour")
 def register():
     """Registration page for individuals"""
     if current_user.is_authenticated:
@@ -114,6 +116,7 @@ def register():
 
 
 @bp.route('/register/society', methods=['GET', 'POST'])
+@limiter.limit("2 per hour")
 def register_society():
     """Registration page for sports societies"""
     if current_user.is_authenticated:

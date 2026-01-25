@@ -2,7 +2,7 @@
 Common utilities and decorators for the application
 """
 from functools import wraps
-from flask import flash, redirect, url_for, abort
+from flask import flash, redirect, url_for, abort, current_app
 from flask_login import current_user
 
 
@@ -39,6 +39,10 @@ def enforce_permission(resource, action, society_id=None, user=None):
     actor = user or current_user
     if check_permission(actor, resource, action, society_id):
         return True
+    if current_app:
+        current_app.logger.warning(
+            f"Permission denied: resource={resource} action={action} scope={society_id} user={actor.id if actor and actor.is_authenticated else 'anonymous'}"
+        )
     flash('Non hai i permessi necessari per questa azione.', 'danger')
     abort(403)
 
@@ -161,6 +165,10 @@ def permission_required(resource, action, society_id_param=None, society_id_func
                 scope_id = society_id_func(*args, **kwargs)
 
             if not check_permission(current_user, resource, action, scope_id):
+                if current_app:
+                    current_app.logger.warning(
+                        f"Permission denied: resource={resource} action={action} scope={scope_id} user={current_user.id if current_user.is_authenticated else 'anonymous'}"
+                    )
                 flash('Non hai i permessi necessari per questa azione.', 'danger')
                 abort(403)
 

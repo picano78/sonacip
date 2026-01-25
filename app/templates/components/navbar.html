@@ -97,8 +97,14 @@
 
                     <!-- Messages -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('messages.inbox') }}">
+                        <a class="nav-link position-relative" href="{{ url_for('messages.inbox') }}">
                             <i class="bi bi-envelope"></i>
+                            {% set unread_msgs = get_unread_messages_count() %}
+                            {% if unread_msgs > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ unread_msgs }}
+                                </span>
+                            {% endif %}
                         </a>
                     </li>
                     

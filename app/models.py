@@ -607,6 +607,9 @@ class Backup(db.Model):
     filepath = db.Column(db.String(500), nullable=False)
     size = db.Column(db.Integer)  # Size in bytes
     backup_type = db.Column(db.String(20), default='full')  # full, database, uploads
+    checksum = db.Column(db.String(64))  # SHA256
+    storage_location = db.Column(db.String(50), default='local')  # local, remote
+    remote_url = db.Column(db.String(500))
     
     # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))

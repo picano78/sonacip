@@ -5,18 +5,22 @@ Creates and configures the Flask application instance
 import os
 from datetime import datetime
 import time
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_mail import Mail
-from flask import request
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Initialize extensions
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 mail = Mail()
+csrf = CSRFProtect()
+limiter = Limiter(key_func=get_remote_address)
 
 
 def create_app(config_name=None):
@@ -28,10 +32,23 @@ def create_app(config_name=None):
     
     # Load configuration
     if config_name is None:
-        config_name = os.environ.get('FLASK_ENV', 'default')
+        config_name = os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or 'production'
     
     from config import config
+    if config_name not in config:
+        config_name = 'production'
     app.config.from_object(config[config_name])
+    
+    # Validate configuration in production
+    if config_name in ['production', 'ProductionConfig']:
+        config[config_name].validate_config()
+
+    # Configure rate limit storage (Redis recommended in production)
+    storage_uri = app.config.get('RATELIMIT_STORAGE_URI') or app.config.get('REDIS_URL')
+    if storage_uri:
+        app.config['RATELIMIT_STORAGE_URI'] = storage_uri
+    else:
+        app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
     
     # Ensure required directories exist
     ensure_directories(app)
@@ -40,6 +57,10 @@ def create_app(config_name=None):
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
+    csrf.init_app(app)
+    write_limit = app.config.get('WRITE_RATE_LIMIT', '100 per minute')
+    limiter.default_limits = [write_limit]
+    limiter.init_app(app)
     
     # Configure Flask-Login
     login_manager.init_app(app)
@@ -61,6 +82,34 @@ def create_app(config_name=None):
     # Register template filters and context processors
     register_template_utilities(app)
     
+    # Configure logging
+    import logging
+    from logging.handlers import RotatingFileHandler
+    
+    if not app.debug and not app.testing:
+        # Create logs directory if it doesn't exist
+        logs_dir = app.config['LOGS_FOLDER']
+        os.makedirs(logs_dir, exist_ok=True)
+        
+        # Set up file handler
+        file_handler = RotatingFileHandler(
+            os.path.join(logs_dir, 'sonacip.log'),
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=10
+        )
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        
+        # Add handler to app logger
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('SONACIP startup')
+
+    if app.config.get('RATELIMIT_STORAGE_URI', '').startswith('memory://'):
+        app.logger.warning('Rate limiting is using in-memory storage; configure REDIS_URL/RATELIMIT_STORAGE_URI for production.')
+
     # Create database tables if they don't exist and run bootstrap (idempotent)
     with app.app_context():
         db.create_all()
@@ -77,26 +126,6 @@ def create_app(config_name=None):
             return None
         run_scheduled_backup_if_due(now)
         app.config['_AUTO_BACKUP_LAST_CHECK'] = now
-
-    # Simple IP-based rate limiting (in-memory, lightweight)
-    @app.before_request
-    def rate_limit_middleware():
-        # Skip static files
-        if request.endpoint and request.endpoint.startswith('static'):
-            return None
-        limit = app.config.get('RATE_LIMIT_REQUESTS', 300)
-        window = app.config.get('RATE_LIMIT_WINDOW', 300)
-        if not limit or not window:
-            return None
-        store = app.config.setdefault('_RATE_LIMIT_STORE', {})
-        now_ts = time.time()
-        key = request.remote_addr or 'anon'
-        history = store.get(key, [])
-        history = [ts for ts in history if now_ts - ts < window]
-        history.append(now_ts)
-        store[key] = history
-        if len(history) > limit:
-            return ('Too Many Requests', 429)
 
     # Security headers
     @app.after_request
@@ -143,6 +172,7 @@ def ensure_schema_columns():
     # User: role_id was added in newer schema
     try:
         add_column_if_missing('user', 'role_id', 'INTEGER')
+        add_column_if_missing('user', 'role', "VARCHAR(50) DEFAULT 'appassionato'")
     except Exception:
         db.session.rollback()
 
@@ -242,17 +272,21 @@ def register_blueprints(app):
 def register_error_handlers(app):
     """Register error handlers"""
     from flask import render_template
+    from flask_login import current_user
     
     @app.errorhandler(403)
     def forbidden(e):
+        app.logger.warning(f"403 Forbidden: {request.url} - User: {current_user.id if current_user.is_authenticated else 'Anonymous'} - IP: {request.remote_addr}")
         return render_template('errors/403.html'), 403
     
     @app.errorhandler(404)
     def not_found(e):
+        app.logger.info(f"404 Not Found: {request.url} - User: {current_user.id if current_user.is_authenticated else 'Anonymous'} - IP: {request.remote_addr}")
         return render_template('errors/404.html'), 404
     
     @app.errorhandler(500)
     def internal_error(e):
+        app.logger.error(f"500 Internal Error: {request.url} - User: {current_user.id if current_user.is_authenticated else 'Anonymous'} - IP: {request.remote_addr} - Error: {str(e)}", exc_info=True)
         db.session.rollback()
         return render_template('errors/500.html'), 500
 
@@ -317,6 +351,13 @@ def register_template_utilities(app):
                 settings = PrivacySetting()
             return settings
 
+        def get_unread_messages_count():
+            """Get count of unread direct messages for current user"""
+            if current_user.is_authenticated:
+                from app.models import Message
+                return Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
+            return 0
+
         def get_social_settings():
             from app.models import SocialSetting
             settings = SocialSetting.query.first()
@@ -345,6 +386,7 @@ def register_template_utilities(app):
         
         return dict(
             get_unread_notifications_count=get_unread_notifications_count,
+            get_unread_messages_count=get_unread_messages_count,
             get_privacy_settings=get_privacy_settings,
             get_social_settings=get_social_settings,
             get_appearance_settings=get_appearance_settings,
@@ -357,6 +399,9 @@ def bootstrap_system(app=None):
     """Deterministic bootstrap: roles, permissions, plans, super admin."""
     from app.models import User, Role, Permission, Plan, SocialSetting, AppearanceSetting
     from flask import current_app
+    import secrets
+    
+    logger = current_app.logger if current_app else None
 
     if app and app.config.get('_BOOTSTRAP_DONE'):
         return
@@ -390,6 +435,7 @@ def bootstrap_system(app=None):
     admin = User.query.join(Role, User.role_id == Role.id).filter(Role.name == 'super_admin').first()
     if not admin:
         super_admin_role = Role.query.filter_by(name='super_admin').first()
+        admin_password = os.environ.get('SUPERADMIN_PASSWORD') or secrets.token_urlsafe(16)
         admin = User(
             email='admin@sonacip.it',
             username='admin',
@@ -400,15 +446,18 @@ def bootstrap_system(app=None):
             is_active=True,
             is_verified=True
         )
-        admin.set_password('admin123')  # Change this in production!
+        admin.set_password(admin_password)
         db.session.add(admin)
         db.session.commit()
-        current_app.logger.info('Bootstrap: Super Admin created (admin@sonacip.it)')
+        if logger:
+            logger.warning('Bootstrap: Super Admin created (admin@sonacip.it); set SUPERADMIN_PASSWORD or rotate immediately.')
+            logger.warning(f'Bootstrap: Initial super admin password: {admin_password}')
 
     # Log bootstrap execution on empty DB
     try:
         if User.query.count() == 1 and Role.query.count() > 0 and Permission.query.count() > 0 and Plan.query.count() > 0:
-            current_app.logger.info('Bootstrap: base roles, permissions, plans initialized')
+            if logger:
+                logger.info('Bootstrap: base roles, permissions, plans initialized')
     except Exception:
         pass
 

@@ -91,7 +91,9 @@
                     <tr>
                         <th>Nome File</th>
                         <th>Tipo</th>
+                        <th>Storage</th>
                         <th>Dimensione</th>
+                        <th>Checksum</th>
                         <th>Data</th>
                         <th>Azioni</th>
                     </tr>
@@ -101,7 +103,9 @@
                         <tr>
                             <td>{{ backup.filename }}</td>
                             <td><span class="badge bg-secondary">{{ backup.backup_type }}</span></td>
+                            <td><span class="badge bg-{{ 'success' if backup.storage_location == 'remote' else 'info' }}">{{ backup.storage_location or 'local' }}</span></td>
                             <td>{{ (backup.size / 1024 / 1024)|round(2) }} MB</td>
+                            <td class="small text-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">{{ backup.checksum or '—' }}</td>
                             <td>{{ backup.created_at|datetime_format }}</td>
                             <td>
                                 <a href="{{ url_for('backup.download', backup_id=backup.id) }}" class="btn btn-sm btn-outline-primary">

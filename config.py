@@ -36,6 +36,8 @@ class Config:
     MEDIA_VIDEO_MAX_WIDTH = int(os.environ.get('MEDIA_VIDEO_MAX_WIDTH', '1280'))
     RATE_LIMIT_REQUESTS = int(os.environ.get('RATE_LIMIT_REQUESTS', '300'))
     RATE_LIMIT_WINDOW = int(os.environ.get('RATE_LIMIT_WINDOW', '300'))  # seconds
+    WRITE_RATE_LIMIT = os.environ.get('WRITE_RATE_LIMIT', '100 per minute')
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx'}
 
@@ -86,16 +88,17 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True  # Require HTTPS
     
     # Override with stronger settings in production
-    # Warn if SECRET_KEY not set but don't crash during module import
+    # Fail fast if SECRET_KEY not set
     @classmethod
     def validate_config(cls):
         if not os.environ.get('SECRET_KEY'):
-            import warnings
-            warnings.warn("SECRET_KEY not set! Using default - CHANGE THIS IN PRODUCTION!")
+            raise ValueError("SECRET_KEY environment variable must be set in production!")
+        if not os.environ.get('DATABASE_URL'):
+            raise ValueError("DATABASE_URL environment variable must be set in production!")
 
 
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
-    'default': DevelopmentConfig
+    'default': ProductionConfig
 }

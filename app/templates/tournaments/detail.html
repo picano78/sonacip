@@ -29,7 +29,7 @@
       <div class="glass-card h-100 p-3 card-hover">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <span class="fw-semibold"><i class="bi bi-controller"></i> Partite</span>
-          {% if current_user.has_permission('tournaments', 'manage') %}
+          {% if can('tournaments', 'manage') %}
             <form class="d-flex flex-wrap gap-2 align-items-center" method="post" action="{{ url_for('tournaments.add_match', tournament_id=tournament.id) }}">
               {{ csrf_token() }}
               <input type="number" name="home_team_id" class="form-control form-control-sm" placeholder="Casa" required>
@@ -50,7 +50,7 @@
               </div>
               <div class="small text-muted mb-2">{{ m.round_label or 'Turno' }} | {{ m.match_date.strftime('%d/%m/%Y') if m.match_date else 'Data da definire' }} | {{ m.location or 'Luogo da definire' }}</div>
               <div class="d-flex align-items-center gap-3">
-                {% if m.status != 'played' and current_user.has_permission('tournaments', 'manage') %}
+                {% if m.status != 'played' and can('tournaments', 'manage') %}
                   <form class="d-flex align-items-center gap-2" method="post" action="{{ url_for('tournaments.set_score', match_id=m.id) }}">
                     {{ csrf_token() }}
                     <input type="number" name="home_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol casa" required>
@@ -72,7 +72,7 @@
       <div class="glass-card p-3 mb-3 card-hover">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="fw-semibold">Squadre</span>
-          {% if current_user.has_permission('tournaments', 'manage') %}
+          {% if can('tournaments', 'manage') %}
             <form class="d-flex flex-wrap gap-2" method="post" action="{{ url_for('tournaments.add_team', tournament_id=tournament.id) }}">
               {{ csrf_token() }}
               <input type="text" name="name" class="form-control form-control-sm" placeholder="Nome" required>

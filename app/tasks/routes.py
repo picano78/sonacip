@@ -14,25 +14,52 @@ from datetime import datetime, timedelta
 import json
 
 
+def _task_scope_id(*args, **kwargs):
+    """Resolve society scope for task/project operations."""
+    task_id = kwargs.get('task_id')
+    project_id = kwargs.get('project_id')
+
+    if task_id:
+        task = Task.query.get(task_id)
+        if task:
+            if task.society_id:
+                return task.society_id
+            if task.project and task.project.society_id:
+                return task.project.society_id
+
+    if project_id:
+        project = Project.query.get(project_id)
+        if project:
+            return project.society_id
+
+    society = current_user.get_primary_society()
+    return society.id if society else None
+
+
 @bp.route('/')
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def index():
     """Task management dashboard"""
-    # Get user's tasks
-    my_tasks = Task.query.filter_by(assigned_to=current_user.id).order_by(Task.due_date).all()
+    scope_id = _task_scope_id()
+
+    # Get user's tasks within scope
+    my_tasks_query = Task.query.filter_by(assigned_to=current_user.id)
+    created_tasks_query = Task.query.filter_by(created_by=current_user.id)
+    if scope_id:
+        my_tasks_query = my_tasks_query.filter(Task.society_id == scope_id)
+        created_tasks_query = created_tasks_query.filter(Task.society_id == scope_id)
+
+    my_tasks = my_tasks_query.order_by(Task.due_date).all()
+    created_tasks = created_tasks_query.all()
     
-    # Get created tasks
-    created_tasks = Task.query.filter_by(created_by=current_user.id).all()
-    
-    # Get projects
+    # Get projects within scope
     if check_permission(current_user, 'admin', 'access'):
         projects = Project.query.all()
-    elif current_user.is_society():
-        projects = Project.query.filter_by(society_id=current_user.id).all()
+    elif scope_id:
+        projects = Project.query.filter_by(society_id=scope_id).all()
     else:
-        # Get projects where user is a team member
-        all_projects = Project.query.all()
-        projects = [p for p in all_projects if is_team_member(current_user.id, p.team_members)]
+        projects = []
     
     # Stats
     stats = {
@@ -52,12 +79,15 @@ def index():
 
 @bp.route('/planner')
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def planner():
     """Unified planner for tasks and events"""
     # Upcoming events: admin sees all, society sees own, others see convocated
+    scope_id = _task_scope_id()
+
     if check_permission(current_user, 'admin', 'access'):
         events_query = Event.query
-    elif current_user.is_society() or current_user.is_staff():
+    elif scope_id:
         events_query = Event.query.filter_by(creator_id=current_user.id)
     else:
         events_query = current_user.events
@@ -73,6 +103,7 @@ def planner():
 @bp.route('/kanban')
 @bp.route('/kanban/<int:project_id>')
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def kanban(project_id=None):
     """Kanban board view (Trello/Monday.com style)"""
     if project_id:
@@ -101,6 +132,7 @@ def kanban(project_id=None):
 @bp.route('/timeline')
 @bp.route('/timeline/<int:project_id>')
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def timeline(project_id=None):
     """Gantt chart / Timeline view"""
     if project_id:
@@ -138,6 +170,7 @@ def timeline(project_id=None):
 
 @bp.route('/calendar')
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def calendar():
     """Calendar view for tasks"""
     # Get all tasks with due dates
@@ -162,9 +195,11 @@ def calendar():
 
 @bp.route('/task/create', methods=['GET', 'POST'])
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def create_task():
     """Create new task"""
     if request.method == 'POST':
+        scope_id = _task_scope_id()
         task = Task(
             title=request.form.get('title'),
             description=request.form.get('description'),
@@ -173,6 +208,7 @@ def create_task():
             status=request.form.get('status', 'todo'),
             priority=request.form.get('priority', 'medium'),
             project_id=request.form.get('project_id') or None,
+            society_id=scope_id,
             due_date=datetime.strptime(request.form.get('due_date'), '%Y-%m-%d') if request.form.get('due_date') else None,
             start_date=datetime.strptime(request.form.get('start_date'), '%Y-%m-%d') if request.form.get('start_date') else None,
             estimated_hours=request.form.get('estimated_hours') or None,
@@ -193,14 +229,16 @@ def create_task():
         return redirect(url_for('tasks.index'))
     
     # Get available projects and users for assignment
-    projects = Project.query.filter_by(society_id=current_user.id).all() if current_user.is_society() else []
-    users = User.query.filter_by(society_id=current_user.id, is_active=True).all() if current_user.is_society() else []
+    scope_id = _task_scope_id()
+    projects = Project.query.filter_by(society_id=scope_id).all() if scope_id else []
+    users = User.query.filter_by(society_id=scope_id, is_active=True).all() if scope_id else []
     
     return render_template('tasks/create_task.html', projects=projects, users=users)
 
 
 @bp.route('/task/<int:task_id>')
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def view_task(task_id):
     """View task details"""
     task = Task.query.get_or_404(task_id)
@@ -227,6 +265,7 @@ def view_task(task_id):
 
 @bp.route('/task/<int:task_id>/update', methods=['POST'])
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def update_task(task_id):
     """Update task (AJAX)"""
     task = Task.query.get_or_404(task_id)
@@ -264,14 +303,15 @@ def update_task(task_id):
 
 @bp.route('/project/create', methods=['GET', 'POST'])
 @login_required
-@permission_required('tasks', 'manage')
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def create_project():
     """Create new project"""
     if request.method == 'POST':
+        scope_id = _task_scope_id()
         project = Project(
             name=request.form.get('name'),
             description=request.form.get('description'),
-            society_id=current_user.id if current_user.is_society() else request.form.get('society_id'),
+            society_id=scope_id,
             owner_id=current_user.id,
             status='active',
             project_type=request.form.get('project_type'),
@@ -291,6 +331,7 @@ def create_project():
 
 @bp.route('/project/<int:project_id>')
 @login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def view_project(project_id):
     """View project details"""
     project = Project.query.get_or_404(project_id)
@@ -324,8 +365,11 @@ def view_project(project_id):
 # Helper functions
 def can_view_task(user, task):
     """Check if user can view task"""
+    scope_id = _task_scope_id(task_id=task.id)
     if check_permission(user, 'admin', 'access'):
         return True
+    if not check_permission(user, 'tasks', 'manage', scope_id):
+        return False
     if task.created_by == user.id or task.assigned_to == user.id:
         return True
     if task.watchers and str(user.id) in task.watchers:
@@ -335,8 +379,11 @@ def can_view_task(user, task):
 
 def can_edit_task(user, task):
     """Check if user can edit task"""
+    scope_id = _task_scope_id(task_id=task.id)
     if check_permission(user, 'admin', 'access'):
         return True
+    if not check_permission(user, 'tasks', 'manage', scope_id):
+        return False
     if task.created_by == user.id or task.assigned_to == user.id:
         return True
     return False

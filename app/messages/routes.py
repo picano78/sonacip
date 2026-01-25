@@ -7,6 +7,7 @@ from app.messages import bp
 from app.messages.forms import MessageForm
 from app.models import Message, User
 from app.notifications.utils import create_notification
+from app.utils import check_permission
 
 
 @bp.route('/')
@@ -76,7 +77,7 @@ def view_message(message_id):
     """View a single message and mark as read"""
     message = Message.query.get_or_404(message_id)
 
-    if message.recipient_id != current_user.id and message.sender_id != current_user.id and not current_user.is_admin():
+    if message.recipient_id != current_user.id and message.sender_id != current_user.id and not check_permission(current_user, 'admin', 'access'):
         flash('Accesso negato.', 'danger')
         return redirect(url_for('messages.inbox'))
 

@@ -7,6 +7,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
+from app.utils import check_permission
 
 
 # Association tables for many-to-many relationships
@@ -90,6 +91,7 @@ class User(UserMixin, db.Model):
     
     # Account status
     is_active = db.Column(db.Boolean, default=True)
+    is_banned = db.Column(db.Boolean, default=False)
     is_verified = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -333,6 +335,7 @@ class Post(db.Model):
     
     # Visibility
     is_public = db.Column(db.Boolean, default=True)
+    post_type = db.Column(db.String(50), default='personal')  # personal, official, tournament, match, automation
 
     # Promotion/ads
     is_promoted = db.Column(db.Boolean, default=False)
@@ -520,14 +523,19 @@ class SocietyCalendarEvent(db.Model):
         """Apply role-based visibility rules for the society calendar."""
         if not user or not user.is_authenticated:
             return False
-        if user.is_admin():
+        scope_id = self.society_id
+        if check_permission(user, 'admin', 'access'):
             return True
-        if user.is_society_admin() and user.get_primary_society() and user.get_primary_society().id == self.society_id:
+        if check_permission(user, 'calendar', 'manage', scope_id):
             return True
-        if user.is_staff() or user.is_coach():
-            return self.staff_members.filter_by(id=user.id).count() > 0 or self.created_by == user.id
-        if user.is_athlete():
-            return self.athletes.filter_by(id=user.id).count() > 0
+        if not check_permission(user, 'calendar', 'view', scope_id):
+            return False
+        if self.created_by == user.id:
+            return True
+        if self.staff_members.filter_by(id=user.id).count() > 0:
+            return True
+        if self.athletes.filter_by(id=user.id).count() > 0:
+            return True
         return False
 
     def __repr__(self):
@@ -1679,3 +1687,29 @@ class Goal(db.Model):
     
     def __repr__(self):
         return f'<Goal {self.title}>'
+
+
+class ModerationRule(db.Model):
+    """
+    Automatic moderation rules for social content
+    """
+    __tablename__ = 'moderation_rule'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    rule_type = db.Column(db.String(50), nullable=False)  # keyword_filter, spam_detection, etc.
+    is_active = db.Column(db.Boolean, default=True)
+    
+    # Rule configuration
+    keywords = db.Column(db.Text)  # comma-separated keywords to filter
+    action = db.Column(db.String(50), default='flag')  # flag, hide, delete
+    severity = db.Column(db.String(20), default='medium')  # low, medium, high
+    
+    # Metadata
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ModerationRule {self.name}>'

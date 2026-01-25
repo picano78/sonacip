@@ -171,6 +171,7 @@ def edit_user(user_id):
         user.role = form.role.data
         user.is_active = form.is_active.data
         user.is_verified = form.is_verified.data
+        user.is_banned = form.is_banned.data
         user.updated_at = datetime.utcnow()
         
         db.session.commit()
@@ -441,3 +442,97 @@ def stats():
                          activity_stats=activity_stats,
                          top_posters=top_posters,
                          top_societies=top_societies)
+
+
+@bp.route('/user/<int:user_id>/ban', methods=['POST'])
+@login_required
+@admin_required
+def ban_user(user_id):
+    """Ban or unban a user"""
+    user = User.query.get_or_404(user_id)
+    
+    if user.id == current_user.id:
+        flash('Non puoi bannare te stesso.', 'danger')
+        return redirect(url_for('admin.users'))
+    
+    action = request.form.get('action')
+    reason = request.form.get('reason', '')
+    
+    if action == 'ban':
+        user.is_banned = True
+        flash(f'Utente {user.username} bannato.', 'success')
+        log_action('ban_user', 'User', user.id, f'Banned user: {reason}')
+    elif action == 'unban':
+        user.is_banned = False
+        flash(f'Utente {user.username} sbannato.', 'success')
+        log_action('unban_user', 'User', user.id, f'Unbanned user')
+    
+    db.session.commit()
+    return redirect(url_for('admin.user_detail', user_id=user.id))
+
+
+@bp.route('/moderation')
+@login_required
+@admin_required
+def moderation():
+    """Moderation rules management"""
+    from app.models import ModerationRule
+    rules = ModerationRule.query.order_by(ModerationRule.created_at.desc()).all()
+    return render_template('admin/moderation.html', rules=rules)
+
+
+@bp.route('/moderation/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def add_moderation_rule():
+    """Add new moderation rule"""
+    from app.models import ModerationRule
+    from app.admin.forms import ModerationRuleForm
+    
+    form = ModerationRuleForm()
+    if form.validate_on_submit():
+        rule = ModerationRule(
+            name=form.name.data,
+            description=form.description.data,
+            rule_type=form.rule_type.data,
+            keywords=form.keywords.data,
+            action=form.action.data,
+            severity=form.severity.data,
+            created_by=current_user.id
+        )
+        db.session.add(rule)
+        db.session.commit()
+        flash('Regola di moderazione aggiunta.', 'success')
+        log_action('add_moderation_rule', 'ModerationRule', rule.id, f'Added rule: {rule.name}')
+        return redirect(url_for('admin.moderation'))
+    
+    return render_template('admin/add_moderation_rule.html', form=form)
+
+
+@bp.route('/moderation/<int:rule_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_moderation_rule(rule_id):
+    """Toggle moderation rule active status"""
+    from app.models import ModerationRule
+    rule = ModerationRule.query.get_or_404(rule_id)
+    rule.is_active = not rule.is_active
+    db.session.commit()
+    status = 'attivata' if rule.is_active else 'disattivata'
+    flash(f'Regola {rule.name} {status}.', 'success')
+    log_action('toggle_moderation_rule', 'ModerationRule', rule.id, f'Toggled to {status}')
+    return redirect(url_for('admin.moderation'))
+
+
+@bp.route('/moderation/<int:rule_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_moderation_rule(rule_id):
+    """Delete moderation rule"""
+    from app.models import ModerationRule
+    rule = ModerationRule.query.get_or_404(rule_id)
+    db.session.delete(rule)
+    db.session.commit()
+    flash('Regola di moderazione eliminata.', 'success')
+    log_action('delete_moderation_rule', 'ModerationRule', rule.id, f'Deleted rule: {rule.name}')
+    return redirect(url_for('admin.moderation'))

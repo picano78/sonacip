@@ -27,7 +27,7 @@
                             {{ form.bio.label(class="form-label") }}
                             {{ form.bio(class="form-control", rows="3") }}
                         </div>
-                        {% if current_user.has_permission('society', 'manage') %}
+                        {% if can('society', 'manage') %}
                             <div class="mb-3">
                                 {{ form.website.label(class="form-label") }}
                                 {{ form.website(class="form-control") }}

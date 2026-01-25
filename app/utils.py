@@ -14,7 +14,11 @@ def check_permission(user, resource, action, society_id=None):
     if user.is_admin():
         return True
 
-    allowed = user.has_permission(resource, action)
+    try:
+        allowed = user.has_permission(resource, action)
+    except Exception:
+        return False
+
     if not allowed:
         return False
 
@@ -22,6 +26,12 @@ def check_permission(user, resource, action, society_id=None):
         return user.can_access_society(society_id)
 
     return True
+
+
+def can(resource, action, society_id=None, user=None):
+    """Lightweight helper used by routes and templates to resolve permissions."""
+    actor = user or current_user
+    return check_permission(actor, resource, action, society_id)
 
 
 def enforce_permission(resource, action, society_id=None, user=None):
@@ -57,7 +67,7 @@ def role_required(*allowed_roles):
                 flash('Effettua il login per accedere a questa pagina.', 'warning')
                 return redirect(url_for('auth.login'))
             # Fallback to permission checks mapped to legacy role expectations
-            if current_user.is_admin():
+            if check_permission(current_user, 'admin', 'access'):
                 return f(*args, **kwargs)
             if current_user.role not in allowed_roles:
                 flash('Accesso negato. Non hai i permessi necessari.', 'danger')

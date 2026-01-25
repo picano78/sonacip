@@ -3,6 +3,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, SelectField, SelectMultipleField, BooleanField, DateField, TimeField
 from wtforms.validators import DataRequired, Optional, Length
 from app.models import User, Society
+from app.utils import check_permission
 
 
 class SocietyCalendarEventForm(FlaskForm):
@@ -44,7 +45,7 @@ class SocietyCalendarEventForm(FlaskForm):
         self.society_id.choices = society_choices
 
         # If not super admin, restrict to their primary society
-        if current_user and not current_user.is_admin():
+        if current_user and not check_permission(current_user, 'admin', 'access'):
             society = current_user.get_primary_society()
             if society:
                 self.society_id.choices = [(society.id, society.legal_name)]

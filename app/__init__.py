@@ -298,6 +298,7 @@ def register_template_utilities(app):
         """Add utility functions to template context"""
         from flask_login import current_user
         from app.models import PrivacySetting
+        from app.utils import can
         
         def get_unread_notifications_count():
             """Get count of unread notifications for current user"""
@@ -347,6 +348,7 @@ def register_template_utilities(app):
             get_privacy_settings=get_privacy_settings,
             get_social_settings=get_social_settings,
             get_appearance_settings=get_appearance_settings,
+            can=can,
             now=datetime.utcnow
         )
 

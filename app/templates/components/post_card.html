@@ -22,6 +22,15 @@
                 {% if post.is_promoted %}
                     <span class="badge bg-warning text-dark ms-2">Sponsorizzato</span>
                 {% endif %}
+                {% if post.post_type == 'official' %}
+                    <span class="badge bg-primary ms-2">Ufficiale</span>
+                {% elif post.post_type == 'tournament' %}
+                    <span class="badge bg-success ms-2">Torneo</span>
+                {% elif post.post_type == 'match' %}
+                    <span class="badge bg-info ms-2">Partita</span>
+                {% elif post.post_type == 'automation' %}
+                    <span class="badge bg-secondary ms-2">Automazione</span>
+                {% endif %}
             </div>
         </div>
         <p class="card-text">{{ post.content }}</p>
@@ -38,7 +47,7 @@
             <a href="{{ url_for('social.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-chat"></i> {{ post.comments_count }}
             </a>
-            {% if current_user.id == post.user_id or current_user.has_permission('admin', 'access') %}
+            {% if current_user.id == post.user_id or can('admin', 'access') %}
                 <a href="{{ url_for('social.promote_post', post_id=post.id) }}" class="btn btn-sm btn-outline-warning">
                     <i class="bi bi-megaphone"></i> Sponsorizza
                 </a>

@@ -39,6 +39,7 @@ class UserEditForm(FlaskForm):
     role = SelectField('Ruolo', choices=[], validators=[DataRequired()])
     is_active = BooleanField('Account Attivo')
     is_verified = BooleanField('Account Verificato')
+    is_banned = BooleanField('Account Bannato')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -98,6 +99,28 @@ class AppearanceSettingsForm(FlaskForm):
     logo_url = StringField('Logo URL', validators=[Optional(), URL()])
     favicon_url = StringField('Favicon URL', validators=[Optional(), URL()])
     layout_style = StringField('Layout', validators=[Optional(), Length(max=50)])
+
+
+class ModerationRuleForm(FlaskForm):
+    """Form for moderation rules"""
+    name = StringField('Nome regola', validators=[DataRequired(), Length(max=200)])
+    description = TextAreaField('Descrizione', validators=[Optional(), Length(max=1000)])
+    rule_type = SelectField('Tipo regola', choices=[
+        ('keyword_filter', 'Filtro parole chiave'),
+        ('spam_detection', 'Rilevamento spam'),
+        ('content_filter', 'Filtro contenuto')
+    ], validators=[DataRequired()])
+    keywords = TextAreaField('Parole chiave (separate da virgola)', validators=[Optional()])
+    action = SelectField('Azione', choices=[
+        ('flag', 'Segnala'),
+        ('hide', 'Nascondi'),
+        ('delete', 'Elimina')
+    ], default='flag', validators=[DataRequired()])
+    severity = SelectField('Severità', choices=[
+        ('low', 'Bassa'),
+        ('medium', 'Media'),
+        ('high', 'Alta')
+    ], default='medium', validators=[DataRequired()])
 
 
 class StorageSettingsForm(FlaskForm):

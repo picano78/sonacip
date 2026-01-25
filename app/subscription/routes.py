@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.subscription import bp
 from app.models import Plan, Subscription, Payment, User
-from app.utils import admin_required, log_action
+from app.utils import admin_required, log_action, check_permission
 from datetime import datetime, timedelta
 
 
@@ -114,15 +114,13 @@ def cancel_subscription(subscription_id):
     
     # Verify ownership
     society = current_user.get_primary_society()
-    if not current_user.is_admin():
+    if not check_permission(current_user, 'admin', 'access'):
         if society and subscription.society_id != society.id:
             flash('Accesso negato.', 'danger')
             return redirect(url_for('subscription.my_subscription'))
         if not society and subscription.user_id != current_user.id:
             flash('Accesso negato.', 'danger')
             return redirect(url_for('subscription.my_subscription'))
-    else:
-        pass
     
     if subscription.status not in ['active', 'trial']:
         flash('Questa sottoscrizione non può essere annullata.', 'warning')
@@ -265,3 +263,34 @@ def admin_payments():
     return render_template('subscription/admin_payments.html',
                          payments=payments,
                          pagination=pagination)
+
+
+@bp.route('/admin/payment/<int:payment_id>/refund', methods=['POST'])
+@login_required
+@admin_required
+def refund_payment(payment_id):
+    """Process refund for a payment"""
+    payment = Payment.query.get_or_404(payment_id)
+    
+    if payment.status != 'completed':
+        flash('Solo pagamenti completati possono essere rimborsati.', 'warning')
+        return redirect(url_for('subscription.admin_payments'))
+    
+    reason = request.form.get('reason', 'Rimborsato dall\'admin')
+    
+    # Mark payment as refunded
+    payment.status = 'refunded'
+    payment.notes = f'Refunded: {reason}'
+    payment.updated_at = datetime.utcnow()
+    
+    # Cancel associated subscription if active
+    if payment.subscription and payment.subscription.status == 'active':
+        payment.subscription.status = 'cancelled'
+        payment.subscription.cancelled_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    log_action('refund_payment', 'Payment', payment.id, f'Refunded payment: {reason}')
+    flash('Pagamento rimborsato con successo.', 'success')
+    
+    return redirect(url_for('subscription.admin_payments'))

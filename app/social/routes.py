@@ -11,6 +11,7 @@ from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm,
 from app.social.utils import save_picture
 from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment, SocialSetting, TournamentMatch
 from app.cache import get_cache
+from app.utils import permission_required, check_permission
 from datetime import datetime, timedelta
 from datetime import datetime
 import os
@@ -18,6 +19,7 @@ import os
 
 @bp.route('/feed')
 @login_required
+@permission_required('social', 'comment')
 def feed():
     """Main social feed"""
     page = request.args.get('page', 1, type=int)
@@ -26,7 +28,7 @@ def feed():
     cache = get_cache()
 
     settings = SocialSetting.query.first()
-    if settings and not settings.feed_enabled and not current_user.is_admin():
+    if settings and not settings.feed_enabled and not check_permission(current_user, 'admin', 'access'):
         flash('Il feed sociale è disabilitato dall\'amministratore.', 'warning')
         return redirect(url_for('main.dashboard'))
     
@@ -67,17 +69,17 @@ def feed():
         # Priority tiers: official society content > tournaments/matches > automations > personal
         if p.author and p.author.is_society():
             score += 30
-        if p.notification_type and any(token in p.notification_type for token in ['tournament', 'match']):
+        if p.post_type and any(token in p.post_type for token in ['tournament', 'match']):
             score += 20
-        if p.notification_type and 'automation' in p.notification_type:
+        if p.post_type and 'automation' in p.post_type:
             score += 10
         if boosted_types:
             for t in boosted_types:
-                if t in (p.notification_type or ''):
+                if t in (p.post_type or ''):
                     score += 5
         if muted_types:
             for t in muted_types:
-                if t in (p.notification_type or ''):
+                if t in (p.post_type or ''):
                     score -= 10
         return score
     if cached_ids is None:
@@ -136,11 +138,12 @@ def feed():
 
 @bp.route('/post/create', methods=['POST'])
 @login_required
+@permission_required('social', 'post')
 def create_post():
     """Create a new post"""
     form = PostForm()
     settings = SocialSetting.query.first()
-    if settings and not settings.feed_enabled and not current_user.is_admin():
+    if settings and not settings.feed_enabled and not check_permission(current_user, 'admin', 'access'):
         flash('Pubblicazione disabilitata dall\'amministratore.', 'warning')
         return redirect(url_for('social.feed'))
     
@@ -170,6 +173,7 @@ def create_post():
 
 @bp.route('/post/<int:post_id>')
 @login_required
+@permission_required('social', 'comment')
 def view_post(post_id):
     """View single post with comments"""
     post = Post.query.get_or_404(post_id)
@@ -180,10 +184,11 @@ def view_post(post_id):
 
 @bp.route('/post/<int:post_id>/promote', methods=['GET', 'POST'])
 @login_required
+@permission_required('social', 'post')
 def promote_post(post_id):
     """Promote a post with paid insertion (simulated payment)"""
     post = Post.query.get_or_404(post_id)
-    if post.user_id != current_user.id and not current_user.is_admin():
+    if post.user_id != current_user.id and not check_permission(current_user, 'admin', 'access'):
         flash('Puoi sponsorizzare solo i tuoi post.', 'danger')
         return redirect(url_for('social.view_post', post_id=post_id))
 
@@ -235,6 +240,7 @@ def promote_post(post_id):
 
 @bp.route('/post/<int:post_id>/like', methods=['POST'])
 @login_required
+@permission_required('social', 'comment')
 def like_post(post_id):
     """Like/unlike a post"""
     post = Post.query.get_or_404(post_id)
@@ -275,6 +281,7 @@ def like_post(post_id):
 
 @bp.route('/post/<int:post_id>/comment', methods=['POST'])
 @login_required
+@permission_required('social', 'comment')
 def comment_post(post_id):
     """Add comment to post"""
     post = Post.query.get_or_404(post_id)
@@ -310,12 +317,13 @@ def comment_post(post_id):
 
 @bp.route('/post/<int:post_id>/delete', methods=['POST'])
 @login_required
+@permission_required('social', 'post')
 def delete_post(post_id):
     """Delete own post"""
     post = Post.query.get_or_404(post_id)
     
     # Check ownership or admin
-    if post.user_id != current_user.id and not current_user.is_admin():
+    if post.user_id != current_user.id and not check_permission(current_user, 'admin', 'access'):
         flash('Non puoi eliminare questo post.', 'danger')
         return redirect(url_for('social.feed'))
     
@@ -517,26 +525,30 @@ def search():
 @login_required
 def society_dashboard():
     """Dashboard for societies"""
-    if not current_user.is_society():
+    if not check_permission(current_user, 'society', 'manage'):
         flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
         return redirect(url_for('social.feed'))
     
     # Get society's staff and athletes
     staff = User.query.filter(
         User.role.in_(['staff', 'coach']),
-        User.society_id == current_user.id
+        User.society_id == society.id
     ).all()
 
     athletes = User.query.filter(
         User.role.in_(['atleta', 'athlete']),
-        User.athlete_society_id == current_user.id
+        User.athlete_society_id == society.id
     ).all()
     
     # Get society's events
     from app.models import Event
-    events = Event.query.filter_by(
-        creator_id=current_user.id
-    ).order_by(Event.start_date.desc()).limit(10).all()
+        events = Event.query.filter_by(
+            creator_id=current_user.id
+        ).order_by(Event.start_date.desc()).limit(10).all()
     
     # Statistics
     stats = {

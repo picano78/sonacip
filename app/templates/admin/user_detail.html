@@ -50,6 +50,23 @@
                         <span class="badge bg-{{ 'success' if user.is_active else 'danger' }}">
                             {{ 'Attivo' if user.is_active else 'Disattivato' }}
                         </span>
+                        {% if user.is_banned %}
+                            <span class="badge bg-danger ms-2">Bannato</span>
+                        {% endif %}
+                    </div>
+                    <div class="list-group-item">
+                        <form method="post" action="{{ url_for('admin.ban_user', user_id=user.id) }}" class="d-inline">
+                            <input type="hidden" name="action" value="{{ 'unban' if user.is_banned else 'ban' }}">
+                            <div class="mb-2">
+                                <label for="reason" class="form-label small">Motivo {{ 'sban' if user.is_banned else 'ban' }}</label>
+                                <input type="text" class="form-control form-control-sm" id="reason" name="reason" 
+                                       placeholder="Motivo opzionale" required>
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-{{ 'success' if user.is_banned else 'danger' }}">
+                                <i class="bi bi-{{ 'check-circle' if user.is_banned else 'slash-circle' }}"></i>
+                                {{ 'Sbanna' if user.is_banned else 'Banna' }} Utente
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

@@ -18,7 +18,7 @@ def _require_society_scope(tournament: Tournament = None, action: str = 'view'):
 
 
 def _get_society_id():
-    if current_user.has_permission('admin', 'access'):
+    if check_permission(current_user, 'admin', 'access'):
         return request.args.get('society_id', type=int)
     society = current_user.get_primary_society()
     return society.id if society else None
@@ -36,7 +36,7 @@ def list_tournaments():
     query = Tournament.query
     if sid:
         query = query.filter_by(society_id=sid)
-    elif not current_user.has_permission('admin', 'access'):
+    elif not check_permission(current_user, 'admin', 'access'):
         query = query.filter(false())
     tournaments = query.order_by(Tournament.created_at.desc()).all()
     return render_template('tournaments/index.html', tournaments=tournaments)

@@ -88,6 +88,40 @@ def init_db():
             db.session.add(appearance)
             print("  ✓ Appearance settings created")
         
+        # CRITICAL: Create default roles (User model requires role_id NOT NULL)
+        print("\nCreating default roles...")
+        required_roles = {
+            'super_admin': ("Super Admin", 100, 'Amministratore principale con tutti i permessi'),
+            'admin': ("Amministratore", 90, 'Amministratore con permessi completi'),
+            'moderator': ("Moderatore", 50, 'Moderatore con permessi di gestione contenuti'),
+            'society_admin': ("Admin Società", 45, 'Amministratore società sportiva'),
+            'societa': ("Società", 40, 'Società sportiva'),
+            'staff': ("Staff", 30, 'Staff tecnico o dirigenziale'),
+            'coach': ("Coach", 30, 'Allenatore'),
+            'atleta': ("Atleta", 20, 'Atleta registrato'),
+            'athlete': ("Athlete", 20, 'Atleta (alias inglese)'),
+            'appassionato': ("Appassionato", 10, 'Tifoso o appassionato'),
+            'user': ("Utente", 10, 'Utente standard'),
+            'guest': ("Ospite", 1, 'Utente ospite con permessi limitati'),
+        }
+
+        created_count = 0
+        for name, (display, level, description) in required_roles.items():
+            if not Role.query.filter_by(name=name).first():
+                db.session.add(Role(
+                    name=name,
+                    display_name=display,
+                    level=level,
+                    is_system=True,
+                    description=description
+                ))
+                created_count += 1
+
+        if created_count:
+            print(f"  ✓ Created {created_count} missing roles")
+        else:
+            print(f"  ✓ Roles already exist ({Role.query.count()} roles)")
+        
         db.session.commit()
         print("\n✓ Database initialization complete!")
         return True

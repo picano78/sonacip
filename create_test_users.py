@@ -4,13 +4,22 @@ Create Test Users
 Populates the database with sample users for testing
 """
 from app import create_app, db
-from app.models import User, Subscription, Plan
+from app.models import User, Subscription, Plan, Role
 from datetime import datetime, timedelta
 
 app = create_app()
 
 with app.app_context():
     print("Creating test users...")
+
+    # CRITICAL: Ensure required roles exist before creating users
+    required_roles = ['societa', 'staff', 'atleta', 'appassionato']
+    missing_roles = [name for name in required_roles if not Role.query.filter_by(name=name).first()]
+    if missing_roles:
+        raise RuntimeError(
+            f"Missing required roles for test users: {missing_roles}. "
+            "Run init_db.py to seed default roles."
+        )
     
     # Create a società (sports society)
     society = User.query.filter_by(email='societa@test.it').first()

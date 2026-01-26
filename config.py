@@ -49,11 +49,11 @@ class Config:
     # Plug-in modules folder (safe discovery)
     MODULES_FOLDER = os.environ.get('MODULES_FOLDER') or os.path.join(BASE_DIR, 'app', 'modules')
     
-    # Backup configuration
-    BACKUP_FOLDER = os.path.join(BASE_DIR, 'backups')
+    # Backup configuration (production: use env var for custom path)
+    BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or os.path.join(BASE_DIR, 'backups')
     
-    # Logs configuration
-    LOGS_FOLDER = os.path.join(BASE_DIR, 'logs')
+    # Logs configuration (production: use env var for custom path)
+    LOGS_FOLDER = os.environ.get('LOGS_FOLDER') or os.path.join(BASE_DIR, 'logs')
 
     # Migrations
     MIGRATIONS_DIR = os.environ.get('MIGRATIONS_DIR') or os.path.join(BASE_DIR, 'migrations')

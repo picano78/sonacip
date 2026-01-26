@@ -1,6 +1,7 @@
 # Gunicorn Configuration for SONACIP
 
 import multiprocessing
+import os
 
 # Server socket
 bind = "0.0.0.0:8000"
@@ -16,9 +17,10 @@ keepalive = 2
 # Process naming
 proc_name = "sonacip"
 
-# Logging
-accesslog = "logs/gunicorn_access.log"
-errorlog = "logs/gunicorn_error.log"
+# Logging (respect LOGS_FOLDER env var, fallback to relative path)
+logs_folder = os.environ.get('LOGS_FOLDER', 'logs')
+accesslog = os.path.join(logs_folder, "gunicorn_access.log")
+errorlog = os.path.join(logs_folder, "gunicorn_error.log")
 loglevel = "info"
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 

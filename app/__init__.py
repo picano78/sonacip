@@ -256,6 +256,10 @@ def create_app(config_name=None):
     from logging import StreamHandler
 
     if not app.debug and not app.testing:
+        # CRITICAL FIX: Remove existing handlers to prevent accumulation on reload
+        # This ensures idempotent behavior and prevents memory leaks
+        app.logger.handlers.clear()
+        
         logs_dir = app.config.get('LOGS_FOLDER', 'logs')
         os.makedirs(logs_dir, exist_ok=True)
 
@@ -295,6 +299,8 @@ def create_app(config_name=None):
         _verify_database_connectivity(app)
         if app.config.get('AUTO_MIGRATE_ON_STARTUP', True):
             _apply_migrations_or_fail(app)
+        # CRITICAL: Ensure required roles exist to prevent NOT NULL role_id failures
+        _ensure_default_roles(app)
 
     # Security headers
     @app.after_request
@@ -344,6 +350,46 @@ def _apply_migrations_or_fail(app):
     except Exception as exc:
         app.logger.critical('Database migrations failed; aborting startup.', exc_info=True)
         raise RuntimeError('Database migrations failed; aborting startup.') from exc
+
+
+def _ensure_default_roles(app):
+    """Ensure default roles exist when the Role table is available."""
+    from sqlalchemy import inspect
+    from app.models import Role
+
+    with app.app_context():
+        inspector = inspect(db.engine)
+        if 'role' not in inspector.get_table_names():
+            raise RuntimeError('Role table missing; database schema is not initialized.')
+
+        if Role.query.count() > 0:
+            return
+
+        required_roles = {
+            'super_admin': ("Super Admin", 100, 'Amministratore principale con tutti i permessi'),
+            'admin': ("Amministratore", 90, 'Amministratore con permessi completi'),
+            'moderator': ("Moderatore", 50, 'Moderatore con permessi di gestione contenuti'),
+            'society_admin': ("Admin Società", 45, 'Amministratore società sportiva'),
+            'societa': ("Società", 40, 'Società sportiva'),
+            'staff': ("Staff", 30, 'Staff tecnico o dirigenziale'),
+            'coach': ("Coach", 30, 'Allenatore'),
+            'atleta': ("Atleta", 20, 'Atleta registrato'),
+            'athlete': ("Athlete", 20, 'Atleta (alias inglese)'),
+            'appassionato': ("Appassionato", 10, 'Tifoso o appassionato'),
+            'user': ("Utente", 10, 'Utente standard'),
+            'guest': ("Ospite", 1, 'Utente ospite con permessi limitati'),
+        }
+
+        for name, (display, level, description) in required_roles.items():
+            db.session.add(Role(
+                name=name,
+                display_name=display,
+                level=level,
+                is_system=True,
+                description=description
+            ))
+        db.session.commit()
+        app.logger.info('Default roles created to satisfy role_id integrity.')
 
 
 def ensure_directories(app):

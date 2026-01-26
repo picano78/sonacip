@@ -28,8 +28,8 @@ def init_db():
         storage = StorageSetting.query.first()
         if not storage:
             storage = StorageSetting(
-                backend='local',
-                local_path=app.config['UPLOAD_FOLDER'],
+                storage_backend='local',
+                base_path=app.config.get('UPLOAD_FOLDER', 'uploads'),
                 preferred_image_format='webp',
                 preferred_video_format='mp4',
                 image_quality=75,
@@ -51,7 +51,12 @@ def init_db():
         # Ads settings
         ads = AdsSetting.query.first()
         if not ads:
-            ads = AdsSetting(ads_enabled=False)
+            ads = AdsSetting(
+                price_per_day=5.0,
+                price_per_thousand_views=2.0,
+                default_duration_days=7,
+                default_views=500
+            )
             db.session.add(ads)
             print("  ✓ Ads settings created")
         
@@ -59,9 +64,13 @@ def init_db():
         social = SocialSetting.query.first()
         if not social:
             social = SocialSetting(
-                comments_enabled=True,
-                posts_moderated=False,
-                allow_anonymous_view=False
+                feed_enabled=True,
+                allow_likes=True,
+                allow_comments=True,
+                allow_shares=True,
+                boost_official=True,
+                mute_user_posts=False,
+                max_posts_per_day=20
             )
             db.session.add(social)
             print("  ✓ Social settings created")
@@ -70,9 +79,11 @@ def init_db():
         appearance = AppearanceSetting.query.first()
         if not appearance:
             appearance = AppearanceSetting(
-                theme='light',
-                primary_color='#007bff',
-                site_name='SONACIP'
+                scope='global',
+                primary_color='#0d6efd',
+                secondary_color='#6c757d',
+                accent_color='#20c997',
+                font_family='Inter, system-ui, -apple-system, sans-serif'
             )
             db.session.add(appearance)
             print("  ✓ Appearance settings created")

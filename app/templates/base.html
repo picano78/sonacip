@@ -13,18 +13,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="{{ appearance.primary_color or '#0d6efd' }}">
+    <meta name="theme-color" content="{{ (appearance.primary_color if appearance else '') or '#0d6efd' }}">
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
 
-    {% set appearance = get_appearance_settings() %}
     <style>
         :root {
-            --primary-color: {{ appearance.primary_color or '#0d6efd' }};
-            --secondary-color: {{ appearance.secondary_color or '#6c757d' }};
-            --accent-color: {{ appearance.accent_color or '#20c997' }};
-            --app-font: {{ appearance.font_family or 'Inter, system-ui, -apple-system, sans-serif' }};
+            --primary-color: {{ (appearance.primary_color if appearance else '') or '#0d6efd' }};
+            --secondary-color: {{ (appearance.secondary_color if appearance else '') or '#6c757d' }};
+            --accent-color: {{ (appearance.accent_color if appearance else '') or '#20c997' }};
+            --app-font: {{ (appearance.font_family if appearance else '') or 'Inter, system-ui, -apple-system, sans-serif' }};
         }
         body { font-family: var(--app-font); }
         .navbar, .btn-primary { background-color: var(--primary-color) !important; border-color: var(--primary-color) !important; }
@@ -71,7 +70,6 @@
             });
         }
     </script>
-    </main>
     
     <!-- Footer -->
     <footer class="bg-dark text-white mt-5 py-4">
@@ -84,9 +82,8 @@
         </div>
     </footer>
 
-    {% set privacy = get_privacy_settings() %}
-    {% if privacy.banner_enabled %}
-    <div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true" data-privacy-version="{{ privacy.updated_at.timestamp() if privacy.updated_at else 'v1' }}">
+    {% if privacy and privacy.banner_enabled %}
+    <div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true" data-privacy-version="{{ privacy.updated_at.timestamp() if (privacy and privacy.updated_at) else 'v1' }}">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -94,12 +91,12 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-3">{{ privacy.consent_message }}</p>
+                    <p class="mb-3">{{ privacy.consent_message if privacy else 'Usiamo cookie tecnici per migliorare la tua esperienza.' }}</p>
                     <div class="small">
-                        {% if privacy.privacy_url %}
+                        {% if privacy and privacy.privacy_url %}
                             <a href="{{ privacy.privacy_url }}" target="_blank" rel="noopener" class="me-3"><i class="bi bi-file-text"></i> Privacy policy</a>
                         {% endif %}
-                        {% if privacy.cookie_url %}
+                        {% if privacy and privacy.cookie_url %}
                             <a href="{{ privacy.cookie_url }}" target="_blank" rel="noopener"><i class="bi bi-cookie"></i> Cookie policy</a>
                         {% endif %}
                     </div>

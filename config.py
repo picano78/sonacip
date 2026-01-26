@@ -99,9 +99,11 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     """Production configuration"""
+    # PRODUCTION SAFETY: DEBUG must NEVER be True
     DEBUG = False
+    TESTING = False
     SESSION_COOKIE_SECURE = True  # Require HTTPS
-    AUTO_MIGRATE_ON_STARTUP = True
+    # AUTO_MIGRATE_ON_STARTUP inherited from Config (respects env var)
     USE_PROXYFIX = True
     PROPAGATE_EXCEPTIONS = False
     TRAP_HTTP_EXCEPTIONS = False
@@ -111,6 +113,7 @@ class ProductionConfig(Config):
     # Fail fast if SECRET_KEY not set
     @classmethod
     def validate_config(cls):
+        """Validate production configuration - fail fast on missing critical settings"""
         if not os.environ.get('SECRET_KEY'):
             raise ValueError("SECRET_KEY environment variable must be set in production!")
         if not os.environ.get('DATABASE_URL'):

@@ -37,4 +37,5 @@ tmp_upload_dir = None
 # Environment variables
 raw_env = [
     "FLASK_ENV=production",
+    "APP_ENV=production",
 ]

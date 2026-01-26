@@ -11,7 +11,8 @@ class Config:
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     
     # Secret key for session management and CSRF protection
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production-2026'
+    # NOTE: Must be provided via environment variables only (no code defaults).
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
@@ -53,6 +54,18 @@ class Config:
     
     # Logs configuration
     LOGS_FOLDER = os.path.join(BASE_DIR, 'logs')
+
+    # Migrations
+    MIGRATIONS_DIR = os.environ.get('MIGRATIONS_DIR') or os.path.join(BASE_DIR, 'migrations')
+    AUTO_MIGRATE_ON_STARTUP = os.environ.get('AUTO_MIGRATE_ON_STARTUP', 'false').lower() in ['true', 'on', '1']
+
+    # ProxyFix (reverse proxy support)
+    USE_PROXYFIX = os.environ.get('USE_PROXYFIX', 'false').lower() in ['true', 'on', '1']
+    PROXYFIX_X_FOR = int(os.environ.get('PROXYFIX_X_FOR', '1'))
+    PROXYFIX_X_PROTO = int(os.environ.get('PROXYFIX_X_PROTO', '1'))
+    PROXYFIX_X_HOST = int(os.environ.get('PROXYFIX_X_HOST', '1'))
+    PROXYFIX_X_PORT = int(os.environ.get('PROXYFIX_X_PORT', '1'))
+    PROXYFIX_X_PREFIX = int(os.environ.get('PROXYFIX_X_PREFIX', '0'))
     
     # Email configuration (SMTP)
     MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'
@@ -80,12 +93,19 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
+    AUTO_MIGRATE_ON_STARTUP = False
+    USE_PROXYFIX = False
 
 
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
     SESSION_COOKIE_SECURE = True  # Require HTTPS
+    AUTO_MIGRATE_ON_STARTUP = True
+    USE_PROXYFIX = True
+    PROPAGATE_EXCEPTIONS = False
+    TRAP_HTTP_EXCEPTIONS = False
+    TRAP_BAD_REQUEST_ERRORS = False
     
     # Override with stronger settings in production
     # Fail fast if SECRET_KEY not set

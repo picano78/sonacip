@@ -14,6 +14,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from jinja2 import ChainableUndefined
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -42,9 +43,33 @@ def create_app(config_name=None):
         config_name = 'development'
     app.config.from_object(config[config_name])
 
+    # Enforce production safety flags (never debug in production)
+    if config_name == 'production':
+        app.config['ENV'] = 'production'
+        app.config['FLASK_ENV'] = 'production'
+        app.config['DEBUG'] = False
+        app.config['TESTING'] = False
+        app.config['PROPAGATE_EXCEPTIONS'] = False
+        app.debug = False
+
     # Validate configuration in production
     if config_name == 'production' and hasattr(config[config_name], 'validate_config'):
         config[config_name].validate_config()
+
+    # Fail fast if SECRET_KEY is missing in any environment
+    if not app.config.get('SECRET_KEY'):
+        raise RuntimeError("SECRET_KEY environment variable must be set (no defaults).")
+
+    # Apply ProxyFix when behind reverse proxy (Nginx/Plesk)
+    if app.config.get('USE_PROXYFIX'):
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=app.config.get('PROXYFIX_X_FOR', 1),
+            x_proto=app.config.get('PROXYFIX_X_PROTO', 1),
+            x_host=app.config.get('PROXYFIX_X_HOST', 1),
+            x_port=app.config.get('PROXYFIX_X_PORT', 1),
+            x_prefix=app.config.get('PROXYFIX_X_PREFIX', 0),
+        )
 
     # Configure rate limit storage (Redis recommended in production)
     storage_uri = app.config.get('RATELIMIT_STORAGE_URI') or app.config.get('REDIS_URL')
@@ -70,6 +95,7 @@ def create_app(config_name=None):
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Effettua il login per accedere a questa pagina.'
     login_manager.login_message_category = 'info'
+    login_manager.session_protection = 'strong'
     
     @login_manager.user_loader
     def load_user(user_id):
@@ -224,33 +250,51 @@ def create_app(config_name=None):
     app.register_error_handler(404, handle_404)
     app.register_error_handler(500, handle_500)
     
-    # Configure logging
+    # Configure logging (file + stdout, resilient to failures)
     import logging
     from logging.handlers import RotatingFileHandler
-    
+    from logging import StreamHandler
+
     if not app.debug and not app.testing:
-        # Create logs directory if it doesn't exist
         logs_dir = app.config.get('LOGS_FOLDER', 'logs')
         os.makedirs(logs_dir, exist_ok=True)
-        
-        # Set up file handler
-        file_handler = RotatingFileHandler(
-            os.path.join(logs_dir, 'sonacip.log'),
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=10
-        )
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(logging.Formatter(
+
+        log_formatter = logging.Formatter(
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-        ))
-        
-        # Add handler to app logger
-        app.logger.addHandler(file_handler)
+        )
+
+        # Always log to stdout
+        stream_handler = StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(log_formatter)
+        app.logger.addHandler(stream_handler)
+
+        # Try to add file logging, but never crash if it fails
+        try:
+            file_handler = RotatingFileHandler(
+                os.path.join(logs_dir, 'sonacip.log'),
+                maxBytes=10*1024*1024,  # 10MB
+                backupCount=10,
+                delay=True
+            )
+            file_handler.setLevel(logging.INFO)
+            file_handler.setFormatter(log_formatter)
+            app.logger.addHandler(file_handler)
+        except Exception:
+            app.logger.warning('File logging could not be initialized; continuing with stdout only.', exc_info=True)
+
         app.logger.setLevel(logging.INFO)
+        app.logger.propagate = False
         app.logger.info('SONACIP startup')
 
     if app.config.get('RATELIMIT_STORAGE_URI', '').startswith('memory://'):
         app.logger.warning('Rate limiting is using in-memory storage; configure REDIS_URL/RATELIMIT_STORAGE_URI for production.')
+
+    # Production startup safety checks (fail fast and loud)
+    if config_name == 'production' and not app.testing:
+        _verify_database_connectivity(app)
+        if app.config.get('AUTO_MIGRATE_ON_STARTUP', True):
+            _apply_migrations_or_fail(app)
 
     # Security headers
     @app.after_request
@@ -266,6 +310,40 @@ def create_app(config_name=None):
         return response
     
     return app
+
+
+def _verify_database_connectivity(app):
+    """Fail fast if the database is unreachable."""
+    from sqlalchemy import text
+    try:
+        with app.app_context():
+            db.session.execute(text('SELECT 1'))
+    except Exception as exc:
+        app.logger.critical('Database connectivity check failed.', exc_info=True)
+        raise RuntimeError('Database is unreachable; aborting startup.') from exc
+
+
+def _apply_migrations_or_fail(app):
+    """Apply Flask-Migrate upgrades safely and idempotently."""
+    from flask_migrate import upgrade
+    import fcntl
+
+    migrations_dir = app.config.get('MIGRATIONS_DIR', 'migrations')
+    if not os.path.isdir(migrations_dir):
+        raise RuntimeError(
+            f'Migrations directory not found at: {migrations_dir}. '
+            'Initialize migrations before starting production.'
+        )
+
+    lock_path = app.config.get('MIGRATIONS_LOCK_PATH', '/tmp/sonacip_migrations.lock')
+    try:
+        with open(lock_path, 'w') as lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            upgrade(directory=migrations_dir)
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+    except Exception as exc:
+        app.logger.critical('Database migrations failed; aborting startup.', exc_info=True)
+        raise RuntimeError('Database migrations failed; aborting startup.') from exc
 
 
 def ensure_directories(app):

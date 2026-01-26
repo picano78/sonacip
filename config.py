@@ -9,6 +9,8 @@ class Config:
     """Base configuration"""
     # Base directory
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+    DEBUG = False
     
     # Secret key for session management and CSRF protection
     # NOTE: Must be provided via environment variables only (no code defaults).
@@ -92,7 +94,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     """Development configuration"""
-    DEBUG = True
+    DEBUG = False
     AUTO_MIGRATE_ON_STARTUP = False
     USE_PROXYFIX = False
 

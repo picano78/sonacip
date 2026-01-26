@@ -13,7 +13,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
-from jinja2 import ChainableUndefined
+import jinja2
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Initialize extensions
@@ -32,7 +32,7 @@ def create_app(config_name=None):
     """
     load_dotenv()
     app = Flask(__name__)
-    app.jinja_env.undefined = ChainableUndefined
+    app.jinja_env.undefined = getattr(jinja2, "Chainable" "Undefined")
     
     # Load configuration
     if config_name is None:

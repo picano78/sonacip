@@ -29,10 +29,10 @@ Sistema completo di gestione per società sportive, staff, atleti e appassionati
 ```bash
 pip3 install -r requirements.txt
 cp .env.example .env
-gunicorn -c gunicorn.conf.py run:app
+gunicorn -c gunicorn.conf.py wsgi:app
 ```
 
-**Accedi a:** http://localhost
+**Accedi a:** http://localhost:8000
 
 **Credenziali Admin (auto-seed):**
 - Email: admin@example.com
@@ -54,9 +54,8 @@ pip install -r requirements.txt
 
 # Crea file .env
 cp .env.example .env
-
 # Avvia con Gunicorn
-gunicorn -c gunicorn.conf.py run:app
+gunicorn -c gunicorn.conf.py wsgi:app
 ```
 
 ## 🚢 Deployment Produzione (Ubuntu 24.04)
@@ -115,7 +114,7 @@ sudo certbot --nginx -d yourdomain.com
 ```
 /opt/sonacip/
 ├── gunicorn.conf.py      # Configurazione Gunicorn
-├── run.py                 # Entry point unico (app factory)
+├── wsgi.py                # Entry point WSGI per Gunicorn
 ├── config.py              # Configurazione (Dev/Prod)
 ├── requirements.txt       # Dipendenze Python
 ├── start.sh              # Script avvio rapido

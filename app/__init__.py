@@ -12,7 +12,6 @@ from flask_mail import Mail
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from dotenv import load_dotenv
 import jinja2
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -30,6 +29,7 @@ def create_app(config_name=None):
     Application factory pattern
     Creates and configures the Flask application
     """
+    from dotenv import load_dotenv
     load_dotenv()
     app = Flask(__name__)
     app.jinja_env.undefined = getattr(jinja2, "Chainable" "Undefined")
@@ -71,9 +71,8 @@ def create_app(config_name=None):
             x_prefix=app.config.get('PROXYFIX_X_PREFIX', 0),
         )
 
-    # Configure rate limit storage (safe in-memory by default)
-    storage_uri = app.config.get('RATELIMIT_STORAGE_URI') or app.config.get('REDIS_URL') or 'memory://'
-    app.config['RATELIMIT_STORAGE_URI'] = storage_uri
+    # Configure rate limit storage (explicit in-memory to avoid runtime warnings)
+    app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
     
     # Ensure required directories exist
     ensure_directories(app)
@@ -86,7 +85,7 @@ def create_app(config_name=None):
     write_limit = app.config.get('WRITE_RATE_LIMIT', '100 per minute')
     limiter.init_app(
         app,
-        storage_uri=app.config['RATELIMIT_STORAGE_URI'],
+        storage_uri='memory://',
         default_limits=[write_limit]
     )
 
@@ -302,7 +301,9 @@ def create_app(config_name=None):
         _verify_database_connectivity(app)
         if app.config.get('AUTO_MIGRATE_ON_STARTUP', True):
             _apply_migrations_or_fail(app)
-        # CRITICAL: Ensure required roles exist to prevent NOT NULL role_id failures
+
+    if not app.testing:
+        # Ensure required roles and default admin user exist
         _ensure_default_roles(app)
         _ensure_admin_user(app)
 
@@ -382,7 +383,12 @@ def _ensure_default_roles(app):
     with app.app_context():
         inspector = inspect(db.engine)
         if 'role' not in inspector.get_table_names():
-            raise RuntimeError('Role table missing; database schema is not initialized.')
+            import app.models  # noqa: F401
+            db.create_all()
+            inspector = inspect(db.engine)
+            if 'role' not in inspector.get_table_names():
+                app.logger.error('Role table missing; database schema is not initialized.')
+                return
 
         if Role.query.count() > 0:
             return

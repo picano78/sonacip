@@ -9,7 +9,7 @@ Group=www-data
 WorkingDirectory=/opt/sonacip
 EnvironmentFile=-/opt/sonacip/.env
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/sonacip/venv/bin/gunicorn -c /opt/sonacip/gunicorn.conf.py run:app
+ExecStart=/opt/sonacip/venv/bin/gunicorn -c /opt/sonacip/gunicorn.conf.py wsgi:app
 Restart=always
 RestartSec=5
 

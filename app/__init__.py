@@ -71,12 +71,9 @@ def create_app(config_name=None):
             x_prefix=app.config.get('PROXYFIX_X_PREFIX', 0),
         )
 
-    # Configure rate limit storage (Redis recommended in production)
-    storage_uri = app.config.get('RATELIMIT_STORAGE_URI') or app.config.get('REDIS_URL')
-    if storage_uri:
-        app.config['RATELIMIT_STORAGE_URI'] = storage_uri
-    else:
-        app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
+    # Configure rate limit storage (safe in-memory by default)
+    storage_uri = app.config.get('RATELIMIT_STORAGE_URI') or app.config.get('REDIS_URL') or 'memory://'
+    app.config['RATELIMIT_STORAGE_URI'] = storage_uri
     
     # Ensure required directories exist
     ensure_directories(app)
@@ -87,8 +84,14 @@ def create_app(config_name=None):
     mail.init_app(app)
     csrf.init_app(app)
     write_limit = app.config.get('WRITE_RATE_LIMIT', '100 per minute')
-    limiter.default_limits = [write_limit]
-    limiter.init_app(app)
+    limiter.init_app(
+        app,
+        storage_uri=app.config['RATELIMIT_STORAGE_URI'],
+        default_limits=[write_limit]
+    )
+
+    # Bootstrap database only when missing (SQLite)
+    _bootstrap_database_if_missing(app)
     
     # Configure Flask-Login
     login_manager.init_app(app)
@@ -291,8 +294,8 @@ def create_app(config_name=None):
         app.logger.propagate = False
         app.logger.info('SONACIP startup')
 
-    if app.config.get('RATELIMIT_STORAGE_URI', '').startswith('memory://'):
-        app.logger.warning('Rate limiting is using in-memory storage; configure REDIS_URL/RATELIMIT_STORAGE_URI for production.')
+    if app.config.get('RATELIMIT_STORAGE_URI', '').startswith('memory://') and config_name != 'production':
+        app.logger.info('Rate limiting is using in-memory storage for non-production environments.')
 
     # Production startup safety checks (fail fast and loud)
     if config_name == 'production' and not app.testing:
@@ -301,6 +304,7 @@ def create_app(config_name=None):
             _apply_migrations_or_fail(app)
         # CRITICAL: Ensure required roles exist to prevent NOT NULL role_id failures
         _ensure_default_roles(app)
+        _ensure_admin_user(app)
 
     # Security headers
     @app.after_request
@@ -336,10 +340,8 @@ def _apply_migrations_or_fail(app):
 
     migrations_dir = app.config.get('MIGRATIONS_DIR', 'migrations')
     if not os.path.isdir(migrations_dir):
-        raise RuntimeError(
-            f'Migrations directory not found at: {migrations_dir}. '
-            'Initialize migrations before starting production.'
-        )
+        app.logger.info('Migrations directory not found; skipping auto-migration.')
+        return
 
     lock_path = app.config.get('MIGRATIONS_LOCK_PATH', '/tmp/sonacip_migrations.lock')
     try:
@@ -350,6 +352,26 @@ def _apply_migrations_or_fail(app):
     except Exception as exc:
         app.logger.critical('Database migrations failed; aborting startup.', exc_info=True)
         raise RuntimeError('Database migrations failed; aborting startup.') from exc
+
+
+def _bootstrap_database_if_missing(app):
+    """Create SQLite database only when it does not exist."""
+    uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if not uri.startswith('sqlite:///'):
+        return
+
+    db_path = uri.replace('sqlite:///', '', 1)
+    if db_path == ':memory:':
+        return
+
+    if os.path.exists(db_path):
+        return
+
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    with app.app_context():
+        import app.models  # noqa: F401
+        db.create_all()
+        app.logger.info('SQLite database initialized at %s', db_path)
 
 
 def _ensure_default_roles(app):
@@ -390,6 +412,37 @@ def _ensure_default_roles(app):
             ))
         db.session.commit()
         app.logger.info('Default roles created to satisfy role_id integrity.')
+
+
+def _ensure_admin_user(app):
+    """Create default admin user if it does not exist."""
+    from app.models import User, Role
+
+    with app.app_context():
+        existing = User.query.filter_by(email='admin@example.com').first()
+        if existing:
+            return
+
+        role = Role.query.filter_by(name='super_admin').first()
+        if not role:
+            role = Role.query.order_by(Role.level.desc()).first()
+        if not role:
+            raise RuntimeError('No roles available to create admin user.')
+
+        user = User(
+            email='admin@example.com',
+            username='admin',
+            first_name='Admin',
+            last_name='SONACIP',
+            is_active=True,
+            is_verified=True,
+            role_obj=role,
+            role_legacy=role.name
+        )
+        user.set_password('Admin123!')
+        db.session.add(user)
+        db.session.commit()
+        app.logger.info('Default admin user created: admin@example.com')
 
 
 def ensure_directories(app):
@@ -463,7 +516,7 @@ def register_blueprints(app):
     app.register_blueprint(tournaments_bp, url_prefix='/tournaments')
 
     # Society Calendar (strategic, separate from field planner)
-    from app.calendar import bp as calendar_bp
+    from app.scheduler import bp as calendar_bp
     app.register_blueprint(calendar_bp)
 
     # Optional external modules (safe discovery)

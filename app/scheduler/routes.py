@@ -4,8 +4,8 @@ from flask import render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
 from app import db
-from app.calendar import bp
-from app.calendar.forms import SocietyCalendarEventForm
+from app.scheduler import bp
+from app.scheduler.forms import SocietyCalendarEventForm
 from app.models import SocietyCalendarEvent, society_calendar_event_staff, society_calendar_event_athletes, User, Notification, Post
 from app.utils import permission_required, check_permission
 

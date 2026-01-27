@@ -24,31 +24,16 @@ fi
 
 echo "✓ Dependencies installed"
 
-# Initialize database
-echo "🗄️  Initializing database..."
-python3 -c "
-from app import create_app, db
-app = create_app()
-with app.app_context():
-    db.create_all()
-    print('✓ Database created')
-"
-
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to initialize database"
-    exit 1
-fi
-
 # Start server
 echo ""
 echo "🌟 Starting SONACIP server..."
 echo ""
-echo "📍 Access the application at: http://localhost:5000"
+echo "📍 Access the application at: http://localhost"
 echo "👤 Default admin login:"
-echo "   Email: admin@sonacip.it"
-echo "   Password: admin123"
+echo "   Email: admin@example.com"
+echo "   Password: Admin123!"
 echo ""
 echo "Press CTRL+C to stop the server"
 echo ""
 
-python3 run.py
+gunicorn -c gunicorn.conf.py run:app

@@ -24,24 +24,19 @@ Sistema completo di gestione per società sportive, staff, atleti e appassionati
 - Nginx (produzione)
 - Gunicorn (produzione)
 
-## ⚡ Quick Start (Sviluppo)
+## ⚡ Quick Start (Locale)
 
 ```bash
-# Metodo 1: Script automatico
-./start.sh
-
-# Metodo 2: Manuale
 pip3 install -r requirements.txt
-flask --app run run
+cp .env.example .env
+gunicorn -c gunicorn.conf.py run:app
 ```
 
-**Accedi a:** http://localhost:5000
+**Accedi a:** http://localhost
 
-**Credenziali Super Admin (bootstrap):**
-- Email: `admin@sonacip.it`
-- Password: impostata tramite variabile ambiente `SUPERADMIN_PASSWORD` oppure generata automaticamente e riportata nei log di avvio.
-
-⚠️ **Imposta `SUPERADMIN_PASSWORD` prima del primo avvio e ruota la password dopo il primo accesso.**
+**Credenziali Admin (auto-seed):**
+- Email: admin@example.com
+- Password: Admin123!
 
 ## 🔧 Installazione Completa (Sviluppo)
 
@@ -57,14 +52,11 @@ source venv/bin/activate  # Linux/Mac
 # Installa dipendenze
 pip install -r requirements.txt
 
-# Crea file .env (opzionale per sviluppo)
+# Crea file .env
 cp .env.example .env
 
-# Inizializza database
-python3 -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all()"
-
-# Avvia server di sviluppo
-flask --app run run
+# Avvia con Gunicorn
+gunicorn -c gunicorn.conf.py run:app
 ```
 
 ## 🚢 Deployment Produzione (Ubuntu 24.04)
@@ -87,23 +79,24 @@ sudo chown -R www-data:www-data /opt/sonacip
 sudo -u www-data python3.12 -m venv venv
 sudo -u www-data venv/bin/pip install -r requirements.txt
 sudo -u www-data cp .env.example .env
-# Configura .env con SECRET_KEY forte e credenziali email
+# Configura .env con SECRET_KEY forte e DATABASE_URL (SQLite assoluto o PostgreSQL)
 sudo -u www-data mkdir -p logs backups uploads
 ```
 
-### 3. Configura Gunicorn
+### 3. Configura Gunicorn + Systemd
 
 ```bash
-sudo cp deployment/sonacip.service /etc/systemd/system/
+sudo cp deploy/sonacip.service /etc/systemd/system/sonacip.service
 sudo systemctl daemon-reload
 sudo systemctl start sonacip
 sudo systemctl enable sonacip
+sudo systemctl status sonacip
 ```
 
 ### 4. Configura Nginx
 
 ```bash
-sudo cp deployment/nginx.conf /etc/nginx/sites-available/sonacip
+sudo cp deploy/nginx_sonacip.conf /etc/nginx/sites-available/sonacip
 # Modifica dominio nel file
 sudo ln -s /etc/nginx/sites-available/sonacip /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -121,11 +114,13 @@ sudo certbot --nginx -d yourdomain.com
 
 ```
 /opt/sonacip/
+├── gunicorn.conf.py      # Configurazione Gunicorn
 ├── run.py                 # Entry point unico (app factory)
 ├── config.py              # Configurazione (Dev/Prod)
 ├── requirements.txt       # Dipendenze Python
 ├── start.sh              # Script avvio rapido
 ├── .env.example          # Template variabili ambiente
+├── .env                  # Variabili ambiente produzione
 ├── app/
 │   ├── __init__.py       # Application factory
 │   ├── models.py         # Database models (11 tabelle)
@@ -134,38 +129,19 @@ sudo certbot --nginx -d yourdomain.com
 │   ├── social/           # Social network (feed, posts, follow)
 │   ├── crm/              # CRM (contatti, opportunità, attività)
 │   ├── events/           # Eventi e convocazioni
+│   ├── scheduler/        # Calendario società
 │   ├── notifications/    # Notifiche (interno + email + SMS-ready)
 │   ├── backup/           # Backup/Restore completo
 │   ├── templates/        # Template Jinja2 (65+ files)
 │   └── static/           # CSS, JS, immagini
-├── deployment/
-│   ├── nginx.conf       # Configurazione Nginx
-│   └── sonacip.service  # Systemd service
+├── deploy/
+│   ├── nginx_sonacip.conf  # Configurazione Nginx
+│   └── sonacip.service     # Systemd service
 ├── backups/             # Directory backup (auto-created)
 ├── uploads/             # File caricati (auto-created)
 ├── logs/                # Log applicazione (auto-created)
 └── sonacip.db           # Database SQLite (auto-created)
 ```
-/opt/sonacip/
-├── run.py                 # Entry point
-├── config.py              # Configurazione
-├── requirements.txt       # Dipendenze
-├── app/
-│   ├── __init__.py       # Application factory
-│   ├── models.py         # Database models
-│   ├── auth/             # Autenticazione
-│   ├── admin/            # Panel admin
-│   ├── social/           # Social network
-│   ├── events/           # Eventi
-│   ├── notifications/    # Notifiche
-│   ├── backup/           # Backup/Restore
-│   ├── templates/        # Template Jinja2
-│   └── static/           # CSS, JS, immagini
-├── deployment/
-│   ├── nginx.conf
-│   └── sonacip.service
-└── logs/
-
 
 ## 👥 Ruoli Utente
 
@@ -182,18 +158,14 @@ Genera SECRET_KEY:
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-File `.env`:
+File .env (produzione):
 ```
+APP_ENV=production
+FLASK_ENV=production
 SECRET_KEY=generated-key
-DATABASE_URL=postgresql://user:pass@localhost/sonacip
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USE_TLS=true
-MAIL_USERNAME=email@gmail.com
-MAIL_PASSWORD=app-password
-REDIS_URL=redis://localhost:6379/0
-RATELIMIT_STORAGE_URI=redis://localhost:6379/1
-SUPERADMIN_PASSWORD=change-me-after-first-login
+DATABASE_URL=sqlite:////opt/sonacip/sonacip.db
+USE_PROXYFIX=true
+RATELIMIT_STORAGE_URI=memory://
 ```
 
 ## 📝 Note Importanti

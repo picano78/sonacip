@@ -40,7 +40,7 @@ class Config:
     RATE_LIMIT_REQUESTS = int(os.environ.get('RATE_LIMIT_REQUESTS', '300'))
     RATE_LIMIT_WINDOW = int(os.environ.get('RATE_LIMIT_WINDOW', '300'))  # seconds
     WRITE_RATE_LIMIT = os.environ.get('WRITE_RATE_LIMIT', '100 per minute')
-    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI')
+    RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_STORAGE_URI', 'memory://')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx'}
 
@@ -118,8 +118,6 @@ class ProductionConfig(Config):
         """Validate production configuration - fail fast on missing critical settings"""
         if not os.environ.get('SECRET_KEY'):
             raise ValueError("SECRET_KEY environment variable must be set in production!")
-        if not os.environ.get('DATABASE_URL'):
-            raise ValueError("DATABASE_URL environment variable must be set in production!")
 
 
 config = {

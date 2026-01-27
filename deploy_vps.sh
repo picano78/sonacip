@@ -24,20 +24,12 @@ apt-get install -y python3 python3-pip python3-venv nginx postgresql postgresql-
 echo "✅ System dependencies installed"
 echo ""
 
-echo "📦 Step 2: Creating application user..."
-if ! id "sonacip" &>/dev/null; then
-    useradd -m -s /bin/bash sonacip
-    echo "✅ User 'sonacip' created"
-else
-    echo "ℹ️  User 'sonacip' already exists"
-fi
+echo "📦 Step 2: Using www-data user for service..."
+echo "✅ User 'www-data' will run the service"
 echo ""
 
-echo "📦 Step 3: Setting up PostgreSQL database..."
-sudo -u postgres psql -c "CREATE DATABASE sonacip;" 2>/dev/null || echo "ℹ️  Database already exists"
-sudo -u postgres psql -c "CREATE USER sonacip WITH PASSWORD 'sonacip_secure_password';" 2>/dev/null || echo "ℹ️  User already exists"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sonacip TO sonacip;"
-echo "✅ Database configured"
+echo "📦 Step 3: Skipping PostgreSQL setup (SQLite default)"
+echo "✅ Database configured (SQLite)"
 echo ""
 
 echo "📦 Step 4: Setting up application directory..."
@@ -66,94 +58,47 @@ echo ""
 
 echo "📦 Step 6: Creating environment configuration..."
 cat > .env << 'EOF'
+APP_ENV=production
 FLASK_ENV=production
-SECRET_KEY=CHANGE_THIS_TO_A_RANDOM_SECRET_KEY
-DATABASE_URL=postgresql://sonacip:sonacip_secure_password@localhost/sonacip
+SECRET_KEY=REPLACE_ME
+DATABASE_URL=sqlite:////opt/sonacip/sonacip.db
+USE_PROXYFIX=true
+RATELIMIT_STORAGE_URI=memory://
 MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
-MAIL_USE_TLS=True
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
+MAIL_USE_TLS=true
+MAIL_USERNAME=
+MAIL_PASSWORD=
 MAIL_DEFAULT_SENDER=noreply@sonacip.it
 EOF
 
+# Generate random SECRET_KEY
+SECRET_KEY=$(python3 - << 'PY'
+import secrets
+print(secrets.token_hex(32))
+PY
+)
+sed -i "s|SECRET_KEY=REPLACE_ME|SECRET_KEY=${SECRET_KEY}|" .env
+
 echo "⚠️  IMPORTANT: Edit .env file and update:"
-echo "   - SECRET_KEY (generate a random key)"
-echo "   - Database password"
 echo "   - Email settings"
 echo ""
 
 echo "📦 Step 7: Creating required directories..."
 mkdir -p logs backups uploads/avatars uploads/covers uploads/posts
-chown -R sonacip:sonacip $APP_DIR
+chown -R www-data:www-data $APP_DIR
 echo "✅ Directories created"
 echo ""
 
-echo "📦 Step 8: Initializing database..."
-sudo -u sonacip bash << 'DBINIT'
-source /opt/sonacip/venv/bin/activate
-cd /opt/sonacip
-python -c "from app import create_app, db; app = create_app(); app.app_context().push(); db.create_all(); print('Database initialized')"
-DBINIT
-echo "✅ Database initialized"
-echo ""
-
-echo "📦 Step 9: Installing systemd service..."
-cat > /etc/systemd/system/sonacip.service << 'EOF'
-[Unit]
-Description=SONACIP SaaS Platform
-After=network.target
-
-[Service]
-Type=notify
-User=sonacip
-Group=sonacip
-WorkingDirectory=/opt/sonacip
-Environment="PATH=/opt/sonacip/venv/bin"
-ExecStart=/opt/sonacip/venv/bin/gunicorn -c /opt/sonacip/gunicorn_config.py run:app
-ExecReload=/bin/kill -s HUP $MAINPID
-KillMode=mixed
-TimeoutStopSec=5
-PrivateTmp=true
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
+echo "📦 Step 8: Installing systemd service..."
+cp /opt/sonacip/deploy/sonacip.service /etc/systemd/system/sonacip.service
 systemctl daemon-reload
 systemctl enable sonacip
 echo "✅ Systemd service installed"
 echo ""
 
-echo "📦 Step 10: Configuring Nginx..."
-cat > /etc/nginx/sites-available/sonacip << 'EOF'
-server {
-    listen 80;
-    server_name _;
-
-    client_max_body_size 50M;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_redirect off;
-    }
-
-    location /static {
-        alias /opt/sonacip/app/static;
-        expires 30d;
-    }
-
-    location /uploads {
-        alias /opt/sonacip/uploads;
-        expires 7d;
-    }
-}
-EOF
+echo "📦 Step 9: Configuring Nginx..."
+cp /opt/sonacip/deploy/nginx_sonacip.conf /etc/nginx/sites-available/sonacip
 
 ln -sf /etc/nginx/sites-available/sonacip /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
@@ -162,7 +107,7 @@ systemctl restart nginx
 echo "✅ Nginx configured"
 echo ""
 
-echo "📦 Step 11: Starting SONACIP..."
+echo "📦 Step 10: Starting SONACIP..."
 systemctl start sonacip
 sleep 3
 systemctl status sonacip --no-pager
@@ -193,8 +138,8 @@ echo "5. Access the application:"
 echo "   http://your-server-ip/"
 echo ""
 echo "🔐 Default Admin Credentials:"
-echo "   Email: admin@sonacip.it"
-echo "   Password: admin123"
+echo "   Email: admin@example.com"
+echo "   Password: Admin123!"
 echo ""
 echo "⚠️  SECURITY WARNINGS:"
 echo "   - Change admin password immediately!"

@@ -72,7 +72,7 @@ def create_app(config_name=None):
         )
 
     # Configure rate limit storage (explicit in-memory to avoid runtime warnings)
-    app.config['RATELIMIT_STORAGE_URI'] = 'memory://'
+    app.config.setdefault('RATELIMIT_STORAGE_URI', 'memory://')
     
     # Ensure required directories exist
     ensure_directories(app)
@@ -83,11 +83,8 @@ def create_app(config_name=None):
     mail.init_app(app)
     csrf.init_app(app)
     write_limit = app.config.get('WRITE_RATE_LIMIT', '100 per minute')
-    limiter.init_app(
-        app,
-        storage_uri='memory://',
-        default_limits=[write_limit]
-    )
+    app.config['RATELIMIT_DEFAULT'] = [write_limit]
+    limiter.init_app(app)
 
     # Bootstrap database only when missing (SQLite)
     _bootstrap_database_if_missing(app)

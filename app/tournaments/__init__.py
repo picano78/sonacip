@@ -1,6 +1,5 @@
 """Tournament blueprint (enterprise-grade tournaments)"""
 from flask import Blueprint
+"""Tournaments Blueprint."""
+from app.tournaments.routes import bp
 
-bp = Blueprint('tournaments', __name__)
-
-from app.tournaments import routes  # noqa: E402,F401

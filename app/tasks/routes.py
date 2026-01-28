@@ -2,16 +2,17 @@
 Tasks and Project Management Routes
 Advanced planning with Kanban, Gantt, Calendar views
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from app.core.extensions import db
-from app.tasks import bp
+from app import db
 from app.models import Task, Project, User, Team
 from app.utils import permission_required, check_permission
 from app.models import Event
 from app.automation.utils import execute_automations, execute_rules
 from datetime import datetime, timedelta
 import json
+
+bp = Blueprint('tasks', __name__)
 
 
 def _task_scope_id(*args, **kwargs):

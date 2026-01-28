@@ -215,7 +215,7 @@ def log_action(action, entity_type=None, entity_id=None, details=None):
     Log an action to the audit log
     """
     from app.models import AuditLog
-    from app.core.extensions import db
+    from app import db
     from flask import request
     
     if current_user.is_authenticated:

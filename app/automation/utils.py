@@ -5,7 +5,7 @@ import traceback
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from flask import current_app
-from app.core.extensions import db, mail
+from app import db, mail
 from app.models import Automation, AutomationRule, AutomationRun, Notification, User
 from app.automation.validation import evaluate_condition, validate_action_schema
 from flask_mail import Message

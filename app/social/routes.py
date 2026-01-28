@@ -2,11 +2,10 @@
 Social routes
 Profiles, feed, posts, follows, likes, comments
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
-from app.core.extensions import db
-from app.social import bp
+from app import db
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.utils import save_picture
 from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment, SocialSetting, TournamentMatch
@@ -15,6 +14,8 @@ from app.utils import permission_required, check_permission
 from datetime import datetime, timedelta
 from datetime import datetime
 import os
+
+bp = Blueprint('social', __name__)
 
 
 @bp.route('/feed')

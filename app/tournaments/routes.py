@@ -1,14 +1,15 @@
 """Tournament routes implementing multi-format tournaments with scheduling, scoring, standings."""
 from datetime import datetime
-from flask import render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 from sqlalchemy import false
-from app.core.extensions import db
-from app.tournaments import bp
+from app import db
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
 from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity
 from app.automation.utils import execute_rules
 from app.utils import permission_required, check_permission
+
+bp = Blueprint('tournaments', __name__)
 
 
 def _require_society_scope(tournament: Tournament = None, action: str = 'view'):

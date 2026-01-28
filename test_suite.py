@@ -5,7 +5,7 @@ Comprehensive tests to verify system integrity
 """
 import sys
 from app import create_app
-from app.core.extensions import db
+from app import db
 from app.models import User, Post, Event, Contact, Opportunity, Notification, AuditLog
 from datetime import datetime, timedelta
 

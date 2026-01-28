@@ -3,7 +3,6 @@ Events Blueprint
 Event management and convocations
 """
 from flask import Blueprint
+"""Events Blueprint."""
+from app.events.routes import bp
 
-bp = Blueprint('events', __name__)
-
-from app.events import routes

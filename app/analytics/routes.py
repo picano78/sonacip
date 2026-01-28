@@ -2,11 +2,10 @@
 Analytics and Business Intelligence Routes
 Power BI / Tableau level insights
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func, desc, and_, or_
-from app.core.extensions import db
-from app.analytics import bp
+from app import db
 from app.models import (
     Analytics, User, Post, Event, Contact, Opportunity,
     Task, Project, Subscription, Payment
@@ -14,6 +13,8 @@ from app.models import (
 from app.utils import admin_required, permission_required
 from datetime import datetime, timedelta
 import json
+
+bp = Blueprint('analytics', __name__)
 
 
 @bp.route('/')

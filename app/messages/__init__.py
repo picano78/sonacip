@@ -2,7 +2,6 @@
 Messages blueprint
 """
 from flask import Blueprint
+"""Messages Blueprint."""
+from app.messages.routes import bp
 
-bp = Blueprint('messages', __name__)
-
-from app.messages import routes  # noqa: E402,F401

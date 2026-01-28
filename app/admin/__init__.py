@@ -1,9 +1,2 @@
-"""
-Admin Blueprint
-Super admin dashboard and management
-"""
-from flask import Blueprint
-
-bp = Blueprint('admin', __name__)
-
-from app.admin import routes
+"""Admin Blueprint."""
+from app.admin.routes import bp

@@ -1,13 +1,14 @@
 """Routes for Society Calendar (strategic, society-wide)"""
 from datetime import datetime, timedelta
-from flask import render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
-from app.core.extensions import db
-from app.scheduler import bp
+from app import db
 from app.scheduler.forms import SocietyCalendarEventForm
 from app.models import SocietyCalendarEvent, society_calendar_event_staff, society_calendar_event_athletes, User, Notification, Post
 from app.utils import permission_required, check_permission
+
+bp = Blueprint('scheduler', __name__)
 
 
 def _date_range(view_mode: str, start_date: datetime.date):

@@ -1,18 +1,14 @@
-"""Centralized Flask extensions.
+"""Backwards-compatible extension imports.
 
-All shared objects must live here to avoid circular imports.
+Use extensions from app/__init__.py as the single source of truth.
 """
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from flask_mail import Mail
-from flask_wtf.csrf import CSRFProtect
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from app import db, migrate, login_manager, mail, csrf, limiter
 
-db = SQLAlchemy()
-migrate = Migrate()
-login_manager = LoginManager()
-mail = Mail()
-csrf = CSRFProtect()
-limiter = Limiter(key_func=get_remote_address)
+__all__ = [
+	'db',
+	'migrate',
+	'login_manager',
+	'mail',
+	'csrf',
+	'limiter',
+]

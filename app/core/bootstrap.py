@@ -44,7 +44,7 @@ def ensure_directories(app) -> None:
 
 def bootstrap_database_if_missing(app) -> None:
     """Create SQLite database only when it does not exist."""
-    from app.core.extensions import db
+    from app import db
 
     uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
     if not uri.startswith('sqlite:///'):
@@ -66,7 +66,7 @@ def bootstrap_database_if_missing(app) -> None:
 
 def verify_database_connectivity(app) -> None:
     """Fail fast if the database is unreachable."""
-    from app.core.extensions import db
+    from app import db
 
     try:
         with app.app_context():
@@ -99,7 +99,7 @@ def apply_migrations_or_fail(app) -> None:
 
 def ensure_default_roles(app) -> None:
     """Ensure default roles exist when the Role table is available."""
-    from app.core.extensions import db
+    from app import db
     from app.models import Role
 
     with app.app_context():
@@ -144,7 +144,7 @@ def ensure_default_roles(app) -> None:
 
 def ensure_admin_user(app) -> None:
     """Create default admin user if it does not exist."""
-    from app.core.extensions import db
+    from app import db
     from app.models import User, Role
 
     with app.app_context():

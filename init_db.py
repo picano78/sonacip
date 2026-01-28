@@ -2,7 +2,7 @@
 import os
 import sys
 from app import create_app
-from app.core.extensions import db
+from app import db
 from app.models import (
     User, Post, Comment, Event, Notification, AuditLog, Backup, Message,
     Contact, Opportunity, CRMActivity, Subscription, Payment,

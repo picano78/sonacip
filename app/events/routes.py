@@ -2,16 +2,17 @@
 Event routes
 Create events, convocate athletes, manage responses
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
-from app.core.extensions import db
-from app.events import bp
+from app import db
 from app.events.forms import EventForm
 from app.models import Event, User, Notification, event_athletes
 from app.automation.utils import execute_automations, execute_rules
 from app.utils import permission_required, check_permission
 from datetime import datetime
+
+bp = Blueprint('events', __name__)
 
 
 def _event_scope_id(event: Event | None):

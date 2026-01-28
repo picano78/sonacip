@@ -7,7 +7,7 @@ import zipfile
 import hashlib
 from datetime import datetime, timedelta
 from flask import current_app
-from app.core.extensions import db
+from app import db
 from app.models import Backup as BackupModel, BackupSetting
 import tempfile
 

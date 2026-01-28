@@ -1,12 +1,13 @@
 """
 Notification routes
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from app.core.extensions import db
-from app.notifications import bp
+from app import db
 from app.models import Notification
 from datetime import datetime
+
+bp = Blueprint('notifications', __name__)
 
 
 @bp.route('/')

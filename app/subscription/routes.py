@@ -2,13 +2,14 @@
 Subscription routes
 Plans, subscriptions, and payment management
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from app.core.extensions import db
-from app.subscription import bp
+from app import db
 from app.models import Plan, Subscription, Payment, User
 from app.utils import admin_required, log_action, check_permission
 from datetime import datetime, timedelta
+
+bp = Blueprint('subscription', __name__)
 
 
 @bp.route('/plans')

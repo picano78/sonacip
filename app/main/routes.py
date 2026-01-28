@@ -1,10 +1,11 @@
 """
 Main routes
 """
-from flask import render_template, redirect, url_for
+from flask import Blueprint, render_template, redirect, url_for
 from flask_login import current_user, login_required
-from app.main import bp
 from app.utils import check_permission
+
+bp = Blueprint('main', __name__)
 
 
 @bp.route('/')

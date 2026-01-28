@@ -5,7 +5,7 @@ import pytest  # type: ignore
 import json
 from datetime import datetime
 from app import create_app
-from app.core.extensions import db
+from app import db
 from app.models import User, AutomationRule, AutomationRun, Notification, Post, Task
 from app.automation.utils import execute_rules
 from app.automation.validation import evaluate_condition, validate_action_schema

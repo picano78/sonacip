@@ -2,10 +2,9 @@
 Backup routes
 Create, restore, manage backups
 """
-from flask import render_template, redirect, url_for, flash, request, send_file, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, jsonify
 from flask_login import login_required, current_user
-from app.core.extensions import db
-from app.backup import bp
+from app import db
 from app.backup.utils import (
     create_backup, restore_backup, validate_backup, 
     delete_backup, get_backup_size_formatted, get_backup_settings,
@@ -14,6 +13,8 @@ from app.backup.utils import (
 from app.models import Backup, AuditLog, BackupSetting
 from app.admin.utils import admin_required
 from datetime import datetime
+
+bp = Blueprint('backup', __name__)
 
 
 @bp.route('/')

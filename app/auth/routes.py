@@ -1,13 +1,14 @@
 """
 Authentication routes
 """
-from flask import render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
-from app.core.extensions import db, limiter
-from app.auth import bp
+from app import db, limiter
 from app.auth.forms import LoginForm, RegistrationForm, SocietyRegistrationForm
 from app.models import User, AuditLog, Society, Subscription, Plan
 from datetime import datetime
+
+bp = Blueprint('auth', __name__)
 
 
 @bp.route('/login', methods=['GET', 'POST'])

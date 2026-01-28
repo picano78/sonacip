@@ -1,16 +1,17 @@
 """
 Admin routes
 """
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_, func, desc
-from app.core.extensions import db
-from app.admin import bp
+from app import db
 from app.admin.utils import admin_required
 from app.admin.forms import UserEditForm, UserSearchForm, PrivacySettingsForm, AdsSettingsForm
 from app.models import User, Post, Event, Notification, AuditLog, Backup, Comment, PrivacySetting, AdsSetting, Society
 from datetime import datetime, timedelta
 import os
+
+bp = Blueprint('admin', __name__)
 
 
 @bp.route('/dashboard')

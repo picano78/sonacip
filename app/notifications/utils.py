@@ -3,7 +3,7 @@ Notification utilities
 """
 from flask import current_app
 from flask_mail import Message
-from app.core.extensions import mail, db
+from app import mail, db
 from app.models import Notification, User
 from datetime import datetime, timedelta
 import os

@@ -11,6 +11,18 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+if [[ -r /etc/os-release ]]; then
+  . /etc/os-release
+  if [[ "${ID:-}" != "ubuntu" ]]; then
+    echo "Unsupported OS: ${ID:-unknown}. Use Ubuntu 22.04 or 24.04." >&2
+    exit 1
+  fi
+  if [[ "${VERSION_ID:-}" != "22.04" && "${VERSION_ID:-}" != "24.04" ]]; then
+    echo "Unsupported Ubuntu version: ${VERSION_ID:-unknown}. Use 22.04 or 24.04." >&2
+    exit 1
+  fi
+fi
+
 echo "[1/7] Installing system packages..."
 apt-get update -y
 apt-get install -y --no-install-recommends \

@@ -8,7 +8,7 @@ from app.models import Message, User
 from app.notifications.utils import create_notification
 from app.utils import check_permission
 
-bp = Blueprint('messages', __name__)
+bp = Blueprint('messages', __name__, url_prefix='/messages')
 
 
 @bp.route('/')

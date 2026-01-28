@@ -4,12 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-Group=www-data
+User=sonacip
+Group=sonacip
 WorkingDirectory=/opt/sonacip
 EnvironmentFile=-/opt/sonacip/.env
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/sonacip/venv/bin/gunicorn -c /opt/sonacip/gunicorn.conf.py wsgi:app
+ExecStart=/opt/sonacip/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 wsgi:app
 Restart=always
 RestartSec=5
 

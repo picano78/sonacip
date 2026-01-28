@@ -9,7 +9,7 @@ from app.models import Plan, Subscription, Payment, User
 from app.utils import admin_required, log_action, check_permission
 from datetime import datetime, timedelta
 
-bp = Blueprint('subscription', __name__)
+bp = Blueprint('subscription', __name__, url_prefix='/subscription')
 
 
 @bp.route('/plans')

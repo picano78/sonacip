@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from datetime import datetime
 import os
 
-bp = Blueprint('social', __name__)
+bp = Blueprint('social', __name__, url_prefix='/social')
 
 
 @bp.route('/feed')

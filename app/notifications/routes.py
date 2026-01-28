@@ -7,7 +7,7 @@ from app import db
 from app.models import Notification
 from datetime import datetime
 
-bp = Blueprint('notifications', __name__)
+bp = Blueprint('notifications', __name__, url_prefix='/notifications')
 
 
 @bp.route('/')

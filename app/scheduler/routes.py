@@ -8,7 +8,7 @@ from app.scheduler.forms import SocietyCalendarEventForm
 from app.models import SocietyCalendarEvent, society_calendar_event_staff, society_calendar_event_athletes, User, Notification, Post
 from app.utils import permission_required, check_permission
 
-bp = Blueprint('scheduler', __name__)
+bp = Blueprint('scheduler', __name__, url_prefix='/scheduler')
 
 
 def _date_range(view_mode: str, start_date: datetime.date):

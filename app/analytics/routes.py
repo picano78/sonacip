@@ -14,7 +14,7 @@ from app.utils import admin_required, permission_required
 from datetime import datetime, timedelta
 import json
 
-bp = Blueprint('analytics', __name__)
+bp = Blueprint('analytics', __name__, url_prefix='/analytics')
 
 
 @bp.route('/')

@@ -11,7 +11,7 @@ from app.models import User, Post, Event, Notification, AuditLog, Backup, Commen
 from datetime import datetime, timedelta
 import os
 
-bp = Blueprint('admin', __name__)
+bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
 @bp.route('/dashboard')

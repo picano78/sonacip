@@ -3,12 +3,12 @@ Description=Gunicorn instance to serve SONACIP
 After=network.target
 
 [Service]
-User=www-data
-Group=www-data
+User=sonacip
+Group=sonacip
 WorkingDirectory=/opt/sonacip
 Environment="PATH=/opt/sonacip/venv/bin"
 Environment="FLASK_ENV=production"
-ExecStart=/opt/sonacip/venv/bin/gunicorn -c gunicorn_config.py run:app
+ExecStart=/opt/sonacip/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 wsgi:app
 
 # Restart policy
 Restart=always

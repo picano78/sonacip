@@ -10,7 +10,7 @@ from app.models import Contact, Opportunity, CRMActivity, User, AuditLog
 from app.utils import permission_required, check_permission
 from datetime import datetime
 
-bp = Blueprint('crm', __name__)
+bp = Blueprint('crm', __name__, url_prefix='/crm')
 
 
 def _society_scope_id():
@@ -49,7 +49,6 @@ def index():
     # Calculate stats
     total_contacts = len(contacts)
     new_contacts = len([c for c in contacts if c.status == 'new'])
-    converted_contacts = len([c for c in contacts if c.status == 'converted'])
     
     total_opportunities = len(opportunities)
     open_opportunities = len([o for o in opportunities if o.stage not in ['closed_won', 'closed_lost']])

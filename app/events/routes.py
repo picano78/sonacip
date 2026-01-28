@@ -12,7 +12,7 @@ from app.automation.utils import execute_automations, execute_rules
 from app.utils import permission_required, check_permission
 from datetime import datetime
 
-bp = Blueprint('events', __name__)
+bp = Blueprint('events', __name__, url_prefix='/events')
 
 
 def _event_scope_id(event: Event | None):

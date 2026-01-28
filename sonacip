@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_DIR="${SONACIP_DIR:-/opt/sonacip}"
+APP_USER="${SONACIP_USER:-sonacip}"
+ENV_FILE="${SONACIP_ENV_FILE:-/etc/sonacip.env}"
+SERVICE_FILE="/etc/systemd/system/sonacip.service"
+BACKUP_ROOT="${BACKUP_DIR:-$APP_DIR/backups/system}"
+
+usage() {
+  cat <<'EOF'
+Uso:
+  sonacip backup
+  sonacip restore <file>
+EOF
+}
+
+resolve_db_path() {
+  local env_source=""
+  if [[ -f "$ENV_FILE" ]]; then
+    env_source="$ENV_FILE"
+  elif [[ -f "$APP_DIR/.env" ]]; then
+    env_source="$APP_DIR/.env"
+  fi
+
+  if [[ -n "$env_source" ]]; then
+    local db_url
+    db_url=$(grep -E '^DATABASE_URL=' "$env_source" | tail -n1 | cut -d= -f2- || true)
+    if [[ "$db_url" == sqlite:///* ]]; then
+      echo "${db_url#sqlite:///}"
+      return 0
+    fi
+  fi
+
+  if [[ -f "$APP_DIR/sonacip.db" ]]; then
+    echo "$APP_DIR/sonacip.db"
+    return 0
+  fi
+
+  echo ""
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  backup)
+    mkdir -p "$BACKUP_ROOT"
+    ts=$(date +%Y%m%d_%H%M%S)
+    tmp_dir=$(mktemp -d)
+    mkdir -p "$tmp_dir/systemd" "$tmp_dir/database"
+
+    rsync -a "$APP_DIR/app" "$tmp_dir/"
+    rsync -a "$APP_DIR/wsgi.py" "$tmp_dir/"
+    rsync -a "$APP_DIR/requirements.txt" "$tmp_dir/"
+
+    if [[ -f "$SERVICE_FILE" ]]; then
+      cp "$SERVICE_FILE" "$tmp_dir/systemd/sonacip.service"
+    elif [[ -f "$APP_DIR/deploy/sonacip.service" ]]; then
+      cp "$APP_DIR/deploy/sonacip.service" "$tmp_dir/systemd/sonacip.service"
+    elif [[ -f "$APP_DIR/deployment/sonacip.service" ]]; then
+      cp "$APP_DIR/deployment/sonacip.service" "$tmp_dir/systemd/sonacip.service"
+    fi
+
+    db_path=$(resolve_db_path)
+    if [[ -n "$db_path" && -f "$db_path" ]]; then
+      cp "$db_path" "$tmp_dir/database/sonacip.db"
+    else
+      echo "[WARN] Database SQLite non trovata."
+    fi
+
+    backup_file="$BACKUP_ROOT/sonacip_backup_${ts}.tar.gz"
+    tar -czf "$backup_file" -C "$tmp_dir" .
+    rm -rf "$tmp_dir"
+    echo "Backup creato: $backup_file"
+    ;;
+  restore)
+    archive="${2:-}"
+    if [[ -z "$archive" ]]; then
+      usage
+      exit 1
+    fi
+    if [[ ! -f "$archive" ]]; then
+      echo "File backup non trovato: $archive" >&2
+      exit 1
+    fi
+
+    tmp_dir=$(mktemp -d)
+    tar -xzf "$archive" -C "$tmp_dir"
+
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl stop sonacip.service || true
+    fi
+
+    rsync -a "$tmp_dir/app" "$APP_DIR/"
+    cp "$tmp_dir/wsgi.py" "$APP_DIR/"
+    cp "$tmp_dir/requirements.txt" "$APP_DIR/"
+
+    if [[ -f "$tmp_dir/systemd/sonacip.service" ]]; then
+      cp "$tmp_dir/systemd/sonacip.service" "$SERVICE_FILE"
+      systemctl daemon-reload || true
+    fi
+
+    db_path=$(resolve_db_path)
+    if [[ -f "$tmp_dir/database/sonacip.db" ]]; then
+      if [[ -z "$db_path" ]]; then
+        db_path="$APP_DIR/sonacip.db"
+      fi
+      mkdir -p "$(dirname "$db_path")"
+      cp "$tmp_dir/database/sonacip.db" "$db_path"
+    fi
+
+    if id -u "$APP_USER" >/dev/null 2>&1; then
+      chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
+    fi
+
+    rm -rf "$tmp_dir"
+
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl restart sonacip.service || true
+    fi
+
+    echo "Restore completato."
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac

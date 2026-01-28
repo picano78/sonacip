@@ -8,7 +8,7 @@ from app.auth.forms import LoginForm, RegistrationForm, SocietyRegistrationForm
 from app.models import User, AuditLog, Society, Subscription, Plan
 from datetime import datetime
 
-bp = Blueprint('auth', __name__)
+bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 
 @bp.route('/login', methods=['GET', 'POST'])

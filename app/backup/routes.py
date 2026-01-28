@@ -14,7 +14,7 @@ from app.models import Backup, AuditLog, BackupSetting
 from app.admin.utils import admin_required
 from datetime import datetime
 
-bp = Blueprint('backup', __name__)
+bp = Blueprint('backup', __name__, url_prefix='/backup')
 
 
 @bp.route('/')

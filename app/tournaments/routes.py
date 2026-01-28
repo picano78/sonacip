@@ -9,7 +9,7 @@ from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentSt
 from app.automation.utils import execute_rules
 from app.utils import permission_required, check_permission
 
-bp = Blueprint('tournaments', __name__)
+bp = Blueprint('tournaments', __name__, url_prefix='/tournaments')
 
 
 def _require_society_scope(tournament: Tournament = None, action: str = 'view'):
@@ -29,7 +29,7 @@ def _trigger(event_type, payload):
     execute_rules(event_type, payload)
 
 
-@bp.route('/tournaments')
+@bp.route('/')
 @login_required
 @permission_required('tournaments', 'view')
 def list_tournaments():
@@ -43,7 +43,7 @@ def list_tournaments():
     return render_template('tournaments/index.html', tournaments=tournaments)
 
 
-@bp.route('/tournaments/new', methods=['GET', 'POST'])
+@bp.route('/new', methods=['GET', 'POST'])
 @login_required
 @permission_required('tournaments', 'manage')
 def create_tournament():
@@ -84,7 +84,7 @@ def create_tournament():
     return render_template('tournaments/create.html', form=form)
 
 
-@bp.route('/tournaments/<int:tournament_id>')
+@bp.route('/<int:tournament_id>')
 @login_required
 @permission_required('tournaments', 'view')
 def view_tournament(tournament_id):
@@ -96,7 +96,7 @@ def view_tournament(tournament_id):
     return render_template('tournaments/detail.html', tournament=tournament, teams=teams, matches=matches, standings=standings)
 
 
-@bp.route('/tournaments/<int:tournament_id>/teams/add', methods=['POST'])
+@bp.route('/<int:tournament_id>/teams/add', methods=['POST'])
 @login_required
 @permission_required('tournaments', 'manage')
 def add_team(tournament_id):
@@ -121,7 +121,7 @@ def add_team(tournament_id):
     return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
 
 
-@bp.route('/tournaments/<int:tournament_id>/matches/add', methods=['POST'])
+@bp.route('/<int:tournament_id>/matches/add', methods=['POST'])
 @login_required
 @permission_required('tournaments', 'manage')
 def add_match(tournament_id):
@@ -146,7 +146,7 @@ def add_match(tournament_id):
     return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
 
 
-@bp.route('/tournaments/<int:match_id>/score', methods=['POST'])
+@bp.route('/<int:match_id>/score', methods=['POST'])
 @login_required
 @permission_required('tournaments', 'manage')
 def set_score(match_id):

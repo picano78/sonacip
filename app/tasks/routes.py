@@ -12,7 +12,7 @@ from app.automation.utils import execute_automations, execute_rules
 from datetime import datetime, timedelta
 import json
 
-bp = Blueprint('tasks', __name__)
+bp = Blueprint('tasks', __name__, url_prefix='/tasks')
 
 
 def _task_scope_id(*args, **kwargs):

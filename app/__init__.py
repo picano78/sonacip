@@ -46,16 +46,24 @@ def _safe_register_blueprints(app: Flask) -> None:
 
     for module_name in modules:
         try:
-            routes_module = importlib.import_module(f'app.{module_name}.routes')
+            try:
+                routes_module = importlib.import_module(f'app.{module_name}.routes')
+            except Exception:
+                routes_module = importlib.import_module(f'app.{module_name}')
+
             blueprint = getattr(routes_module, 'bp', None)
             if blueprint is None:
-                print(f"[SONACIP] WARNING: 'bp' not found in app.{module_name}.routes")
+                app.logger.warning(
+                    "[SONACIP] Blueprint 'bp' non trovato in app.%s", module_name
+                )
                 continue
+
             app.register_blueprint(blueprint)
         except Exception:
-            print(
-                f"[SONACIP] WARNING: failed to load app.{module_name}.routes\n"
-                f"{traceback.format_exc()}"
+            app.logger.warning(
+                "[SONACIP] Caricamento modulo app.%s fallito; modulo ignorato.\n%s",
+                module_name,
+                traceback.format_exc(),
             )
 
 
@@ -106,6 +114,12 @@ def create_app(config_name: str | None = None) -> Flask:
     def base_health():
         return 'SONACIP ONLINE'
 
-    _safe_register_blueprints(app)
+    try:
+        _safe_register_blueprints(app)
+    except Exception:
+        app.logger.warning(
+            "[SONACIP] Registrazione blueprint fallita; avvio in modalità safe.\n%s",
+            traceback.format_exc(),
+        )
 
     return app

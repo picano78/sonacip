@@ -2,7 +2,7 @@
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime
-from app import db
+from app.core.extensions import db
 from app.messages import bp
 from app.messages.forms import MessageForm
 from app.models import Message, User

@@ -5,7 +5,7 @@ Power BI / Tableau level insights
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func, desc, and_, or_
-from app import db
+from app.core.extensions import db
 from app.analytics import bp
 from app.models import (
     Analytics, User, Post, Event, Contact, Opportunity,

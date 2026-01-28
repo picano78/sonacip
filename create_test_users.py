@@ -3,7 +3,8 @@
 Create Test Users
 Populates the database with sample users for testing
 """
-from app import create_app, db
+from app import create_app
+from app.core.extensions import db
 from app.models import User, Subscription, Plan, Role
 from datetime import datetime, timedelta
 

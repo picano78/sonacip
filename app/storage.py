@@ -11,7 +11,7 @@ from flask import current_app
 from werkzeug.utils import secure_filename
 from PIL import Image
 
-from app import db
+from app.core.extensions import db
 from app.models import StorageSetting
 
 

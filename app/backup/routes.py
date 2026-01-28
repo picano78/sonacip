@@ -4,7 +4,7 @@ Create, restore, manage backups
 """
 from flask import render_template, redirect, url_for, flash, request, send_file, jsonify
 from flask_login import login_required, current_user
-from app import db
+from app.core.extensions import db
 from app.backup import bp
 from app.backup.utils import (
     create_backup, restore_backup, validate_backup, 

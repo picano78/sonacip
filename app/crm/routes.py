@@ -4,7 +4,7 @@ Contact and opportunity management
 """
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from app import db
+from app.core.extensions import db
 from app.crm import bp
 from app.crm.forms import ContactForm, OpportunityForm, ActivityForm
 from app.models import Contact, Opportunity, CRMActivity, User, AuditLog

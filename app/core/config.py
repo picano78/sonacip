@@ -1,5 +1,3 @@
-"""Compatibility config import."""
-from app.core.config import Config, DevelopmentConfig, ProductionConfig, config  # noqa: F401
 """
 Application Configuration
 Environment-based configuration for development and production
@@ -7,27 +5,28 @@ Environment-based configuration for development and production
 import os
 from datetime import timedelta
 
+
 class Config:
     """Base configuration"""
     # Base directory
-    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
     DEBUG = False
-    
+
     # Secret key for session management and CSRF protection
     # NOTE: Must be provided via environment variables only (no code defaults).
     SECRET_KEY = os.environ.get('SECRET_KEY')
-    
+
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         f'sqlite:///{os.path.join(BASE_DIR, "sonacip.db")}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
+
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    
+
     # File upload configuration
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     STORAGE_BACKEND = os.environ.get('STORAGE_BACKEND', 'local')
@@ -52,10 +51,10 @@ class Config:
 
     # Plug-in modules folder (safe discovery)
     MODULES_FOLDER = os.environ.get('MODULES_FOLDER') or os.path.join(BASE_DIR, 'app', 'modules')
-    
+
     # Backup configuration (production: use env var for custom path)
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or os.path.join(BASE_DIR, 'backups')
-    
+
     # Logs configuration (production: use env var for custom path)
     LOGS_FOLDER = os.environ.get('LOGS_FOLDER') or os.path.join(BASE_DIR, 'logs')
 
@@ -70,7 +69,7 @@ class Config:
     PROXYFIX_X_HOST = int(os.environ.get('PROXYFIX_X_HOST', '1'))
     PROXYFIX_X_PORT = int(os.environ.get('PROXYFIX_X_PORT', '1'))
     PROXYFIX_X_PREFIX = int(os.environ.get('PROXYFIX_X_PREFIX', '0'))
-    
+
     # Email configuration (SMTP)
     MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 587)
@@ -78,18 +77,18 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'noreply@sonacip.it'
-    
+
     # SMS configuration (ready for integration)
     SMS_PROVIDER = os.environ.get('SMS_PROVIDER')  # e.g., 'twilio'
     SMS_API_KEY = os.environ.get('SMS_API_KEY')
     SMS_API_SECRET = os.environ.get('SMS_API_SECRET')
     SMS_FROM_NUMBER = os.environ.get('SMS_FROM_NUMBER')
-    
+
     # Pagination
     POSTS_PER_PAGE = 20
     USERS_PER_PAGE = 30
     EVENTS_PER_PAGE = 15
-    
+
     # Application name
     APP_NAME = 'SONACIP'
 
@@ -112,7 +111,7 @@ class ProductionConfig(Config):
     PROPAGATE_EXCEPTIONS = False
     TRAP_HTTP_EXCEPTIONS = False
     TRAP_BAD_REQUEST_ERRORS = False
-    
+
     # Override with stronger settings in production
     # Fail fast if SECRET_KEY not set
     @classmethod

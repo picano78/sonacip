@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from app import db
+from app.core.extensions import db
 from app.utils import check_permission
 
 

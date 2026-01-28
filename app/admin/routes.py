@@ -4,7 +4,7 @@ Admin routes
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_, func, desc
-from app import db
+from app.core.extensions import db
 from app.admin import bp
 from app.admin.utils import admin_required
 from app.admin.forms import UserEditForm, UserSearchForm, PrivacySettingsForm, AdsSettingsForm

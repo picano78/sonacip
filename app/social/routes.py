@@ -5,7 +5,7 @@ Profiles, feed, posts, follows, likes, comments
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
-from app import db
+from app.core.extensions import db
 from app.social import bp
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.utils import save_picture

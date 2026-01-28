@@ -5,7 +5,7 @@ Create events, convocate athletes, manage responses
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
-from app import db
+from app.core.extensions import db
 from app.events import bp
 from app.events.forms import EventForm
 from app.models import Event, User, Notification, event_athletes

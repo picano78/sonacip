@@ -49,6 +49,7 @@ def index():
     # Calculate stats
     total_contacts = len(contacts)
     new_contacts = len([c for c in contacts if c.status == 'new'])
+    converted_contacts = len([c for c in contacts if c.status == 'converted'])
     
     total_opportunities = len(opportunities)
     open_opportunities = len([o for o in opportunities if o.stage not in ['closed_won', 'closed_lost']])

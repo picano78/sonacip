@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime
+from sqlalchemy import or_
 from app import db
 from app.messages.forms import MessageForm
 from app.models import Message, User
@@ -40,7 +41,7 @@ def compose():
     form = MessageForm()
     if form.validate_on_submit():
         recipient = User.query.filter(
-            db.or_(
+            or_(
                 User.email == form.recipient.data,
                 User.username == form.recipient.data
             )

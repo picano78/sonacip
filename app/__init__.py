@@ -25,24 +25,28 @@ mail = Mail()
 csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address)
 
+# Explicit core module list (ordered, stable)
+CORE_MODULES = [
+    'main',
+    'auth',
+    'admin',
+    'crm',
+    'events',
+    'social',
+    'backup',
+    'notifications',
+    'analytics',
+    'messages',
+    'tournaments',
+    'tasks',
+    'scheduler',
+    'subscription',
+]
 
-def _safe_register_blueprints(app: Flask) -> None:
-    modules = [
-        'main',
-        'auth',
-        'admin',
-        'crm',
-        'events',
-        'social',
-        'backup',
-        'notifications',
-        'analytics',
-        'messages',
-        'tournaments',
-        'tasks',
-        'scheduler',
-        'subscription',
-    ]
+
+def _safe_register_blueprints(app: Flask, modules: list[str] | None = None) -> None:
+    if modules is None:
+        modules = CORE_MODULES
 
     for module_name in modules:
         try:
@@ -93,6 +97,8 @@ def create_app(config_name: str | None = None) -> Flask:
             x_prefix=app.config.get('PROXYFIX_X_PREFIX', 0),
         )
 
+    app.config.setdefault('RATELIMIT_STORAGE_URI', 'memory://')
+
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
@@ -119,6 +125,16 @@ def create_app(config_name: str | None = None) -> Flask:
     except Exception:
         app.logger.warning(
             "[SONACIP] Registrazione blueprint fallita; avvio in modalità safe.\n%s",
+            traceback.format_exc(),
+        )
+
+    # Optional modules loader (plugins in app/modules)
+    try:
+        from app.core.bootstrap import discover_and_register_modules
+        discover_and_register_modules(app)
+    except Exception:
+        app.logger.warning(
+            "[SONACIP] Moduli opzionali non caricati; avvio in modalità safe.\n%s",
             traceback.format_exc(),
         )
 

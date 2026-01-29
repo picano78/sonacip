@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import importlib
 import os
-import traceback
 
 from flask import Flask
 from flask_login import LoginManager
@@ -44,31 +43,25 @@ CORE_MODULES = [
 ]
 
 
-def _safe_register_blueprints(app: Flask, modules: list[str] | None = None) -> None:
+def _register_blueprints(app: Flask, modules: list[str] | None = None) -> None:
     if modules is None:
         modules = CORE_MODULES
 
     for module_name in modules:
         try:
-            try:
-                routes_module = importlib.import_module(f'app.{module_name}.routes')
-            except Exception:
-                routes_module = importlib.import_module(f'app.{module_name}')
+            routes_module = importlib.import_module(f'app.{module_name}.routes')
+        except ModuleNotFoundError as exc:
+            if exc.name != f'app.{module_name}.routes':
+                raise
+            routes_module = importlib.import_module(f'app.{module_name}')
 
-            blueprint = getattr(routes_module, 'bp', None)
-            if blueprint is None:
-                app.logger.warning(
-                    "[SONACIP] Blueprint 'bp' non trovato in app.%s", module_name
-                )
-                continue
-
-            app.register_blueprint(blueprint)
-        except Exception:
-            app.logger.warning(
-                "[SONACIP] Caricamento modulo app.%s fallito; modulo ignorato.\n%s",
-                module_name,
-                traceback.format_exc(),
+        blueprint = getattr(routes_module, 'bp', None)
+        if blueprint is None:
+            raise RuntimeError(
+                f"Blueprint 'bp' non trovato in app.{module_name}.routes"
             )
+
+        app.register_blueprint(blueprint)
 
 
 def create_app(config_name: str | None = None) -> Flask:
@@ -81,7 +74,11 @@ def create_app(config_name: str | None = None) -> Flask:
     if config_name not in config:
         config_name = 'development'
 
-    app.config.from_object(config[config_name])
+    config_class = config[config_name]
+    app.config.from_object(config_class)
+
+    if hasattr(config_class, 'validate_config'):
+        config_class.validate_config()
 
     if not app.config.get('SECRET_KEY'):
         print('[SONACIP] WARNING: SECRET_KEY missing, using a random key for this process.')
@@ -116,26 +113,27 @@ def create_app(config_name: str | None = None) -> Flask:
         except Exception:
             return None
 
-    @app.route('/')
-    def base_health():
-        return 'SONACIP ONLINE'
+    from app.core.bootstrap import (
+        apply_migrations_or_fail,
+        bootstrap_database_if_missing,
+        discover_and_register_modules,
+        ensure_admin_user,
+        ensure_default_roles,
+        ensure_directories,
+        verify_database_connectivity,
+    )
 
-    try:
-        _safe_register_blueprints(app)
-    except Exception:
-        app.logger.warning(
-            "[SONACIP] Registrazione blueprint fallita; avvio in modalità safe.\n%s",
-            traceback.format_exc(),
-        )
+    ensure_directories(app)
+    bootstrap_database_if_missing(app)
 
-    # Optional modules loader (plugins in app/modules)
-    try:
-        from app.core.bootstrap import discover_and_register_modules
-        discover_and_register_modules(app)
-    except Exception:
-        app.logger.warning(
-            "[SONACIP] Moduli opzionali non caricati; avvio in modalità safe.\n%s",
-            traceback.format_exc(),
-        )
+    if app.config.get('AUTO_MIGRATE_ON_STARTUP'):
+        apply_migrations_or_fail(app)
+
+    verify_database_connectivity(app)
+    ensure_default_roles(app)
+    ensure_admin_user(app)
+
+    _register_blueprints(app)
+    discover_and_register_modules(app, strict=True)
 
     return app

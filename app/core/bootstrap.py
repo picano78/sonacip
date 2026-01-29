@@ -174,8 +174,8 @@ def ensure_admin_user(app) -> None:
         app.logger.info('Default admin user created: admin@example.com')
 
 
-def discover_and_register_modules(app) -> None:
-    """Load optional modules without breaking core app if missing/invalid."""
+def discover_and_register_modules(app, strict: bool = False) -> None:
+    """Load optional modules and register their blueprints."""
     modules_path = app.config.get('MODULES_FOLDER')
     if not modules_path or not os.path.isdir(modules_path):
         return
@@ -189,6 +189,8 @@ def discover_and_register_modules(app) -> None:
         try:
             module = importlib.import_module(module_name)
         except Exception as exc:
+            if strict:
+                raise
             app.logger.warning(f"Modulo opzionale '{module_name}' non caricato: {exc}")
             continue
 
@@ -205,6 +207,8 @@ def discover_and_register_modules(app) -> None:
         try:
             app.register_blueprint(bp, url_prefix=url_prefix)
         except Exception as exc:
+            if strict:
+                raise
             app.logger.warning(f"Blueprint '{name}' non registrato: {exc}")
 
 

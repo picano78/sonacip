@@ -50,7 +50,7 @@ def create_backup(created_by_id, backup_type='full', notes=None):
                 app_folder = os.path.join(current_app.root_path)
                 if os.path.exists(app_folder):
                     # Only backup essential files, not the entire venv
-                    essential_files = ['models.py', 'config.py', 'run.py']
+                    essential_files = ['models.py', 'config.py', 'wsgi.py']
                     app_backup_dir = os.path.join(temp_dir, 'app_code')
                     os.makedirs(app_backup_dir, exist_ok=True)
                     

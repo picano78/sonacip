@@ -16,7 +16,7 @@ bp = Blueprint('auth', __name__, url_prefix='/auth')
 def login():
     """Login page"""
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('social.feed'))
     
     form = LoginForm()
     if form.validate_on_submit():
@@ -50,7 +50,7 @@ def login():
         # Redirect to next page or dashboard
         next_page = request.args.get('next')
         if not next_page or not next_page.startswith('/'):
-            next_page = url_for('main.dashboard')
+            next_page = url_for('social.feed')
         return redirect(next_page)
     
     return render_template('auth/login.html', form=form)
@@ -61,7 +61,7 @@ def login():
 def register():
     """Registration page for individuals"""
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('social.feed'))
     
     form = RegistrationForm()
     if form.validate_on_submit():
@@ -111,7 +111,7 @@ def register():
         db.session.commit()
         
         flash('Registrazione completata! Effettua il login.', 'success')
-        return redirect(url_for('auth.login'))
+        return redirect(url_for('auth.login', next=url_for('social.feed')))
     
     return render_template('auth/register.html', form=form)
 
@@ -121,7 +121,7 @@ def register():
 def register_society():
     """Registration page for sports societies"""
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(url_for('social.feed'))
     
     form = SocietyRegistrationForm()
     if form.validate_on_submit():
@@ -196,7 +196,7 @@ def register_society():
         db.session.commit()
         
         flash('Registrazione società completata! Effettua il login.', 'success')
-        return redirect(url_for('auth.login'))
+        return redirect(url_for('auth.login', next=url_for('social.feed')))
     
     return render_template('auth/register_society.html', form=form)
 
@@ -218,4 +218,4 @@ def logout():
     
     logout_user()
     flash('Logout effettuato con successo.', 'info')
-    return redirect(url_for('main.index'))
+    return redirect(url_for('social.feed'))

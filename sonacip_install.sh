@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_USER="sonacip"
 APP_DIR="/opt/sonacip"
-ENV_FILE="/etc/sonacip.env"
+ENV_FILE="/opt/sonacip/.env"
 SERVICE_FILE="/etc/systemd/system/sonacip.service"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -65,39 +65,20 @@ sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.tx
 
 echo "[5/8] Scrittura environment file..."
 if [[ ! -f "$ENV_FILE" ]]; then
-  SECRET_KEY=$(python3 - <<'PY'
-import secrets
-print(secrets.token_hex(32))
-PY
-  )
-  cat > "$ENV_FILE" <<EOF
-APP_ENV=production
-FLASK_ENV=production
-SECRET_KEY=$SECRET_KEY
-EOF
-  chmod 600 "$ENV_FILE"
+  SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+  install -m 0600 /dev/null "$ENV_FILE"
+  {
+    printf '%s\n' "APP_ENV=production"
+    printf '%s\n' "FLASK_ENV=production"
+    printf '%s\n' "SECRET_KEY=$SECRET_KEY"
+    printf '%s\n' "USE_PROXYFIX=true"
+  } >> "$ENV_FILE"
+  chown "$APP_USER":"$APP_USER" "$ENV_FILE"
 fi
 
 
 echo "[6/8] Installazione servizio systemd..."
-cat > "$SERVICE_FILE" <<EOF
-[Unit]
-Description=SONACIP Flask Application
-After=network.target
-
-[Service]
-Type=simple
-User=$APP_USER
-Group=$APP_USER
-WorkingDirectory=$APP_DIR
-EnvironmentFile=$ENV_FILE
-ExecStart=$APP_DIR/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 wsgi:app
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
+install -m 0644 "$APP_DIR/deploy/sonacip.service" "$SERVICE_FILE"
 
 systemctl daemon-reload
 systemctl enable sonacip.service

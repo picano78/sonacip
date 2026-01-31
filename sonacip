@@ -8,11 +8,9 @@ SERVICE_FILE="/etc/systemd/system/sonacip.service"
 BACKUP_ROOT="${BACKUP_DIR:-$APP_DIR/backups/system}"
 
 usage() {
-  cat <<'EOF'
-Uso:
-  sonacip backup
-  sonacip restore <file>
-EOF
+  printf '%s\n' "Uso:"
+  printf '%s\n' "  sonacip backup"
+  printf '%s\n' "  sonacip restore <file>"
 }
 
 resolve_db_path() {

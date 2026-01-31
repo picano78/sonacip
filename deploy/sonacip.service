@@ -7,7 +7,7 @@ Type=simple
 User=sonacip
 Group=sonacip
 WorkingDirectory=/opt/sonacip
-EnvironmentFile=-/opt/sonacip/.env
+EnvironmentFile=/opt/sonacip/.env
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/sonacip/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 wsgi:app
 Restart=always

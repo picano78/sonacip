@@ -1,6 +1,6 @@
 # 🏆 SONACIP - Piattaforma SaaS per Gestione Sportiva
 
-⚠️ ENTRYPOINT UNICO: wsgi:app. run.py non è usato in produzione.
+⚠️ ENTRYPOINT DI PRODUZIONE: `wsgi:app`. `run.py` è mantenuto solo come alias legacy (compatibilità), ma non è l’entrypoint raccomandato.
 
 Sistema completo di gestione per società sportive, staff, atleti e appassionati.
 
@@ -29,8 +29,13 @@ Sistema completo di gestione per società sportive, staff, atleti e appassionati
 ## ▶️ Avvio
 
 ```bash
+export SECRET_KEY="change-me"  # oppure usa un file .env (vedi .env.example)
 gunicorn wsgi:app
 ```
+
+## 🚀 Deploy VPS (Ubuntu 24.04)
+
+Vedi guida completa: `DEPLOYMENT_UBUNTU_24_04.md`.
 
 ## 🎯 Struttura Progetto
 

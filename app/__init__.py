@@ -81,8 +81,9 @@ def create_app(config_name: str | None = None) -> Flask:
         config_class.validate_config()
 
     if not app.config.get('SECRET_KEY'):
-        print('[SONACIP] WARNING: SECRET_KEY missing, using a random key for this process.')
-        app.config['SECRET_KEY'] = os.urandom(32)
+        raise RuntimeError(
+            "Missing SECRET_KEY. Set SECRET_KEY in the environment (see .env.example)."
+        )
 
     if app.config.get('USE_PROXYFIX'):
         app.wsgi_app = ProxyFix(
@@ -113,25 +114,7 @@ def create_app(config_name: str | None = None) -> Flask:
         except Exception:
             return None
 
-    from app.core.bootstrap import (
-        apply_migrations_or_fail,
-        bootstrap_database_if_missing,
-        discover_and_register_modules,
-        ensure_admin_user,
-        ensure_default_roles,
-        ensure_directories,
-        verify_database_connectivity,
-    )
-
-    ensure_directories(app)
-    bootstrap_database_if_missing(app)
-
-    if app.config.get('AUTO_MIGRATE_ON_STARTUP'):
-        apply_migrations_or_fail(app)
-
-    verify_database_connectivity(app)
-    ensure_default_roles(app)
-    ensure_admin_user(app)
+    from app.core.bootstrap import discover_and_register_modules
 
     _register_blueprints(app)
     discover_and_register_modules(app, strict=False)

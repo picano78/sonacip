@@ -142,7 +142,7 @@ UTENTI TEST:
   Crea: società, staff, 3 atleti, fan
 
 PRODUZIONE:
-  $ gunicorn -c gunicorn_config.py run:app
+  $ gunicorn -c gunicorn_config.py wsgi:app
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📚 DOCUMENTAZIONE

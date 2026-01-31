@@ -1,5 +1,7 @@
 # 🏆 SONACIP - Piattaforma SaaS per Gestione Sportiva
 
+⚠️ ENTRYPOINT UNICO: wsgi:app. run.py non è usato in produzione.
+
 Sistema completo di gestione per società sportive, staff, atleti e appassionati.
 
 **✅ PRODUCTION-READY - Piattaforma funzionale e consolidata**  
@@ -24,89 +26,10 @@ Sistema completo di gestione per società sportive, staff, atleti e appassionati
 - Nginx (produzione)
 - Gunicorn (produzione)
 
-## ⚡ Quick Start (Locale)
+## ▶️ Avvio
 
 ```bash
-pip3 install -r requirements.txt
-cp .env.example .env
-gunicorn -c gunicorn.conf.py wsgi:app
-```
-
-**Accedi a:** http://localhost:8000
-
-**Credenziali Admin (auto-seed):**
-- Email: admin@example.com
-- Password: Admin123!
-
-## 🔧 Installazione Completa (Sviluppo)
-
-```bash
-# Clone o estrai il progetto
-cd /opt/sonacip
-
-# Crea virtual environment (opzionale ma raccomandato)
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate  # Windows
-
-# Installa dipendenze
-pip install -r requirements.txt
-
-# Crea file .env
-cp .env.example .env
-# Avvia con Gunicorn
-gunicorn -c gunicorn.conf.py wsgi:app
-```
-
-## 🚢 Deployment Produzione (Ubuntu 24.04)
-
-### 1. Preparazione Server
-
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install python3.12 python3.12-venv python3-pip nginx -y
-```
-
-### 2. Deploy Applicazione
-
-```bash
-sudo mkdir -p /opt/sonacip
-sudo cp -r . /opt/sonacip/
-cd /opt/sonacip
-sudo chown -R www-data:www-data /opt/sonacip
-
-sudo -u www-data python3.12 -m venv venv
-sudo -u www-data venv/bin/pip install -r requirements.txt
-sudo -u www-data cp .env.example .env
-# Configura .env con SECRET_KEY forte e DATABASE_URL (SQLite assoluto o PostgreSQL)
-sudo -u www-data mkdir -p logs backups uploads
-```
-
-### 3. Configura Gunicorn + Systemd
-
-```bash
-sudo cp deploy/sonacip.service /etc/systemd/system/sonacip.service
-sudo systemctl daemon-reload
-sudo systemctl start sonacip
-sudo systemctl enable sonacip
-sudo systemctl status sonacip
-```
-
-### 4. Configura Nginx
-
-```bash
-sudo cp deploy/nginx_sonacip.conf /etc/nginx/sites-available/sonacip
-# Modifica dominio nel file
-sudo ln -s /etc/nginx/sites-available/sonacip /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-### 5. SSL (Let's Encrypt)
-
-```bash
-sudo apt install certbot python3-certbot-nginx -y
-sudo certbot --nginx -d yourdomain.com
+gunicorn wsgi:app
 ```
 
 ## 🎯 Struttura Progetto
@@ -152,20 +75,7 @@ sudo certbot --nginx -d yourdomain.com
 
 ## 🔐 Configurazione
 
-Genera SECRET_KEY:
-```python
-python3 -c "import secrets; print(secrets.token_hex(32))"
-```
-
-File .env (produzione):
-```
-APP_ENV=production
-FLASK_ENV=production
-SECRET_KEY=generated-key
-DATABASE_URL=sqlite:////opt/sonacip/sonacip.db
-USE_PROXYFIX=true
-RATELIMIT_STORAGE_URI=memory://
-```
+Le variabili ambiente sono documentate nel file .env.example.
 
 ## 📝 Note Importanti
 
@@ -173,7 +83,7 @@ RATELIMIT_STORAGE_URI=memory://
 2. Configura SECRET_KEY forte
 3. Abilita HTTPS in produzione
 4. Backup regolari via admin panel
-5. Monitora log: `sudo journalctl -u sonacip -f`
+5. Monitora i log di sistema del servizio
 
 ---
 

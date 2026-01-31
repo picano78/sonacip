@@ -1,6 +1,10 @@
-"""Deprecated entry point. Use wsgi:app for Gunicorn."""
+"""
+Legacy entrypoint kept for compatibility.
 
-from wsgi import app
+Production entrypoint MUST be `wsgi:app`.
+This module intentionally remains runnable by Gunicorn as `run:app` if needed.
+"""
 
-if __name__ == "__main__":
-    raise RuntimeError("Deprecated. Use 'wsgi:app' as the Gunicorn entrypoint.")
+from app import create_app
+
+app = create_app()

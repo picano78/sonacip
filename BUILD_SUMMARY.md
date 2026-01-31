@@ -279,7 +279,7 @@ cp .env.example .env
 nano .env  # Edit SECRET_KEY, MAIL settings
 
 # 4. Setup systemd service
-sudo cp deployment/sonacip.service /etc/systemd/system/
+sudo cp deploy/sonacip.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl start sonacip
 sudo systemctl enable sonacip

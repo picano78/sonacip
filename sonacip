@@ -56,8 +56,6 @@ case "$cmd" in
       cp "$SERVICE_FILE" "$tmp_dir/systemd/sonacip.service"
     elif [[ -f "$APP_DIR/deploy/sonacip.service" ]]; then
       cp "$APP_DIR/deploy/sonacip.service" "$tmp_dir/systemd/sonacip.service"
-    elif [[ -f "$APP_DIR/deployment/sonacip.service" ]]; then
-      cp "$APP_DIR/deployment/sonacip.service" "$tmp_dir/systemd/sonacip.service"
     fi
 
     db_path=$(resolve_db_path)

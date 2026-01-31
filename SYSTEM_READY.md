@@ -361,7 +361,7 @@ gunicorn -c gunicorn_config.py wsgi:app
 
 ```bash
 # Copia service file
-sudo cp deployment/sonacip.service /etc/systemd/system/
+sudo cp deploy/sonacip.service /etc/systemd/system/
 
 # Abilita e avvia
 sudo systemctl enable sonacip

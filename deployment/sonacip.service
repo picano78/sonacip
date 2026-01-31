@@ -1,26 +1,3 @@
-[Unit]
-Description=Gunicorn instance to serve SONACIP
-After=network.target
-
-[Service]
-User=sonacip
-Group=sonacip
-WorkingDirectory=/opt/sonacip
-Environment="PATH=/opt/sonacip/venv/bin"
-Environment="FLASK_ENV=production"
-ExecStart=/opt/sonacip/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 wsgi:app
-
-# Restart policy
-Restart=always
-RestartSec=10
-
-# Security
-NoNewPrivileges=true
-PrivateTmp=true
-
-# Logging
-StandardOutput=append:/opt/sonacip/logs/sonacip.log
-StandardError=append:/opt/sonacip/logs/sonacip_error.log
-
-[Install]
-WantedBy=multi-user.target
+# DEPRECATED
+# Questo file è mantenuto solo per compatibilità storica.
+# Usa esclusivamente: deploy/sonacip.service

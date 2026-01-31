@@ -80,7 +80,7 @@ run_test "JS file" "[ -f app/static/js/main.js ]"
 run_test "Config module" "python3 -c 'from config import config'"
 run_test "Gunicorn config" "[ -f gunicorn_config.py ]"
 run_test "Nginx config" "[ -f deployment/nginx.conf ]"
-run_test "Systemd service" "[ -f deployment/sonacip.service ]"
+run_test "Systemd service" "[ -f deploy/sonacip.service ]"
 
 echo ""
 echo "======================="

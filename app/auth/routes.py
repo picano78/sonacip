@@ -78,7 +78,7 @@ def register():
         user.set_password(form.password.data)
 
         db.session.add(user)
-        db.session.flush()
+        db.session.commit()
 
         # Auto-attach free plan subscription for individuals
         free_plan = Plan.query.filter_by(slug='free').first()
@@ -95,8 +95,6 @@ def register():
                     auto_renew=False
                 )
                 db.session.add(sub)
-
-        db.session.commit()
         
         # Log the registration
         log = AuditLog(

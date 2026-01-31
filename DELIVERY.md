@@ -29,7 +29,7 @@
 ## 🎯 WHAT HAS BEEN DELIVERED
 
 ### 1. ✅ COMPLETE APPLICATION
-- Single entry point architecture (run.py)
+- Single entry point architecture (wsgi.py)
 - No circular imports
 - Blueprint-based modular structure
 - Production & development configurations
@@ -132,7 +132,7 @@ cd /workspaces/sonacip
 ```bash
 cd /workspaces/sonacip
 pip3 install -r requirements.txt
-flask --app run run
+flask --app wsgi run
 ```
 
 ### Option 3: Run Tests First
@@ -151,7 +151,7 @@ cd /workspaces/sonacip
 
 ### Core Application
 ```
-run.py                    # Single entry point
+wsgi.py                   # Single entry point
 config.py                 # Configuration (Dev/Prod)
 requirements.txt          # Python dependencies
 start.sh                  # Quick start script

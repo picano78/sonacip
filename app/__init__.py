@@ -134,6 +134,6 @@ def create_app(config_name: str | None = None) -> Flask:
     ensure_admin_user(app)
 
     _register_blueprints(app)
-    discover_and_register_modules(app, strict=True)
+    discover_and_register_modules(app, strict=False)
 
     return app

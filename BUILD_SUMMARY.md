@@ -22,7 +22,7 @@
 ## 🎯 IMPLEMENTED FEATURES
 
 ### ✅ Core System
-- [x] Single entry point architecture (run.py)
+- [x] Single entry point architecture (wsgi.py)
 - [x] Application Factory pattern
 - [x] No circular imports
 - [x] Blueprint-based modular structure
@@ -259,7 +259,7 @@ app/
 ### Manual Setup
 ```bash
 pip3 install -r requirements.txt
-flask --app run run
+flask --app wsgi run
 ```
 
 ### Production Deployment (Ubuntu 24.04)

@@ -382,7 +382,7 @@ Per completare l'esperienza visiva world-class:
 
 QUICK START:
 ```bash
-flask --app run run
+flask --app wsgi run
 ```
 
 LOGIN:

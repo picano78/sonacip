@@ -77,7 +77,7 @@ Tutti i cambiamenti significativi di SONACIP saranno documentati in questo file.
 #### Architettura
 - Application Factory Pattern preservato
 - Blueprint structure estesa e coerente
-- Single entry point mantenuto (run.py)
+- Single entry point mantenuto (wsgi.py)
 - Migration-ready con Flask-Migrate
 
 #### Sicurezza
@@ -123,7 +123,7 @@ python -c "from app.backup.utils import create_backup; create_backup(1, 'full', 
 rm sonacip.db
 
 # Avviare app per auto-initialization
-flask --app run run
+flask --app wsgi run
 ```
 
 ### 📝 Note di Upgrade

@@ -18,10 +18,10 @@ Tutti i test passano con successo. Il sistema è:
 
 ```bash
 # Ambiente di sviluppo
-flask --app run run
+flask --app wsgi run
 
 # Produzione con Gunicorn
-gunicorn -c gunicorn_config.py run:app
+gunicorn -c gunicorn_config.py wsgi:app
 ```
 
 Il server sarà disponibile su:
@@ -185,7 +185,7 @@ sonacip/
 │   ├── covers/           # Foto copertina
 │   └── posts/            # Immagini post
 ├── config.py             # Configurazione
-├── run.py                # Entrypoint UNICO
+├── wsgi.py               # Entrypoint UNICO
 ├── test_suite.py         # Suite di test automatici
 ├── gunicorn_config.py    # Configurazione Gunicorn
 ├── requirements.txt      # Dipendenze Python
@@ -354,7 +354,7 @@ SQLALCHEMY_DATABASE_URI = 'mysql://user:pass@localhost/sonacip'
 pip install gunicorn
 
 # Run
-gunicorn -c gunicorn_config.py run:app
+gunicorn -c gunicorn_config.py wsgi:app
 ```
 
 ### Con Systemd (Linux)

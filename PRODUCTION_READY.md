@@ -30,7 +30,7 @@ All critical tests have passed:
 ### 1. Start the Application
 
 ```bash
-flask --app run run
+flask --app wsgi run
 ```
 
 The application will:
@@ -231,7 +231,7 @@ flask db upgrade
 ### Start with Gunicorn
 
 ```bash
-gunicorn -c gunicorn_config.py run:app
+gunicorn -c gunicorn_config.py wsgi:app
 ```
 
 Or use the provided systemd service:
@@ -296,7 +296,7 @@ sonacip/
 ├── backups/                 # Database backups
 ├── uploads/                 # User uploads
 ├── config.py                # Configuration
-├── run.py                   # Application entry point
+├── wsgi.py                  # Application entry point
 ├── requirements.txt         # Python dependencies
 └── system_validation.py     # Validation script
 ```

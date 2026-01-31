@@ -1,4 +1,4 @@
-"""WSGI entry point for Gunicorn"""
-from app import create_app
+"""Deprecated entry point. Use wsgi:app for Gunicorn."""
 
-app = create_app()
+if __name__ == "__main__":
+    raise RuntimeError("Deprecated. Use 'wsgi:app' as the Gunicorn entrypoint.")

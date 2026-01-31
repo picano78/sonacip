@@ -16,7 +16,7 @@
 - ✅ Risolto errore `metadata` (campo riservato SQLAlchemy) → rinominato in `payment_metadata`
 - ✅ Corretti errori di sintassi nelle stringhe escapate
 - ✅ Tutti i modelli ora registrati correttamente
-- ✅ L'applicazione si avvia senza errori: `flask --app run run`
+- ✅ L'applicazione si avvia senza errori: `flask --app wsgi run`
 
 ---
 
@@ -115,7 +115,7 @@ cleanup_old_notifications(days=90)          # Pulizia automatica
 ### Architettura
 ✅ **Application Factory Pattern** mantenuto  
 ✅ **Blueprint Structure** preservata e estesa  
-✅ **Single Entry Point**: `run.py`  
+✅ **Single Entry Point**: `wsgi.py`  
 ✅ **Database Migration Ready** con Flask-Migrate  
 
 ### Sicurezza
@@ -143,7 +143,7 @@ cleanup_old_notifications(days=90)          # Pulizia automatica
 
 ### Sviluppo
 ```bash
-flask --app run run
+flask --app wsgi run
 ```
 Accedi con:
 - Email: `admin@sonacip.it`
@@ -151,7 +151,7 @@ Accedi con:
 
 ### Produzione
 ```bash
-gunicorn -c gunicorn_config.py run:app
+gunicorn -c gunicorn_config.py wsgi:app
 ```
 
 ---
@@ -247,7 +247,7 @@ MAIL_PASSWORD=your-app-password
 SONACIP è ora:
 - ✅ **Coherente**: Architettura uniforme e ben strutturata
 - ✅ **Stabile**: Nessun crash al runtime, error handling robusto
-- ✅ **Startable**: Si avvia correttamente con `flask --app run run`
+- ✅ **Startable**: Si avvia correttamente con `flask --app wsgi run`
 - ✅ **Maintainable**: Codice pulito, documentato, estendibile
 - ✅ **SaaS-Ready**: Sistema completo di subscription e payment
 

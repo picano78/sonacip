@@ -36,4 +36,4 @@ echo ""
 echo "Press CTRL+C to stop the server"
 echo ""
 
-gunicorn -c gunicorn.conf.py run:app
+gunicorn -c gunicorn.conf.py wsgi:app

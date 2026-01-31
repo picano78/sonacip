@@ -20,7 +20,7 @@ PHASE 1: ELIMINATE ALL BLOCKING ERRORS - ✅ COMPLETED
 ✅ Confirmed all models exist and are properly defined
 ✅ All models have correct relationships
 ✅ No orphan references
-✅ flask --app run run starts WITHOUT ERRORS
+✅ flask --app wsgi run starts WITHOUT ERRORS
 
 
 ════════════════════════════════════════════════════════════════════════
@@ -84,7 +84,7 @@ DELIVERABLES
 STARTUP VERIFICATION
 ════════════════════════════════════════════════════════════════════════
 
-Command: flask --app run run
+Command: flask --app wsgi run
 
 ✅ No ImportError
 ✅ No AttributeError  

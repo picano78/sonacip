@@ -4,8 +4,8 @@ Authentication routes
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
 from app import db, limiter
-from app.auth.forms import LoginForm, RegistrationForm, SocietyRegistrationForm
-from app.models import User, AuditLog, Society, Subscription, Plan
+from app.auth.forms import LoginForm, RegistrationForm
+from app.models import User, AuditLog, Subscription, Plan
 from datetime import datetime
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -114,91 +114,6 @@ def register():
         return redirect(url_for('auth.login', next=url_for('social.feed')))
     
     return render_template('auth/register.html', form=form)
-
-
-@bp.route('/register/society', methods=['GET', 'POST'])
-@limiter.limit("2 per hour")
-def register_society():
-    """Registration page for sports societies"""
-    if current_user.is_authenticated:
-        return redirect(url_for('social.feed'))
-    
-    form = SocietyRegistrationForm()
-    if form.validate_on_submit():
-        user = User(
-            email=form.email.data,
-            username=form.username.data,
-            phone=form.phone.data,
-            role='society_admin',
-            is_active=True,
-            is_verified=False,
-            # Society specific fields
-            company_name=form.company_name.data,
-            company_type=form.company_type.data,
-            fiscal_code=form.fiscal_code.data,
-            vat_number=form.vat_number.data,
-            address=form.address.data,
-            city=form.city.data,
-            province=form.province.data.upper(),
-            postal_code=form.postal_code.data,
-            website=form.website.data
-        )
-        user.set_password(form.password.data)
-        
-        db.session.add(user)
-        db.session.flush()
-
-        # Create society profile (shared primary key with User)
-        society = Society(
-            id=user.id,
-            legal_name=form.company_name.data,
-            company_type=form.company_type.data,
-            vat_number=form.vat_number.data or None,
-            fiscal_code=form.fiscal_code.data,
-            email=form.email.data,
-            phone=form.phone.data,
-            website=form.website.data or None,
-            address=form.address.data,
-            city=form.city.data,
-            province=form.province.data.upper(),
-            postal_code=form.postal_code.data
-        )
-        db.session.add(society)
-
-        # Auto-attach free plan subscription to the new society
-        free_plan = Plan.query.filter_by(slug='free').first()
-        if free_plan:
-            existing_sub = Subscription.query.filter_by(society_id=society.id, status='active').first()
-            if not existing_sub:
-                sub = Subscription(
-                    society_id=society.id,
-                    plan_id=free_plan.id,
-                    status='active',
-                    billing_cycle='monthly',
-                    start_date=datetime.utcnow(),
-                    amount=0,
-                    auto_renew=False
-                )
-                db.session.add(sub)
-
-        db.session.commit()
-        
-        # Log the registration
-        log = AuditLog(
-            user_id=user.id,
-            action='register_society',
-            entity_type='User',
-            entity_id=user.id,
-            details=f'New society registered: {form.company_name.data}',
-            ip_address=request.remote_addr
-        )
-        db.session.add(log)
-        db.session.commit()
-        
-        flash('Registrazione società completata! Effettua il login.', 'success')
-        return redirect(url_for('auth.login', next=url_for('social.feed')))
-    
-    return render_template('auth/register_society.html', form=form)
 
 
 @bp.route('/logout')

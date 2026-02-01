@@ -66,12 +66,18 @@ def notify_society_members(society_id, title, message, notification_type='system
     """
     Notify all members (staff and athletes) of a society
     """
-    members = User.query.filter(
-        db.or_(
-            User.society_id == society_id,
-            User.athlete_society_id == society_id
+    # Canonical membership resolution (SocietyMembership)
+    try:
+        from app.models import SocietyMembership
+        member_ids = (
+            SocietyMembership.query.filter_by(society_id=society_id, status='active')
+            .with_entities(SocietyMembership.user_id)
+            .all()
         )
-    ).all()
+        member_ids = [row[0] for row in member_ids]
+        members = User.query.filter(User.id.in_(member_ids)).all() if member_ids else []
+    except Exception:
+        members = []
     
     notifications = []
     for member in members:

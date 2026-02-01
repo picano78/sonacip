@@ -228,7 +228,19 @@ def convocate(event_id):
         User.is_active == True
     )
     if scope_id and not check_permission(current_user, 'admin', 'access'):
-        available_athletes = base_q.filter(User.athlete_society_id == scope_id).all()
+        # Canonical membership-based athlete list
+        try:
+            from app.models import SocietyMembership
+            athlete_ids = (
+                SocietyMembership.query.filter_by(society_id=scope_id, status='active')
+                .filter(SocietyMembership.role_name.in_(['atleta', 'athlete']))
+                .with_entities(SocietyMembership.user_id)
+                .all()
+            )
+            athlete_ids = [row[0] for row in athlete_ids]
+            available_athletes = base_q.filter(User.id.in_(athlete_ids)).all() if athlete_ids else []
+        except Exception:
+            available_athletes = []
     else:
         available_athletes = base_q.all()
     

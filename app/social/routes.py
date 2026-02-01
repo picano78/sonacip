@@ -211,7 +211,12 @@ def create_post():
         society_id = None
         if current_user.is_society():
             audience = 'public' if form.is_public.data else 'society'
-            society_id = current_user.id
+            # Scope posts to the Society entity, not the User id.
+            try:
+                scope = current_user.get_primary_society()
+                society_id = scope.id if scope else None
+            except Exception:
+                society_id = None
 
         post = Post(
             user_id=current_user.id,
@@ -617,16 +622,25 @@ def society_dashboard():
         flash('Profilo società non trovato.', 'warning')
         return redirect(url_for('social.feed'))
     
-    # Get society's staff and athletes
-    staff = User.query.filter(
-        User.role.in_(['staff', 'coach']),
-        User.society_id == society.id
-    ).all()
-
-    athletes = User.query.filter(
-        User.role.in_(['atleta', 'athlete']),
-        User.athlete_society_id == society.id
-    ).all()
+    # Get society's staff and athletes (canonical: SocietyMembership)
+    try:
+        staff_memberships = (
+            SocietyMembership.query.filter_by(society_id=society.id, status='active')
+            .filter(SocietyMembership.role_name.in_(['staff', 'coach', 'dirigente']))
+            .options(joinedload(SocietyMembership.user))
+            .all()
+        )
+        athlete_memberships = (
+            SocietyMembership.query.filter_by(society_id=society.id, status='active')
+            .filter(SocietyMembership.role_name.in_(['atleta', 'athlete']))
+            .options(joinedload(SocietyMembership.user))
+            .all()
+        )
+        staff = [m.user for m in staff_memberships if m.user]
+        athletes = [m.user for m in athlete_memberships if m.user]
+    except Exception:
+        staff = []
+        athletes = []
     
     # Get society's events
     from app.models import Event

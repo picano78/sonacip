@@ -966,6 +966,14 @@ class AdCampaign(db.Model):
     # Scope: if set, ads show only inside that society scope.
     society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
 
+    # Self-serve sponsor mode (advertisers)
+    is_self_serve = db.Column(db.Boolean, default=False, index=True)
+    advertiser_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+
+    # Budgeting (CPM-based spend tracking)
+    budget_cents = db.Column(db.Integer, default=0)
+    spend_cents = db.Column(db.Integer, default=0)
+
     is_active = db.Column(db.Boolean, default=True, index=True)
     starts_at = db.Column(db.DateTime)
     ends_at = db.Column(db.DateTime)
@@ -987,6 +995,7 @@ class AdCampaign(db.Model):
 
     society = db.relationship('Society', foreign_keys=[society_id])
     creator = db.relationship('User', foreign_keys=[created_by])
+    advertiser = db.relationship('User', foreign_keys=[advertiser_user_id])
 
     def __repr__(self):
         return f'<AdCampaign {self.id} {self.name} active={self.is_active}>'

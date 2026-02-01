@@ -8,9 +8,10 @@ from urllib.parse import urlparse
 
 from flask import current_app, request, session
 from itsdangerous import BadSignature, URLSafeSerializer
+from sqlalchemy import func
 
 from app import db
-from app.models import AdCampaign, AdCreative, AdEvent
+from app.models import AdCampaign, AdCreative, AdEvent, AdsSetting
 
 
 def _serializer() -> URLSafeSerializer:
@@ -73,6 +74,8 @@ def _eligible_creatives(placement: str, society_id: int | None) -> list[AdCreati
     # caps
     q = q.filter((AdCampaign.max_impressions.is_(None)) | (AdCampaign.impressions_count < AdCampaign.max_impressions))
     q = q.filter((AdCampaign.max_clicks.is_(None)) | (AdCampaign.clicks_count < AdCampaign.max_clicks))
+    # self-serve budget gating (CPM spend)
+    q = q.filter((AdCampaign.is_self_serve == False) | (AdCampaign.budget_cents > func.coalesce(AdCampaign.spend_cents, 0)))  # noqa: E712
     return q.order_by(AdCreative.id.asc()).limit(200).all()
 
 
@@ -154,6 +157,16 @@ def log_event(kind: str, creative: AdCreative, placement: str, society_id: int |
     if kind == "impression":
         creative.impressions_count = (creative.impressions_count or 0) + 1
         creative.campaign.impressions_count = (creative.campaign.impressions_count or 0) + 1
+        # charge self-serve CPM (best-effort)
+        try:
+            if creative.campaign.is_self_serve:
+                settings = AdsSetting.query.first()
+                cpm_eur = float(settings.price_per_thousand_views or 0) if settings else 0.0
+                cost_cents = int(round((cpm_eur * 100.0) / 1000.0))
+                cost_cents = max(1, cost_cents) if cpm_eur > 0 else 0
+                creative.campaign.spend_cents = int(creative.campaign.spend_cents or 0) + cost_cents
+        except Exception:
+            pass
     elif kind == "click":
         creative.clicks_count = (creative.clicks_count or 0) + 1
         creative.campaign.clicks_count = (creative.campaign.clicks_count or 0) + 1

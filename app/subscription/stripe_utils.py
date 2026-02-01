@@ -17,6 +17,7 @@ from app.models import (
     PlatformFeeSetting,
     PlatformTransaction,
     SocietyFee,
+    AdCampaign,
     Subscription,
 )
 
@@ -132,6 +133,36 @@ def create_fee_checkout_session(fee: SocietyFee, *, success_url: str, cancel_url
                         "name": f"Quota società (#{fee.id})",
                         "description": fee.description or "Quota",
                     },
+                },
+                "quantity": 1,
+            }
+        ],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        allow_promotion_codes=False,
+        metadata=metadata,
+    )
+    return sess.url  # type: ignore[attr-defined]
+
+
+def create_ads_topup_checkout_session(*, campaign: AdCampaign, amount_cents: int, success_url: str, cancel_url: str) -> str:
+    """One-time payment to add budget to an ad campaign (self-serve)."""
+    _init_stripe()
+    if amount_cents <= 0:
+        raise ValueError("Importo non valido.")
+    metadata = {
+        "ad_campaign_id": str(campaign.id),
+        "society_id": str(campaign.society_id or ""),
+        "user_id": str(campaign.advertiser_user_id or campaign.created_by or ""),
+    }
+    sess = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[
+            {
+                "price_data": {
+                    "currency": "eur",
+                    "unit_amount": int(amount_cents),
+                    "product_data": {"name": f"Budget Ads (campagna #{campaign.id})"},
                 },
                 "quantity": 1,
             }
@@ -380,6 +411,26 @@ def handle_stripe_event(event: Any) -> None:
                         created_at=datetime.utcnow(),
                     )
                 )
+            db.session.commit()
+            return
+
+        # Ads top-up (self-serve)
+        if mode == "payment" and session_obj.get("metadata", {}).get("ad_campaign_id"):
+            meta = session_obj.get("metadata") or {}
+            camp_id = int(meta.get("ad_campaign_id"))
+            camp = AdCampaign.query.get(camp_id)
+            if not camp:
+                return
+            p = _upsert_payment_from_checkout_session(
+                session_obj,
+                status="completed",
+                user_id=(camp.advertiser_user_id or camp.created_by),
+                society_id=camp.society_id,
+            )
+            # Increase budget by amount_total
+            amount_total = session_obj.get("amount_total") or 0
+            camp.budget_cents = int(camp.budget_cents or 0) + int(amount_total)
+            db.session.add(camp)
             db.session.commit()
             return
 

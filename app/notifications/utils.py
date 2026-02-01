@@ -4,9 +4,11 @@ Notification utilities
 from flask import current_app
 from flask_mail import Message
 from app import mail, db
-from app.models import Notification, User
+from app.models import Notification, User, SmtpSetting
 from datetime import datetime, timedelta
 import os
+import smtplib
+from email.message import EmailMessage
 
 
 def create_notification(user_id, title, message, notification_type='system', link=None):
@@ -124,13 +126,47 @@ def send_email(recipient, subject, body, html_body=None):
     Returns True if successful, False otherwise
     """
     try:
+        # Prefer DB-managed SMTP settings (super admin).
+        settings = None
+        try:
+            settings = SmtpSetting.query.first()
+        except Exception:
+            settings = None
+
+        recipients = [recipient] if isinstance(recipient, str) else list(recipient)
+
+        if settings and settings.enabled and settings.host and settings.port and settings.default_sender:
+            msg = EmailMessage()
+            msg["Subject"] = subject
+            msg["From"] = settings.default_sender
+            msg["To"] = ", ".join(recipients)
+            msg.set_content(body or "")
+            if html_body:
+                msg.add_alternative(html_body, subtype="html")
+
+            server = smtplib.SMTP(settings.host, settings.port, timeout=20)
+            try:
+                server.ehlo()
+                if settings.use_tls:
+                    server.starttls()
+                    server.ehlo()
+                if settings.username and settings.password:
+                    server.login(settings.username, settings.password)
+                server.send_message(msg)
+            finally:
+                try:
+                    server.quit()
+                except Exception:
+                    pass
+            return True
+
+        # Fallback: env-based Flask-Mail
         if not current_app.config.get('MAIL_USERNAME'):
-            # Email not configured
             return False
         
         msg = Message(
             subject=subject,
-            recipients=[recipient] if isinstance(recipient, str) else recipient,
+            recipients=recipients,
             body=body,
             html=html_body,
             sender=current_app.config['MAIL_DEFAULT_SENDER']

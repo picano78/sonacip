@@ -184,6 +184,11 @@
                                         <i class="bi bi-grid-1x2"></i> Template cruscotti
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.smtp_settings') }}">
+                                        <i class="bi bi-envelope"></i> SMTP
+                                    </a>
+                                </li>
                             {% endif %}
                             {% if can('society', 'manage') %}
                                 <li>

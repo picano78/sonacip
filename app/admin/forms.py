@@ -164,3 +164,14 @@ class DashboardTemplateForm(FlaskForm):
 
 class NavigationConfigForm(FlaskForm):
     links_json = TextAreaField('Link navbar (JSON array)', validators=[DataRequired(), Length(max=50000)])
+
+
+class SmtpSettingsForm(FlaskForm):
+    enabled = BooleanField('Abilita invio email (SMTP)')
+    host = StringField('Host SMTP', validators=[Optional(), Length(max=255)])
+    port = StringField('Porta', validators=[Optional(), Length(max=6)])
+    use_tls = BooleanField('Usa STARTTLS')
+    username = StringField('Username', validators=[Optional(), Length(max=255)])
+    password = PasswordField('Password', validators=[Optional(), Length(max=255)])
+    default_sender = StringField('Mittente predefinito', validators=[Optional(), Length(max=255)])
+    test_recipient = StringField('Invia test a (email)', validators=[Optional(), Email(), Length(max=255)])

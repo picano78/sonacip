@@ -12,6 +12,7 @@ from app.admin.forms import (
     AppearanceSettingsForm,
     DashboardTemplateForm,
     NavigationConfigForm,
+    SmtpSettingsForm,
     PageCustomizationForm,
     PrivacySettingsForm,
     SiteCustomizationForm,
@@ -37,6 +38,7 @@ from app.models import (
     SocialSetting,
     Society,
     StorageSetting,
+    SmtpSetting,
     User,
 )
 from datetime import datetime, timedelta
@@ -261,6 +263,55 @@ def navigation():
         return redirect(url_for('admin.navigation'))
 
     return render_template('admin/navigation.html', form=form)
+
+
+@bp.route('/smtp', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def smtp_settings():
+    """SMTP settings (super admin)."""
+    settings = SmtpSetting.query.first()
+    if not settings:
+        settings = SmtpSetting(enabled=False)
+        db.session.add(settings)
+        db.session.commit()
+
+    form = SmtpSettingsForm(obj=settings)
+    if request.method == 'GET':
+        form.port.data = str(settings.port or 587)
+
+    if form.validate_on_submit():
+        settings.enabled = bool(form.enabled.data)
+        settings.host = form.host.data or None
+        try:
+            settings.port = int(form.port.data) if form.port.data else 587
+        except Exception:
+            settings.port = 587
+        settings.use_tls = bool(form.use_tls.data)
+        settings.username = form.username.data or None
+        if form.password.data:
+            settings.password = form.password.data
+        settings.default_sender = form.default_sender.data or settings.default_sender
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        log_action('update_smtp_settings', 'SmtpSetting', settings.id, 'Updated SMTP settings')
+
+        # Optional test send
+        if form.test_recipient.data:
+            from app.notifications.utils import send_email
+            ok = send_email(
+                recipient=form.test_recipient.data,
+                subject='SONACIP - Test SMTP',
+                body='Questo è un test SMTP inviato dal pannello Super Admin.',
+            )
+            flash('Test email inviata.' if ok else 'Invio test fallito. Controlla i log.', 'success' if ok else 'danger')
+        else:
+            flash('Impostazioni SMTP salvate.', 'success')
+
+        return redirect(url_for('admin.smtp_settings'))
+
+    return render_template('admin/smtp_settings.html', form=form, settings=settings)
 
 
 @bp.route('/pages')

@@ -100,6 +100,9 @@
                     <a href="{{ url_for('admin.dashboard_templates') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-grid-1x2"></i> Template cruscotti
                     </a>
+                    <a href="{{ url_for('admin.smtp_settings') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-envelope"></i> SMTP
+                    </a>
                     <form action="{{ url_for('admin.reset_system') }}" method="post" class="list-group-item d-flex align-items-center justify-content-between">
                         {{ csrf_token() }}
                         <div><i class="bi bi-arrow-repeat"></i> Reset/Restart</div>

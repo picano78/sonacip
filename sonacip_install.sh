@@ -5,6 +5,8 @@ APP_USER="sonacip"
 APP_DIR="/opt/sonacip"
 ENV_FILE="/opt/sonacip/.env"
 SERVICE_FILE="/etc/systemd/system/sonacip.service"
+NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/sonacip"
+NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/sonacip"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ $EUID -ne 0 ]]; then
@@ -29,6 +31,7 @@ apt-get install -y --no-install-recommends \
   python3-dev \
   build-essential \
   libpq-dev \
+  nginx \
   rsync \
   curl
 
@@ -77,18 +80,29 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 
-echo "[6/8] Installazione servizio systemd..."
+echo "[6/9] Installazione servizio systemd..."
 install -m 0644 "$APP_DIR/deploy/sonacip.service" "$SERVICE_FILE"
 
 systemctl daemon-reload
 systemctl enable sonacip.service
 
 
-echo "[7/8] Installazione CLI di backup/restore..."
+echo "[7/9] Configurazione Nginx (HTTP)..."
+install -m 0644 "$APP_DIR/deployment/nginx.conf" "$NGINX_SITE_AVAILABLE"
+ln -sf "$NGINX_SITE_AVAILABLE" "$NGINX_SITE_ENABLED"
+if [[ -e /etc/nginx/sites-enabled/default ]]; then
+  rm -f /etc/nginx/sites-enabled/default
+fi
+nginx -t
+systemctl enable nginx
+systemctl restart nginx
+
+
+echo "[8/9] Installazione CLI di backup/restore..."
 install -m 0755 "$APP_DIR/sonacip" /usr/local/bin/sonacip
 
 
-echo "[8/8] Validazione sistema..."
+echo "[9/9] Validazione sistema..."
 if ! "$APP_DIR/venv/bin/python" "$APP_DIR/system_validation.py"; then
   echo "Validazione fallita. Installazione interrotta." >&2
   exit 1

@@ -848,6 +848,30 @@ class CustomizationKV(db.Model):
         return f'<CustomizationKV {self.scope}:{self.scope_key}:{self.key}>'
 
 
+class SmtpSetting(db.Model):
+    """SMTP settings editable by super admin."""
+    __tablename__ = 'smtp_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, default=False)
+
+    host = db.Column(db.String(255))
+    port = db.Column(db.Integer, default=587)
+    use_tls = db.Column(db.Boolean, default=True)
+
+    username = db.Column(db.String(255))
+    password = db.Column(db.String(255))
+    default_sender = db.Column(db.String(255), default='noreply@sonacip.it')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<SmtpSetting enabled={self.enabled}>'
+
+
 class Message(db.Model):
     """
     Direct messaging between users

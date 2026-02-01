@@ -34,12 +34,15 @@ instance/
 sonacip.db
 
 # Logs
-logs/
+logs/*
+!logs/.gitkeep
 *.log
 
 # Uploads & Backups
-uploads/
-backups/
+uploads/*
+!uploads/.gitkeep
+backups/*
+!backups/.gitkeep
 
 # Environment
 .env

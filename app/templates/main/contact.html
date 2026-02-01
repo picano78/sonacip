@@ -1,17 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Contatti - SONACIP{% endblock %}
+{% block title %}{{ page.title if page and page.title else 'Contatti - SONACIP' }}{% endblock %}
 
 {% block content %}
 <div class="container my-5">
-    <h1 class="mb-4">Contatti</h1>
+    <h1 class="mb-4">{{ page.hero_title if page and page.hero_title else 'Contatti' }}</h1>
     
     <div class="row">
         <div class="col-lg-6">
-            <h3>Informazioni</h3>
-            <p><strong>Email:</strong> info@sonacip.it</p>
-            <p><strong>Telefono:</strong> +39 02 1234567</p>
-            <p><strong>Indirizzo:</strong> Via dello Sport, 1 - Milano</p>
+            {% if page and page.body_html %}
+              {{ page.body_html|safe }}
+            {% else %}
+              <h3>Informazioni</h3>
+              <p><strong>Email:</strong> info@sonacip.it</p>
+              <p><strong>Telefono:</strong> +39 02 1234567</p>
+              <p><strong>Indirizzo:</strong> Via dello Sport, 1 - Milano</p>
+            {% endif %}
         </div>
     </div>
 </div>

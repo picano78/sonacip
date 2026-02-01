@@ -1,0 +1,13 @@
+[Unit]
+Description=SONACIP Calendar Reminders Job
+After=network.target
+
+[Service]
+Type=oneshot
+User=sonacip
+Group=sonacip
+WorkingDirectory=/opt/sonacip
+EnvironmentFile=/opt/sonacip/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/sonacip/venv/bin/python /opt/sonacip/scripts/calendar_reminder_job.py
+

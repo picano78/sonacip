@@ -133,3 +133,55 @@ class StorageSettingsForm(FlaskForm):
     video_max_width = StringField('Larghezza max video (px)', validators=[Optional(), Length(max=5)])
     max_image_mb = StringField('Limite immagini (MB)', validators=[Optional(), Length(max=4)])
     max_video_mb = StringField('Limite video (MB)', validators=[Optional(), Length(max=4)])
+
+
+class SiteCustomizationForm(FlaskForm):
+    navbar_brand_text = StringField('Testo brand navbar', validators=[Optional(), Length(max=100)])
+    navbar_brand_icon = StringField('Icona navbar (Bootstrap Icons)', validators=[Optional(), Length(max=50)])
+    footer_html = TextAreaField('Footer HTML', validators=[Optional(), Length(max=20000)])
+    custom_css = TextAreaField('CSS personalizzato', validators=[Optional(), Length(max=50000)])
+
+
+class PageCustomizationForm(FlaskForm):
+    slug = StringField('Slug pagina (es: main.index)', validators=[DataRequired(), Length(max=120)])
+    title = StringField('Titolo pagina (tab)', validators=[Optional(), Length(max=200)])
+    hero_title = StringField('Titolo hero', validators=[Optional(), Length(max=200)])
+    hero_subtitle = StringField('Sottotitolo hero', validators=[Optional(), Length(max=500)])
+    body_html = TextAreaField('Contenuto HTML', validators=[Optional(), Length(max=50000)])
+
+
+class DashboardTemplateForm(FlaskForm):
+    role_name = SelectField('Ruolo', choices=[], validators=[Optional()])
+    name = StringField('Nome template', validators=[DataRequired(), Length(max=200)])
+    layout = SelectField('Layout', choices=[('grid', 'Grid')], validators=[DataRequired()])
+    widgets = TextAreaField('Widgets (JSON array)', validators=[DataRequired(), Length(max=50000)])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # '' means global default
+        self.role_name.choices = [('', 'Default (tutti)')] + _load_role_choices(include_empty=False)
+
+
+class NavigationConfigForm(FlaskForm):
+    links_json = TextAreaField('Link navbar (JSON array)', validators=[DataRequired(), Length(max=50000)])
+
+
+class SmtpSettingsForm(FlaskForm):
+    enabled = BooleanField('Abilita invio email (SMTP)')
+    host = StringField('Host SMTP', validators=[Optional(), Length(max=255)])
+    port = StringField('Porta', validators=[Optional(), Length(max=6)])
+    use_tls = BooleanField('Usa STARTTLS')
+    username = StringField('Username', validators=[Optional(), Length(max=255)])
+    password = PasswordField('Password', validators=[Optional(), Length(max=255)])
+    default_sender = StringField('Mittente predefinito', validators=[Optional(), Length(max=255)])
+    test_recipient = StringField('Invia test a (email)', validators=[Optional(), Email(), Length(max=255)])
+
+
+class WhatsappSettingsForm(FlaskForm):
+    enabled = BooleanField('Abilita WhatsApp')
+    provider = SelectField('Provider', choices=[('webhook', 'Webhook (generico)')], validators=[Optional()])
+    api_url = StringField('Webhook URL', validators=[Optional(), Length(max=500)])
+    api_token = PasswordField('Token (Bearer)', validators=[Optional(), Length(max=500)])
+    from_number = StringField('From (opzionale)', validators=[Optional(), Length(max=50)])
+    test_phone = StringField('Invia test a (telefono)', validators=[Optional(), Length(max=20)])
+    test_message = StringField('Messaggio test', validators=[Optional(), Length(max=500)])

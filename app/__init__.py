@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib
 import os
 
-from flask import Flask
+from flask import Flask, request
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -81,8 +81,9 @@ def create_app(config_name: str | None = None) -> Flask:
         config_class.validate_config()
 
     if not app.config.get('SECRET_KEY'):
-        print('[SONACIP] WARNING: SECRET_KEY missing, using a random key for this process.')
-        app.config['SECRET_KEY'] = os.urandom(32)
+        raise RuntimeError(
+            "Missing SECRET_KEY. Set SECRET_KEY in the environment (see .env.example)."
+        )
 
     if app.config.get('USE_PROXYFIX'):
         app.wsgi_app = ProxyFix(
@@ -113,27 +114,74 @@ def create_app(config_name: str | None = None) -> Flask:
         except Exception:
             return None
 
-    from app.core.bootstrap import (
-        apply_migrations_or_fail,
-        bootstrap_database_if_missing,
-        discover_and_register_modules,
-        ensure_admin_user,
-        ensure_default_roles,
-        ensure_directories,
-        verify_database_connectivity,
-    )
-
-    ensure_directories(app)
-    bootstrap_database_if_missing(app)
-
-    if app.config.get('AUTO_MIGRATE_ON_STARTUP'):
-        apply_migrations_or_fail(app)
-
-    verify_database_connectivity(app)
-    ensure_default_roles(app)
-    ensure_admin_user(app)
+    from app.core.bootstrap import discover_and_register_modules
 
     _register_blueprints(app)
     discover_and_register_modules(app, strict=False)
+
+    @app.context_processor
+    def inject_platform_context():
+        """Globals used by base templates (theme, privacy, counts, per-page content)."""
+        from flask_login import current_user
+
+        from app.utils import can as can_fn
+
+        appearance = None
+        privacy = None
+        site = None
+        page = None
+        nav_links = None
+
+        try:
+            from app.models import (
+                AppearanceSetting,
+                CustomizationKV,
+                Message,
+                Notification,
+                PageCustomization,
+                PrivacySetting,
+                SiteCustomization,
+            )
+
+            appearance = AppearanceSetting.query.filter_by(scope='global').order_by(AppearanceSetting.id.desc()).first()
+            privacy = PrivacySetting.query.order_by(PrivacySetting.id.desc()).first()
+            site = SiteCustomization.query.order_by(SiteCustomization.id.desc()).first()
+
+            endpoint = request.endpoint or ''
+            if endpoint:
+                page = PageCustomization.query.filter_by(slug=endpoint).first()
+
+            # Admin-configurable navigation links (site scope)
+            nav_row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='navbar.links').first()
+            nav_links = nav_row.get_value(default=None) if nav_row else None
+
+            def get_unread_notifications_count():
+                if not current_user.is_authenticated:
+                    return 0
+                return Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+
+            def get_unread_messages_count():
+                if not current_user.is_authenticated:
+                    return 0
+                return Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
+
+        except Exception:
+            # DB not initialized yet or models unavailable: keep templates functional.
+            def get_unread_notifications_count():
+                return 0
+
+            def get_unread_messages_count():
+                return 0
+
+        return {
+            'can': can_fn,
+            'appearance': appearance,
+            'privacy': privacy,
+            'site': site,
+            'page': page,
+            'nav_links': nav_links,
+            'get_unread_notifications_count': get_unread_notifications_count,
+            'get_unread_messages_count': get_unread_messages_count,
+        }
 
     return app

@@ -45,6 +45,42 @@ society_calendar_event_athletes = db.Table('society_calendar_event_athletes',
 )
 
 
+class SocietyCalendarAttendance(db.Model):
+    """
+    RSVP tracking for society calendar convocations (per athlete).
+    """
+    __tablename__ = 'society_calendar_attendance'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('society_calendar_event.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, accepted, declined
+    responded_at = db.Column(db.DateTime)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', name='uq_society_calendar_attendance'),
+    )
+
+
+class SocietyCalendarReminderSent(db.Model):
+    """
+    Idempotency for calendar reminder jobs (per event/user/kind).
+    """
+    __tablename__ = 'society_calendar_reminder_sent'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('society_calendar_event.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    kind = db.Column(db.String(50), nullable=False)  # e.g. '24h', '1h'
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', 'kind', name='uq_society_calendar_reminder_sent'),
+    )
+
+
 class User(UserMixin, db.Model):
     """
     User model - handles all user types
@@ -241,15 +277,52 @@ class User(UserMixin, db.Model):
         """Return True if user is scoped to the given society (or no scope requested)."""
         if not society_id:
             return True
-        society = self.get_primary_society()
-        if not society:
-            return False
-        return society.id == society_id
+        # Society owners can always access their own society scope.
+        if self.is_society() and self.society_profile and self.society_profile.id == society_id:
+            return True
+        # Staff/athletes can access if they have an active membership for that society.
+        try:
+            from app.models import SocietyMembership
+            return (
+                SocietyMembership.query.filter_by(
+                    society_id=society_id, user_id=self.id, status='active'
+                ).first()
+                is not None
+            )
+        except Exception:
+            # Fallback to legacy fields if DB isn't ready yet.
+            society = self.get_primary_society()
+            if not society:
+                return False
+            return society.id == society_id
+
+    def get_society_role(self, society_id: int | None) -> str | None:
+        """Return the society-specific role_name (from SocietyMembership) for a given society."""
+        if not society_id:
+            return None
+        if self.is_society() and self.society_profile and self.society_profile.id == society_id:
+            return 'societa'
+        try:
+            from app.models import SocietyMembership
+            m = SocietyMembership.query.filter_by(
+                society_id=society_id, user_id=self.id, status='active'
+            ).first()
+            return m.role_name if m else None
+        except Exception:
+            return None
 
     def get_primary_society(self):
         """Return Society entity for this user, if any."""
         if self.is_society() and self.society_profile:
             return self.society_profile
+        # Prefer explicit memberships (canonical) when present.
+        try:
+            from app.models import SocietyMembership
+            m = SocietyMembership.query.filter_by(user_id=self.id, status='active').order_by(SocietyMembership.created_at.desc()).first()
+            if m and m.society:
+                return m.society
+        except Exception:
+            pass
         if self.society_id:
             return self.society
         if self.athlete_society_id:
@@ -335,6 +408,10 @@ class Post(db.Model):
     
     # Visibility
     is_public = db.Column(db.Boolean, default=True)
+    # New: explicit audience/scoping (for society CRM communications)
+    audience = db.Column(db.String(20), default='public')  # public, followers, society, direct
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))  # owning society for scoped comms
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # direct-to user comms
     post_type = db.Column(db.String(50), default='personal')  # personal, official, tournament, match, automation
 
     # Promotion/ads
@@ -358,6 +435,9 @@ class Post(db.Model):
     liked_by = db.relationship('User', secondary=post_likes,
                               backref=db.backref('liked_posts', lazy='dynamic'),
                               lazy='dynamic')
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    target_user = db.relationship('User', foreign_keys=[target_user_id])
     
     def is_liked_by(self, user):
         """Check if user liked this post"""
@@ -365,6 +445,66 @@ class Post(db.Model):
     
     def __repr__(self):
         return f'<Post {self.id} by {self.user_id}>'
+
+
+class SocietyMembership(db.Model):
+    """
+    Link between a Society and a User (staff/athlete/coach/dirigente/appassionato).
+    This powers CRM+planner scoping and "who sees what".
+    """
+    __tablename__ = 'society_membership'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    role_name = db.Column(db.String(50), nullable=False, default='appassionato')  # atleta, staff, coach, dirigente, appassionato
+    status = db.Column(db.String(20), nullable=False, default='active')  # pending, active, rejected, revoked
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('memberships', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('society_memberships', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', name='uq_society_membership'),
+    )
+
+    def __repr__(self):
+        return f'<SocietyMembership society={self.society_id} user={self.user_id} role={self.role_name} status={self.status}>'
+
+
+class SocietyRolePermission(db.Model):
+    """
+    Society-scoped RBAC: per-society permissions granted/denied to society roles
+    (atleta, coach, staff, dirigente, etc.)
+    """
+    __tablename__ = 'society_role_permission'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    role_name = db.Column(db.String(50), nullable=False, index=True)
+    permission_id = db.Column(db.Integer, db.ForeignKey('permission.id'), nullable=False, index=True)
+    effect = db.Column(db.String(10), nullable=False, default='allow')  # allow / deny
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    permission = db.relationship('Permission', foreign_keys=[permission_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'role_name', 'permission_id', name='uq_society_role_permission'),
+    )
+
+    def __repr__(self):
+        return f'<SocietyRolePermission society={self.society_id} role={self.role_name} perm={self.permission_id} {self.effect}>'
 
 
 class Comment(db.Model):
@@ -488,6 +628,8 @@ class SocietyCalendarEvent(db.Model):
     society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+    facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), index=True)
+
     title = db.Column(db.String(200), nullable=False)
     team = db.Column(db.String(100))  # textual team/category label
     category = db.Column(db.String(100))
@@ -496,6 +638,8 @@ class SocietyCalendarEvent(db.Model):
 
     start_datetime = db.Column(db.DateTime, nullable=False)
     end_datetime = db.Column(db.DateTime)
+
+    color = db.Column(db.String(20), default='#212529')  # hex or css color token
 
     location_text = db.Column(db.String(255))
     notes = db.Column(db.Text)
@@ -507,6 +651,7 @@ class SocietyCalendarEvent(db.Model):
 
     # Relationships
     society = db.relationship('Society', backref=db.backref('calendar_events', lazy='dynamic'))
+    facility = db.relationship('Facility', foreign_keys=[facility_id])
     creator = db.relationship('User', foreign_keys=[created_by])
     staff_members = db.relationship(
         'User', secondary=society_calendar_event_staff,
@@ -540,6 +685,29 @@ class SocietyCalendarEvent(db.Model):
 
     def __repr__(self):
         return f'<SocietyCalendarEvent {self.title} ({self.event_type})>'
+
+
+class Facility(db.Model):
+    """
+    Society facilities/resources (palestre/campi/sale) used for occupancy planning.
+    """
+    __tablename__ = 'facility'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    address = db.Column(db.String(255))
+    capacity = db.Column(db.Integer)
+    color = db.Column(db.String(20), default='#0d6efd')  # default color for this facility
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('facilities', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<Facility {self.name} society={self.society_id}>'
 
 
 class Notification(db.Model):
@@ -582,6 +750,7 @@ class AuditLog(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Who performed the action
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)  # Optional scope
     action = db.Column(db.String(100), nullable=False)  # Action type
     entity_type = db.Column(db.String(50))  # User, Post, Event, etc.
     entity_id = db.Column(db.Integer)  # ID of affected entity
@@ -591,9 +760,41 @@ class AuditLog(db.Model):
     
     # Relationship
     user = db.relationship('User', backref='audit_logs')
+    society = db.relationship('Society', foreign_keys=[society_id])
     
     def __repr__(self):
         return f'<AuditLog {self.action} by User {self.user_id}>'
+
+
+class SocietyInvite(db.Model):
+    """
+    Society invites a user to join as a specific role (athlete/staff/coach/dirigente).
+    Acceptance activates a SocietyMembership and updates user role fields.
+    """
+    __tablename__ = 'society_invite'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    invited_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    invited_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    requested_role = db.Column(db.String(50), nullable=False)  # atleta, coach, staff, dirigente
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, accepted, rejected, revoked
+
+    note = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    responded_at = db.Column(db.DateTime)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    invited_user = db.relationship('User', foreign_keys=[invited_user_id])
+    inviter = db.relationship('User', foreign_keys=[invited_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'invited_user_id', 'status', name='uq_society_invite_active'),
+    )
+
+    def __repr__(self):
+        return f'<SocietyInvite society={self.society_id} user={self.invited_user_id} role={self.requested_role} status={self.status}>'
 
 
 class Backup(db.Model):
@@ -764,6 +965,138 @@ class PrivacySetting(db.Model):
         return f'<PrivacySetting {self.id}>'
 
 
+class SiteCustomization(db.Model):
+    """
+    Global UI/content customization (super admin controlled).
+    Keep it intentionally small and safe: branding + footer + optional custom CSS.
+    """
+    __tablename__ = 'site_customization'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    navbar_brand_text = db.Column(db.String(100), default='SONACIP')
+    navbar_brand_icon = db.Column(db.String(50), default='bi-trophy-fill')  # Bootstrap Icons class
+
+    footer_html = db.Column(db.Text)
+    custom_css = db.Column(db.Text)
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<SiteCustomization {self.id}>'
+
+
+class PageCustomization(db.Model):
+    """
+    Per-page editable content controlled by super admin.
+    `slug` should match a stable page identifier (e.g. 'main.index', 'main.about').
+    """
+    __tablename__ = 'page_customization'
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(120), unique=True, nullable=False, index=True)
+
+    title = db.Column(db.String(200))
+    hero_title = db.Column(db.String(200))
+    hero_subtitle = db.Column(db.String(500))
+    body_html = db.Column(db.Text)
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<PageCustomization {self.slug}>'
+
+
+class CustomizationKV(db.Model):
+    """
+    Generic customization key/value storage (JSON as text).
+    Designed to scale "everything customizable" without schema churn.
+    """
+    __tablename__ = 'customization_kv'
+    __table_args__ = (
+        db.UniqueConstraint('scope', 'scope_key', 'key', name='uq_customization_scope_key'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    scope = db.Column(db.String(20), nullable=False, index=True)  # site, page, user, role
+    scope_key = db.Column(db.String(120), index=True)  # e.g. endpoint for page, user_id for user
+    key = db.Column(db.String(120), nullable=False, index=True)
+    value_json = db.Column(db.Text, nullable=False, default='{}')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def get_value(self, default=None):
+        import json
+        try:
+            return json.loads(self.value_json or 'null')
+        except Exception:
+            return default
+
+    def set_value(self, value):
+        import json
+        self.value_json = json.dumps(value)
+
+    def __repr__(self):
+        return f'<CustomizationKV {self.scope}:{self.scope_key}:{self.key}>'
+
+
+class SmtpSetting(db.Model):
+    """SMTP settings editable by super admin."""
+    __tablename__ = 'smtp_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, default=False)
+
+    host = db.Column(db.String(255))
+    port = db.Column(db.Integer, default=587)
+    use_tls = db.Column(db.Boolean, default=True)
+
+    username = db.Column(db.String(255))
+    password = db.Column(db.String(255))
+    default_sender = db.Column(db.String(255), default='noreply@sonacip.it')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<SmtpSetting enabled={self.enabled}>'
+
+
+class WhatsappSetting(db.Model):
+    """
+    WhatsApp integration settings (super admin).
+    Generic webhook-style provider to avoid hard dependency on a specific vendor.
+    """
+    __tablename__ = 'whatsapp_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, default=False)
+
+    provider = db.Column(db.String(50), default='webhook')  # webhook, twilio, meta, ...
+    api_url = db.Column(db.String(500))  # webhook endpoint URL
+    api_token = db.Column(db.String(500))  # bearer token (optional)
+    from_number = db.Column(db.String(50))  # optional sender identifier
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<WhatsappSetting enabled={self.enabled} provider={self.provider}>'
+
+
 class Message(db.Model):
     """
     Direct messaging between users
@@ -787,6 +1120,94 @@ class Message(db.Model):
     
     def __repr__(self):
         return f'<Message {self.id} from {self.sender_id} to {self.recipient_id}>'
+
+
+class MedicalCertificate(db.Model):
+    """
+    Medical certificate for an athlete (society-managed), used for automated expiry reminders.
+    """
+    __tablename__ = 'medical_certificate'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    issued_on = db.Column(db.Date)
+    expires_on = db.Column(db.Date, nullable=False, index=True)
+    status = db.Column(db.String(20), default='valid')  # valid, expired, revoked
+    notes = db.Column(db.Text)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', 'expires_on', name='uq_medical_certificate_society_user_expires'),
+    )
+
+    def __repr__(self):
+        return f'<MedicalCertificate user={self.user_id} expires={self.expires_on}>'
+
+
+class SocietyFee(db.Model):
+    """
+    Society membership fee/payment due for a member (internal billing), used for automated reminders.
+    """
+    __tablename__ = 'society_fee'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    description = db.Column(db.String(255))
+    amount_cents = db.Column(db.Integer, nullable=False, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+    due_on = db.Column(db.Date, nullable=False, index=True)
+    status = db.Column(db.String(20), default='pending')  # pending, paid, cancelled
+    paid_at = db.Column(db.DateTime)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<SocietyFee user={self.user_id} due={self.due_on} status={self.status}>'
+
+
+class MedicalCertificateReminderSent(db.Model):
+    """Idempotency for certificate expiry reminders."""
+    __tablename__ = 'medical_certificate_reminder_sent'
+
+    id = db.Column(db.Integer, primary_key=True)
+    certificate_id = db.Column(db.Integer, db.ForeignKey('medical_certificate.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    kind = db.Column(db.String(50), nullable=False)  # e.g. '14d', '7d', '1d'
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('certificate_id', 'user_id', 'kind', name='uq_medical_certificate_reminder_sent'),
+    )
+
+
+class SocietyFeeReminderSent(db.Model):
+    """Idempotency for fee due reminders."""
+    __tablename__ = 'society_fee_reminder_sent'
+
+    id = db.Column(db.Integer, primary_key=True)
+    fee_id = db.Column(db.Integer, db.ForeignKey('society_fee.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    kind = db.Column(db.String(50), nullable=False)  # e.g. '7d', '1d'
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('fee_id', 'user_id', 'kind', name='uq_society_fee_reminder_sent'),
+    )
 
 
 class Contact(db.Model):
@@ -1139,6 +1560,62 @@ class Payment(db.Model):
         return f'<Payment {self.id}: {self.amount} {self.currency} - {self.status}>'
 
 
+class Coupon(db.Model):
+    """
+    Coupon codes for monetization (super-admin managed).
+    Can apply to subscriptions and unlock paid features.
+    """
+    __tablename__ = 'coupon'
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    description = db.Column(db.String(255))
+
+    discount_type = db.Column(db.String(20), default='percent')  # percent, fixed
+    discount_value = db.Column(db.Integer, default=0)  # percent points (0-100) or cents for fixed
+    currency = db.Column(db.String(3), default='EUR')
+
+    is_active = db.Column(db.Boolean, default=True)
+    max_redemptions = db.Column(db.Integer)  # null = unlimited
+    redeemed_count = db.Column(db.Integer, default=0)
+
+    valid_from = db.Column(db.DateTime)
+    valid_until = db.Column(db.DateTime)
+
+    # Optional restriction to a plan
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'))
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    plan = db.relationship('Plan', foreign_keys=[plan_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<Coupon {self.code} active={self.is_active}>'
+
+
+class CouponRedemption(db.Model):
+    """Coupon redemption audit."""
+    __tablename__ = 'coupon_redemption'
+
+    id = db.Column(db.Integer, primary_key=True)
+    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'))
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'))
+
+    redeemed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    coupon = db.relationship('Coupon', foreign_keys=[coupon_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    subscription = db.relationship('Subscription', foreign_keys=[subscription_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+
+
 class Society(db.Model):
     """
     Society (Sports Club) extended model
@@ -1293,7 +1770,7 @@ class Tournament(db.Model):
     __tablename__ = 'tournament'
 
     id = db.Column(db.Integer, primary_key=True)
-    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     name = db.Column(db.String(200), nullable=False)
@@ -1328,6 +1805,7 @@ class TournamentTeam(db.Model):
     name = db.Column(db.String(150), nullable=False)
     category = db.Column(db.String(100))
     external_ref = db.Column(db.String(100))
+    seed = db.Column(db.Integer)
 
     tournament = db.relationship('Tournament', backref=db.backref('teams', lazy='dynamic', cascade='all, delete-orphan'))
 
@@ -1340,10 +1818,14 @@ class TournamentMatch(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
-    home_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=False)
-    away_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=False)
+    home_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=True)
+    away_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=True)
+    winner_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'))
 
     round_label = db.Column(db.String(100))  # group A, quarterfinal, etc.
+    round_number = db.Column(db.Integer, default=1, index=True)
+    position = db.Column(db.Integer, default=0, index=True)  # bracket position within round (0-based)
+    is_bracket = db.Column(db.Boolean, default=False, index=True)
     match_date = db.Column(db.DateTime)
     location = db.Column(db.String(255))
 
@@ -1355,11 +1837,14 @@ class TournamentMatch(db.Model):
 
     home_team = db.relationship('TournamentTeam', foreign_keys=[home_team_id])
     away_team = db.relationship('TournamentTeam', foreign_keys=[away_team_id])
+    winner_team = db.relationship('TournamentTeam', foreign_keys=[winner_team_id])
 
     def set_score(self, home, away):
         self.home_score = home
         self.away_score = away
         self.status = 'played'
+        if home is not None and away is not None and home != away:
+            self.winner_team_id = self.home_team_id if home > away else self.away_team_id
 
     def __repr__(self):
         return f'<TournamentMatch {self.home_team_id} vs {self.away_team_id}>'
@@ -1551,7 +2036,7 @@ class AutomationRule(db.Model):
                 if not isinstance(action, dict) or 'type' not in action:
                     return False, 'Each action must have a type'
                 atype = action['type']
-                if atype not in ['notify', 'email', 'social_post', 'webhook', 'task_create']:
+                if atype not in ['notify', 'email', 'social_post', 'webhook', 'task_create', 'whatsapp']:
                     return False, f'Invalid action type: {atype}'
                 if atype in ['notify', 'email'] and 'user_id' not in action:
                     return False, f'{atype} action requires user_id'
@@ -1616,6 +2101,29 @@ class Team(db.Model):
         return f'<Team {self.name}>'
 
 
+class DashboardTemplate(db.Model):
+    """
+    Default dashboard template for a role (super admin controlled).
+    Used to provision user dashboards and to reset them deterministically.
+    """
+    __tablename__ = 'dashboard_template'
+
+    id = db.Column(db.Integer, primary_key=True)
+    role_name = db.Column(db.String(50), index=True)  # nullable = global fallback
+
+    name = db.Column(db.String(200), nullable=False, default='Default')
+    layout = db.Column(db.String(20), default='grid')
+    widgets = db.Column(db.Text, nullable=False)  # JSON array
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<DashboardTemplate role={self.role_name or "default"}>'
+
+
 class Dashboard(db.Model):
     """
     Custom Dashboards (Databox/Klipfolio style)
@@ -1645,6 +2153,18 @@ class Dashboard(db.Model):
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def get_widgets(self):
+        import json
+        try:
+            data = json.loads(self.widgets or '[]')
+            return data if isinstance(data, list) else [data]
+        except Exception:
+            return []
+
+    def set_widgets(self, widgets):
+        import json
+        self.widgets = json.dumps(widgets or [])
     
     def __repr__(self):
         return f'<Dashboard {self.name}>'

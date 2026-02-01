@@ -13,6 +13,8 @@ class AutomationRuleForm(FlaskForm):
     ])
     
     event_type = SelectField('Tipo Evento', validators=[DataRequired()], choices=[
+        ('medical_certificate.expiring', 'Certificato Medico in Scadenza'),
+        ('fee.due', 'Quota in Scadenza'),
         ('tournament.created', 'Torneo Creato'),
         ('tournament.started', 'Torneo Iniziato'),
         ('match.scored', 'Partita Conclusa'),

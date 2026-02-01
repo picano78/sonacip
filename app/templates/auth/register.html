@@ -52,11 +52,6 @@
                         </div>
                         
                         <div class="mb-3">
-                            {{ form.role.label(class="form-label") }}
-                            {{ form.role(class="form-select") }}
-                        </div>
-                        
-                        <div class="mb-3">
                             {{ form.password.label(class="form-label") }}
                             {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
                             {% if form.password.errors %}

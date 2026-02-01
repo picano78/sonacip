@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Calendario Griglia | SONACIP{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-1"><i class="bi bi-grid-3x3-gap"></i> Calendario (Griglia)</h1>
+      <div class="text-muted">Vista giorno/settimana con occupazione per risorsa.</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calendar.index') }}">Vista lista</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calendar.occupancy') }}">Report occupazione</a>
+      {% if can('calendar','manage') %}
+        <a class="btn btn-sm btn-dark" href="{{ url_for('calendar.create') }}"><i class="bi bi-plus-lg"></i> Nuovo evento</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <form class="row g-2 align-items-end mb-3" method="get">
+    <div class="col-md-3">
+      <label class="form-label">Data</label>
+      <input type="date" class="form-control" name="start" value="{{ start_date.strftime('%Y-%m-%d') }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Vista</label>
+      <select class="form-select" name="view">
+        <option value="day" {% if view=='day' %}selected{% endif %}>Giorno</option>
+        <option value="week" {% if view=='week' %}selected{% endif %}>Settimana</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Risorsa/Palestra</label>
+      <select class="form-select" name="facility_id">
+        <option value="">Tutte</option>
+        {% for f in facilities %}
+          <option value="{{ f.id }}" {{ 'selected' if facility_id == f.id else '' }}>{{ f.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <button class="btn btn-outline-secondary w-100" type="submit"><i class="bi bi-funnel"></i> Applica</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle">
+      <thead>
+        <tr>
+          <th style="width:90px;">Ora</th>
+          {% for d in days %}
+            <th>
+              <div class="fw-semibold">{{ d.strftime('%a %d/%m') }}</div>
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in hours %}
+          <tr>
+            <td class="text-muted small">{{ '%02d:00'|format(h) }}</td>
+            {% for d in days %}
+              <td style="min-width:220px;">
+                {% for ev in grid_map.get((d, h), []) %}
+                  <a class="text-decoration-none" href="{{ url_for('calendar.detail', event_id=ev.id) }}">
+                    <span class="badge d-inline-flex align-items-center gap-1 mb-1"
+                          style="background-color: {{ ev.color or '#212529' }}; color: #fff;">
+                      <span>{{ ev.start_datetime.strftime('%H:%M') }}–{{ ev.end_datetime.strftime('%H:%M') }}</span>
+                      <span class="text-uppercase">{{ ev.event_type }}</span>
+                    </span>
+                    <div class="small fw-semibold text-dark">{{ ev.title }}</div>
+                    <div class="small text-muted">
+                      {% if ev.facility %}{{ ev.facility.name }}{% elif ev.location_text %}{{ ev.location_text }}{% endif %}
+                    </div>
+                  </a>
+                  <hr class="my-2">
+                {% endfor %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

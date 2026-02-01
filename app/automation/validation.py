@@ -130,20 +130,22 @@ def validate_action_schema(action: Dict[str, Any]) -> Tuple[bool, str]:
     if atype == 'notify':
         if 'user_id' not in action:
             return False, 'notify action requires user_id'
-        if not isinstance(action['user_id'], int):
-            return False, 'notify user_id must be an integer'
+        if not isinstance(action['user_id'], (int, str)):
+            return False, 'notify user_id must be an integer or template string'
     
     elif atype == 'email':
         if 'user_id' not in action:
             return False, 'email action requires user_id'
-        if not isinstance(action['user_id'], int):
-            return False, 'email user_id must be an integer'
+        if not isinstance(action['user_id'], (int, str)):
+            return False, 'email user_id must be an integer or template string'
         if 'subject' in action and not isinstance(action['subject'], str):
             return False, 'email subject must be a string'
     
     elif atype == 'social_post':
         if 'user_id' not in action:
             return False, 'social_post action requires user_id'
+        if not isinstance(action['user_id'], (int, str)):
+            return False, 'social_post user_id must be an integer or template string'
         if 'content' in action and not isinstance(action['content'], str):
             return False, 'social_post content must be a string'
     
@@ -156,8 +158,18 @@ def validate_action_schema(action: Dict[str, Any]) -> Tuple[bool, str]:
     elif atype == 'task_create':
         if 'title' not in action:
             return False, 'task_create action requires title'
-        if 'assigned_to' in action and not isinstance(action['assigned_to'], int):
-            return False, 'task_create assigned_to must be an integer'
+        if 'assigned_to' in action and not isinstance(action['assigned_to'], (int, str)):
+            return False, 'task_create assigned_to must be an integer or template string'
+
+    elif atype == 'whatsapp':
+        if 'user_id' not in action:
+            return False, 'whatsapp action requires user_id'
+        if not isinstance(action['user_id'], (int, str)):
+            return False, 'whatsapp user_id must be an integer or template string'
+        if 'message' not in action:
+            return False, 'whatsapp action requires message'
+        if not isinstance(action['message'], str):
+            return False, 'whatsapp message must be a string'
     
     else:
         return False, f'Unknown action type: {atype}'

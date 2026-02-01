@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Navbar{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h1 class="h4 mb-3">Navbar (Super Admin)</h1>
+  <div class="card">
+    <div class="card-body">
+      <p class="text-muted">
+        JSON array di link. Campi supportati: <code>label</code>, <code>endpoint</code>, <code>icon</code>, <code>resource</code>, <code>action</code>.
+        Se <code>resource/action</code> sono presenti, il link appare solo se l’utente ha quel permesso.
+      </p>
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.links_json.label(class='form-label') }}
+          {{ form.links_json(class='form-control', rows=16) }}
+        </div>
+        <button class="btn btn-primary" type="submit">Salva</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Torna al pannello</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

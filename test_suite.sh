@@ -6,6 +6,9 @@ echo "🧪 SONACIP - Test Suite"
 echo "======================="
 echo ""
 
+# Ensure required env for app factory
+export SECRET_KEY="${SECRET_KEY:-test-secret-key}"
+
 # Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'

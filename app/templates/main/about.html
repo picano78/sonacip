@@ -1,26 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}Chi Siamo - SONACIP{% endblock %}
+{% block title %}{{ page.title if page and page.title else 'Chi Siamo - SONACIP' }}{% endblock %}
 
 {% block content %}
 <div class="container my-5">
-    <h1 class="mb-4">Chi Siamo</h1>
+    <h1 class="mb-4">{{ page.hero_title if page and page.hero_title else 'Chi Siamo' }}</h1>
     
     <div class="row">
         <div class="col-lg-8">
-            <p class="lead">SONACIP è la piattaforma completa per la gestione delle società sportive dilettantistiche.</p>
-            
-            <h3 class="mt-4">La Nostra Missione</h3>
-            <p>Fornire uno strumento moderno, efficiente e professionale per gestire ogni aspetto dell'attività sportiva.</p>
-            
-            <h3 class="mt-4">Cosa Offriamo</h3>
-            <ul>
-                <li>Gestione completa di società, staff e atleti</li>
-                <li>Sistema di eventi e convocazioni</li>
-                <li>Social network dedicato allo sport</li>
-                <li>Notifiche in tempo reale</li>
-                <li>Backup e sicurezza dei dati</li>
-            </ul>
+            {% if page and page.body_html %}
+              {{ page.body_html|safe }}
+            {% else %}
+              <p class="lead">SONACIP è la piattaforma completa per la gestione delle società sportive dilettantistiche.</p>
+              
+              <h3 class="mt-4">La Nostra Missione</h3>
+              <p>Fornire uno strumento moderno, efficiente e professionale per gestire ogni aspetto dell'attività sportiva.</p>
+              
+              <h3 class="mt-4">Cosa Offriamo</h3>
+              <ul>
+                  <li>Gestione completa di società, staff e atleti</li>
+                  <li>Sistema di eventi e convocazioni</li>
+                  <li>Social network dedicato allo sport</li>
+                  <li>Notifiche in tempo reale</li>
+                  <li>Backup e sicurezza dei dati</li>
+              </ul>
+            {% endif %}
         </div>
     </div>
 </div>

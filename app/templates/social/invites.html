@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Inviti{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h1 class="h4 mb-3"><i class="bi bi-person-plus"></i> Inviti</h1>
+
+  <div class="card">
+    <div class="card-body">
+      {% if invites %}
+        <div class="list-group">
+          {% for inv in invites %}
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="fw-semibold">{{ inv.society.legal_name if inv.society else ('Società #' ~ inv.society_id) }}</div>
+                  <div class="text-muted small">
+                    Ruolo proposto: <strong>{{ inv.requested_role }}</strong>
+                    {% if inv.note %} — {{ inv.note }}{% endif %}
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <form method="post" action="{{ url_for('social.respond_invite', invite_id=inv.id, action='accept') }}">
+                    {{ csrf_token() }}
+                    <button class="btn btn-sm btn-success" type="submit">Accetta</button>
+                  </form>
+                  <form method="post" action="{{ url_for('social.respond_invite', invite_id=inv.id, action='reject') }}">
+                    {{ csrf_token() }}
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Rifiuta</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-info mb-0">Nessun invito in attesa.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+

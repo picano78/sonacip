@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Modifica Pagina{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h1 class="h4 mb-3">Modifica Pagina (Super Admin)</h1>
+  <div class="card">
+    <div class="card-body">
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+          <div class="col-12">
+            {{ form.slug.label(class='form-label') }}
+            {{ form.slug(class='form-control', placeholder='main.index') }}
+          </div>
+          <div class="col-12">
+            {{ form.title.label(class='form-label') }}
+            {{ form.title(class='form-control') }}
+          </div>
+          <div class="col-md-6">
+            {{ form.hero_title.label(class='form-label') }}
+            {{ form.hero_title(class='form-control') }}
+          </div>
+          <div class="col-md-6">
+            {{ form.hero_subtitle.label(class='form-label') }}
+            {{ form.hero_subtitle(class='form-control') }}
+          </div>
+          <div class="col-12">
+            {{ form.body_html.label(class='form-label') }}
+            {{ form.body_html(class='form-control', rows=12) }}
+            <div class="form-text">HTML renderizzato nella pagina con <code>|safe</code>.</div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button class="btn btn-primary" type="submit">Salva</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('admin.pages') }}">Annulla</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -9,6 +9,7 @@ from app import db, mail
 from app.models import Automation, AutomationRule, AutomationRun, Notification, User
 from app.automation.validation import evaluate_condition, validate_action_schema
 from flask_mail import Message
+from jinja2 import Template
 
 
 def execute_automations(trigger_type, society_id=None, payload=None):
@@ -43,7 +44,11 @@ def execute_rules(event_type: str, payload: Dict[str, Any] = None):
     if not event_type:
         return []
     payload = payload or {}
-    rules = AutomationRule.query.filter_by(event_type=event_type, is_active=True).all()
+    # Accept both legacy underscore and dot-separated event types.
+    candidates = {event_type}
+    candidates.add(event_type.replace('_', '.'))
+    candidates.add(event_type.replace('.', '_'))
+    rules = AutomationRule.query.filter(AutomationRule.event_type.in_(list(candidates)), AutomationRule.is_active == True).all()
     executed_runs: List[AutomationRun] = []
 
     for rule in rules:
@@ -160,25 +165,63 @@ def _apply_actions(actions: List[Dict[str, Any]], payload: Dict[str, Any]):
             _action_webhook(action, payload)
         elif atype == 'task_create':
             _action_task_create(action, payload)
+        elif atype == 'whatsapp':
+            _action_whatsapp(action, payload)
+
+
+def _render_template(value: Any, payload: Dict[str, Any]) -> Any:
+    """Render strings using either Jinja2 ({{ }}) or str.format ({key})."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return value
+    s = value
+    try:
+        if "{{" in s and "}}" in s:
+            return Template(s).render(**payload)
+    except Exception:
+        # Fall back to .format
+        pass
+    try:
+        class _SafeDict(dict):
+            def __missing__(self, key):
+                return "{" + key + "}"
+        return s.format_map(_SafeDict(payload))
+    except Exception:
+        return s
+
+
+def _resolve_int(value: Any, payload: Dict[str, Any]) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        rendered = _render_template(value, payload)
+        try:
+            return int(str(rendered).strip())
+        except Exception:
+            return None
+    return None
 
 
 def _action_notify(action: Dict[str, Any], payload: Dict[str, Any]):
-    user_id = action.get('user_id')
+    user_id = _resolve_int(action.get('user_id'), payload)
     if not user_id:
         return
     notification = Notification(
         user_id=user_id,
-        title=action.get('title') or 'Automazione',
-        message=action.get('message') or str(payload),
+        title=_render_template(action.get('title') or 'Automazione', payload),
+        message=_render_template(action.get('message') or str(payload), payload),
         notification_type='automation'
     )
     db.session.add(notification)
 
 
 def _action_email(action: Dict[str, Any], payload: Dict[str, Any]):
-    to_user_id = action.get('user_id')
-    subject = action.get('subject') or 'Automazione'
-    body = action.get('body') or json.dumps(payload)
+    to_user_id = _resolve_int(action.get('user_id'), payload)
+    subject = _render_template(action.get('subject') or 'Automazione', payload)
+    body = _render_template(action.get('body') or json.dumps(payload), payload)
     if not to_user_id:
         return
     user = User.query.get(to_user_id)
@@ -194,8 +237,8 @@ def _action_email(action: Dict[str, Any], payload: Dict[str, Any]):
 
 def _action_social_post(action: Dict[str, Any], payload: Dict[str, Any]):
     from app.models import Post
-    user_id = action.get('user_id')
-    content = action.get('content') or f"Aggiornamento automatico: {payload}"
+    user_id = _resolve_int(action.get('user_id'), payload)
+    content = _render_template(action.get('content') or f"Aggiornamento automatico: {payload}", payload)
     if not user_id:
         return
     user = User.query.get(user_id)
@@ -242,17 +285,32 @@ def _action_task_create(action: Dict[str, Any], payload: Dict[str, Any]):
     from app.models import Task
     
     task = Task(
-        title=action.get('title'),
-        description=action.get('description', ''),
-        assigned_to=action.get('assigned_to'),
+        title=_render_template(action.get('title'), payload),
+        description=_render_template(action.get('description', ''), payload),
+        assigned_to=_resolve_int(action.get('assigned_to'), payload),
         status=action.get('status', 'todo'),
         priority=action.get('priority', 'medium'),
         due_date=action.get('due_date'),
-        created_by=action.get('created_by'),
-        project_id=action.get('project_id')
+        created_by=_resolve_int(action.get('created_by'), payload),
+        project_id=_resolve_int(action.get('project_id'), payload),
     )
     db.session.add(task)
     current_app.logger.info(
         f"Task created via automation: {task.title}",
         extra={'task_title': task.title, 'assigned_to': task.assigned_to}
     )
+
+
+def _action_whatsapp(action: Dict[str, Any], payload: Dict[str, Any]):
+    """Send WhatsApp message via configured provider."""
+    from app.notifications.utils import send_whatsapp
+    to_user_id = _resolve_int(action.get('user_id'), payload)
+    message = _render_template(action.get('message') or json.dumps(payload), payload)
+    if not to_user_id:
+        return
+    user = User.query.get(to_user_id)
+    if not user or not user.phone:
+        return
+    ok = send_whatsapp(user.phone, message)
+    if not ok:
+        raise RuntimeError("WhatsApp not configured or sending failed")

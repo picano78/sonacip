@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Pagamento{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="section-hero mb-4">
+    <div class="pill mb-2"><i class="bi bi-credit-card"></i> Pagamento</div>
+    <h1 class="h4 mb-0">Completa il pagamento</h1>
+    <p class="text-muted mb-0">Puoi applicare un coupon per sconti o attivazioni.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="mb-3">
+        <div class="fw-semibold">Piano</div>
+        <div>{{ subscription.plan.name }} — {{ subscription.billing_cycle }}</div>
+      </div>
+      <div class="mb-3">
+        <div class="fw-semibold">Importo</div>
+        <div>€{{ "%.2f"|format(subscription.amount or 0) }}</div>
+      </div>
+
+      <form method="post" action="{{ url_for('subscription.process_payment', subscription_id=subscription.id) }}">
+        {{ csrf_token() }}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Metodo</label>
+            <select class="form-select" name="payment_method">
+              <option value="card">Carta (test)</option>
+              <option value="bank_transfer">Bonifico (test)</option>
+              <option value="paypal">PayPal (test)</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Coupon (opzionale)</label>
+            <input class="form-control" name="coupon_code" placeholder="ES. SONACIP2026">
+          </div>
+        </div>
+        <div class="mt-3 d-flex gap-2">
+          <button class="btn btn-primary" type="submit">Paga / Attiva</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('subscription.plans') }}">Torna ai piani</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

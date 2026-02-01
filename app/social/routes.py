@@ -8,12 +8,27 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
 from app import db
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
+from app.social.society_forms import SocietyInviteForm
 from app.social.utils import save_picture
-from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment, SocialSetting, TournamentMatch
+from app.models import (
+    User,
+    Post,
+    Comment,
+    Notification,
+    AuditLog,
+    AdsSetting,
+    Payment,
+    SocialSetting,
+    TournamentMatch,
+    SocietyInvite,
+    SocietyMembership,
+    Permission,
+    SocietyRolePermission,
+)
 from app.cache import get_cache
 from app.utils import permission_required, check_permission
+from app.utils import log_action
 from datetime import datetime, timedelta
-from datetime import datetime
 import os
 
 bp = Blueprint('social', __name__, url_prefix='/social')
@@ -38,6 +53,31 @@ def feed():
     cached_ids = cache.get(cache_key)
 
     start = (page - 1) * per_page
+    # Visibility scoping (athletes see only relevant communications)
+    admin_access = check_permission(current_user, 'admin', 'access')
+    scope = current_user.get_primary_society()
+    scope_id = scope.id if scope else None
+    followed_ids = set()
+    try:
+        followed_ids = {u.id for u in current_user.followed.all()}
+    except Exception:
+        followed_ids = set()
+
+    def is_visible(p: Post) -> bool:
+        if admin_access:
+            return True
+        if p.user_id == current_user.id:
+            return True
+        if (p.audience or 'public') == 'public':
+            return True
+        if (p.audience or '') == 'direct' and p.target_user_id == current_user.id:
+            return True
+        if (p.audience or '') == 'society' and scope_id and p.society_id == scope_id:
+            return True
+        if (p.audience or '') == 'followers' and p.user_id in followed_ids:
+            return True
+        return False
+
     if cached_ids is None:
         # Get posts from followed users + own posts
         try:
@@ -62,6 +102,8 @@ def feed():
             if p.id not in seen:
                 combined.append(p)
                 seen.add(p.id)
+        # Apply visibility filter in-memory (keeps existing query behavior stable)
+        combined = [p for p in combined if is_visible(p)]
 
     boosted_types = []
     muted_types = []
@@ -101,7 +143,7 @@ def feed():
         return score
     if cached_ids is None:
         sorted_posts = sorted(combined, key=engagement_score, reverse=True)
-        total = posts_query.count() if 'posts_query' in locals() else len(sorted_posts)
+        total = len(sorted_posts)
         end = start + per_page
         page_ids = [p.id for p in sorted_posts[start:end]] if start < len(sorted_posts) else []
         cache.set(cache_key, {'ids': page_ids, 'total': total}, ttl=cache_ttl)
@@ -164,10 +206,20 @@ def create_post():
         return redirect(url_for('social.feed'))
     
     if form.validate_on_submit():
+        # Map legacy `is_public` to explicit audience rules
+        audience = 'public' if form.is_public.data else 'followers'
+        society_id = None
+        if current_user.is_society():
+            audience = 'public' if form.is_public.data else 'society'
+            society_id = current_user.id
+
         post = Post(
             user_id=current_user.id,
             content=form.content.data,
-            is_public=form.is_public.data
+            is_public=form.is_public.data,
+            audience=audience,
+            society_id=society_id,
+            post_type='official' if current_user.is_society() else 'personal',
         )
         
         # Handle image upload
@@ -591,11 +643,341 @@ def society_dashboard():
         'posts_count': Post.query.filter_by(user_id=current_user.id).count()
     }
     
-    return render_template('social/society_dashboard.html',
-                         staff=staff,
-                         athletes=athletes,
-                         events=events,
-                         stats=stats)
+    # Pending invites
+    invites = SocietyInvite.query.filter_by(society_id=society.id, status='pending').order_by(SocietyInvite.created_at.desc()).all()
+    # Memberships (canonical)
+    memberships = SocietyMembership.query.filter_by(society_id=society.id, status='active').order_by(SocietyMembership.created_at.desc()).all()
+
+    # Audit logs scoped to this society
+    recent_audit = AuditLog.query.filter_by(society_id=society.id).order_by(AuditLog.created_at.desc()).limit(20).all()
+
+    invite_form = SocietyInviteForm()
+
+    return render_template(
+        'social/society_dashboard.html',
+        staff=staff,
+        athletes=athletes,
+        events=events,
+        stats=stats,
+        invites=invites,
+        memberships=memberships,
+        recent_audit=recent_audit,
+        invite_form=invite_form,
+    )
+
+
+@bp.route('/society/invite', methods=['POST'])
+@login_required
+def society_invite():
+    """Society invites a user to join with a specific role."""
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    form = SocietyInviteForm()
+    if not form.validate_on_submit():
+        flash('Dati invito non validi.', 'danger')
+        return redirect(url_for('social.society_dashboard'))
+
+    q = (form.user_query.data or '').strip()
+    user = User.query.filter((User.email == q) | (User.username == q)).first()
+    if not user:
+        flash('Utente non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+    if user.id == current_user.id:
+        flash('Non puoi invitare te stesso.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    # Create invite
+    existing = SocietyInvite.query.filter_by(society_id=society.id, invited_user_id=user.id, status='pending').first()
+    if existing:
+        flash('Invito già inviato (in attesa).', 'info')
+        return redirect(url_for('social.society_dashboard'))
+
+    inv = SocietyInvite(
+        society_id=society.id,
+        invited_user_id=user.id,
+        invited_by=current_user.id,
+        requested_role=form.requested_role.data,
+        status='pending',
+        note=form.note.data or None,
+    )
+    db.session.add(inv)
+
+    notif = Notification(
+        user_id=user.id,
+        title='Invito da società',
+        message=f'{current_user.get_full_name()} ti ha invitato come {form.requested_role.data}.',
+        notification_type='system',
+        link=url_for('social.my_invites'),
+    )
+    db.session.add(notif)
+    db.session.commit()
+
+    log_action('society_invite', 'SocietyInvite', inv.id, f'Invited {user.id} role={inv.requested_role}', society_id=society.id)
+    flash('Invito inviato.', 'success')
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/society/permissions', methods=['GET', 'POST'])
+@login_required
+def society_permissions():
+    """Manage society-scoped role permissions (view/edit powers per role)."""
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    managed_roles = ['dirigente', 'coach', 'staff', 'atleta']
+    managed_perms = Permission.query.filter(
+        Permission.resource.in_(['social', 'events', 'calendar', 'crm', 'tasks', 'tournaments', 'society', 'users'])
+    ).order_by(Permission.resource.asc(), Permission.action.asc()).all()
+
+    if request.method == 'POST':
+        # Parse tri-state selects: inherit/allow/deny
+        changed = 0
+        for role_name in managed_roles:
+            for perm in managed_perms:
+                key = f"p__{role_name}__{perm.id}"
+                if key not in request.form:
+                    continue
+                val = (request.form.get(key) or 'inherit').strip()
+                row = SocietyRolePermission.query.filter_by(
+                    society_id=society.id, role_name=role_name, permission_id=perm.id
+                ).first()
+                if val == 'inherit':
+                    if row:
+                        db.session.delete(row)
+                        changed += 1
+                    continue
+                if val not in ('allow', 'deny'):
+                    continue
+                if not row:
+                    row = SocietyRolePermission(
+                        society_id=society.id,
+                        role_name=role_name,
+                        permission_id=perm.id,
+                        effect=val,
+                        created_by=current_user.id,
+                    )
+                    db.session.add(row)
+                    changed += 1
+                else:
+                    if row.effect != val:
+                        row.effect = val
+                        changed += 1
+
+        db.session.commit()
+        log_action('society_permissions_update', 'Society', society.id, f'Changed={changed}', society_id=society.id)
+        flash('Permessi aggiornati.', 'success')
+        return redirect(url_for('social.society_permissions'))
+
+    overrides = SocietyRolePermission.query.filter_by(society_id=society.id).all()
+    override_map = {(o.role_name, o.permission_id): o.effect for o in overrides}
+
+    return render_template(
+        'social/society_permissions.html',
+        society=society,
+        roles=managed_roles,
+        permissions=managed_perms,
+        override_map=override_map,
+    )
+
+
+@bp.route('/society/members/<int:user_id>/set-role', methods=['POST'])
+@login_required
+def society_set_member_role(user_id):
+    """Change a member role within the current society."""
+    if not check_permission(current_user, 'society', 'manage_staff'):
+        flash('Permesso negato.', 'danger')
+        return redirect(url_for('social.society_dashboard'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    role_name = (request.form.get('role_name') or '').strip()
+    if role_name not in ('atleta', 'coach', 'staff', 'dirigente'):
+        flash('Ruolo non valido.', 'danger')
+        return redirect(url_for('social.society_dashboard'))
+
+    membership = SocietyMembership.query.filter_by(society_id=society.id, user_id=user_id, status='active').first()
+    if not membership:
+        flash('Membro non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    member = User.query.get_or_404(user_id)
+    membership.role_name = role_name
+    membership.updated_by = current_user.id
+
+    # Keep legacy linkages aligned for now (until full migration off legacy fields)
+    if role_name == 'atleta':
+        member.role = 'atleta'
+        member.athlete_society_id = society.id
+        member.society_id = None
+        member.staff_role = None
+    elif role_name == 'coach':
+        member.role = 'coach'
+        member.society_id = society.id
+        member.athlete_society_id = None
+        member.staff_role = 'coach'
+    elif role_name == 'dirigente':
+        member.role = 'staff'
+        member.society_id = society.id
+        member.athlete_society_id = None
+        member.staff_role = 'dirigente'
+    else:
+        member.role = 'staff'
+        member.society_id = society.id
+        member.athlete_society_id = None
+        member.staff_role = 'staff'
+
+    db.session.commit()
+    log_action('society_member_role_change', 'User', member.id, f'role={role_name}', society_id=society.id)
+    flash('Ruolo aggiornato.', 'success')
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/society/members/<int:user_id>/remove', methods=['POST'])
+@login_required
+def society_remove_member(user_id):
+    """Remove/deactivate a member from the current society."""
+    if not check_permission(current_user, 'society', 'manage_staff'):
+        flash('Permesso negato.', 'danger')
+        return redirect(url_for('social.society_dashboard'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    membership = SocietyMembership.query.filter_by(society_id=society.id, user_id=user_id, status='active').first()
+    if not membership:
+        flash('Membro non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    member = User.query.get_or_404(user_id)
+    membership.status = 'inactive'
+    membership.updated_by = current_user.id
+
+    # Clear legacy links if they match this society
+    if member.society_id == society.id:
+        member.society_id = None
+    if member.athlete_society_id == society.id:
+        member.athlete_society_id = None
+    member.staff_role = None
+
+    # If the user has no other active memberships, revert to appassionato
+    still_active = SocietyMembership.query.filter(
+        SocietyMembership.user_id == member.id,
+        SocietyMembership.status == 'active',
+    ).count()
+    if still_active == 0 and not member.is_society():
+        member.role = 'appassionato'
+
+    db.session.add(
+        Notification(
+            user_id=member.id,
+            title='Rimozione da società',
+            message=f'Sei stato rimosso dalla società {society.legal_name}.',
+            notification_type='system',
+            link=url_for('main.dashboard'),
+        )
+    )
+
+    db.session.commit()
+    log_action('society_member_remove', 'User', member.id, 'removed', society_id=society.id)
+    flash('Membro rimosso.', 'success')
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/invites')
+@login_required
+def my_invites():
+    """List invites received by the current user."""
+    invites = SocietyInvite.query.filter_by(invited_user_id=current_user.id, status='pending').order_by(SocietyInvite.created_at.desc()).all()
+    return render_template('social/invites.html', invites=invites)
+
+
+@bp.route('/invites/<int:invite_id>/<string:action>', methods=['POST'])
+@login_required
+def respond_invite(invite_id, action):
+    """Accept/reject an invite."""
+    inv = SocietyInvite.query.get_or_404(invite_id)
+    if inv.invited_user_id != current_user.id:
+        flash('Invito non valido.', 'danger')
+        return redirect(url_for('social.my_invites'))
+
+    if action not in ('accept', 'reject'):
+        flash('Azione non valida.', 'danger')
+        return redirect(url_for('social.my_invites'))
+
+    if inv.status != 'pending':
+        flash('Invito già gestito.', 'info')
+        return redirect(url_for('social.my_invites'))
+
+    society_id = inv.society_id
+
+    if action == 'reject':
+        inv.status = 'rejected'
+        inv.responded_at = datetime.utcnow()
+        db.session.commit()
+        log_action('society_invite_reject', 'SocietyInvite', inv.id, f'Rejected invite role={inv.requested_role}', society_id=society_id)
+        flash('Invito rifiutato.', 'success')
+        return redirect(url_for('social.my_invites'))
+
+    # Accept: activate membership + update user role fields
+    requested = inv.requested_role
+    membership = SocietyMembership.query.filter_by(society_id=society_id, user_id=current_user.id).first()
+    if not membership:
+        membership = SocietyMembership(
+            society_id=society_id,
+            user_id=current_user.id,
+            role_name=requested,
+            status='active',
+            created_by=inv.invited_by,
+        )
+        db.session.add(membership)
+    else:
+        membership.role_name = requested
+        membership.status = 'active'
+        membership.updated_by = inv.invited_by
+
+    # Update the user's primary role + society linkage
+    if requested == 'atleta':
+        current_user.role = 'atleta'
+        current_user.athlete_society_id = society_id
+        current_user.society_id = None
+        current_user.staff_role = None
+    elif requested == 'coach':
+        current_user.role = 'coach'
+        current_user.society_id = society_id
+        current_user.athlete_society_id = None
+        current_user.staff_role = 'coach'
+    elif requested == 'dirigente':
+        current_user.role = 'staff'
+        current_user.society_id = society_id
+        current_user.athlete_society_id = None
+        current_user.staff_role = 'dirigente'
+    else:  # staff
+        current_user.role = 'staff'
+        current_user.society_id = society_id
+        current_user.athlete_society_id = None
+        current_user.staff_role = 'staff'
+
+    inv.status = 'accepted'
+    inv.responded_at = datetime.utcnow()
+    db.session.commit()
+
+    log_action('society_invite_accept', 'SocietyInvite', inv.id, f'Accepted invite role={requested}', society_id=society_id)
+    flash('Invito accettato. Ruolo aggiornato.', 'success')
+    return redirect(url_for('main.dashboard'))
 
 
 @bp.route('/explore')

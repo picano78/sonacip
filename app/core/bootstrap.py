@@ -2,7 +2,6 @@
 import importlib
 import os
 import pkgutil
-import sys
 from typing import Optional
 
 from sqlalchemy import inspect, text
@@ -180,11 +179,13 @@ def discover_and_register_modules(app, strict: bool = False) -> None:
     if not modules_path or not os.path.isdir(modules_path):
         return
 
-    if modules_path not in sys.path:
-        sys.path.append(modules_path)
-
     package_import = 'app.modules'
+    # `app/modules/*` currently contains shims for core blueprints too.
+    # Never attempt to re-register core modules here.
+    core_module_names = set(PREFIX_OVERRIDES.keys())
     for _, name, _ in pkgutil.iter_modules([modules_path]):
+        if name in core_module_names:
+            continue
         module_name = f"{package_import}.{name}"
         try:
             module = importlib.import_module(module_name)

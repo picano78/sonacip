@@ -7,11 +7,19 @@ Type=simple
 User=sonacip
 Group=sonacip
 WorkingDirectory=/opt/sonacip
-EnvironmentFile=-/opt/sonacip/.env
+EnvironmentFile=/opt/sonacip/.env
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/sonacip/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 wsgi:app
-Restart=always
+Restart=on-failure
 RestartSec=5
+
+# Hardening (keep writable paths explicit)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/sonacip
+UMask=0027
 
 [Install]
 WantedBy=multi-user.target

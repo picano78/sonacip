@@ -14,6 +14,69 @@ def check_permission(user, resource, action, society_id=None):
     if user.is_admin():
         return True
 
+    # When scope is provided, resolve society membership + per-society overrides.
+    if society_id:
+        # Must be in scope
+        if not user.can_access_society(society_id):
+            return False
+        try:
+            from app.models import Permission, SocietyRolePermission
+        except Exception:
+            return False
+
+        perm = Permission.query.filter_by(resource=resource, action=action).first()
+        if not perm:
+            return False
+
+        role_name = None
+        try:
+            role_name = user.get_society_role(society_id)
+        except Exception:
+            role_name = None
+
+        def _default_allows(rn: str | None) -> bool:
+            # Minimal, safe defaults. Società can override via SocietyRolePermission.
+            if rn in ('societa', 'society_admin'):
+                return True
+            if rn in ('dirigente', 'coach', 'staff'):
+                # operational roles
+                if (resource, action) in {
+                    ('social', 'comment'),
+                    ('social', 'post'),
+                    ('events', 'view'),
+                    ('events', 'create'),
+                    ('events', 'manage'),
+                    ('calendar', 'view'),
+                    ('calendar', 'manage'),
+                    ('crm', 'access'),
+                    ('crm', 'manage'),
+                    ('tasks', 'manage'),
+                    ('tournaments', 'view'),
+                    ('tournaments', 'manage'),
+                    ('society', 'manage_staff'),
+                }:
+                    return True
+            if rn in ('atleta', 'athlete'):
+                if (resource, action) in {
+                    ('social', 'comment'),
+                    ('events', 'view'),
+                    ('calendar', 'view'),
+                    ('tournaments', 'view'),
+                }:
+                    return True
+            return False
+
+        # Explicit overrides for this society-role-permission
+        if role_name:
+            ov = SocietyRolePermission.query.filter_by(
+                society_id=society_id, role_name=role_name, permission_id=perm.id
+            ).first()
+            if ov:
+                return True if ov.effect == 'allow' else False
+
+        # Fallback to defaults or global role permission surface
+        return _default_allows(role_name) or user.has_permission(resource, action)
+
     try:
         allowed = user.has_permission(resource, action)
     except Exception:
@@ -21,9 +84,6 @@ def check_permission(user, resource, action, society_id=None):
 
     if not allowed:
         return False
-
-    if society_id:
-        return user.can_access_society(society_id)
 
     return True
 
@@ -210,7 +270,7 @@ def safe_get_or_404(model, entity_id, error_message=None):
     return entity
 
 
-def log_action(action, entity_type=None, entity_id=None, details=None):
+def log_action(action, entity_type=None, entity_id=None, details=None, society_id=None):
     """
     Log an action to the audit log
     """
@@ -221,6 +281,7 @@ def log_action(action, entity_type=None, entity_id=None, details=None):
     if current_user.is_authenticated:
         log = AuditLog(
             user_id=current_user.id,
+            society_id=society_id,
             action=action,
             entity_type=entity_type,
             entity_id=entity_id,

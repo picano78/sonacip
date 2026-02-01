@@ -5,11 +5,43 @@ Plans, subscriptions, and payment management
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Plan, Subscription, Payment, User
+from app.models import Plan, Subscription, Payment, User, Coupon, CouponRedemption
 from app.utils import admin_required, log_action, check_permission
 from datetime import datetime, timedelta
+import json
 
 bp = Blueprint('subscription', __name__, url_prefix='/subscription')
+
+def _apply_coupon(plan: Plan, amount: float, coupon_code: str | None) -> tuple[float, Coupon | None, float]:
+    """Return (final_amount, coupon, discount_amount)."""
+    if not coupon_code:
+        return amount, None, 0.0
+    code = coupon_code.strip().upper()
+    if not code:
+        return amount, None, 0.0
+
+    c = Coupon.query.filter_by(code=code, is_active=True).first()
+    if not c:
+        raise ValueError("Coupon non valido.")
+    now = datetime.utcnow()
+    if c.valid_from and now < c.valid_from:
+        raise ValueError("Coupon non ancora valido.")
+    if c.valid_until and now > c.valid_until:
+        raise ValueError("Coupon scaduto.")
+    if c.plan_id and c.plan_id != plan.id:
+        raise ValueError("Coupon non applicabile a questo piano.")
+    if c.max_redemptions is not None and (c.redeemed_count or 0) >= c.max_redemptions:
+        raise ValueError("Coupon esaurito.")
+
+    discount = 0.0
+    if c.discount_type == 'percent':
+        pct = max(0, min(int(c.discount_value or 0), 100))
+        discount = round((amount * pct) / 100.0, 2)
+    else:
+        discount = round(((c.discount_value or 0) / 100.0), 2)
+
+    final_amount = max(0.0, round(amount - discount, 2))
+    return final_amount, c, discount
 
 
 @bp.route('/plans')
@@ -176,13 +208,24 @@ def process_payment(subscription_id):
     
     # This is a placeholder - integrate with real payment gateway (Stripe, PayPal, etc.)
     payment_method = request.form.get('payment_method', 'card')
+    coupon_code = request.form.get('coupon_code') or None
+
+    amount_to_pay = float(subscription.amount or 0)
+    coupon = None
+    discount = 0.0
+    if coupon_code:
+        try:
+            amount_to_pay, coupon, discount = _apply_coupon(subscription.plan, amount_to_pay, coupon_code)
+        except ValueError as exc:
+            flash(str(exc), 'danger')
+            return redirect(url_for('subscription.payment', subscription_id=subscription.id))
     
     # Create payment record
     payment = Payment(
         user_id=current_user.id,
         society_id=society.id if society else None,
         subscription_id=subscription.id,
-        amount=subscription.amount,
+        amount=amount_to_pay,
         currency='EUR',
         status='completed',  # Would be 'pending' in real implementation
         payment_method=payment_method,
@@ -190,8 +233,27 @@ def process_payment(subscription_id):
         description=f'Payment for {subscription.plan.name} subscription',
         transaction_id=f'TEST_{datetime.utcnow().timestamp()}'  # Would come from gateway
     )
+    payment.payment_metadata = json.dumps({
+        "coupon_code": (coupon.code if coupon else None),
+        "discount": discount,
+        "original_amount": float(subscription.amount or 0),
+        "final_amount": amount_to_pay,
+    })
     
     db.session.add(payment)
+    db.session.flush()
+
+    if coupon:
+        coupon.redeemed_count = int(coupon.redeemed_count or 0) + 1
+        db.session.add(
+            CouponRedemption(
+                coupon_id=coupon.id,
+                user_id=current_user.id,
+                society_id=society.id if society else None,
+                subscription_id=subscription.id,
+                payment_id=payment.id,
+            )
+        )
     
     # Activate subscription
     subscription.status = 'active'
@@ -205,6 +267,85 @@ def process_payment(subscription_id):
     
     flash('Pagamento completato! La tua sottoscrizione è ora attiva.', 'success')
     return redirect(url_for('subscription.my_subscription'))
+
+
+@bp.route('/admin/coupons', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_coupons():
+    """Admin: Manage coupon codes."""
+    if request.method == 'POST':
+        code = (request.form.get('code') or '').strip().upper()
+        discount_type = (request.form.get('discount_type') or 'percent').strip()
+        description = (request.form.get('description') or '').strip() or None
+        discount_value = int(request.form.get('discount_value') or 0)
+        max_redemptions = request.form.get('max_redemptions')
+        plan_id = request.form.get('plan_id')
+        valid_until = request.form.get('valid_until')
+
+        if not code or len(code) < 4:
+            flash('Codice coupon non valido.', 'danger')
+            return redirect(url_for('subscription.admin_coupons'))
+        if discount_type not in ('percent', 'fixed'):
+            discount_type = 'percent'
+
+        existing = Coupon.query.filter_by(code=code).first()
+        if existing:
+            flash('Codice già esistente.', 'danger')
+            return redirect(url_for('subscription.admin_coupons'))
+
+        mr = None
+        try:
+            mr = int(max_redemptions) if max_redemptions else None
+        except Exception:
+            mr = None
+
+        pid = None
+        try:
+            pid = int(plan_id) if plan_id else None
+        except Exception:
+            pid = None
+
+        vu = None
+        try:
+            vu = datetime.strptime(valid_until, '%Y-%m-%d') if valid_until else None
+        except Exception:
+            vu = None
+
+        c = Coupon(
+            code=code,
+            description=description,
+            discount_type=discount_type,
+            discount_value=discount_value,
+            max_redemptions=mr,
+            redeemed_count=0,
+            is_active=True,
+            valid_from=datetime.utcnow(),
+            valid_until=vu,
+            plan_id=pid,
+            created_by=current_user.id,
+        )
+        db.session.add(c)
+        db.session.commit()
+        log_action('create_coupon', 'Coupon', c.id, f'code={code}')
+        flash('Coupon creato.', 'success')
+        return redirect(url_for('subscription.admin_coupons'))
+
+    coupons = Coupon.query.order_by(Coupon.created_at.desc()).limit(200).all()
+    plans = Plan.query.order_by(Plan.display_order).all()
+    return render_template('subscription/admin_coupons.html', coupons=coupons, plans=plans)
+
+
+@bp.route('/admin/coupons/<int:coupon_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def admin_coupon_toggle(coupon_id):
+    c = Coupon.query.get_or_404(coupon_id)
+    c.is_active = not bool(c.is_active)
+    db.session.commit()
+    log_action('toggle_coupon', 'Coupon', c.id, f'active={c.is_active}')
+    flash('Coupon aggiornato.', 'success')
+    return redirect(url_for('subscription.admin_coupons'))
 
 
 # ==============================
@@ -281,7 +422,13 @@ def refund_payment(payment_id):
     
     # Mark payment as refunded
     payment.status = 'refunded'
-    payment.notes = f'Refunded: {reason}'
+    try:
+        meta = json.loads(payment.payment_metadata or '{}')
+    except Exception:
+        meta = {}
+    meta['refund_reason'] = reason
+    meta['refunded_at'] = datetime.utcnow().isoformat()
+    payment.payment_metadata = json.dumps(meta)
     payment.updated_at = datetime.utcnow()
     
     # Cancel associated subscription if active

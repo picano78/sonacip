@@ -3,16 +3,14 @@ set -euo pipefail
 
 APP_DIR="${SONACIP_DIR:-/opt/sonacip}"
 APP_USER="${SONACIP_USER:-sonacip}"
-ENV_FILE="${SONACIP_ENV_FILE:-/etc/sonacip.env}"
+ENV_FILE="${SONACIP_ENV_FILE:-/opt/sonacip/.env}"
 SERVICE_FILE="/etc/systemd/system/sonacip.service"
 BACKUP_ROOT="${BACKUP_DIR:-$APP_DIR/backups/system}"
 
 usage() {
-  cat <<'EOF'
-Uso:
-  sonacip backup
-  sonacip restore <file>
-EOF
+  printf '%s\n' "Uso:"
+  printf '%s\n' "  sonacip backup"
+  printf '%s\n' "  sonacip restore <file>"
 }
 
 resolve_db_path() {
@@ -21,6 +19,14 @@ resolve_db_path() {
     env_source="$ENV_FILE"
   elif [[ -f "$APP_DIR/.env" ]]; then
     env_source="$APP_DIR/.env"
+  fi
+
+  # Load env vars when available (for BACKUP_DIR, DATABASE_URL, etc.)
+  if [[ -n "$env_source" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$env_source"
+    set +a
   fi
 
   if [[ -n "$env_source" ]]; then

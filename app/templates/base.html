@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}SONACIP{% endblock %}</title>
+    <title>
+      {% if page and page.title %}
+        {{ page.title }}
+      {% else %}
+        {% block title %}SONACIP{% endblock %}
+      {% endif %}
+    </title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,6 +17,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% if appearance and appearance.favicon_url %}
+      <link rel="icon" href="{{ appearance.favicon_url }}">
+    {% endif %}
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="{{ (appearance.primary_color if appearance else '') or '#0d6efd' }}">
@@ -30,6 +39,11 @@
         .btn-secondary { background-color: var(--secondary-color) !important; border-color: var(--secondary-color) !important; }
         a { color: var(--primary-color); }
     </style>
+    {% if site and site.custom_css %}
+    <style>
+{{ site.custom_css }}
+    </style>
+    {% endif %}
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -74,11 +88,15 @@
     <!-- Footer -->
     <footer class="bg-dark text-white mt-5 py-4">
         <div class="container text-center">
-            <p class="mb-0">&copy; 2026 SONACIP - Sistema di Gestione Sportiva</p>
-            <p class="small mb-0 text-muted">
-                <a href="{{ url_for('main.about') }}" class="text-muted">Chi Siamo</a> | 
-                <a href="{{ url_for('main.contact') }}" class="text-muted">Contatti</a>
-            </p>
+            {% if site and site.footer_html %}
+              {{ site.footer_html|safe }}
+            {% else %}
+              <p class="mb-0">&copy; 2026 SONACIP - Sistema di Gestione Sportiva</p>
+              <p class="small mb-0 text-muted">
+                  <a href="{{ url_for('main.about') }}" class="text-muted">Chi Siamo</a> |
+                  <a href="{{ url_for('main.contact') }}" class="text-muted">Contatti</a>
+              </p>
+            {% endif %}
         </div>
     </footer>
 

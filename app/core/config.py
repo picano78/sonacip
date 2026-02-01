@@ -92,6 +92,10 @@ class Config:
     # Application name
     APP_NAME = 'SONACIP'
 
+    # Bootstrap admin (used by manage.py seed)
+    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL')
+    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD')
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""
@@ -105,7 +109,7 @@ class ProductionConfig(Config):
     # PRODUCTION SAFETY: DEBUG must NEVER be True
     DEBUG = False
     TESTING = False
-    SESSION_COOKIE_SECURE = True  # Require HTTPS
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() in ['true', 'on', '1']
     # AUTO_MIGRATE_ON_STARTUP inherited from Config (respects env var)
     USE_PROXYFIX = True
     PROPAGATE_EXCEPTIONS = False

@@ -92,6 +92,10 @@ class Config:
     # Application name
     APP_NAME = 'SONACIP'
 
+    # Bootstrap admin (used by manage.py seed)
+    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL')
+    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD')
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""

@@ -69,25 +69,40 @@ sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.tx
 echo "[5/8] Scrittura environment file..."
 if [[ ! -f "$ENV_FILE" ]]; then
   SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+  ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(16))')"
   install -m 0600 /dev/null "$ENV_FILE"
   {
     printf '%s\n' "APP_ENV=production"
     printf '%s\n' "FLASK_ENV=production"
     printf '%s\n' "SECRET_KEY=$SECRET_KEY"
     printf '%s\n' "USE_PROXYFIX=true"
+    printf '%s\n' "SUPERADMIN_EMAIL=admin@example.com"
+    printf '%s\n' "SUPERADMIN_PASSWORD=$ADMIN_PASSWORD"
   } >> "$ENV_FILE"
   chown "$APP_USER":"$APP_USER" "$ENV_FILE"
+  echo "Credenziali iniziali admin:"
+  echo "  email: admin@example.com"
+  echo "  password: $ADMIN_PASSWORD"
 fi
 
 
-echo "[6/9] Installazione servizio systemd..."
+echo "[6/10] Migrazioni DB + seed iniziale..."
+set -a
+# shellcheck disable=SC1090
+. "$ENV_FILE"
+set +a
+sudo -u "$APP_USER" "$APP_DIR/venv/bin/python" "$APP_DIR/manage.py" db upgrade
+sudo -u "$APP_USER" "$APP_DIR/venv/bin/python" "$APP_DIR/manage.py" seed
+
+
+echo "[7/10] Installazione servizio systemd..."
 install -m 0644 "$APP_DIR/deploy/sonacip.service" "$SERVICE_FILE"
 
 systemctl daemon-reload
 systemctl enable sonacip.service
 
 
-echo "[7/9] Configurazione Nginx (HTTP)..."
+echo "[8/10] Configurazione Nginx (HTTP)..."
 install -m 0644 "$APP_DIR/deployment/nginx.conf" "$NGINX_SITE_AVAILABLE"
 ln -sf "$NGINX_SITE_AVAILABLE" "$NGINX_SITE_ENABLED"
 if [[ -e /etc/nginx/sites-enabled/default ]]; then
@@ -98,11 +113,11 @@ systemctl enable nginx
 systemctl restart nginx
 
 
-echo "[8/9] Installazione CLI di backup/restore..."
+echo "[9/10] Installazione CLI di backup/restore..."
 install -m 0755 "$APP_DIR/sonacip" /usr/local/bin/sonacip
 
 
-echo "[9/9] Validazione sistema..."
+echo "[10/10] Validazione sistema..."
 if ! "$APP_DIR/venv/bin/python" "$APP_DIR/system_validation.py"; then
   echo "Validazione fallita. Installazione interrotta." >&2
   exit 1

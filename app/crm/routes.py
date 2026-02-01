@@ -10,6 +10,8 @@ from app.models import Contact, Opportunity, CRMActivity, User, AuditLog, Medica
 from app.utils import permission_required, check_permission
 from datetime import datetime
 from app.utils import log_action
+from sqlalchemy.orm import joinedload
+from datetime import date, timedelta
 
 bp = Blueprint('crm', __name__, url_prefix='/crm')
 
@@ -331,8 +333,38 @@ def compliance():
         flash('Seleziona una società (scope) per gestire compliance.', 'warning')
         return redirect(url_for('crm.index'))
 
-    certificates = MedicalCertificate.query.filter_by(society_id=scope_id).order_by(MedicalCertificate.expires_on.asc()).all()
-    fees = SocietyFee.query.filter_by(society_id=scope_id).order_by(SocietyFee.due_on.asc()).all()
+    # Filters
+    cert_filter = (request.args.get('cert') or '').strip()
+    fee_filter = (request.args.get('fee') or '').strip()
+
+    cert_q = MedicalCertificate.query.options(joinedload(MedicalCertificate.user)).filter_by(society_id=scope_id)
+    fee_q = SocietyFee.query.options(joinedload(SocietyFee.user)).filter_by(society_id=scope_id)
+
+    today = date.today()
+    soon = today + timedelta(days=14)
+    if cert_filter == 'expiring':
+        cert_q = cert_q.filter(MedicalCertificate.expires_on <= soon, MedicalCertificate.status == 'valid')
+    elif cert_filter == 'expired':
+        cert_q = cert_q.filter(MedicalCertificate.expires_on < today)
+
+    if fee_filter == 'pending':
+        fee_q = fee_q.filter(SocietyFee.status == 'pending')
+    elif fee_filter == 'overdue':
+        fee_q = fee_q.filter(SocietyFee.status == 'pending', SocietyFee.due_on < today)
+
+    certificates = cert_q.order_by(MedicalCertificate.expires_on.asc()).all()
+    fees = fee_q.order_by(SocietyFee.due_on.asc()).all()
+
+    expiring_count = (
+        MedicalCertificate.query.filter_by(society_id=scope_id)
+        .filter(MedicalCertificate.status == 'valid', MedicalCertificate.expires_on <= soon, MedicalCertificate.expires_on >= today)
+        .count()
+    )
+    overdue_fees_count = (
+        SocietyFee.query.filter_by(society_id=scope_id)
+        .filter(SocietyFee.status == 'pending', SocietyFee.due_on < today)
+        .count()
+    )
 
     cert_form = MedicalCertificateForm(society_id=scope_id)
     fee_form = SocietyFeeForm(society_id=scope_id)
@@ -343,6 +375,10 @@ def compliance():
         fees=fees,
         cert_form=cert_form,
         fee_form=fee_form,
+        cert_filter=cert_filter,
+        fee_filter=fee_filter,
+        expiring_count=expiring_count,
+        overdue_fees_count=overdue_fees_count,
     )
 
 
@@ -386,6 +422,34 @@ def compliance_certificate_delete(cert_id):
     db.session.commit()
     log_action('delete_medical_certificate', 'MedicalCertificate', cert_id, 'deleted', society_id=scope_id)
     flash('Certificato eliminato.', 'success')
+    return redirect(url_for('crm.compliance'))
+
+
+@bp.route('/compliance/certificates/<int:cert_id>/update', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+def compliance_certificate_update(cert_id):
+    scope_id = _society_scope_id()
+    cert = MedicalCertificate.query.get_or_404(cert_id)
+    scoped = _enforce_scope(cert.society_id, 'crm.compliance')
+    if scoped:
+        return scoped
+
+    status = (request.form.get('status') or '').strip()
+    if status not in ('valid', 'expired', 'revoked'):
+        flash('Stato non valido.', 'danger')
+        return redirect(url_for('crm.compliance'))
+
+    try:
+        expires_on = request.form.get('expires_on') or ''
+        cert.expires_on = datetime.strptime(expires_on, '%Y-%m-%d').date()
+    except Exception:
+        pass
+
+    cert.status = status
+    db.session.commit()
+    log_action('update_medical_certificate', 'MedicalCertificate', cert.id, f'status={status}', society_id=scope_id)
+    flash('Certificato aggiornato.', 'success')
     return redirect(url_for('crm.compliance'))
 
 
@@ -439,3 +503,64 @@ def compliance_fee_delete(fee_id):
     log_action('delete_society_fee', 'SocietyFee', fee_id, 'deleted', society_id=scope_id)
     flash('Quota eliminata.', 'success')
     return redirect(url_for('crm.compliance'))
+
+
+@bp.route('/compliance/fees/<int:fee_id>/update', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+def compliance_fee_update(fee_id):
+    scope_id = _society_scope_id()
+    fee = SocietyFee.query.get_or_404(fee_id)
+    scoped = _enforce_scope(fee.society_id, 'crm.compliance')
+    if scoped:
+        return scoped
+
+    status = (request.form.get('status') or '').strip()
+    if status not in ('pending', 'paid', 'cancelled'):
+        flash('Stato non valido.', 'danger')
+        return redirect(url_for('crm.compliance'))
+
+    # Optionally update due date
+    try:
+        due_on = request.form.get('due_on') or ''
+        fee.due_on = datetime.strptime(due_on, '%Y-%m-%d').date()
+    except Exception:
+        pass
+
+    fee.status = status
+    fee.paid_at = datetime.utcnow() if status == 'paid' else None
+    db.session.commit()
+    log_action('update_society_fee', 'SocietyFee', fee.id, f'status={status}', society_id=scope_id)
+    flash('Quota aggiornata.', 'success')
+    return redirect(url_for('crm.compliance'))
+
+
+@bp.route('/compliance/export.csv')
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+def compliance_export():
+    """CSV export for compliance data."""
+    import csv
+    import io
+    from flask import Response
+
+    scope_id = _society_scope_id()
+    if not scope_id:
+        flash('Scope società non valido.', 'danger')
+        return redirect(url_for('crm.index'))
+
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(['type', 'user_id', 'user_name', 'status', 'date', 'amount_eur', 'description'])
+
+    certs = MedicalCertificate.query.options(joinedload(MedicalCertificate.user)).filter_by(society_id=scope_id).all()
+    for c in certs:
+        w.writerow(['certificate', c.user_id, c.user.get_full_name() if c.user else '', c.status, c.expires_on.isoformat(), '', ''])
+
+    fees = SocietyFee.query.options(joinedload(SocietyFee.user)).filter_by(society_id=scope_id).all()
+    for f in fees:
+        w.writerow(['fee', f.user_id, f.user.get_full_name() if f.user else '', f.status, f.due_on.isoformat(), round((f.amount_cents or 0) / 100.0, 2), f.description or ''])
+
+    resp = Response(out.getvalue(), mimetype='text/csv')
+    resp.headers['Content-Disposition'] = 'attachment; filename="sonacip_compliance.csv"'
+    return resp

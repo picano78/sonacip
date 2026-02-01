@@ -5,8 +5,9 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
 from app import db, limiter
 from app.auth.forms import LoginForm, RegistrationForm
-from app.models import User, AuditLog, Subscription, Plan
+from app.models import User, AuditLog, Subscription, Plan, Dashboard, DashboardTemplate
 from datetime import datetime
+import json
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -79,6 +80,38 @@ def register():
 
         db.session.add(user)
         db.session.commit()
+
+        # Provision a default personal dashboard for the new user
+        try:
+            tpl = DashboardTemplate.query.filter_by(role_name=form.role.data).first()
+            if not tpl:
+                tpl = DashboardTemplate.query.filter_by(role_name=None).first()
+            widgets = []
+            layout = 'grid'
+            if tpl:
+                try:
+                    widgets = json.loads(tpl.widgets or '[]')
+                except Exception:
+                    widgets = []
+                layout = tpl.layout or 'grid'
+            if not widgets:
+                widgets = [
+                    {"type": "quick_links"},
+                    {"type": "stats"},
+                    {"type": "recent_notifications"},
+                ]
+            dash = Dashboard(
+                name='Il mio cruscotto',
+                description='Dashboard personale',
+                user_id=user.id,
+                widgets=json.dumps(widgets),
+                layout=layout,
+                is_default=True,
+            )
+            db.session.add(dash)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # Auto-attach free plan subscription for individuals
         free_plan = Plan.query.filter_by(slug='free').first()

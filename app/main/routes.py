@@ -1,9 +1,11 @@
 """
 Main routes
 """
-from flask import Blueprint, render_template, redirect, url_for
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import current_user, login_required
+from app import db
 from app.utils import check_permission
+from app.main.forms import DashboardEditForm
 
 bp = Blueprint('main', __name__, url_prefix='')
 
@@ -37,9 +39,131 @@ def healthz():
 @bp.route('/dashboard')
 @login_required
 def dashboard():
-    """User dashboard - redirect to appropriate view"""
-    if check_permission(current_user, 'admin', 'access'):
-        return redirect(url_for('admin.dashboard'))
-    if check_permission(current_user, 'society', 'manage'):
-        return redirect(url_for('social.society_dashboard'))
-    return redirect(url_for('social.feed'))
+    """User dashboard (personal, configurable)."""
+    from app.models import Dashboard, DashboardTemplate, Notification, Message, Post, Event, Task
+    import json
+
+    dash = Dashboard.query.filter_by(user_id=current_user.id, is_default=True).first()
+    if not dash:
+        dash = Dashboard.query.filter_by(user_id=current_user.id).order_by(Dashboard.id.asc()).first()
+
+    if not dash:
+        tpl = DashboardTemplate.query.filter_by(role_name=current_user.role).first()
+        if not tpl:
+            tpl = DashboardTemplate.query.filter_by(role_name=None).first()
+        widgets = []
+        layout = 'grid'
+        if tpl:
+            try:
+                widgets = json.loads(tpl.widgets or '[]')
+            except Exception:
+                widgets = []
+            layout = tpl.layout or 'grid'
+        if not widgets:
+            widgets = [
+                {"type": "quick_links"},
+                {"type": "stats"},
+                {"type": "recent_notifications"},
+            ]
+        dash = Dashboard(
+            name='Il mio cruscotto',
+            description='Dashboard personale',
+            user_id=current_user.id,
+            widgets=json.dumps(widgets),
+            layout=layout,
+            is_default=True,
+        )
+        db.session.add(dash)
+        db.session.commit()
+
+    widgets = dash.get_widgets()
+
+    # Basic data used by widgets (keep safe / fast)
+    stats = {}
+    try:
+        stats = {
+            "posts": Post.query.filter_by(user_id=current_user.id).count(),
+            "events_created": Event.query.filter_by(creator_id=current_user.id).count(),
+            "tasks_assigned": Task.query.filter_by(assigned_to=current_user.id).count(),
+            "notifications_unread": Notification.query.filter_by(user_id=current_user.id, is_read=False).count(),
+            "messages_unread": Message.query.filter_by(recipient_id=current_user.id, is_read=False).count(),
+        }
+    except Exception:
+        stats = {}
+
+    recent_notifications = []
+    try:
+        recent_notifications = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(5).all()
+    except Exception:
+        recent_notifications = []
+
+    return render_template(
+        'main/dashboard.html',
+        dashboard=dash,
+        widgets=widgets,
+        stats=stats,
+        recent_notifications=recent_notifications,
+    )
+
+
+@bp.route('/dashboard/edit', methods=['GET', 'POST'])
+@login_required
+def edit_dashboard():
+    """Edit the current user's default dashboard."""
+    from app.models import Dashboard, DashboardTemplate
+    import json
+
+    dash = Dashboard.query.filter_by(user_id=current_user.id, is_default=True).first()
+    if not dash:
+        dash = Dashboard.query.filter_by(user_id=current_user.id).order_by(Dashboard.id.asc()).first()
+    if not dash:
+        # Force creation by visiting /dashboard first
+        return redirect(url_for('main.dashboard'))
+
+    form = DashboardEditForm()
+    if request.method == 'GET':
+        form.name.data = dash.name
+        form.widgets.data = dash.widgets
+
+    if form.validate_on_submit():
+        try:
+            parsed = json.loads(form.widgets.data or '[]')
+            if not isinstance(parsed, list):
+                raise ValueError('Widgets must be a JSON array')
+        except Exception as exc:
+            flash(f'JSON non valido: {exc}', 'danger')
+            return render_template('main/dashboard_edit.html', form=form, dashboard=dash)
+
+        dash.name = form.name.data
+        dash.widgets = form.widgets.data
+        db.session.commit()
+        flash('Cruscotto aggiornato.', 'success')
+        return redirect(url_for('main.dashboard'))
+
+    return render_template('main/dashboard_edit.html', form=form, dashboard=dash)
+
+
+@bp.route('/dashboard/reset', methods=['POST'])
+@login_required
+def reset_dashboard():
+    """Reset dashboard to the role template."""
+    from app.models import Dashboard, DashboardTemplate
+    import json
+
+    dash = Dashboard.query.filter_by(user_id=current_user.id, is_default=True).first()
+    if not dash:
+        flash('Nessun cruscotto trovato.', 'warning')
+        return redirect(url_for('main.dashboard'))
+
+    tpl = DashboardTemplate.query.filter_by(role_name=current_user.role).first()
+    if not tpl:
+        tpl = DashboardTemplate.query.filter_by(role_name=None).first()
+    if not tpl:
+        flash('Nessun template disponibile.', 'warning')
+        return redirect(url_for('main.dashboard'))
+
+    dash.layout = tpl.layout or dash.layout
+    dash.widgets = tpl.widgets
+    db.session.commit()
+    flash('Cruscotto ripristinato al template.', 'success')
+    return redirect(url_for('main.dashboard'))

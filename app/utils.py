@@ -2,8 +2,45 @@
 Common utilities and decorators for the application
 """
 from functools import wraps
-from flask import flash, redirect, url_for, abort, current_app
+from flask import flash, redirect, url_for, abort, current_app, request
 from flask_login import current_user
+from datetime import datetime
+
+
+def rate_limit(key: str, limit: int = 10, window_seconds: int = 60):
+    """
+    Lightweight rate limiter using the app cache (memory/redis).
+    Designed to avoid adding new dependencies.
+
+    Args:
+        key: logical bucket key (e.g. 'social:post', 'auth:login')
+        limit: max requests in the window
+        window_seconds: rolling window size in seconds (bucketed by time slice)
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            try:
+                from app.cache import get_cache
+                cache = get_cache()
+                now = int(datetime.utcnow().timestamp())
+                bucket = now // max(1, int(window_seconds))
+                actor = current_user.id if getattr(current_user, "is_authenticated", False) else "anon"
+                ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown").split(",")[0].strip()
+                cache_key = f"rl:{key}:{actor}:{ip}:{bucket}"
+                val = cache.get(cache_key) or {"count": 0}
+                val["count"] = int(val.get("count", 0)) + 1
+                cache.set(cache_key, val, ttl=window_seconds + 5)
+                if val["count"] > int(limit):
+                    if current_app:
+                        current_app.logger.warning(f"Rate limit exceeded key={key} actor={actor} ip={ip}")
+                    abort(429)
+            except Exception:
+                # If cache is unavailable, do not block the request.
+                pass
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
 
 
 def check_permission(user, resource, action, society_id=None):
@@ -192,18 +229,10 @@ def get_user_society(user):
     Get the society associated with a user
     Returns User object or None
     """
-    from app.models import User
-    
-    if user.is_society():
-        return user
-    
-    if user.is_staff() and user.society_id:
-        return User.query.get(user.society_id)
-    
-    if user.is_athlete() and user.athlete_society_id:
-        return User.query.get(user.athlete_society_id)
-    
-    return None
+    try:
+        return user.get_primary_society()
+    except Exception:
+        return None
 
 
 def permission_required(resource, action, society_id_param=None, society_id_func=None):

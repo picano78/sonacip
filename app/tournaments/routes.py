@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from sqlalchemy import false
 from sqlalchemy.orm import joinedload
-from app import db
+from app import db, limiter
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
 from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity
 from app.automation.utils import execute_rules
@@ -300,6 +300,7 @@ def view_tournament(tournament_id):
 
 @bp.route('/<int:tournament_id>/publish', methods=['POST'])
 @login_required
+@limiter.limit("10 per minute")
 def publish_tournament(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     _require_manage(tournament)
@@ -349,6 +350,7 @@ def publish_tournament(tournament_id):
 
 @bp.route('/<int:tournament_id>/matches/<int:match_id>/publish', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")
 def publish_match_result(tournament_id, match_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     _require_manage(tournament)
@@ -454,6 +456,7 @@ def add_match(tournament_id):
 
 @bp.route('/<int:match_id>/score', methods=['POST'])
 @login_required
+@limiter.limit("60 per minute")
 def set_score(match_id):
     match = TournamentMatch.query.get_or_404(match_id)
     tournament = match.tournament

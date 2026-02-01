@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
-from app import db
+from app import db, limiter
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.society_forms import SocietyInviteForm
 from app.social.utils import save_picture
@@ -197,6 +197,7 @@ def feed():
 @bp.route('/post/create', methods=['POST'])
 @login_required
 @permission_required('social', 'post')
+@limiter.limit("10 per minute")
 def create_post():
     """Create a new post"""
     form = PostForm()
@@ -234,6 +235,17 @@ def create_post():
         
         db.session.add(post)
         db.session.commit()
+
+        try:
+            log_action(
+                'post_create',
+                'Post',
+                post.id,
+                f'post_type={post.post_type} audience={post.audience}',
+                society_id=post.society_id,
+            )
+        except Exception:
+            pass
         
         flash('Post pubblicato!', 'success')
     else:
@@ -682,6 +694,7 @@ def society_dashboard():
 
 @bp.route('/society/invite', methods=['POST'])
 @login_required
+@limiter.limit("10 per minute")
 def society_invite():
     """Society invites a user to join with a specific role."""
     if not check_permission(current_user, 'society', 'manage'):
@@ -921,6 +934,7 @@ def my_invites():
 
 @bp.route('/invites/<int:invite_id>/<string:action>', methods=['POST'])
 @login_required
+@limiter.limit("20 per minute")
 def respond_invite(invite_id, action):
     """Accept/reject an invite."""
     inv = SocietyInvite.query.get_or_404(invite_id)

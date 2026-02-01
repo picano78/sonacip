@@ -1210,6 +1210,60 @@ class SocietyFeeReminderSent(db.Model):
     )
 
 
+class CRMPipeline(db.Model):
+    """
+    CRM pipeline configuration (per-society).
+    Minimal version: one active pipeline per society.
+    """
+    __tablename__ = 'crm_pipeline'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True, unique=True)
+    name = db.Column(db.String(120), nullable=False, default='Pipeline')
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('crm_pipeline', uselist=False))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<CRMPipeline society={self.society_id} name={self.name}>'
+
+
+class CRMPipelineStage(db.Model):
+    """
+    CRM pipeline stage configuration.
+    Stored separately so Opportunity.stage can stay a stable key (string).
+    """
+    __tablename__ = 'crm_pipeline_stage'
+
+    id = db.Column(db.Integer, primary_key=True)
+    pipeline_id = db.Column(db.Integer, db.ForeignKey('crm_pipeline.id'), nullable=False, index=True)
+
+    key = db.Column(db.String(50), nullable=False)  # stable key stored on Opportunity.stage
+    label = db.Column(db.String(120), nullable=False)
+    position = db.Column(db.Integer, nullable=False, default=0, index=True)
+    color = db.Column(db.String(20))  # e.g. '#0d6efd' or bootstrap token
+
+    is_active = db.Column(db.Boolean, default=True)
+    is_won = db.Column(db.Boolean, default=False)
+    is_lost = db.Column(db.Boolean, default=False)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    pipeline = db.relationship('CRMPipeline', foreign_keys=[pipeline_id], backref=db.backref('stages', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('pipeline_id', 'key', name='uq_crm_pipeline_stage_key'),
+    )
+
+    def __repr__(self):
+        return f'<CRMPipelineStage {self.key} ({self.label}) pipeline={self.pipeline_id}>'
+
+
 class Contact(db.Model):
     """
     CRM Contact model

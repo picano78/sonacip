@@ -70,6 +70,11 @@
                     <a href="{{ url_for('crm.new_activity') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-calendar-check"></i> Registra Attività
                     </a>
+                    {% if can('crm','manage') %}
+                      <a href="{{ url_for('crm.pipeline_settings') }}" class="list-group-item list-group-item-action">
+                          <i class="bi bi-diagram-3"></i> Pipeline (Fasi)
+                      </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -111,7 +116,10 @@
                                     <small class="text-muted">{{ opp.opportunity_type }}</small>
                                 </div>
                                 <div>
-                                    <span class="badge bg-info">{{ opp.stage }}</span>
+                                    {% set st = stage_map.get(opp.stage, {}) %}
+                                    <span class="badge bg-info" {% if st.get('color') %}style="background: {{ st.get('color') }} !important;"{% endif %}>
+                                      {{ st.get('label', opp.stage) }}
+                                    </span>
                                     {% if opp.value %}
                                         <br><small>€{{ opp.value }}</small>
                                     {% endif %}

@@ -5,8 +5,25 @@ Contact and opportunity management
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app import db
-from app.crm.forms import ContactForm, OpportunityForm, ActivityForm, MedicalCertificateForm, SocietyFeeForm
-from app.models import Contact, Opportunity, CRMActivity, User, AuditLog, MedicalCertificate, SocietyFee
+from app.crm.forms import (
+    ContactForm,
+    OpportunityForm,
+    ActivityForm,
+    MedicalCertificateForm,
+    SocietyFeeForm,
+    PipelineStageForm,
+)
+from app.models import (
+    Contact,
+    Opportunity,
+    CRMActivity,
+    User,
+    AuditLog,
+    MedicalCertificate,
+    SocietyFee,
+    CRMPipeline,
+    CRMPipelineStage,
+)
 from app.utils import permission_required, check_permission, feature_required, get_active_society_id
 from datetime import datetime
 from app.utils import log_action
@@ -31,6 +48,70 @@ def _enforce_scope(entity_society_id, redirect_endpoint):
     return None
 
 
+def _ensure_default_pipeline(scope_id: int) -> CRMPipeline:
+    """
+    Ensure a default pipeline exists for the given society scope.
+    Created lazily (first CRM usage) to avoid requiring seed changes.
+    """
+    pipe = CRMPipeline.query.filter_by(society_id=scope_id).first()
+    if pipe:
+        return pipe
+
+    pipe = CRMPipeline(society_id=scope_id, name="Pipeline", created_by=current_user.id, created_at=datetime.utcnow())
+    db.session.add(pipe)
+    db.session.flush()
+
+    defaults = [
+        ("prospecting", "Prospecting", 10, "#0d6efd", False, False),
+        ("qualification", "Qualificazione", 20, "#6f42c1", False, False),
+        ("proposal", "Proposta", 30, "#fd7e14", False, False),
+        ("negotiation", "Negoziazione", 40, "#0dcaf0", False, False),
+        ("closed_won", "Chiusa - Vinta", 90, "#198754", True, False),
+        ("closed_lost", "Chiusa - Persa", 99, "#dc3545", False, True),
+    ]
+    for key, label, pos, color, is_won, is_lost in defaults:
+        db.session.add(
+            CRMPipelineStage(
+                pipeline_id=pipe.id,
+                key=key,
+                label=label,
+                position=pos,
+                color=color,
+                is_active=True,
+                is_won=is_won,
+                is_lost=is_lost,
+                created_by=current_user.id,
+                created_at=datetime.utcnow(),
+            )
+        )
+    db.session.commit()
+    return pipe
+
+
+def _stage_map_for_scope(scope_id: int | None) -> dict:
+    """Return mapping stage_key -> {label,color,is_won,is_lost} for templates."""
+    if not scope_id:
+        return {}
+    try:
+        pipe = _ensure_default_pipeline(scope_id)
+        stages = (
+            CRMPipelineStage.query.filter_by(pipeline_id=pipe.id, is_active=True)
+            .order_by(CRMPipelineStage.position.asc(), CRMPipelineStage.id.asc())
+            .all()
+        )
+        return {
+            s.key: {
+                "label": s.label,
+                "color": s.color,
+                "is_won": bool(s.is_won),
+                "is_lost": bool(s.is_lost),
+            }
+            for s in stages
+        }
+    except Exception:
+        return {}
+
+
 @bp.route('/')
 @login_required
 @permission_required('crm', 'access', society_id_func=_society_scope_id)
@@ -40,6 +121,7 @@ def index():
     # Get statistics
     scope_id = _society_scope_id()
     if scope_id:
+        stage_map = _stage_map_for_scope(scope_id)
         contacts = Contact.query.filter_by(society_id=scope_id).all()
         opportunities = Opportunity.query.filter_by(society_id=scope_id).all()
     else:
@@ -49,6 +131,7 @@ def index():
         else:
             contacts = []
             opportunities = []
+        stage_map = {}
     
     # Calculate stats
     total_contacts = len(contacts)
@@ -73,7 +156,8 @@ def index():
                          won_opportunities=won_opportunities,
                          total_value=total_value,
                          recent_contacts=contacts[:5],
-                         recent_opportunities=opportunities[:5])
+                         recent_opportunities=opportunities[:5],
+                         stage_map=stage_map)
 
 
 @bp.route('/contacts')
@@ -205,11 +289,13 @@ def opportunities():
     # Filter by society
     scope_id = _society_scope_id()
     if scope_id:
+        stage_map = _stage_map_for_scope(scope_id)
         opportunities = Opportunity.query.filter_by(society_id=scope_id).order_by(Opportunity.created_at.desc()).all()
     else:
         opportunities = Opportunity.query.order_by(Opportunity.created_at.desc()).all()
+        stage_map = {}
     
-    return render_template('crm/opportunities.html', opportunities=opportunities)
+    return render_template('crm/opportunities.html', opportunities=opportunities, stage_map=stage_map)
 
 
 @bp.route('/opportunities/new', methods=['GET', 'POST'])
@@ -218,10 +304,15 @@ def opportunities():
 @feature_required('crm')
 def new_opportunity():
     """Create new opportunity"""
-    form = OpportunityForm()
+    scope_id = _society_scope_id()
+    if not scope_id:
+        flash('Seleziona una società (scope) per creare opportunità.', 'warning')
+        return redirect(url_for('crm.index'))
+
+    _ensure_default_pipeline(scope_id)
+    form = OpportunityForm(society_id=scope_id)
     
     # Populate contact choices
-    scope_id = _society_scope_id()
     if scope_id:
         contacts = Contact.query.filter_by(society_id=scope_id).all()
     else:
@@ -270,9 +361,111 @@ def opportunity_detail(opp_id):
     # Get related activities
     activities = CRMActivity.query.filter_by(opportunity_id=opp_id).order_by(CRMActivity.created_at.desc()).all()
     
+    stage_map = _stage_map_for_scope(_society_scope_id())
     return render_template('crm/opportunity_detail.html', 
                          opportunity=opportunity,
-                         activities=activities)
+                         activities=activities,
+                         stage_map=stage_map)
+
+
+@bp.route('/pipeline', methods=['GET', 'POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
+def pipeline_settings():
+    """Manage CRM pipeline stages for the active society scope."""
+    scope_id = _society_scope_id()
+    if not scope_id:
+        flash('Seleziona una società (scope) per gestire la pipeline.', 'warning')
+        return redirect(url_for('crm.index'))
+
+    pipe = _ensure_default_pipeline(scope_id)
+    form = PipelineStageForm()
+
+    if request.method == 'GET':
+        form.is_active.data = True
+
+    if form.validate_on_submit():
+        key = (form.key.data or '').strip()
+        label = (form.label.data or '').strip()
+        try:
+            exists = CRMPipelineStage.query.filter_by(pipeline_id=pipe.id, key=key).first()
+            if exists:
+                flash('Key già esistente in pipeline.', 'danger')
+                return redirect(url_for('crm.pipeline_settings'))
+        except Exception:
+            pass
+
+        st = CRMPipelineStage(
+            pipeline_id=pipe.id,
+            key=key,
+            label=label,
+            position=int(form.position.data or 50),
+            color=(form.color.data or '').strip() or None,
+            is_active=True if form.is_active.data else False,
+            is_won=True if form.is_won.data else False,
+            is_lost=True if form.is_lost.data else False,
+            created_by=current_user.id,
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(st)
+        db.session.commit()
+        log_action('crm_pipeline_stage_create', 'CRMPipelineStage', st.id, f'key={st.key}', society_id=scope_id)
+        flash('Fase aggiunta.', 'success')
+        return redirect(url_for('crm.pipeline_settings'))
+
+    stages = CRMPipelineStage.query.filter_by(pipeline_id=pipe.id).order_by(CRMPipelineStage.position.asc(), CRMPipelineStage.id.asc()).all()
+    return render_template('crm/pipeline.html', pipeline=pipe, stages=stages, form=form)
+
+
+@bp.route('/pipeline/stages/<int:stage_id>/update', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
+def pipeline_stage_update(stage_id):
+    scope_id = _society_scope_id()
+    if not scope_id:
+        abort(403)
+    st = CRMPipelineStage.query.get_or_404(stage_id)
+    pipe = CRMPipeline.query.get(st.pipeline_id)
+    if not pipe or pipe.society_id != scope_id:
+        abort(403)
+
+    st.label = (request.form.get('label') or st.label).strip()
+    try:
+        st.position = int((request.form.get('position') or st.position))
+    except Exception:
+        pass
+    st.color = (request.form.get('color') or '').strip() or None
+    st.is_active = (request.form.get('is_active') or '') == '1'
+    st.is_won = (request.form.get('is_won') or '') == '1'
+    st.is_lost = (request.form.get('is_lost') or '') == '1'
+    db.session.commit()
+    log_action('crm_pipeline_stage_update', 'CRMPipelineStage', st.id, f'key={st.key}', society_id=scope_id)
+    flash('Fase aggiornata.', 'success')
+    return redirect(url_for('crm.pipeline_settings'))
+
+
+@bp.route('/pipeline/stages/<int:stage_id>/delete', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
+def pipeline_stage_delete(stage_id):
+    scope_id = _society_scope_id()
+    if not scope_id:
+        abort(403)
+    st = CRMPipelineStage.query.get_or_404(stage_id)
+    pipe = CRMPipeline.query.get(st.pipeline_id)
+    if not pipe or pipe.society_id != scope_id:
+        abort(403)
+    if st.key in ('closed_won', 'closed_lost'):
+        flash('Non puoi eliminare le fasi di chiusura.', 'warning')
+        return redirect(url_for('crm.pipeline_settings'))
+    db.session.delete(st)
+    db.session.commit()
+    log_action('crm_pipeline_stage_delete', 'CRMPipelineStage', stage_id, 'deleted', society_id=scope_id)
+    flash('Fase eliminata.', 'success')
+    return redirect(url_for('crm.pipeline_settings'))
 
 
 @bp.route('/activities/new', methods=['GET', 'POST'])

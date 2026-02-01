@@ -2,7 +2,7 @@
 CRM Forms
 """
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SelectField, DateField, BooleanField
+from wtforms import StringField, TextAreaField, SelectField, DateField, BooleanField, IntegerField
 from wtforms.validators import DataRequired, Email, Optional, Length
 from app.models import User, SocietyMembership
 
@@ -62,14 +62,7 @@ class OpportunityForm(FlaskForm):
         ('other', 'Altro')
     ], validators=[DataRequired()])
     
-    stage = SelectField('Fase', choices=[
-        ('prospecting', 'Prospecting'),
-        ('qualification', 'Qualificazione'),
-        ('proposal', 'Proposta'),
-        ('negotiation', 'Negoziazione'),
-        ('closed_won', 'Chiusa - Vinta'),
-        ('closed_lost', 'Chiusa - Persa')
-    ], validators=[DataRequired()])
+    stage = SelectField('Fase', choices=[], validators=[DataRequired()])
     
     value = StringField('Valore (€)', validators=[Optional()])
     probability = SelectField('Probabilità', choices=[
@@ -84,6 +77,50 @@ class OpportunityForm(FlaskForm):
     expected_close_date = DateField('Data Chiusura Prevista', format='%Y-%m-%d', validators=[Optional()])
     
     contact_id = SelectField('Contatto Collegato', coerce=int, validators=[Optional()])
+
+    def __init__(self, *args, **kwargs):
+        society_id = kwargs.pop('society_id', None)
+        super().__init__(*args, **kwargs)
+
+        # Dynamic stage choices from CRM pipeline config (per society).
+        # Fallback to legacy fixed choices when not available.
+        fallback = [
+            ('prospecting', 'Prospecting'),
+            ('qualification', 'Qualificazione'),
+            ('proposal', 'Proposta'),
+            ('negotiation', 'Negoziazione'),
+            ('closed_won', 'Chiusa - Vinta'),
+            ('closed_lost', 'Chiusa - Persa'),
+        ]
+        if not society_id:
+            self.stage.choices = fallback
+            return
+
+        try:
+            from app.models import CRMPipeline, CRMPipelineStage
+
+            pipe = CRMPipeline.query.filter_by(society_id=society_id).first()
+            if not pipe:
+                self.stage.choices = fallback
+                return
+            stages = (
+                CRMPipelineStage.query.filter_by(pipeline_id=pipe.id, is_active=True)
+                .order_by(CRMPipelineStage.position.asc(), CRMPipelineStage.id.asc())
+                .all()
+            )
+            self.stage.choices = [(s.key, s.label) for s in stages] or fallback
+        except Exception:
+            self.stage.choices = fallback
+
+
+class PipelineStageForm(FlaskForm):
+    key = StringField('Key (tecnica)', validators=[DataRequired(), Length(max=50)])
+    label = StringField('Nome fase', validators=[DataRequired(), Length(max=120)])
+    position = IntegerField('Ordine', validators=[Optional()])
+    color = StringField('Colore', validators=[Optional(), Length(max=20)])
+    is_won = BooleanField('È “vinta”')
+    is_lost = BooleanField('È “persa”')
+    is_active = BooleanField('Attiva', default=True)
 
 
 class ActivityForm(FlaskForm):

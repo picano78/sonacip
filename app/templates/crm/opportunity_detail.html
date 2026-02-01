@@ -19,7 +19,12 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>Tipo:</strong> {{ opportunity.opportunity_type }}</p>
-                            <p><strong>Fase:</strong> <span class="badge bg-info">{{ opportunity.stage }}</span></p>
+                            {% set st = stage_map.get(opportunity.stage, {}) %}
+                            <p><strong>Fase:</strong>
+                              <span class="badge bg-info" {% if st.get('color') %}style="background: {{ st.get('color') }} !important;"{% endif %}>
+                                {{ st.get('label', opportunity.stage) }}
+                              </span>
+                            </p>
                         </div>
                         <div class="col-md-6">
                             {% if opportunity.value %}

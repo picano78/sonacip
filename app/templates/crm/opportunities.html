@@ -19,7 +19,11 @@
                         
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="badge bg-info">{{ opp.opportunity_type }}</span>
-                            <span class="badge bg-{{ 'success' if opp.stage == 'closed_won' else 'warning' }}">{{ opp.stage }}</span>
+                            {% set st = stage_map.get(opp.stage, {}) %}
+                            <span class="badge bg-{{ 'success' if st.get('is_won') else ('danger' if st.get('is_lost') else 'warning') }}"
+                                  {% if st.get('color') %}style="background: {{ st.get('color') }} !important;"{% endif %}>
+                              {{ st.get('label', opp.stage) }}
+                            </span>
                         </div>
                         
                         {% if opp.value %}

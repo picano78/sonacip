@@ -32,6 +32,7 @@ def seed_defaults(app) -> dict:
         SiteCustomization,
         SocialSetting,
         SmtpSetting,
+        WhatsappSetting,
         StorageSetting,
         User,
     )
@@ -45,6 +46,7 @@ def seed_defaults(app) -> dict:
         "dashboard_templates_created": 0,
         "navbar_created": 0,
         "smtp_settings_created": 0,
+        "whatsapp_settings_created": 0,
     }
 
     with app.app_context():
@@ -244,6 +246,9 @@ def seed_defaults(app) -> dict:
         if not SmtpSetting.query.first():
             db.session.add(SmtpSetting(enabled=False))
             summary["smtp_settings_created"] += 1
+        if not WhatsappSetting.query.first():
+            db.session.add(WhatsappSetting(enabled=False, provider="webhook"))
+            summary["whatsapp_settings_created"] += 1
         db.session.commit()
 
         # ---------------------------------------------------------------------

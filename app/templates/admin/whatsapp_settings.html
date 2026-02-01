@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}WhatsApp{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h1 class="h4 mb-3">WhatsApp (Super Admin)</h1>
+  <div class="card">
+    <div class="card-body">
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-check">
+              {{ form.enabled(class='form-check-input') }}
+              {{ form.enabled.label(class='form-check-label') }}
+            </div>
+          </div>
+          <div class="col-md-4">
+            {{ form.provider.label(class='form-label') }}
+            {{ form.provider(class='form-select') }}
+          </div>
+          <div class="col-md-8">
+            {{ form.api_url.label(class='form-label') }}
+            {{ form.api_url(class='form-control', placeholder='https://provider.example/api/whatsapp') }}
+          </div>
+          <div class="col-md-6">
+            {{ form.api_token.label(class='form-label') }}
+            {{ form.api_token(class='form-control', placeholder='(lascia vuoto per non cambiare)') }}
+          </div>
+          <div class="col-md-6">
+            {{ form.from_number.label(class='form-label') }}
+            {{ form.from_number(class='form-control', placeholder='es. +39...') }}
+          </div>
+          <div class="col-12">
+            <hr>
+            <div class="fw-semibold mb-2">Test invio</div>
+            <div class="row g-2">
+              <div class="col-md-4">
+                {{ form.test_phone.label(class='form-label') }}
+                {{ form.test_phone(class='form-control', placeholder='+39...') }}
+              </div>
+              <div class="col-md-8">
+                {{ form.test_message.label(class='form-label') }}
+                {{ form.test_message(class='form-control', placeholder='Messaggio di test') }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <button class="btn btn-primary" type="submit">Salva</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Torna al pannello</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

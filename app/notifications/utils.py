@@ -4,7 +4,7 @@ Notification utilities
 from flask import current_app
 from flask_mail import Message
 from app import mail, db
-from app.models import Notification, User, SmtpSetting
+from app.models import Notification, User, SmtpSetting, WhatsappSetting
 from datetime import datetime, timedelta
 import os
 import smtplib
@@ -202,3 +202,44 @@ def send_sms(phone_number, message):
     
     current_app.logger.info(f'SMS would be sent to {phone_number}: {message}')
     return True
+
+
+def send_whatsapp(phone_number: str, message: str) -> bool:
+    """
+    Send WhatsApp message via configured provider (webhook-style).
+    Returns True if queued/sent, False otherwise.
+    """
+    try:
+        settings = None
+        try:
+            settings = WhatsappSetting.query.first()
+        except Exception:
+            settings = None
+
+        if not settings or not settings.enabled:
+            return False
+        if not phone_number or not message:
+            return False
+
+        if settings.provider == 'webhook':
+            if not settings.api_url:
+                return False
+            import requests
+            headers = {'Content-Type': 'application/json'}
+            if settings.api_token:
+                headers['Authorization'] = f'Bearer {settings.api_token}'
+            payload = {
+                'to': phone_number,
+                'message': message,
+                'from': settings.from_number,
+            }
+            resp = requests.post(settings.api_url, json=payload, headers=headers, timeout=20)
+            resp.raise_for_status()
+            return True
+
+        # Unknown provider: do not fail hard, but log.
+        current_app.logger.warning(f"WhatsApp provider not supported: {settings.provider}")
+        return False
+    except Exception as exc:
+        current_app.logger.warning(f"send_whatsapp failed: {exc}")
+        raise

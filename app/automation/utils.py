@@ -160,6 +160,8 @@ def _apply_actions(actions: List[Dict[str, Any]], payload: Dict[str, Any]):
             _action_webhook(action, payload)
         elif atype == 'task_create':
             _action_task_create(action, payload)
+        elif atype == 'whatsapp':
+            _action_whatsapp(action, payload)
 
 
 def _action_notify(action: Dict[str, Any], payload: Dict[str, Any]):
@@ -256,3 +258,18 @@ def _action_task_create(action: Dict[str, Any], payload: Dict[str, Any]):
         f"Task created via automation: {task.title}",
         extra={'task_title': task.title, 'assigned_to': task.assigned_to}
     )
+
+
+def _action_whatsapp(action: Dict[str, Any], payload: Dict[str, Any]):
+    """Send WhatsApp message via configured provider."""
+    from app.notifications.utils import send_whatsapp
+    to_user_id = action.get('user_id')
+    message = action.get('message') or json.dumps(payload)
+    if not to_user_id:
+        return
+    user = User.query.get(to_user_id)
+    if not user or not user.phone:
+        return
+    ok = send_whatsapp(user.phone, message)
+    if not ok:
+        raise RuntimeError("WhatsApp not configured or sending failed")

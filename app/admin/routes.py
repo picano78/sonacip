@@ -13,6 +13,7 @@ from app.admin.forms import (
     DashboardTemplateForm,
     NavigationConfigForm,
     SmtpSettingsForm,
+    WhatsappSettingsForm,
     PageCustomizationForm,
     PrivacySettingsForm,
     SiteCustomizationForm,
@@ -39,6 +40,7 @@ from app.models import (
     Society,
     StorageSetting,
     SmtpSetting,
+    WhatsappSetting,
     User,
 )
 from datetime import datetime, timedelta
@@ -312,6 +314,50 @@ def smtp_settings():
         return redirect(url_for('admin.smtp_settings'))
 
     return render_template('admin/smtp_settings.html', form=form, settings=settings)
+
+
+@bp.route('/whatsapp', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def whatsapp_settings():
+    """WhatsApp settings (super admin)."""
+    settings = WhatsappSetting.query.first()
+    if not settings:
+        settings = WhatsappSetting(enabled=False, provider='webhook')
+        db.session.add(settings)
+        db.session.commit()
+
+    form = WhatsappSettingsForm(obj=settings)
+    if form.validate_on_submit():
+        settings.enabled = bool(form.enabled.data)
+        settings.provider = form.provider.data or 'webhook'
+        settings.api_url = form.api_url.data or None
+        if form.api_token.data:
+            settings.api_token = form.api_token.data
+        settings.from_number = form.from_number.data or None
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        log_action('update_whatsapp_settings', 'WhatsappSetting', settings.id, 'Updated WhatsApp settings')
+
+        # Optional test send
+        if form.test_phone.data and form.test_message.data:
+            try:
+                from app.notifications.utils import send_whatsapp
+                ok = send_whatsapp(form.test_phone.data, form.test_message.data)
+                if ok:
+                    flash('WhatsApp test inviato (provider).', 'success')
+                else:
+                    flash('WhatsApp non configurato o disabilitato.', 'warning')
+            except Exception as exc:
+                flash(f'Invio WhatsApp fallito: {exc}', 'danger')
+        else:
+            flash('Impostazioni WhatsApp salvate.', 'success')
+
+        return redirect(url_for('admin.whatsapp_settings'))
+
+    return render_template('admin/whatsapp_settings.html', form=form, settings=settings)
 
 
 @bp.route('/pages')

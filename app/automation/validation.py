@@ -158,6 +158,16 @@ def validate_action_schema(action: Dict[str, Any]) -> Tuple[bool, str]:
             return False, 'task_create action requires title'
         if 'assigned_to' in action and not isinstance(action['assigned_to'], int):
             return False, 'task_create assigned_to must be an integer'
+
+    elif atype == 'whatsapp':
+        if 'user_id' not in action:
+            return False, 'whatsapp action requires user_id'
+        if not isinstance(action['user_id'], int):
+            return False, 'whatsapp user_id must be an integer'
+        if 'message' not in action:
+            return False, 'whatsapp action requires message'
+        if not isinstance(action['message'], str):
+            return False, 'whatsapp message must be a string'
     
     else:
         return False, f'Unknown action type: {atype}'

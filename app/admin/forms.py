@@ -175,3 +175,13 @@ class SmtpSettingsForm(FlaskForm):
     password = PasswordField('Password', validators=[Optional(), Length(max=255)])
     default_sender = StringField('Mittente predefinito', validators=[Optional(), Length(max=255)])
     test_recipient = StringField('Invia test a (email)', validators=[Optional(), Email(), Length(max=255)])
+
+
+class WhatsappSettingsForm(FlaskForm):
+    enabled = BooleanField('Abilita WhatsApp')
+    provider = SelectField('Provider', choices=[('webhook', 'Webhook (generico)')], validators=[Optional()])
+    api_url = StringField('Webhook URL', validators=[Optional(), Length(max=500)])
+    api_token = PasswordField('Token (Bearer)', validators=[Optional(), Length(max=500)])
+    from_number = StringField('From (opzionale)', validators=[Optional(), Length(max=50)])
+    test_phone = StringField('Invia test a (telefono)', validators=[Optional(), Length(max=20)])
+    test_message = StringField('Messaggio test', validators=[Optional(), Length(max=500)])

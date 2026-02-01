@@ -1073,6 +1073,30 @@ class SmtpSetting(db.Model):
         return f'<SmtpSetting enabled={self.enabled}>'
 
 
+class WhatsappSetting(db.Model):
+    """
+    WhatsApp integration settings (super admin).
+    Generic webhook-style provider to avoid hard dependency on a specific vendor.
+    """
+    __tablename__ = 'whatsapp_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, default=False)
+
+    provider = db.Column(db.String(50), default='webhook')  # webhook, twilio, meta, ...
+    api_url = db.Column(db.String(500))  # webhook endpoint URL
+    api_token = db.Column(db.String(500))  # bearer token (optional)
+    from_number = db.Column(db.String(50))  # optional sender identifier
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<WhatsappSetting enabled={self.enabled} provider={self.provider}>'
+
+
 class Message(db.Model):
     """
     Direct messaging between users

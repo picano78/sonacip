@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Compliance Società{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="section-hero mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <div class="pill mb-2"><i class="bi bi-shield-check"></i> CRM</div>
+      <h1 class="h4 mb-0">Compliance (Certificati & Quote)</h1>
+      <p class="text-muted mb-0">Gestione scadenze e promemoria automatici (notifiche/email/WhatsApp).</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('crm.index') }}">Torna al CRM</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.automation_rules') }}">Regole automazioni</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-file-medical"></i> Certificati medici</span>
+          <span class="badge bg-secondary">{{ certificates|length }}</span>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('crm.compliance_certificate_new') }}" class="mb-3">
+            {{ cert_form.hidden_tag() }}
+            <div class="row g-2">
+              <div class="col-md-6">
+                {{ cert_form.user_id.label(class="form-label") }}
+                {{ cert_form.user_id(class="form-select") }}
+              </div>
+              <div class="col-md-6">
+                {{ cert_form.status.label(class="form-label") }}
+                {{ cert_form.status(class="form-select") }}
+              </div>
+              <div class="col-md-6">
+                {{ cert_form.issued_on.label(class="form-label") }}
+                {{ cert_form.issued_on(class="form-control") }}
+              </div>
+              <div class="col-md-6">
+                {{ cert_form.expires_on.label(class="form-label") }}
+                {{ cert_form.expires_on(class="form-control") }}
+              </div>
+              <div class="col-12">
+                {{ cert_form.notes.label(class="form-label") }}
+                {{ cert_form.notes(class="form-control", rows="2") }}
+              </div>
+              <div class="col-12">
+                <button class="btn btn-primary" type="submit">Aggiungi</button>
+              </div>
+            </div>
+          </form>
+
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Atleta</th>
+                  <th>Scadenza</th>
+                  <th>Stato</th>
+                  <th class="text-end">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in certificates %}
+                  <tr>
+                    <td>{{ c.user.get_full_name() if c.user else ('User #' ~ c.user_id) }}</td>
+                    <td>{{ c.expires_on.strftime('%d/%m/%Y') }}</td>
+                    <td><span class="badge bg-{{ 'success' if c.status=='valid' else ('danger' if c.status=='expired' else 'secondary') }}">{{ c.status }}</span></td>
+                    <td class="text-end">
+                      <form method="post" action="{{ url_for('crm.compliance_certificate_delete', cert_id=c.id) }}" onsubmit="return confirm('Eliminare questo certificato?');">
+                        {{ csrf_token() }}
+                        <button class="btn btn-sm btn-outline-danger" type="submit">Elimina</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="4" class="text-muted">Nessun certificato.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-cash-coin"></i> Quote</span>
+          <span class="badge bg-secondary">{{ fees|length }}</span>
+        </div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('crm.compliance_fee_new') }}" class="mb-3">
+            {{ fee_form.hidden_tag() }}
+            <div class="row g-2">
+              <div class="col-md-6">
+                {{ fee_form.user_id.label(class="form-label") }}
+                {{ fee_form.user_id(class="form-select") }}
+              </div>
+              <div class="col-md-6">
+                {{ fee_form.status.label(class="form-label") }}
+                {{ fee_form.status(class="form-select") }}
+              </div>
+              <div class="col-md-6">
+                {{ fee_form.amount_eur.label(class="form-label") }}
+                {{ fee_form.amount_eur(class="form-control", placeholder="es. 30,00") }}
+              </div>
+              <div class="col-md-6">
+                {{ fee_form.due_on.label(class="form-label") }}
+                {{ fee_form.due_on(class="form-control") }}
+              </div>
+              <div class="col-12">
+                {{ fee_form.description.label(class="form-label") }}
+                {{ fee_form.description(class="form-control", placeholder="Quota mensile / Iscrizione / ecc.") }}
+              </div>
+              <div class="col-12">
+                <button class="btn btn-primary" type="submit">Aggiungi</button>
+              </div>
+            </div>
+          </form>
+
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Membro</th>
+                  <th>Scadenza</th>
+                  <th>Importo</th>
+                  <th>Stato</th>
+                  <th class="text-end">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for f in fees %}
+                  <tr>
+                    <td>{{ f.user.get_full_name() if f.user else ('User #' ~ f.user_id) }}</td>
+                    <td>{{ f.due_on.strftime('%d/%m/%Y') }}</td>
+                    <td>€{{ "%.2f"|format((f.amount_cents or 0) / 100.0) }}</td>
+                    <td><span class="badge bg-{{ 'warning' if f.status=='pending' else ('success' if f.status=='paid' else 'secondary') }}">{{ f.status }}</span></td>
+                    <td class="text-end">
+                      <form method="post" action="{{ url_for('crm.compliance_fee_delete', fee_id=f.id) }}" onsubmit="return confirm('Eliminare questa quota?');">
+                        {{ csrf_token() }}
+                        <button class="btn btn-sm btn-outline-danger" type="submit">Elimina</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="5" class="text-muted">Nessuna quota.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

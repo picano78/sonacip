@@ -3,6 +3,13 @@
 {% block content %}
 <div class="container my-4">
     <h1 class="mb-4"><i class="bi bi-briefcase"></i> CRM Dashboard</h1>
+    {% if can('crm','manage') %}
+      <div class="mb-3">
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('crm.compliance') }}">
+          <i class="bi bi-shield-check"></i> Compliance (Certificati/Quote)
+        </a>
+      </div>
+    {% endif %}
     
     <div class="row g-3 mb-4">
         <div class="col-md-3">

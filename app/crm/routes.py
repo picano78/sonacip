@@ -5,10 +5,11 @@ Contact and opportunity management
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app import db
-from app.crm.forms import ContactForm, OpportunityForm, ActivityForm
-from app.models import Contact, Opportunity, CRMActivity, User, AuditLog
+from app.crm.forms import ContactForm, OpportunityForm, ActivityForm, MedicalCertificateForm, SocietyFeeForm
+from app.models import Contact, Opportunity, CRMActivity, User, AuditLog, MedicalCertificate, SocietyFee
 from app.utils import permission_required, check_permission
 from datetime import datetime
+from app.utils import log_action
 
 bp = Blueprint('crm', __name__, url_prefix='/crm')
 
@@ -318,3 +319,123 @@ def new_activity():
         form.opportunity_id.data = opportunity_id
     
     return render_template('crm/activity_form.html', form=form, title='Nuova Attività')
+
+
+@bp.route('/compliance')
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+def compliance():
+    """Society compliance: medical certificates and fees."""
+    scope_id = _society_scope_id()
+    if not scope_id:
+        flash('Seleziona una società (scope) per gestire compliance.', 'warning')
+        return redirect(url_for('crm.index'))
+
+    certificates = MedicalCertificate.query.filter_by(society_id=scope_id).order_by(MedicalCertificate.expires_on.asc()).all()
+    fees = SocietyFee.query.filter_by(society_id=scope_id).order_by(SocietyFee.due_on.asc()).all()
+
+    cert_form = MedicalCertificateForm(society_id=scope_id)
+    fee_form = SocietyFeeForm(society_id=scope_id)
+
+    return render_template(
+        'crm/compliance.html',
+        certificates=certificates,
+        fees=fees,
+        cert_form=cert_form,
+        fee_form=fee_form,
+    )
+
+
+@bp.route('/compliance/certificates/new', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+def compliance_certificate_new():
+    scope_id = _society_scope_id()
+    form = MedicalCertificateForm(society_id=scope_id)
+    if not form.validate_on_submit():
+        flash('Dati certificato non validi.', 'danger')
+        return redirect(url_for('crm.compliance'))
+
+    cert = MedicalCertificate(
+        society_id=scope_id,
+        user_id=form.user_id.data,
+        issued_on=form.issued_on.data,
+        expires_on=form.expires_on.data,
+        status=form.status.data,
+        notes=form.notes.data,
+        created_by=current_user.id,
+        created_at=datetime.utcnow(),
+    )
+    db.session.add(cert)
+    db.session.commit()
+    log_action('create_medical_certificate', 'MedicalCertificate', cert.id, f'user_id={cert.user_id} expires={cert.expires_on}', society_id=scope_id)
+    flash('Certificato inserito.', 'success')
+    return redirect(url_for('crm.compliance'))
+
+
+@bp.route('/compliance/certificates/<int:cert_id>/delete', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+def compliance_certificate_delete(cert_id):
+    scope_id = _society_scope_id()
+    cert = MedicalCertificate.query.get_or_404(cert_id)
+    scoped = _enforce_scope(cert.society_id, 'crm.compliance')
+    if scoped:
+        return scoped
+    db.session.delete(cert)
+    db.session.commit()
+    log_action('delete_medical_certificate', 'MedicalCertificate', cert_id, 'deleted', society_id=scope_id)
+    flash('Certificato eliminato.', 'success')
+    return redirect(url_for('crm.compliance'))
+
+
+@bp.route('/compliance/fees/new', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+def compliance_fee_new():
+    scope_id = _society_scope_id()
+    form = SocietyFeeForm(society_id=scope_id)
+    if not form.validate_on_submit():
+        flash('Dati quota non validi.', 'danger')
+        return redirect(url_for('crm.compliance'))
+
+    try:
+        amount = (form.amount_eur.data or '').replace(',', '.').strip()
+        amount_cents = int(round(float(amount) * 100))
+    except Exception:
+        flash('Importo non valido.', 'danger')
+        return redirect(url_for('crm.compliance'))
+
+    fee = SocietyFee(
+        society_id=scope_id,
+        user_id=form.user_id.data,
+        description=form.description.data or None,
+        amount_cents=amount_cents,
+        currency='EUR',
+        due_on=form.due_on.data,
+        status=form.status.data,
+        paid_at=datetime.utcnow() if form.status.data == 'paid' else None,
+        created_by=current_user.id,
+        created_at=datetime.utcnow(),
+    )
+    db.session.add(fee)
+    db.session.commit()
+    log_action('create_society_fee', 'SocietyFee', fee.id, f'user_id={fee.user_id} due={fee.due_on} cents={fee.amount_cents}', society_id=scope_id)
+    flash('Quota inserita.', 'success')
+    return redirect(url_for('crm.compliance'))
+
+
+@bp.route('/compliance/fees/<int:fee_id>/delete', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+def compliance_fee_delete(fee_id):
+    scope_id = _society_scope_id()
+    fee = SocietyFee.query.get_or_404(fee_id)
+    scoped = _enforce_scope(fee.society_id, 'crm.compliance')
+    if scoped:
+        return scoped
+    db.session.delete(fee)
+    db.session.commit()
+    log_action('delete_society_fee', 'SocietyFee', fee_id, 'deleted', society_id=scope_id)
+    flash('Quota eliminata.', 'success')
+    return redirect(url_for('crm.compliance'))

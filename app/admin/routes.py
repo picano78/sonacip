@@ -43,12 +43,17 @@ from app.models import (
     SiteCustomization,
     SocialSetting,
     Society,
+    SocietyHealthSnapshot,
     StorageSetting,
     SmtpSetting,
     WhatsappSetting,
     WhatsappTemplate,
     WhatsappMessageLog,
     User,
+    Payment,
+    Subscription,
+    AddOnEntitlement,
+    MarketplacePurchase,
     AdCampaign,
     AdCreative,
     AdEvent,
@@ -1038,6 +1043,7 @@ def stats():
     """Detailed statistics page"""
     days = 30
     start_date = datetime.utcnow() - timedelta(days=days)
+    now = datetime.utcnow()
 
     # 1. Signup Data (Daily for chart)
     signup_map = {}
@@ -1152,6 +1158,57 @@ def stats():
     except Exception as e:
         print(f"Error fetching societies: {e}")
     
+    # 6. Business metrics (revenue, add-ons, marketplace, take-rate, ads, retention)
+    business = {}
+    try:
+        revenue_30d = (
+            db.session.query(func.sum(Payment.amount))
+            .filter(Payment.status == 'completed', Payment.created_at >= start_date)
+            .scalar()
+            or 0
+        )
+        subs_active = Subscription.query.filter_by(status='active').count()
+        subs_past_due = Subscription.query.filter_by(status='past_due').count()
+        take_rate_30d = (
+            db.session.query(func.sum(PlatformTransaction.platform_fee_amount))
+            .filter(PlatformTransaction.created_at >= start_date)
+            .scalar()
+            or 0
+        )
+        marketplace_sales_30d = MarketplacePurchase.query.filter(MarketplacePurchase.status == 'completed', MarketplacePurchase.created_at >= start_date).count()
+        addons_30d = AddOnEntitlement.query.filter(AddOnEntitlement.created_at >= start_date, AddOnEntitlement.status == 'active').count()
+        ads_selfserve_budget = (
+            db.session.query(func.sum(AdCampaign.budget_cents))
+            .filter(AdCampaign.is_self_serve == True)  # noqa: E712
+            .scalar()
+            or 0
+        )
+        ads_selfserve_spend = (
+            db.session.query(func.sum(AdCampaign.spend_cents))
+            .filter(AdCampaign.is_self_serve == True)  # noqa: E712
+            .scalar()
+            or 0
+        )
+        retention_avg = (
+            db.session.query(func.avg(SocietyHealthSnapshot.score))
+            .filter(SocietyHealthSnapshot.created_at >= start_date)
+            .scalar()
+        )
+        business = {
+            "revenue_30d": float(revenue_30d),
+            "subs_active": int(subs_active),
+            "subs_past_due": int(subs_past_due),
+            "take_rate_30d": float(take_rate_30d),
+            "marketplace_sales_30d": int(marketplace_sales_30d),
+            "addons_30d": int(addons_30d),
+            "ads_selfserve_budget_eur": round(float(ads_selfserve_budget or 0) / 100.0, 2),
+            "ads_selfserve_spend_eur": round(float(ads_selfserve_spend or 0) / 100.0, 2),
+            "retention_avg_score": round(float(retention_avg or 0), 1) if retention_avg is not None else None,
+        }
+    except Exception as e:
+        print(f"Error fetching business stats: {e}")
+        business = {}
+
     return render_template('admin/analytics.html',
                          days=days,
                          signup_data=signup_data,
@@ -1159,7 +1216,8 @@ def stats():
                          growth_stats=growth_stats,
                          activity_trend=activity_trend,
                          top_posters=top_posters,
-                         top_societies=top_societies)
+                         top_societies=top_societies,
+                         business=business)
 
 
 @bp.route('/user/<int:user_id>/ban', methods=['POST'])

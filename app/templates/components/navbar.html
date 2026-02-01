@@ -90,6 +90,13 @@
                                 </a>
                             </li>
                         {% endif %}
+                        {% if can('analytics', 'access') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">
+                                    <i class="bi bi-graph-up"></i> Analytics
+                                </a>
+                            </li>
+                        {% endif %}
                         {% if can('admin', 'access') %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('admin.dashboard') }}">

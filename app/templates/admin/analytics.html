@@ -27,6 +27,86 @@
         {% endfor %}
     </div>
 
+    {% if business %}
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted mb-2 small">Revenue (30d)</h6>
+                    <h2 class="mb-0 fw-bold">€{{ "%.2f"|format(business.revenue_30d or 0) }}</h2>
+                    <div class="small text-muted mt-2">Pagamenti completati</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted mb-2 small">Take-rate (30d)</h6>
+                    <h2 class="mb-0 fw-bold">€{{ "%.2f"|format(business.take_rate_30d or 0) }}</h2>
+                    <div class="small text-muted mt-2">Fee piattaforma</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted mb-2 small">Abbonamenti</h6>
+                    <h2 class="mb-0 fw-bold">{{ business.subs_active or 0 }}</h2>
+                    <div class="small text-muted mt-2">past_due: {{ business.subs_past_due or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted mb-2 small">Retention score</h6>
+                    <h2 class="mb-0 fw-bold">{{ business.retention_avg_score if business.retention_avg_score is not none else 'n/d' }}</h2>
+                    <div class="small text-muted mt-2">media 30 giorni</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted mb-2 small">Add-on attivati (30d)</h6>
+                    <h2 class="mb-0 fw-bold">{{ business.addons_30d or 0 }}</h2>
+                    <div class="small text-muted mt-2">Entitlement attivi</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted mb-2 small">Marketplace sales (30d)</h6>
+                    <h2 class="mb-0 fw-bold">{{ business.marketplace_sales_30d or 0 }}</h2>
+                    <div class="small text-muted mt-2">Acquisti completati</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted mb-2 small">Ads self‑serve</h6>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="text-muted small">Budget</div>
+                            <div class="fw-bold">€{{ "%.2f"|format(business.ads_selfserve_budget_eur or 0) }}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-muted small">Speso</div>
+                            <div class="fw-bold">€{{ "%.2f"|format(business.ads_selfserve_spend_eur or 0) }}</div>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">CPM su impression</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row g-4 mb-4">
         <div class="col-md-8">
             <div class="card shadow-sm border-0">
@@ -122,7 +202,7 @@
                             {% for society in top_societies %}
                             <tr>
                                 <td>
-                                    <div class="fw-bold">{{ society.name }}</div>
+                                    <div class="fw-bold">{{ society.legal_name }}</div>
                                     <div class="small text-muted">{{ society.city }}</div>
                                 </td>
                                 <td class="text-end fw-bold">

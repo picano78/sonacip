@@ -22,6 +22,8 @@ def seed_defaults(app) -> dict:
     from app import db
     from app.models import (
         AdsSetting,
+        AdCampaign,
+        AdCreative,
         AppearanceSetting,
         CustomizationKV,
         DashboardTemplate,
@@ -258,6 +260,41 @@ def seed_defaults(app) -> dict:
             db.session.add(WhatsappSetting(enabled=False, provider="webhook"))
             summary["whatsapp_settings_created"] += 1
         db.session.commit()
+
+        # ---------------------------------------------------------------------
+        # Ads autopilot: default "house" campaign (idempotent)
+        # ---------------------------------------------------------------------
+        try:
+            if not AdCampaign.query.first():
+                camp = AdCampaign(
+                    name="SONACIP - Promo Piani",
+                    objective="traffic",
+                    society_id=None,
+                    is_active=True,
+                    autopilot=True,
+                    created_by=None,
+                    created_at=datetime.utcnow(),
+                )
+                db.session.add(camp)
+                db.session.flush()
+                db.session.add(
+                    AdCreative(
+                        campaign_id=camp.id,
+                        placement="feed_inline",
+                        headline="Sblocca funzionalità avanzate",
+                        body="Passa a un piano superiore per CRM completo, automazioni e molto altro.",
+                        image_url=None,
+                        link_url="/subscription/plans",
+                        cta_label="Vedi piani",
+                        is_active=True,
+                        weight=100,
+                        created_by=None,
+                        created_at=datetime.utcnow(),
+                    )
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # ---------------------------------------------------------------------
         # Default automation rules (super admin can edit)

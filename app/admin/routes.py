@@ -21,6 +21,8 @@ from app.admin.forms import (
     StorageSettingsForm,
     UserEditForm,
     UserSearchForm,
+    AdCampaignForm,
+    AdCreativeForm,
 )
 from app.models import (
     AdsSetting,
@@ -42,6 +44,9 @@ from app.models import (
     SmtpSetting,
     WhatsappSetting,
     User,
+    AdCampaign,
+    AdCreative,
+    AdEvent,
 )
 from datetime import datetime, timedelta
 import os
@@ -751,6 +756,99 @@ def ads_settings():
         return redirect(url_for('admin.ads_settings'))
 
     return render_template('admin/ads_settings.html', form=form, settings=settings)
+
+
+@bp.route('/ads', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def ads_manager():
+    """Facebook-like banner manager (autopilot)."""
+    campaign_form = AdCampaignForm()
+    creative_form = AdCreativeForm()
+
+    # Create campaign
+    if request.method == 'POST' and request.form.get('_action') == 'create_campaign':
+        if campaign_form.validate_on_submit():
+            society_id = None
+            raw_sid = (campaign_form.society_id.data or '').strip()
+            if raw_sid:
+                try:
+                    society_id = int(raw_sid)
+                except Exception:
+                    society_id = None
+
+            c = AdCampaign(
+                name=campaign_form.name.data,
+                objective=(campaign_form.objective.data or 'traffic'),
+                society_id=society_id,
+                autopilot=bool(campaign_form.autopilot.data),
+                is_active=bool(campaign_form.is_active.data),
+                starts_at=campaign_form.starts_at.data,
+                ends_at=campaign_form.ends_at.data,
+                max_impressions=campaign_form.max_impressions.data,
+                max_clicks=campaign_form.max_clicks.data,
+                created_by=current_user.id,
+                created_at=datetime.utcnow(),
+            )
+            db.session.add(c)
+            db.session.commit()
+            log_action('ad_campaign_create', 'AdCampaign', c.id, c.name)
+            flash('Campagna creata.', 'success')
+            return redirect(url_for('admin.ads_manager'))
+        flash('Errore nel form campagna.', 'danger')
+
+    # Create creative
+    if request.method == 'POST' and request.form.get('_action') == 'create_creative':
+        if creative_form.validate_on_submit():
+            camp = AdCampaign.query.get(int(creative_form.campaign_id.data))
+            if not camp:
+                flash('Campaign ID non valido.', 'danger')
+                return redirect(url_for('admin.ads_manager'))
+            cr = AdCreative(
+                campaign_id=camp.id,
+                placement=creative_form.placement.data,
+                headline=(creative_form.headline.data or '').strip() or None,
+                body=(creative_form.body.data or '').strip() or None,
+                image_url=(creative_form.image_url.data or '').strip() or None,
+                link_url=(creative_form.link_url.data or '').strip(),
+                cta_label=(creative_form.cta_label.data or '').strip() or 'Scopri di più',
+                weight=int(creative_form.weight.data or 100),
+                is_active=bool(creative_form.is_active.data),
+                created_by=current_user.id,
+                created_at=datetime.utcnow(),
+            )
+            db.session.add(cr)
+            db.session.commit()
+            log_action('ad_creative_create', 'AdCreative', cr.id, f'campaign={camp.id}')
+            flash('Creatività creata.', 'success')
+            return redirect(url_for('admin.ads_manager'))
+        flash('Errore nel form creatività.', 'danger')
+
+    # Lists + basic stats
+    campaigns = AdCampaign.query.order_by(AdCampaign.created_at.desc()).all()
+    creatives = AdCreative.query.order_by(AdCreative.created_at.desc()).limit(200).all()
+
+    def _ctr(clicks: int | None, imps: int | None) -> float:
+        i = float(imps or 0)
+        c = float(clicks or 0)
+        return round((c / i) * 100.0, 2) if i > 0 else 0.0
+
+    campaign_stats = {c.id: {"ctr": _ctr(c.clicks_count, c.impressions_count)} for c in campaigns}
+    creative_stats = {c.id: {"ctr": _ctr(c.clicks_count, c.impressions_count)} for c in creatives}
+
+    # Recent events for debugging
+    recent_events = AdEvent.query.order_by(AdEvent.created_at.desc()).limit(50).all()
+
+    return render_template(
+        'admin/ads_manager.html',
+        campaigns=campaigns,
+        creatives=creatives,
+        campaign_form=campaign_form,
+        creative_form=creative_form,
+        campaign_stats=campaign_stats,
+        creative_stats=creative_stats,
+        recent_events=recent_events,
+    )
 
 
 @bp.route('/search')

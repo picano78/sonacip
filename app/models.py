@@ -621,6 +621,7 @@ class AuditLog(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # Who performed the action
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)  # Optional scope
     action = db.Column(db.String(100), nullable=False)  # Action type
     entity_type = db.Column(db.String(50))  # User, Post, Event, etc.
     entity_id = db.Column(db.Integer)  # ID of affected entity
@@ -630,9 +631,41 @@ class AuditLog(db.Model):
     
     # Relationship
     user = db.relationship('User', backref='audit_logs')
+    society = db.relationship('Society', foreign_keys=[society_id])
     
     def __repr__(self):
         return f'<AuditLog {self.action} by User {self.user_id}>'
+
+
+class SocietyInvite(db.Model):
+    """
+    Society invites a user to join as a specific role (athlete/staff/coach/dirigente).
+    Acceptance activates a SocietyMembership and updates user role fields.
+    """
+    __tablename__ = 'society_invite'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    invited_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    invited_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    requested_role = db.Column(db.String(50), nullable=False)  # atleta, coach, staff, dirigente
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, accepted, rejected, revoked
+
+    note = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    responded_at = db.Column(db.DateTime)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    invited_user = db.relationship('User', foreign_keys=[invited_user_id])
+    inviter = db.relationship('User', foreign_keys=[invited_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'invited_user_id', 'status', name='uq_society_invite_active'),
+    )
+
+    def __repr__(self):
+        return f'<SocietyInvite society={self.society_id} user={self.invited_user_id} role={self.requested_role} status={self.status}>'
 
 
 class Backup(db.Model):

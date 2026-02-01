@@ -8,12 +8,13 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
 from app import db
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
+from app.social.society_forms import SocietyInviteForm
 from app.social.utils import save_picture
-from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment, SocialSetting, TournamentMatch
+from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment, SocialSetting, TournamentMatch, SocietyInvite, SocietyMembership
 from app.cache import get_cache
 from app.utils import permission_required, check_permission
+from app.utils import log_action
 from datetime import datetime, timedelta
-from datetime import datetime
 import os
 
 bp = Blueprint('social', __name__, url_prefix='/social')
@@ -628,11 +629,167 @@ def society_dashboard():
         'posts_count': Post.query.filter_by(user_id=current_user.id).count()
     }
     
-    return render_template('social/society_dashboard.html',
-                         staff=staff,
-                         athletes=athletes,
-                         events=events,
-                         stats=stats)
+    # Pending invites
+    invites = SocietyInvite.query.filter_by(society_id=society.id, status='pending').order_by(SocietyInvite.created_at.desc()).all()
+    # Memberships (canonical)
+    memberships = SocietyMembership.query.filter_by(society_id=society.id, status='active').order_by(SocietyMembership.created_at.desc()).all()
+
+    # Audit logs scoped to this society
+    recent_audit = AuditLog.query.filter_by(society_id=society.id).order_by(AuditLog.created_at.desc()).limit(20).all()
+
+    invite_form = SocietyInviteForm()
+
+    return render_template(
+        'social/society_dashboard.html',
+        staff=staff,
+        athletes=athletes,
+        events=events,
+        stats=stats,
+        invites=invites,
+        memberships=memberships,
+        recent_audit=recent_audit,
+        invite_form=invite_form,
+    )
+
+
+@bp.route('/society/invite', methods=['POST'])
+@login_required
+def society_invite():
+    """Society invites a user to join with a specific role."""
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    form = SocietyInviteForm()
+    if not form.validate_on_submit():
+        flash('Dati invito non validi.', 'danger')
+        return redirect(url_for('social.society_dashboard'))
+
+    q = (form.user_query.data or '').strip()
+    user = User.query.filter((User.email == q) | (User.username == q)).first()
+    if not user:
+        flash('Utente non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+    if user.id == current_user.id:
+        flash('Non puoi invitare te stesso.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    # Create invite
+    existing = SocietyInvite.query.filter_by(society_id=society.id, invited_user_id=user.id, status='pending').first()
+    if existing:
+        flash('Invito già inviato (in attesa).', 'info')
+        return redirect(url_for('social.society_dashboard'))
+
+    inv = SocietyInvite(
+        society_id=society.id,
+        invited_user_id=user.id,
+        invited_by=current_user.id,
+        requested_role=form.requested_role.data,
+        status='pending',
+        note=form.note.data or None,
+    )
+    db.session.add(inv)
+
+    notif = Notification(
+        user_id=user.id,
+        title='Invito da società',
+        message=f'{current_user.get_full_name()} ti ha invitato come {form.requested_role.data}.',
+        notification_type='system',
+        link=url_for('social.my_invites'),
+    )
+    db.session.add(notif)
+    db.session.commit()
+
+    log_action('society_invite', 'SocietyInvite', inv.id, f'Invited {user.id} role={inv.requested_role}', society_id=society.id)
+    flash('Invito inviato.', 'success')
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/invites')
+@login_required
+def my_invites():
+    """List invites received by the current user."""
+    invites = SocietyInvite.query.filter_by(invited_user_id=current_user.id, status='pending').order_by(SocietyInvite.created_at.desc()).all()
+    return render_template('social/invites.html', invites=invites)
+
+
+@bp.route('/invites/<int:invite_id>/<string:action>', methods=['POST'])
+@login_required
+def respond_invite(invite_id, action):
+    """Accept/reject an invite."""
+    inv = SocietyInvite.query.get_or_404(invite_id)
+    if inv.invited_user_id != current_user.id:
+        flash('Invito non valido.', 'danger')
+        return redirect(url_for('social.my_invites'))
+
+    if action not in ('accept', 'reject'):
+        flash('Azione non valida.', 'danger')
+        return redirect(url_for('social.my_invites'))
+
+    if inv.status != 'pending':
+        flash('Invito già gestito.', 'info')
+        return redirect(url_for('social.my_invites'))
+
+    society_id = inv.society_id
+
+    if action == 'reject':
+        inv.status = 'rejected'
+        inv.responded_at = datetime.utcnow()
+        db.session.commit()
+        log_action('society_invite_reject', 'SocietyInvite', inv.id, f'Rejected invite role={inv.requested_role}', society_id=society_id)
+        flash('Invito rifiutato.', 'success')
+        return redirect(url_for('social.my_invites'))
+
+    # Accept: activate membership + update user role fields
+    requested = inv.requested_role
+    membership = SocietyMembership.query.filter_by(society_id=society_id, user_id=current_user.id).first()
+    if not membership:
+        membership = SocietyMembership(
+            society_id=society_id,
+            user_id=current_user.id,
+            role_name=requested,
+            status='active',
+            created_by=inv.invited_by,
+        )
+        db.session.add(membership)
+    else:
+        membership.role_name = requested
+        membership.status = 'active'
+        membership.updated_by = inv.invited_by
+
+    # Update the user's primary role + society linkage
+    if requested == 'atleta':
+        current_user.role = 'atleta'
+        current_user.athlete_society_id = society_id
+        current_user.society_id = None
+        current_user.staff_role = None
+    elif requested == 'coach':
+        current_user.role = 'coach'
+        current_user.society_id = society_id
+        current_user.athlete_society_id = None
+        current_user.staff_role = 'coach'
+    elif requested == 'dirigente':
+        current_user.role = 'staff'
+        current_user.society_id = society_id
+        current_user.athlete_society_id = None
+        current_user.staff_role = 'dirigente'
+    else:  # staff
+        current_user.role = 'staff'
+        current_user.society_id = society_id
+        current_user.athlete_society_id = None
+        current_user.staff_role = 'staff'
+
+    inv.status = 'accepted'
+    inv.responded_at = datetime.utcnow()
+    db.session.commit()
+
+    log_action('society_invite_accept', 'SocietyInvite', inv.id, f'Accepted invite role={requested}', society_id=society_id)
+    flash('Invito accettato. Ruolo aggiornato.', 'success')
+    return redirect(url_for('main.dashboard'))
 
 
 @bp.route('/explore')

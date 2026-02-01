@@ -210,7 +210,7 @@ def safe_get_or_404(model, entity_id, error_message=None):
     return entity
 
 
-def log_action(action, entity_type=None, entity_id=None, details=None):
+def log_action(action, entity_type=None, entity_id=None, details=None, society_id=None):
     """
     Log an action to the audit log
     """
@@ -221,6 +221,7 @@ def log_action(action, entity_type=None, entity_id=None, details=None):
     if current_user.is_authenticated:
         log = AuditLog(
             user_id=current_user.id,
+            society_id=society_id,
             action=action,
             entity_type=entity_type,
             entity_id=entity_id,

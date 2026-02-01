@@ -1276,6 +1276,74 @@ class WhatsappSetting(db.Model):
         return f'<WhatsappSetting enabled={self.enabled} provider={self.provider}>'
 
 
+class WhatsappTemplate(db.Model):
+    """
+    WhatsApp Business template registry (admin-managed).
+    For Meta Cloud API, `provider_template_name` is the approved template name.
+    """
+    __tablename__ = 'whatsapp_template'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(120), unique=True, nullable=False, index=True)  # internal key (stable)
+    provider_template_name = db.Column(db.String(200), nullable=False)
+    language_code = db.Column(db.String(20), default='it')  # e.g. it, it_IT, en_US
+    category = db.Column(db.String(50), default='utility')
+    body_preview = db.Column(db.String(500))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
+class WhatsappOptIn(db.Model):
+    """
+    Explicit opt-in/out per society to satisfy WhatsApp policy/compliance.
+    """
+    __tablename__ = 'whatsapp_optin'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    phone_number = db.Column(db.String(30))
+
+    is_opted_in = db.Column(db.Boolean, default=False)
+    opted_in_at = db.Column(db.DateTime)
+    opted_out_at = db.Column(db.DateTime)
+    source = db.Column(db.String(50), default='user')
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', name='uq_whatsapp_optin_scope'),
+    )
+
+
+class WhatsappMessageLog(db.Model):
+    """
+    Delivery/audit log for WhatsApp messages (for troubleshooting and compliance).
+    """
+    __tablename__ = 'whatsapp_message_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+
+    to_number = db.Column(db.String(30))
+    template_key = db.Column(db.String(120))
+    body = db.Column(db.Text)
+    status = db.Column(db.String(30), default='queued')  # queued, sent, failed
+    provider = db.Column(db.String(50))
+    provider_response = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    sent_at = db.Column(db.DateTime)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+
 class Message(db.Model):
     """
     Direct messaging between users

@@ -43,6 +43,8 @@ from app.models import (
     StorageSetting,
     SmtpSetting,
     WhatsappSetting,
+    WhatsappTemplate,
+    WhatsappMessageLog,
     User,
     AdCampaign,
     AdCreative,
@@ -363,6 +365,58 @@ def whatsapp_settings():
         return redirect(url_for('admin.whatsapp_settings'))
 
     return render_template('admin/whatsapp_settings.html', form=form, settings=settings)
+
+
+@bp.route('/whatsapp/templates', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def whatsapp_templates():
+    """WhatsApp templates registry (super admin)."""
+    if request.method == 'POST':
+        key = (request.form.get('key') or '').strip()
+        provider_name = (request.form.get('provider_template_name') or '').strip()
+        language_code = (request.form.get('language_code') or 'it').strip()
+        category = (request.form.get('category') or 'utility').strip()
+        body_preview = (request.form.get('body_preview') or '').strip() or None
+        if not key or len(key) < 3:
+            flash('Key non valida.', 'danger')
+            return redirect(url_for('admin.whatsapp_templates'))
+        if not provider_name:
+            flash('Nome template provider richiesto.', 'danger')
+            return redirect(url_for('admin.whatsapp_templates'))
+        if WhatsappTemplate.query.filter_by(key=key).first():
+            flash('Key già esistente.', 'danger')
+            return redirect(url_for('admin.whatsapp_templates'))
+        t = WhatsappTemplate(
+            key=key,
+            provider_template_name=provider_name,
+            language_code=language_code,
+            category=category,
+            body_preview=body_preview,
+            is_active=True,
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(t)
+        db.session.commit()
+        log_action('create_whatsapp_template', 'WhatsappTemplate', t.id, f'key={key}')
+        flash('Template creato.', 'success')
+        return redirect(url_for('admin.whatsapp_templates'))
+
+    templates = WhatsappTemplate.query.order_by(WhatsappTemplate.created_at.desc()).limit(300).all()
+    recent_logs = WhatsappMessageLog.query.order_by(WhatsappMessageLog.created_at.desc()).limit(50).all()
+    return render_template('admin/whatsapp_templates.html', templates=templates, recent_logs=recent_logs)
+
+
+@bp.route('/whatsapp/templates/<int:template_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def whatsapp_template_toggle(template_id: int):
+    t = WhatsappTemplate.query.get_or_404(template_id)
+    t.is_active = not bool(t.is_active)
+    db.session.commit()
+    log_action('toggle_whatsapp_template', 'WhatsappTemplate', t.id, f'active={t.is_active}')
+    flash('Template aggiornato.', 'success')
+    return redirect(url_for('admin.whatsapp_templates'))
 
 
 @bp.route('/pages')

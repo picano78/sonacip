@@ -172,6 +172,10 @@ def validate_action_schema(action: Dict[str, Any]) -> Tuple[bool, str]:
             return False, 'whatsapp action requires message'
         if not isinstance(action['message'], str):
             return False, 'whatsapp message must be a string'
+        if 'template_key' in action and action['template_key'] is not None and not isinstance(action['template_key'], str):
+            return False, 'whatsapp template_key must be a string'
+        if 'template_params' in action and action['template_params'] is not None and not isinstance(action['template_params'], (list, str)):
+            return False, 'whatsapp template_params must be a list or comma-separated string'
     
     else:
         return False, f'Unknown action type: {atype}'

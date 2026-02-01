@@ -209,9 +209,16 @@ class SmtpSettingsForm(FlaskForm):
 
 class WhatsappSettingsForm(FlaskForm):
     enabled = BooleanField('Abilita WhatsApp')
-    provider = SelectField('Provider', choices=[('webhook', 'Webhook (generico)')], validators=[Optional()])
-    api_url = StringField('Webhook URL', validators=[Optional(), Length(max=500)])
+    provider = SelectField(
+        'Provider',
+        choices=[
+            ('webhook', 'Webhook (generico)'),
+            ('meta_cloud_api', 'Meta Cloud API (WhatsApp Business)'),
+        ],
+        validators=[Optional()],
+    )
+    api_url = StringField('API URL', validators=[Optional(), Length(max=500)])
     api_token = PasswordField('Token (Bearer)', validators=[Optional(), Length(max=500)])
-    from_number = StringField('From (opzionale)', validators=[Optional(), Length(max=50)])
+    from_number = StringField('From / Phone Number ID (opzionale)', validators=[Optional(), Length(max=50)])
     test_phone = StringField('Invia test a (telefono)', validators=[Optional(), Length(max=20)])
     test_message = StringField('Messaggio test', validators=[Optional(), Length(max=500)])

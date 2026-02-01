@@ -210,7 +210,15 @@ def send_sms(phone_number, message):
     return True
 
 
-def send_whatsapp(phone_number: str, message: str) -> bool:
+def send_whatsapp(
+    phone_number: str,
+    message: str,
+    *,
+    society_id: int | None = None,
+    user_id: int | None = None,
+    template_key: str | None = None,
+    template_params: list[str] | None = None,
+) -> bool:
     """
     Send WhatsApp message via configured provider (webhook-style).
     Returns True if queued/sent, False otherwise.
@@ -227,7 +235,22 @@ def send_whatsapp(phone_number: str, message: str) -> bool:
         if not phone_number or not message:
             return False
 
-        if settings.provider == 'webhook':
+        # Enforce opt-in when we have a society/user scope (WhatsApp Business compliance)
+        try:
+            from app.models import WhatsappOptIn
+
+            if society_id and user_id:
+                opt = WhatsappOptIn.query.filter_by(society_id=society_id, user_id=user_id).first()
+                if not opt or not opt.is_opted_in:
+                    return False
+        except Exception:
+            pass
+
+        provider = (settings.provider or 'webhook').strip()
+        resp_payload = None
+        ok = False
+
+        if provider == 'webhook':
             if not settings.api_url:
                 return False
             import requests
@@ -238,14 +261,87 @@ def send_whatsapp(phone_number: str, message: str) -> bool:
                 'to': phone_number,
                 'message': message,
                 'from': settings.from_number,
+                'template_key': template_key,
+                'template_params': template_params or [],
+                'society_id': society_id,
+                'user_id': user_id,
             }
             resp = requests.post(settings.api_url, json=payload, headers=headers, timeout=20)
             resp.raise_for_status()
-            return True
+            resp_payload = resp.text
+            ok = True
 
-        # Unknown provider: do not fail hard, but log.
-        current_app.logger.warning(f"WhatsApp provider not supported: {settings.provider}")
-        return False
+        elif provider == 'meta_cloud_api':
+            # Generic Meta Cloud API call. `api_url` should be the /messages endpoint.
+            if not settings.api_url or not settings.api_token:
+                return False
+            import requests
+            headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {settings.api_token}'}
+
+            payload = None
+            if template_key:
+                try:
+                    from app.models import WhatsappTemplate
+                    t = WhatsappTemplate.query.filter_by(key=template_key, is_active=True).first()
+                except Exception:
+                    t = None
+                if not t:
+                    return False
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": phone_number,
+                    "type": "template",
+                    "template": {
+                        "name": t.provider_template_name,
+                        "language": {"code": t.language_code or "it"},
+                        "components": [
+                            {
+                                "type": "body",
+                                "parameters": [{"type": "text", "text": p} for p in (template_params or [])],
+                            }
+                        ],
+                    },
+                }
+            else:
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": phone_number,
+                    "type": "text",
+                    "text": {"body": message},
+                }
+
+            resp = requests.post(settings.api_url, json=payload, headers=headers, timeout=20)
+            resp.raise_for_status()
+            resp_payload = resp.text
+            ok = True
+
+        else:
+            current_app.logger.warning(f"WhatsApp provider not supported: {provider}")
+            return False
+
+        # Log delivery attempt (best-effort)
+        try:
+            from app.models import WhatsappMessageLog
+            db.session.add(
+                WhatsappMessageLog(
+                    society_id=society_id,
+                    user_id=user_id,
+                    to_number=phone_number,
+                    template_key=template_key,
+                    body=message,
+                    status='sent' if ok else 'failed',
+                    provider=provider,
+                    provider_response=resp_payload,
+                    created_at=datetime.utcnow(),
+                    sent_at=datetime.utcnow() if ok else None,
+                )
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        return ok
+
     except Exception as exc:
         current_app.logger.warning(f"send_whatsapp failed: {exc}")
-        raise
+        return False

@@ -36,6 +36,7 @@ def seed_defaults(app) -> dict:
         SmtpSetting,
         AutomationRule,
         WhatsappSetting,
+        WhatsappTemplate,
         StorageSetting,
         User,
     )
@@ -312,6 +313,37 @@ def seed_defaults(app) -> dict:
             db.session.add(WhatsappSetting(enabled=False, provider="webhook"))
             summary["whatsapp_settings_created"] += 1
         db.session.commit()
+
+        # ---------------------------------------------------------------------
+        # WhatsApp templates (optional, for WhatsApp Pro)
+        # ---------------------------------------------------------------------
+        try:
+            if not WhatsappTemplate.query.first():
+                db.session.add(
+                    WhatsappTemplate(
+                        key="fee_due",
+                        provider_template_name="sonacip_fee_due",
+                        language_code="it",
+                        category="utility",
+                        body_preview="Ciao {{name}}, la tua quota scade il {{due_on}}.",
+                        is_active=True,
+                        created_at=datetime.utcnow(),
+                    )
+                )
+                db.session.add(
+                    WhatsappTemplate(
+                        key="medical_certificate_expiring",
+                        provider_template_name="sonacip_medical_certificate_expiring",
+                        language_code="it",
+                        category="utility",
+                        body_preview="Promemoria: certificato in scadenza il {{expires_on}}.",
+                        is_active=True,
+                        created_at=datetime.utcnow(),
+                    )
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # ---------------------------------------------------------------------
         # Ads autopilot: default "house" campaign (idempotent)

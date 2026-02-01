@@ -1560,6 +1560,62 @@ class Payment(db.Model):
         return f'<Payment {self.id}: {self.amount} {self.currency} - {self.status}>'
 
 
+class Coupon(db.Model):
+    """
+    Coupon codes for monetization (super-admin managed).
+    Can apply to subscriptions and unlock paid features.
+    """
+    __tablename__ = 'coupon'
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    description = db.Column(db.String(255))
+
+    discount_type = db.Column(db.String(20), default='percent')  # percent, fixed
+    discount_value = db.Column(db.Integer, default=0)  # percent points (0-100) or cents for fixed
+    currency = db.Column(db.String(3), default='EUR')
+
+    is_active = db.Column(db.Boolean, default=True)
+    max_redemptions = db.Column(db.Integer)  # null = unlimited
+    redeemed_count = db.Column(db.Integer, default=0)
+
+    valid_from = db.Column(db.DateTime)
+    valid_until = db.Column(db.DateTime)
+
+    # Optional restriction to a plan
+    plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'))
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    plan = db.relationship('Plan', foreign_keys=[plan_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<Coupon {self.code} active={self.is_active}>'
+
+
+class CouponRedemption(db.Model):
+    """Coupon redemption audit."""
+    __tablename__ = 'coupon_redemption'
+
+    id = db.Column(db.Integer, primary_key=True)
+    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'))
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'))
+
+    redeemed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    coupon = db.relationship('Coupon', foreign_keys=[coupon_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    subscription = db.relationship('Subscription', foreign_keys=[subscription_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+
+
 class Society(db.Model):
     """
     Society (Sports Club) extended model

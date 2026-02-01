@@ -122,6 +122,38 @@
           {% endif %}
         </div>
       {% endif %}
+
+      {% if tournament.format == 'round_robin' and can_manage %}
+        <div class="glass-card p-3 mt-3 card-hover">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold"><i class="bi bi-calendar3"></i> Calendario automatico</span>
+          </div>
+          <form method="post" action="{{ url_for('tournaments.generate_schedule', tournament_id=tournament.id) }}" class="row g-2 align-items-end">
+            {{ csrf_token() }}
+            <div class="col-md-4">
+              <label class="form-label">Data inizio</label>
+              <input class="form-control form-control-sm" type="date" name="start_date" value="{{ tournament.start_date.strftime('%Y-%m-%d') if tournament.start_date else '' }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Intervallo (giorni)</label>
+              <input class="form-control form-control-sm" type="number" name="interval_days" value="7" min="1">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Seeding</label>
+              <select class="form-select form-select-sm" name="seeding">
+                <option value="random">Casuale</option>
+                <option value="manual">Manuale (seed)</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <button class="btn btn-sm btn-outline-primary w-100" type="submit">Genera</button>
+            </div>
+            <div class="col-12">
+              <div class="text-muted small">Genera automaticamente tutte le partite. Per tornei di società, crea anche eventi nel Calendario Società.</div>
+            </div>
+          </form>
+        </div>
+      {% endif %}
     </div>
     <div class="col-md-4">
       <div class="glass-card p-3 mb-3 card-hover">

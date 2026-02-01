@@ -5,6 +5,7 @@ import random
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 from sqlalchemy import false
+from sqlalchemy.orm import joinedload
 from app import db
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
 from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity
@@ -238,9 +239,26 @@ def view_tournament(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     _require_view(tournament)
     teams = tournament.teams.order_by(TournamentTeam.name.asc()).all()
-    matches = tournament.matches.order_by(TournamentMatch.match_date.asc()).all()
+    matches = (
+        tournament.matches.options(
+            joinedload(TournamentMatch.home_team),
+            joinedload(TournamentMatch.away_team),
+            joinedload(TournamentMatch.winner_team),
+        )
+        .order_by(TournamentMatch.match_date.asc())
+        .all()
+    )
     standings = tournament.standings.order_by(TournamentStanding.points.desc(), TournamentStanding.goals_for.desc()).all()
-    bracket_matches = tournament.matches.filter_by(is_bracket=True).order_by(TournamentMatch.round_number.asc(), TournamentMatch.position.asc()).all()
+    bracket_matches = (
+        tournament.matches.options(
+            joinedload(TournamentMatch.home_team),
+            joinedload(TournamentMatch.away_team),
+            joinedload(TournamentMatch.winner_team),
+        )
+        .filter_by(is_bracket=True)
+        .order_by(TournamentMatch.round_number.asc(), TournamentMatch.position.asc())
+        .all()
+    )
     bracket_rounds = {}
     for m in bracket_matches:
         bracket_rounds.setdefault(m.round_number, []).append(m)
@@ -408,4 +426,140 @@ def update_seeding(tournament_id):
             updated += 1
     db.session.commit()
     flash('Seeding aggiornato.' if updated else 'Nessuna modifica.', 'success' if updated else 'info')
+    return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+
+def _round_robin_pairs(team_ids: list[int]) -> list[list[tuple[int | None, int | None]]]:
+    """
+    Circle method.
+    Returns rounds, each round is list of (home_id, away_id); ids can be None for BYE.
+    """
+    ids = list(team_ids)
+    if len(ids) < 2:
+        return []
+    # Add BYE if odd
+    if len(ids) % 2 == 1:
+        ids.append(None)
+    n = len(ids)
+    rounds = n - 1
+    half = n // 2
+    arr = ids[:]
+    out: list[list[tuple[int | None, int | None]]] = []
+    for r in range(rounds):
+        pairs = []
+        for i in range(half):
+            a = arr[i]
+            b = arr[n - 1 - i]
+            pairs.append((a, b))
+        out.append(pairs)
+        # rotate all but first
+        fixed = arr[0]
+        rest = arr[1:]
+        rest = [rest[-1]] + rest[:-1]
+        arr = [fixed] + rest
+    return out
+
+
+def _create_calendar_event_for_match(tournament: Tournament, match: TournamentMatch) -> None:
+    """If society tournament, create SocietyCalendarEvent and link it."""
+    if not tournament.society_id or not match.match_date:
+        return
+    if match.calendar_event_id:
+        return
+
+    title = f"{match.home_team.name if match.home_team else 'TBD'} vs {match.away_team.name if match.away_team else 'TBD'}"
+    ev = SocietyCalendarEvent(
+        society_id=tournament.society_id,
+        created_by=tournament.created_by,
+        title=f"Torneo: {title}",
+        event_type="match",
+        start_datetime=match.match_date,
+        end_datetime=match.match_date,
+        location_text=match.location or None,
+        notes=f"Torneo: {tournament.name} ({match.round_label or 'Round'})",
+        share_to_social=True,
+        color="#198754",
+    )
+    db.session.add(ev)
+    db.session.flush()
+    match.calendar_event_id = ev.id
+    db.session.add(match)
+
+
+@bp.route('/<int:tournament_id>/schedule/generate', methods=['POST'])
+@login_required
+def generate_schedule(tournament_id):
+    """Generate matches automatically (round-robin only)."""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    _require_manage(tournament)
+
+    if tournament.format != 'round_robin':
+        flash('Generazione calendario disponibile solo per girone all’italiana.', 'warning')
+        return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+    if tournament.matches.count() > 0:
+        flash('Calendario già presente: elimina le partite per rigenerare.', 'warning')
+        return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+    mode = (request.form.get('seeding') or 'random').strip()
+    if mode not in ('random', 'manual'):
+        mode = 'random'
+
+    # Base date and interval days
+    start_date_str = (request.form.get('start_date') or '').strip()
+    interval_days = int(request.form.get('interval_days') or 7)
+    try:
+        base_date = datetime.strptime(start_date_str, '%Y-%m-%d') if start_date_str else None
+    except Exception:
+        base_date = None
+    if not base_date:
+        base_date = datetime.utcnow().replace(hour=18, minute=0, second=0, microsecond=0)
+    else:
+        base_date = base_date.replace(hour=18, minute=0, second=0, microsecond=0)
+    if interval_days <= 0:
+        interval_days = 7
+
+    teams = tournament.teams.order_by(TournamentTeam.name.asc()).all()
+    if len(teams) < 2:
+        flash('Servono almeno 2 squadre.', 'warning')
+        return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+    # Choose ordering for pairing generation
+    ordered = list(teams)
+    if mode == 'random':
+        random.shuffle(ordered)
+    else:
+        ordered.sort(key=lambda t: (t.seed is None, t.seed if t.seed is not None else 10**9, t.name.lower()))
+
+    rounds = _round_robin_pairs([t.id for t in ordered])
+    created = 0
+    from datetime import timedelta as _td
+    for r_idx, pairs in enumerate(rounds, start=1):
+        round_date = base_date + _td(days=(r_idx - 1) * interval_days)
+        for a, b in pairs:
+            if a is None or b is None:
+                continue
+            match = TournamentMatch(
+                tournament_id=tournament.id,
+                home_team_id=a,
+                away_team_id=b,
+                round_label=f"Giornata {r_idx}",
+                match_date=round_date,
+                location=None,
+                status='scheduled',
+                is_bracket=False,
+            )
+            db.session.add(match)
+            db.session.flush()
+            created += 1
+            try:
+                # Link calendar event (society tournaments)
+                match.home_team = TournamentTeam.query.get(a)
+                match.away_team = TournamentTeam.query.get(b)
+                _create_calendar_event_for_match(tournament, match)
+            except Exception:
+                pass
+
+    db.session.commit()
+    flash(f'Calendario generato: {created} partite.', 'success')
     return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))

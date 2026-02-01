@@ -7,6 +7,10 @@ ENV_FILE="/opt/sonacip/.env"
 SERVICE_FILE="/etc/systemd/system/sonacip.service"
 NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/sonacip"
 NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/sonacip"
+LE_WEBROOT="/var/www/letsencrypt"
+SONACIP_DOMAIN="${SONACIP_DOMAIN:-}"
+SONACIP_LETSENCRYPT_EMAIL="${SONACIP_LETSENCRYPT_EMAIL:-}"
+SONACIP_ENABLE_UFW="${SONACIP_ENABLE_UFW:-false}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ $EUID -ne 0 ]]; then
@@ -32,6 +36,10 @@ apt-get install -y --no-install-recommends \
   build-essential \
   libpq-dev \
   nginx \
+  certbot \
+  python3-certbot \
+  python3-certbot-nginx \
+  openssl \
   rsync \
   curl
 
@@ -76,6 +84,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     printf '%s\n' "FLASK_ENV=production"
     printf '%s\n' "SECRET_KEY=$SECRET_KEY"
     printf '%s\n' "USE_PROXYFIX=true"
+    printf '%s\n' "SESSION_COOKIE_SECURE=true"
     printf '%s\n' "SUPERADMIN_EMAIL=admin@example.com"
     printf '%s\n' "SUPERADMIN_PASSWORD=$ADMIN_PASSWORD"
   } >> "$ENV_FILE"
@@ -103,7 +112,49 @@ systemctl enable sonacip.service
 
 
 echo "[8/10] Configurazione Nginx (HTTP)..."
-install -m 0644 "$APP_DIR/deployment/nginx.conf" "$NGINX_SITE_AVAILABLE"
+mkdir -p "$LE_WEBROOT/.well-known/acme-challenge"
+chown -R root:root "$LE_WEBROOT"
+chmod -R 0755 "$LE_WEBROOT"
+
+# SSL strategy:
+# - If SONACIP_DOMAIN + SONACIP_LETSENCRYPT_EMAIL are provided -> Let's Encrypt
+# - else -> self-signed cert (still HTTPS, so cookies work)
+SERVER_NAME="_"
+if [[ -n "$SONACIP_DOMAIN" ]]; then
+  SERVER_NAME="$SONACIP_DOMAIN"
+fi
+
+SSL_CERT="/etc/ssl/sonacip/fullchain.pem"
+SSL_KEY="/etc/ssl/sonacip/privkey.pem"
+
+if [[ -n "$SONACIP_DOMAIN" && -n "$SONACIP_LETSENCRYPT_EMAIL" ]]; then
+  echo "Richiesta certificato Let's Encrypt per: $SONACIP_DOMAIN"
+  SSL_CERT="/etc/letsencrypt/live/$SONACIP_DOMAIN/fullchain.pem"
+  SSL_KEY="/etc/letsencrypt/live/$SONACIP_DOMAIN/privkey.pem"
+  certbot certonly --webroot -w "$LE_WEBROOT" \
+    -d "$SONACIP_DOMAIN" \
+    --agree-tos --non-interactive --email "$SONACIP_LETSENCRYPT_EMAIL" \
+    --keep-until-expiring
+  systemctl enable certbot.timer || true
+else
+  echo "SSL: uso certificato self-signed (imposta SONACIP_DOMAIN + SONACIP_LETSENCRYPT_EMAIL per Let's Encrypt)."
+  install -d -m 0755 /etc/ssl/sonacip
+  if [[ ! -f "$SSL_CERT" || ! -f "$SSL_KEY" ]]; then
+    CN="${SONACIP_DOMAIN:-localhost}"
+    openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+      -subj "/CN=$CN" \
+      -keyout "$SSL_KEY" -out "$SSL_CERT"
+    chmod 0600 "$SSL_KEY"
+  fi
+fi
+
+python3 "$APP_DIR/scripts/render_nginx_conf.py" \
+  --template "$APP_DIR/deployment/nginx_site.conf.template" \
+  --out "$NGINX_SITE_AVAILABLE" \
+  --server-name "$SERVER_NAME" \
+  --ssl-cert "$SSL_CERT" \
+  --ssl-key "$SSL_KEY"
+
 ln -sf "$NGINX_SITE_AVAILABLE" "$NGINX_SITE_ENABLED"
 if [[ -e /etc/nginx/sites-enabled/default ]]; then
   rm -f /etc/nginx/sites-enabled/default
@@ -111,6 +162,14 @@ fi
 nginx -t
 systemctl enable nginx
 systemctl restart nginx
+
+if [[ "$SONACIP_ENABLE_UFW" == "true" || "$SONACIP_ENABLE_UFW" == "on" || "$SONACIP_ENABLE_UFW" == "1" ]]; then
+  echo "Configurazione firewall UFW..."
+  apt-get install -y --no-install-recommends ufw
+  ufw allow OpenSSH
+  ufw allow 'Nginx Full'
+  ufw --force enable
+fi
 
 
 echo "[9/10] Installazione CLI di backup/restore..."

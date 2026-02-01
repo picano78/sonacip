@@ -30,6 +30,7 @@ from app.utils import permission_required, check_permission, get_active_society_
 from app.utils import log_action
 from datetime import datetime, timedelta
 import os
+from app.ads.utils import choose_creative, make_token
 
 bp = Blueprint('social', __name__, url_prefix='/social')
 
@@ -156,6 +157,17 @@ def feed():
     else:
         posts = []
 
+    # Autopilot banner (Facebook-like): pick a creative for this feed page.
+    ad = None
+    ad_token = None
+    try:
+        ad = choose_creative("feed_inline", society_id=scope_id, user_id=current_user.id)
+        if ad:
+            ad_token = make_token(ad, "feed_inline", society_id=scope_id, user_id=current_user.id)
+    except Exception:
+        ad = None
+        ad_token = None
+
     # Update promotion views and disable expired ones (no-op if empty)
     if posts:
         for p in posts:
@@ -190,7 +202,9 @@ def feed():
     return render_template('social/feed.html',
                          posts=posts,
                          pagination=pagination,
-                         form=form)
+                         form=form,
+                         ad=ad,
+                         ad_token=ad_token)
 
 
 @bp.route('/post/create', methods=['POST'])

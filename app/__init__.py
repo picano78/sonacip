@@ -29,6 +29,7 @@ CORE_MODULES = [
     'main',
     'auth',
     'admin',
+    'ads',
     'crm',
     'events',
     'social',

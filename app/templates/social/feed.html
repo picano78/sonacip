@@ -53,6 +53,9 @@
             {% if posts %}
                 {% for post in posts %}
                     {% include 'components/post_card.html' %}
+                    {% if ad and ad_token and loop.index == 5 %}
+                      {% include 'components/ad_card.html' %}
+                    {% endif %}
                 {% endfor %}
             {% else %}
                 <div class="glass-card p-4 text-center">

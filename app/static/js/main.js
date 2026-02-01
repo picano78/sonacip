@@ -200,6 +200,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Ads tracking (impressions) - only after privacy accepted (version stored)
+    try {
+        const privacyVersion = privacyModalEl ? (privacyModalEl.dataset.privacyVersion || 'v1') : (localStorage.getItem('sonacipPrivacyVersion') || 'v1');
+        const accepted = localStorage.getItem('sonacipPrivacyVersion') === privacyVersion;
+        if (accepted) {
+            const nodes = document.querySelectorAll('[data-ad-impression-url]');
+            nodes.forEach(n => {
+                const url = n.getAttribute('data-ad-impression-url');
+                if (!url) return;
+                // fire-and-forget
+                fetch(url, { method: 'GET', credentials: 'same-origin' }).catch(() => {});
+            });
+        }
+    } catch (e) {
+        // ignore
+    }
+
     // Theme toggle (light/dark)
     const themeToggle = document.querySelector('[data-theme-toggle]');
     const rootBody = document.body;

@@ -870,6 +870,103 @@ class AdsSetting(db.Model):
         return f'<AdsSetting CPM={self.price_per_thousand_views}>'
 
 
+class AdCampaign(db.Model):
+    """
+    Ad campaign (Facebook-like): groups creatives and controls delivery.
+    For now: managed by super admin (global) or scoped to a society.
+    """
+    __tablename__ = 'ad_campaign'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    objective = db.Column(db.String(50), default='traffic')  # traffic, awareness, conversions (future)
+
+    # Scope: if set, ads show only inside that society scope.
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
+
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    starts_at = db.Column(db.DateTime)
+    ends_at = db.Column(db.DateTime)
+
+    # Basic caps (autopilot safety)
+    max_impressions = db.Column(db.Integer)
+    max_clicks = db.Column(db.Integer)
+
+    # Autopilot: if true, delivery uses bandit (CTR) instead of fixed weights.
+    autopilot = db.Column(db.Boolean, default=True)
+
+    # Counters (fast stats)
+    impressions_count = db.Column(db.Integer, default=0)
+    clicks_count = db.Column(db.Integer, default=0)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<AdCampaign {self.id} {self.name} active={self.is_active}>'
+
+
+class AdCreative(db.Model):
+    """Ad creative: what gets displayed and clicked."""
+    __tablename__ = 'ad_creative'
+
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('ad_campaign.id'), nullable=False, index=True)
+
+    placement = db.Column(db.String(50), nullable=False, index=True)  # e.g. feed_inline, sidebar_card
+    headline = db.Column(db.String(120))
+    body = db.Column(db.String(500))
+    image_url = db.Column(db.String(500))
+    link_url = db.Column(db.String(800), nullable=False)
+    cta_label = db.Column(db.String(50), default='Scopri di più')
+
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    weight = db.Column(db.Integer, default=100)  # used when autopilot disabled
+
+    impressions_count = db.Column(db.Integer, default=0)
+    clicks_count = db.Column(db.Integer, default=0)
+    last_served_at = db.Column(db.DateTime)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    campaign = db.relationship('AdCampaign', foreign_keys=[campaign_id], backref=db.backref('creatives', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<AdCreative {self.id} placement={self.placement} active={self.is_active}>'
+
+
+class AdEvent(db.Model):
+    """Event log for impressions/clicks (for analytics and debugging)."""
+    __tablename__ = 'ad_event'
+
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(20), nullable=False)  # impression, click
+    campaign_id = db.Column(db.Integer, db.ForeignKey('ad_campaign.id'), nullable=False, index=True)
+    creative_id = db.Column(db.Integer, db.ForeignKey('ad_creative.id'), nullable=False, index=True)
+    placement = db.Column(db.String(50), nullable=False, index=True)
+
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+
+    ip = db.Column(db.String(80))
+    user_agent = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    campaign = db.relationship('AdCampaign', foreign_keys=[campaign_id])
+    creative = db.relationship('AdCreative', foreign_keys=[creative_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f'<AdEvent {self.kind} creative={self.creative_id} at={self.created_at}>'
+
+
 class SocialSetting(db.Model):
     """Global social governance controlled by super admin."""
     __tablename__ = 'social_setting'

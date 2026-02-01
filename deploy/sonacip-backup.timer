@@ -1,11 +1,10 @@
- [Unit]
- Description=Run SONACIP backups daily
- 
- [Timer]
- OnCalendar=daily
- Persistent=true
- RandomizedDelaySec=10m
- 
- [Install]
- WantedBy=timers.target
- 
+[Unit]
+Description=Run SONACIP backups daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

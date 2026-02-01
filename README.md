@@ -37,6 +37,22 @@ gunicorn wsgi:app
 
 Vedi guida completa: `DEPLOYMENT_UBUNTU_24_04.md`.
 
+Per installazione **automatica** su VPS:
+
+```bash
+sudo ./sonacip_install.sh
+```
+
+Opzioni:
+
+```bash
+export SONACIP_DOMAIN="tuodominio.it"
+export SONACIP_LETSENCRYPT_EMAIL="tuamail@tuodominio.it"
+export SONACIP_ENABLE_UFW="true"
+export SONACIP_ENABLE_REDIS="true"
+sudo ./sonacip_install.sh
+```
+
 ## 🎯 Struttura Progetto
 
 ```

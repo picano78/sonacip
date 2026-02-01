@@ -1,13 +1,12 @@
- [Unit]
- Description=SONACIP Backup Job
- After=network.target
- 
- [Service]
- Type=oneshot
- User=sonacip
- Group=sonacip
- WorkingDirectory=/opt/sonacip
- EnvironmentFile=/opt/sonacip/.env
- Environment=PYTHONUNBUFFERED=1
- ExecStart=/opt/sonacip/venv/bin/python /opt/sonacip/scripts/backup_job.py
- 
+[Unit]
+Description=SONACIP Backup Job
+After=network.target
+
+[Service]
+Type=oneshot
+User=sonacip
+Group=sonacip
+WorkingDirectory=/opt/sonacip
+EnvironmentFile=/opt/sonacip/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/sonacip/venv/bin/python /opt/sonacip/scripts/backup_job.py

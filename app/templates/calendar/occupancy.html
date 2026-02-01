@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Occupazione Risorse | SONACIP{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-1"><i class="bi bi-bar-chart"></i> Occupazione risorse</h1>
+      <div class="text-muted">Ore prenotate per palestra/risorsa nell’intervallo selezionato.</div>
+    </div>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calendar.grid') }}">Vista griglia</a>
+  </div>
+
+  <form class="row g-2 align-items-end mb-3" method="get">
+    <div class="col-md-4">
+      <label class="form-label">Dal</label>
+      <input type="date" class="form-control" name="start" value="{{ start_date.strftime('%Y-%m-%d') }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Al</label>
+      <input type="date" class="form-control" name="end" value="{{ end_date.strftime('%Y-%m-%d') }}">
+    </div>
+    <div class="col-md-4">
+      <button class="btn btn-outline-secondary w-100" type="submit">Aggiorna</button>
+    </div>
+  </form>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Risorsa</th>
+            <th class="text-end">Ore prenotate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>
+                <span class="badge me-2" style="background-color: {{ r.facility.color or '#0d6efd' }}; color:#fff;">&nbsp;</span>
+                {{ r.facility.name }}
+              </td>
+              <td class="text-end">{{ r.hours }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="2" class="text-muted">Nessuna risorsa configurata.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -15,6 +15,9 @@
                     <div class="small text-muted">Filtro attivo</div>
                     <div class="fw-bold">{{ view|capitalize }}</div>
                 </div>
+                <a href="{{ url_for('calendar.grid') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-grid-3x3-gap"></i> Griglia
+                </a>
                 {% if can('calendar', 'manage') %}
                     <a href="{{ url_for('calendar.create') }}" class="btn btn-dark">
                         <i class="bi bi-plus-lg"></i> Nuovo evento

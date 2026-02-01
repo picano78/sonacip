@@ -17,11 +17,15 @@ from app.models import (
 )
 from app.utils import permission_required, check_permission
 
-bp = Blueprint('scheduler', __name__, url_prefix='/scheduler')
+bp = Blueprint('calendar', __name__, url_prefix='/scheduler')
 
 def _scope_id():
     s = current_user.get_primary_society()
     return s.id if s else None
+
+def _event_scope_id(event_id: int):
+    ev = SocietyCalendarEvent.query.get(event_id)
+    return ev.society_id if ev else None
 
 
 def _date_range(view_mode: str, start_date: datetime.date):
@@ -95,10 +99,142 @@ def index():
         filters={'team': team or '', 'category': category or '', 'competition': competition or ''}
     )
 
+@bp.route('/calendar-grid')
+@login_required
+@permission_required('calendar', 'view', society_id_func=lambda: _scope_id())
+def grid():
+    """Google-Calendar-like grid view (day/week) with facility occupancy."""
+    view = request.args.get('view', 'week')
+    try:
+        start_str = request.args.get('start')
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.utcnow().date()
+    except ValueError:
+        start_date = datetime.utcnow().date()
+
+    if view not in ('day', 'week'):
+        view = 'week'
+
+    # Normalize start_date to Monday for week view
+    if view == 'week':
+        start_date = start_date - timedelta(days=start_date.weekday())
+        end_date = start_date + timedelta(days=7)
+    else:
+        end_date = start_date + timedelta(days=1)
+
+    society = current_user.get_primary_society()
+    if not society and not check_permission(current_user, 'admin', 'access'):
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('calendar.index'))
+
+    facility_id = request.args.get('facility_id', type=int)
+    facilities = []
+    if society:
+        facilities = Facility.query.filter_by(society_id=society.id).order_by(Facility.name.asc()).all()
+
+    q = _base_query_for_user()
+    q = q.filter(
+        SocietyCalendarEvent.start_datetime < datetime.combine(end_date, datetime.min.time()),
+        SocietyCalendarEvent.end_datetime > datetime.combine(start_date, datetime.min.time()),
+    )
+    if facility_id:
+        q = q.filter(SocietyCalendarEvent.facility_id == facility_id)
+
+    events = q.order_by(SocietyCalendarEvent.start_datetime.asc()).all()
+
+    days = []
+    d = start_date
+    while d < end_date:
+        days.append(d)
+        d = d + timedelta(days=1)
+
+    hours = list(range(6, 23))  # 06:00-22:00
+
+    # Map: day -> hour -> list[events]
+    grid_map = {(day, hour): [] for day in days for hour in hours}
+    for ev in events:
+        day = ev.start_datetime.date()
+        if day < start_date or day >= end_date:
+            continue
+        h = ev.start_datetime.hour
+        if h < hours[0]:
+            h = hours[0]
+        if h > hours[-1]:
+            h = hours[-1]
+        grid_map[(day, h)].append(ev)
+
+    return render_template(
+        'calendar/grid.html',
+        view=view,
+        start_date=start_date,
+        end_date=end_date,
+        days=days,
+        hours=hours,
+        facilities=facilities,
+        facility_id=facility_id,
+        grid_map=grid_map,
+    )
+
+
+@bp.route('/occupancy')
+@login_required
+@permission_required('calendar', 'view', society_id_func=lambda: _scope_id())
+def occupancy():
+    """Facility occupancy report (booked hours per resource)."""
+    try:
+        start_str = request.args.get('start')
+        end_str = request.args.get('end')
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.utcnow().date()
+        end_date = datetime.strptime(end_str, '%Y-%m-%d').date() if end_str else (start_date + timedelta(days=7))
+    except ValueError:
+        start_date = datetime.utcnow().date()
+        end_date = start_date + timedelta(days=7)
+
+    if end_date <= start_date:
+        end_date = start_date + timedelta(days=1)
+
+    society = current_user.get_primary_society()
+    if not society and not check_permission(current_user, 'admin', 'access'):
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('calendar.index'))
+
+    facilities = Facility.query.filter_by(society_id=society.id).order_by(Facility.name.asc()).all() if society else []
+    range_start = datetime.combine(start_date, datetime.min.time())
+    range_end = datetime.combine(end_date, datetime.min.time())
+
+    q = _base_query_for_user().filter(
+        SocietyCalendarEvent.facility_id.isnot(None),
+        SocietyCalendarEvent.start_datetime < range_end,
+        SocietyCalendarEvent.end_datetime > range_start,
+    )
+    events = q.all()
+
+    # Sum booked seconds per facility
+    totals = {f.id: 0 for f in facilities}
+    for ev in events:
+        if not ev.facility_id:
+            continue
+        s = max(ev.start_datetime, range_start)
+        e = min(ev.end_datetime, range_end)
+        if e > s:
+            totals[ev.facility_id] = totals.get(ev.facility_id, 0) + int((e - s).total_seconds())
+
+    rows = []
+    for f in facilities:
+        secs = totals.get(f.id, 0)
+        rows.append({'facility': f, 'hours': round(secs / 3600.0, 2)})
+    rows.sort(key=lambda r: r['hours'], reverse=True)
+
+    return render_template(
+        'calendar/occupancy.html',
+        start_date=start_date,
+        end_date=end_date,
+        rows=rows,
+    )
+
 
 @bp.route('/calendar/<int:event_id>')
 @login_required
-@permission_required('calendar', 'view', society_id_func=lambda event_id: (SocietyCalendarEvent.query.get(event_id).society_id if SocietyCalendarEvent.query.get(event_id) else None))
+@permission_required('calendar', 'view', society_id_func=_event_scope_id)
 def detail(event_id):
     event = SocietyCalendarEvent.query.get_or_404(event_id)
     if not event.is_visible_to(current_user):
@@ -256,7 +392,7 @@ def create():
 
 @bp.route('/calendar/<int:event_id>/respond/<string:response>', methods=['POST'])
 @login_required
-@permission_required('calendar', 'view', society_id_func=lambda event_id, response: (SocietyCalendarEvent.query.get(event_id).society_id if SocietyCalendarEvent.query.get(event_id) else None))
+@permission_required('calendar', 'view', society_id_func=lambda event_id, response: _event_scope_id(event_id))
 def respond(event_id, response):
     """Athlete responds to a society calendar convocation."""
     event = SocietyCalendarEvent.query.get_or_404(event_id)

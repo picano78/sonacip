@@ -90,6 +90,27 @@ def check_blueprints(app) -> bool:
     return True
 
 
+def check_redis_if_configured(app) -> bool:
+    print_header('REDIS (OPTIONAL)')
+    redis_url = app.config.get('REDIS_URL')
+    if not redis_url:
+        print('  ✓ Redis not configured (skipped)')
+        return True
+    try:
+        import redis  # type: ignore
+    except Exception as exc:
+        print(f'  ✗ Redis URL is set but python redis package is missing: {exc}')
+        return False
+    try:
+        client = redis.from_url(redis_url)
+        client.ping()
+        print('  ✓ Redis reachable')
+        return True
+    except Exception as exc:
+        print(f'  ✗ Redis not reachable at {redis_url}: {exc}')
+        return False
+
+
 def run_checks(checks: Iterable) -> int:
     passed = 0
     failed = 0
@@ -126,6 +147,7 @@ def main() -> int:
         check_wsgi_import,
         lambda: check_database_connection(app),
         lambda: check_blueprints(app),
+        lambda: check_redis_if_configured(app),
     ])
 
 

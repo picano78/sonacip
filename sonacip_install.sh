@@ -11,6 +11,7 @@ LE_WEBROOT="/var/www/letsencrypt"
 SONACIP_DOMAIN="${SONACIP_DOMAIN:-}"
 SONACIP_LETSENCRYPT_EMAIL="${SONACIP_LETSENCRYPT_EMAIL:-}"
 SONACIP_ENABLE_UFW="${SONACIP_ENABLE_UFW:-false}"
+SONACIP_ENABLE_REDIS="${SONACIP_ENABLE_REDIS:-false}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ $EUID -ne 0 ]]; then
@@ -43,6 +44,11 @@ apt-get install -y --no-install-recommends \
   logrotate \
   rsync \
   curl
+
+if [[ "$SONACIP_ENABLE_REDIS" == "true" || "$SONACIP_ENABLE_REDIS" == "on" || "$SONACIP_ENABLE_REDIS" == "1" ]]; then
+  apt-get install -y --no-install-recommends redis-server
+  systemctl enable --now redis-server
+fi
 
 echo "[2/8] Creazione utente e directory applicativa..."
 if ! id -u "$APP_USER" >/dev/null 2>&1; then
@@ -93,6 +99,17 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "Credenziali iniziali admin:"
   echo "  email: admin@example.com"
   echo "  password: $ADMIN_PASSWORD"
+fi
+
+# Ensure Redis config is present if enabled
+if [[ "$SONACIP_ENABLE_REDIS" == "true" || "$SONACIP_ENABLE_REDIS" == "on" || "$SONACIP_ENABLE_REDIS" == "1" ]]; then
+  if ! grep -qE '^REDIS_URL=' "$ENV_FILE"; then
+    printf '%s\n' "REDIS_URL=redis://localhost:6379/0" >> "$ENV_FILE"
+  fi
+  if ! grep -qE '^RATELIMIT_STORAGE_URI=' "$ENV_FILE"; then
+    printf '%s\n' "RATELIMIT_STORAGE_URI=redis://localhost:6379/1" >> "$ENV_FILE"
+  fi
+  chown "$APP_USER":"$APP_USER" "$ENV_FILE"
 fi
 
 

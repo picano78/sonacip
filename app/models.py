@@ -592,6 +592,8 @@ class SocietyCalendarEvent(db.Model):
     society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+    facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), index=True)
+
     title = db.Column(db.String(200), nullable=False)
     team = db.Column(db.String(100))  # textual team/category label
     category = db.Column(db.String(100))
@@ -600,6 +602,8 @@ class SocietyCalendarEvent(db.Model):
 
     start_datetime = db.Column(db.DateTime, nullable=False)
     end_datetime = db.Column(db.DateTime)
+
+    color = db.Column(db.String(20), default='#212529')  # hex or css color token
 
     location_text = db.Column(db.String(255))
     notes = db.Column(db.Text)
@@ -611,6 +615,7 @@ class SocietyCalendarEvent(db.Model):
 
     # Relationships
     society = db.relationship('Society', backref=db.backref('calendar_events', lazy='dynamic'))
+    facility = db.relationship('Facility', foreign_keys=[facility_id])
     creator = db.relationship('User', foreign_keys=[created_by])
     staff_members = db.relationship(
         'User', secondary=society_calendar_event_staff,
@@ -644,6 +649,29 @@ class SocietyCalendarEvent(db.Model):
 
     def __repr__(self):
         return f'<SocietyCalendarEvent {self.title} ({self.event_type})>'
+
+
+class Facility(db.Model):
+    """
+    Society facilities/resources (palestre/campi/sale) used for occupancy planning.
+    """
+    __tablename__ = 'facility'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    address = db.Column(db.String(255))
+    capacity = db.Column(db.Integer)
+    color = db.Column(db.String(20), default='#0d6efd')  # default color for this facility
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('facilities', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<Facility {self.name} society={self.society_id}>'
 
 
 class Notification(db.Model):

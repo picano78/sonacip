@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Risorse / Palestre | Calendario Società{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-1"><i class="bi bi-building"></i> Risorse / Palestre</h1>
+      <div class="text-muted">Configura le palestre/risorse per la tua società per gestire occupazione e colori.</div>
+    </div>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calendar.index') }}">Torna al calendario</a>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">Nuova risorsa</div>
+        <div class="card-body">
+          <form method="post">
+            {{ form.hidden_tag() }}
+            <div class="mb-2">
+              <label class="form-label">Nome</label>
+              {{ form.name(class="form-control") }}
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Indirizzo</label>
+              {{ form.address(class="form-control") }}
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Capienza</label>
+              {{ form.capacity(class="form-control") }}
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Colore (es. #0d6efd)</label>
+              {{ form.color(class="form-control") }}
+            </div>
+            <button class="btn btn-primary" type="submit">Crea</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Risorse</span>
+          <span class="badge bg-secondary">{{ facilities|length }}</span>
+        </div>
+        <div class="list-group list-group-flush">
+          {% for f in facilities %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-semibold">{{ f.name }}</div>
+                <div class="text-muted small">
+                  {% if f.address %}{{ f.address }}{% else %}—{% endif %}
+                  {% if f.capacity %}&middot; capienza {{ f.capacity }}{% endif %}
+                </div>
+              </div>
+              <span class="badge" style="background-color: {{ f.color or '#0d6efd' }}; color: #fff;">&nbsp;&nbsp;</span>
+            </div>
+          {% else %}
+            <div class="list-group-item text-muted">Nessuna risorsa configurata.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

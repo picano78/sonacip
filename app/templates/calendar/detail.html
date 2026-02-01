@@ -19,8 +19,15 @@
                     <div>{{ event.start_datetime.strftime('%d/%m/%Y %H:%M') }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%d/%m/%Y %H:%M') }}{% endif %}</div>
                 </div>
                 <div class="col-md-6">
-                    <div class="fw-semibold">Luogo</div>
-                    <div>{{ event.location_text or 'Da definire' }}</div>
+                    <div class="fw-semibold">Palestra / Luogo</div>
+                    <div>
+                        {% if event.facility %}
+                            {{ event.facility.name }}
+                            {% if event.facility.address %}<div class="text-muted small">{{ event.facility.address }}</div>{% endif %}
+                        {% else %}
+                            {{ event.location_text or 'Da definire' }}
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="col-md-4">
                     <div class="fw-semibold">Squadra / Categoria</div>

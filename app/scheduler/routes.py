@@ -4,8 +4,16 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
 from app import db
-from app.scheduler.forms import SocietyCalendarEventForm
-from app.models import SocietyCalendarEvent, society_calendar_event_staff, society_calendar_event_athletes, User, Notification, Post
+from app.scheduler.forms import SocietyCalendarEventForm, FacilityForm
+from app.models import (
+    SocietyCalendarEvent,
+    society_calendar_event_staff,
+    society_calendar_event_athletes,
+    User,
+    Notification,
+    Post,
+    Facility,
+)
 from app.utils import permission_required, check_permission
 
 bp = Blueprint('scheduler', __name__, url_prefix='/scheduler')
@@ -110,10 +118,40 @@ def create():
         end_dt = None
         if form.end_date.data and form.end_time.data:
             end_dt = datetime.combine(form.end_date.data, form.end_time.data)
+        if not end_dt:
+            end_dt = start_dt + timedelta(hours=2)
+
+        facility_id = form.facility_id.data if form.facility_id.data and form.facility_id.data != -1 else None
+        if facility_id:
+            # Verify facility belongs to this society
+            facility = Facility.query.filter_by(id=facility_id, society_id=form.society_id.data).first()
+            if not facility:
+                flash('Risorsa/palestra non valida per questa società.', 'danger')
+                return redirect(url_for('calendar.create'))
+
+            # Conflict detection: same facility overlapping time range
+            conflict = (
+                SocietyCalendarEvent.query.filter(
+                    SocietyCalendarEvent.society_id == form.society_id.data,
+                    SocietyCalendarEvent.facility_id == facility_id,
+                    SocietyCalendarEvent.start_datetime < end_dt,
+                    SocietyCalendarEvent.end_datetime > start_dt,
+                )
+                .order_by(SocietyCalendarEvent.start_datetime.asc())
+                .first()
+            )
+            if conflict:
+                flash(
+                    f'Conflitto: la risorsa è già occupata da "{conflict.title}" '
+                    f'({conflict.start_datetime.strftime("%d/%m %H:%M")} - {conflict.end_datetime.strftime("%H:%M")}).',
+                    'danger',
+                )
+                return redirect(url_for('calendar.create'))
 
         event = SocietyCalendarEvent(
             society_id=form.society_id.data,
             created_by=current_user.id,
+            facility_id=facility_id,
             title=form.title.data,
             team=form.team.data,
             category=form.category.data,
@@ -121,6 +159,7 @@ def create():
             competition_name=form.competition_name.data,
             start_datetime=start_dt,
             end_datetime=end_dt,
+            color=(form.color.data or '').strip() or '#212529',
             location_text=form.location_text.data,
             notes=form.notes.data,
             share_to_social=form.share_to_social.data
@@ -164,7 +203,10 @@ def create():
                 post = Post(
                     user_id=current_user.id,
                     content=f'Nuovo evento in calendario: {event.title} ({event.start_datetime.strftime("%d/%m/%Y")})',
-                    is_public=True
+                    is_public=True,
+                    audience='society',
+                    society_id=event.society_id,
+                    post_type='calendar'
                 )
                 db.session.add(post)
                 db.session.commit()
@@ -174,3 +216,32 @@ def create():
         return redirect(url_for('calendar.index'))
 
     return render_template('calendar/create.html', form=form)
+
+
+@bp.route('/facilities', methods=['GET', 'POST'])
+@login_required
+@permission_required('calendar', 'manage')
+def facilities():
+    """Manage society facilities/resources (palestre)."""
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('calendar.index'))
+
+    form = FacilityForm()
+    if form.validate_on_submit():
+        f = Facility(
+            society_id=society.id,
+            name=form.name.data,
+            address=form.address.data or None,
+            capacity=form.capacity.data,
+            color=(form.color.data or '').strip() or '#0d6efd',
+            created_by=current_user.id,
+        )
+        db.session.add(f)
+        db.session.commit()
+        flash('Risorsa creata.', 'success')
+        return redirect(url_for('calendar.facilities'))
+
+    facilities = Facility.query.filter_by(society_id=society.id).order_by(Facility.name.asc()).all()
+    return render_template('calendar/facilities.html', facilities=facilities, form=form, society=society)

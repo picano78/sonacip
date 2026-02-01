@@ -1261,6 +1261,27 @@ class SmtpSetting(db.Model):
         return f'<SmtpSetting enabled={self.enabled}>'
 
 
+class EnterpriseSSOSetting(db.Model):
+    """
+    Enterprise SSO (OIDC) settings controlled by super admin.
+    When enabled and configured, users can login via /auth/sso/login.
+    """
+    __tablename__ = 'enterprise_sso_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, default=False)
+
+    issuer_url = db.Column(db.String(500))
+    client_id = db.Column(db.String(255))
+    client_secret = db.Column(db.String(255))
+    scopes = db.Column(db.String(255), default='openid email profile')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+
 class WhatsappSetting(db.Model):
     """
     WhatsApp integration settings (super admin).

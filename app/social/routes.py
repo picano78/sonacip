@@ -789,6 +789,41 @@ def society_dashboard():
     )
 
 
+@bp.route('/society/audit/export.csv')
+@login_required
+def society_audit_export():
+    """Enterprise: export society audit logs as CSV."""
+    from flask import Response
+    import io
+    import csv
+
+    if not check_permission(current_user, 'society', 'manage'):
+        abort(403)
+    if not current_user.has_feature('enterprise_pack'):
+        flash('Questa funzione richiede Enterprise Pack.', 'warning')
+        return redirect(url_for('subscription.addons'))
+    society = current_user.get_primary_society()
+    if not society:
+        abort(404)
+
+    logs = AuditLog.query.filter_by(society_id=society.id).order_by(AuditLog.created_at.desc()).limit(2000).all()
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['created_at', 'user_id', 'action', 'entity_type', 'entity_id', 'details', 'ip'])
+    for l in logs:
+        w.writerow([
+            l.created_at.isoformat() if l.created_at else '',
+            l.user_id or '',
+            l.action or '',
+            l.entity_type or '',
+            l.entity_id or '',
+            (l.details or '').replace('\n', ' ')[:2000],
+            l.ip_address or '',
+        ])
+    out = buf.getvalue()
+    return Response(out, mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename="audit_society.csv"'})
+
+
 @bp.route('/society/suggestions/<string:key>/dismiss', methods=['POST'])
 @login_required
 def society_dismiss_suggestion(key: str):

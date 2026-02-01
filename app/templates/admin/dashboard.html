@@ -127,6 +127,9 @@
                     <a href="{{ url_for('admin.platform_transactions') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-receipt"></i> Take-rate (ledger)
                     </a>
+                    <a href="{{ url_for('admin.enterprise_sso') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-shield-check"></i> Enterprise SSO
+                    </a>
                     <form action="{{ url_for('admin.reset_system') }}" method="post" class="list-group-item d-flex align-items-center justify-content-between">
                         {{ csrf_token() }}
                         <div><i class="bi bi-arrow-repeat"></i> Reset/Restart</div>

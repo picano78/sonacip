@@ -13,6 +13,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
+from authlib.integrations.flask_client import OAuth
 
 from app.core.config import config
 
@@ -23,6 +24,7 @@ migrate = Migrate()
 mail = Mail()
 csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address)
+oauth = OAuth()
 
 # Explicit core module list (ordered, stable)
 CORE_MODULES = [
@@ -105,6 +107,7 @@ def create_app(config_name: str | None = None) -> Flask:
     mail.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    oauth.init_app(app)
 
     login_manager.login_view = 'auth.login'
 

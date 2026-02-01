@@ -33,6 +33,7 @@ from app.models import (
     CustomizationKV,
     DashboardTemplate,
     Event,
+    EnterpriseSSOSetting,
     Notification,
     PageCustomization,
     Post,
@@ -471,6 +472,33 @@ def platform_transactions():
 
     stats = {"total_gross": float(total_gross), "total_platform": float(total_platform)}
     return render_template('admin/platform_transactions.html', transactions=items, pagination=pagination, stats=stats)
+
+
+@bp.route('/enterprise/sso', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def enterprise_sso():
+    """Enterprise SSO (OIDC) configuration."""
+    sso = EnterpriseSSOSetting.query.first()
+    if not sso:
+        sso = EnterpriseSSOSetting(enabled=False, scopes='openid email profile', updated_at=datetime.utcnow(), updated_by=current_user.id)
+        db.session.add(sso)
+        db.session.commit()
+
+    if request.method == 'POST':
+        sso.enabled = bool(request.form.get('enabled'))
+        sso.issuer_url = (request.form.get('issuer_url') or '').strip() or None
+        sso.client_id = (request.form.get('client_id') or '').strip() or None
+        sso.client_secret = (request.form.get('client_secret') or '').strip() or None
+        sso.scopes = (request.form.get('scopes') or 'openid email profile').strip()
+        sso.updated_by = current_user.id
+        sso.updated_at = datetime.utcnow()
+        db.session.commit()
+        log_action('update_enterprise_sso', 'EnterpriseSSOSetting', sso.id, f'enabled={sso.enabled}')
+        flash('SSO aggiornato.', 'success')
+        return redirect(url_for('admin.enterprise_sso'))
+
+    return render_template('admin/enterprise_sso.html', sso=sso)
 
 
 @bp.route('/pages')

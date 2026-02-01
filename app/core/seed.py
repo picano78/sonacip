@@ -34,6 +34,7 @@ def seed_defaults(app) -> dict:
         SiteCustomization,
         SocialSetting,
         SmtpSetting,
+        EnterpriseSSOSetting,
         AutomationRule,
         WhatsappSetting,
         WhatsappTemplate,
@@ -315,6 +316,8 @@ def seed_defaults(app) -> dict:
         if not SmtpSetting.query.first():
             db.session.add(SmtpSetting(enabled=False))
             summary["smtp_settings_created"] += 1
+        if not EnterpriseSSOSetting.query.first():
+            db.session.add(EnterpriseSSOSetting(enabled=False, scopes='openid email profile'))
         if not WhatsappSetting.query.first():
             db.session.add(WhatsappSetting(enabled=False, provider="webhook"))
             summary["whatsapp_settings_created"] += 1

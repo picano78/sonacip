@@ -3,13 +3,34 @@ Authentication routes
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
-from app import db, limiter
+from app import db, limiter, oauth
 from app.auth.forms import LoginForm, RegistrationForm, SocietyRegistrationForm
-from app.models import User, AuditLog, Subscription, Plan, Dashboard, DashboardTemplate, Society, Role
+from app.models import User, AuditLog, Subscription, Plan, Dashboard, DashboardTemplate, Society, Role, EnterpriseSSOSetting
 from datetime import datetime
 import json
+import secrets
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+
+def _enterprise_oidc_client():
+    sso = EnterpriseSSOSetting.query.first()
+    if not sso or not sso.enabled or not sso.issuer_url or not sso.client_id or not sso.client_secret:
+        return None
+    issuer = (sso.issuer_url or "").rstrip("/")
+    server_metadata_url = issuer + "/.well-known/openid-configuration"
+    # Register (safe if repeated with same name)
+    try:
+        oauth.register(
+            name="enterprise_oidc",
+            client_id=sso.client_id,
+            client_secret=sso.client_secret,
+            server_metadata_url=server_metadata_url,
+            client_kwargs={"scope": (sso.scopes or "openid email profile")},
+        )
+    except Exception:
+        pass
+    return oauth.create_client("enterprise_oidc")
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -55,6 +76,102 @@ def login():
         return redirect(next_page)
     
     return render_template('auth/login.html', form=form)
+
+
+@bp.route('/sso/login')
+def sso_login():
+    """Enterprise SSO login (OIDC)."""
+    if current_user.is_authenticated:
+        return redirect(url_for('social.feed'))
+    client = _enterprise_oidc_client()
+    if not client:
+        flash('SSO non configurato.', 'warning')
+        return redirect(url_for('auth.login'))
+    redirect_uri = url_for('auth.sso_callback', _external=True)
+    return client.authorize_redirect(redirect_uri)
+
+
+@bp.route('/sso/callback')
+def sso_callback():
+    """OIDC callback."""
+    client = _enterprise_oidc_client()
+    if not client:
+        flash('SSO non configurato.', 'warning')
+        return redirect(url_for('auth.login'))
+    try:
+        token = client.authorize_access_token()
+    except Exception:
+        flash('SSO fallito.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    userinfo = None
+    try:
+        userinfo = client.parse_id_token(token)
+    except Exception:
+        userinfo = None
+    if not userinfo:
+        try:
+            userinfo = client.get('userinfo').json()
+        except Exception:
+            userinfo = None
+    if not userinfo:
+        flash('SSO: userinfo mancante.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    email = (userinfo.get('email') or '').strip().lower()
+    if not email:
+        flash('SSO: email mancante.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        role_name = 'appassionato'
+        role_obj = Role.query.filter_by(name=role_name).first()
+        if not role_obj:
+            flash('Sistema non inizializzato: ruolo appassionato mancante.', 'danger')
+            return redirect(url_for('auth.login'))
+
+        base_username = email.split("@")[0][:40] or "user"
+        username = base_username
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}{secrets.randbelow(9999)}"
+
+        user = User(
+            email=email,
+            username=username,
+            first_name=(userinfo.get('given_name') or ''),
+            last_name=(userinfo.get('family_name') or ''),
+            phone=None,
+            role=role_name,
+            is_active=True,
+            is_verified=True,
+            role_obj=role_obj,
+            role_legacy=role_name,
+        )
+        user.set_password(secrets.token_urlsafe(24))
+        db.session.add(user)
+        db.session.commit()
+
+    if not user.is_active:
+        flash('Account disabilitato. Contatta l\'amministratore.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    login_user(user, remember=True)
+    user.last_seen = datetime.utcnow()
+    db.session.commit()
+
+    db.session.add(
+        AuditLog(
+            user_id=user.id,
+            action='sso_login',
+            entity_type='User',
+            entity_id=user.id,
+            ip_address=request.remote_addr,
+        )
+    )
+    db.session.commit()
+    flash(f'Benvenuto, {user.get_full_name()}!', 'success')
+    return redirect(url_for('social.feed'))
 
 
 @bp.route('/register', methods=['GET', 'POST'])

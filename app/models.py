@@ -783,6 +783,71 @@ class AuditLog(db.Model):
         return f'<AuditLog {self.action} by User {self.user_id}>'
 
 
+class SocietyHealthSnapshot(db.Model):
+    """
+    Retention health snapshot (weekly) for a society.
+    Used to surface adoption KPIs and next-best actions.
+    """
+    __tablename__ = 'society_health_snapshot'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    week_key = db.Column(db.String(12), nullable=False, index=True)  # e.g. "2026-W05"
+
+    score = db.Column(db.Integer, default=0)  # 0-100
+    details = db.Column(db.Text)  # JSON blob
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'week_key', name='uq_society_health_snapshot_week'),
+    )
+
+
+class UserOnboardingStep(db.Model):
+    """
+    Onboarding checklist completion for a user in a society scope.
+    """
+    __tablename__ = 'user_onboarding_step'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    step_key = db.Column(db.String(80), nullable=False, index=True)
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', 'step_key', name='uq_user_onboarding_step'),
+    )
+
+
+class SocietySuggestionDismissal(db.Model):
+    """
+    Persisted dismissal state for next-best-action suggestions.
+    """
+    __tablename__ = 'society_suggestion_dismissal'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    key = db.Column(db.String(120), nullable=False, index=True)
+    dismissed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', 'key', name='uq_society_suggestion_dismissal'),
+    )
+
+
 class SocietyInvite(db.Model):
     """
     Society invites a user to join as a specific role (athlete/staff/coach/dirigente).

@@ -16,12 +16,19 @@ from app.models import (
     Comment,
     Notification,
     AuditLog,
+    AddOn,
+    AddOnEntitlement,
     AdsSetting,
     Payment,
     SocialSetting,
+    SocietyCalendarEvent,
+    SocietyHealthSnapshot,
+    SocietySuggestionDismissal,
     TournamentMatch,
     SocietyInvite,
     SocietyMembership,
+    UserOnboardingStep,
+    Opportunity,
     Permission,
     SocietyRolePermission,
 )
@@ -700,6 +707,53 @@ def society_dashboard():
     # Audit logs scoped to this society
     recent_audit = AuditLog.query.filter_by(society_id=society.id).order_by(AuditLog.created_at.desc()).limit(20).all()
 
+    # Retention / onboarding / next-best-actions
+    health = SocietyHealthSnapshot.query.filter_by(society_id=society.id).order_by(SocietyHealthSnapshot.created_at.desc()).first()
+
+    dismissed = SocietySuggestionDismissal.query.filter_by(society_id=society.id, user_id=current_user.id).all()
+    dismissed_keys = {d.key for d in dismissed}
+
+    member_count = SocietyMembership.query.filter_by(society_id=society.id, status='active').count()
+    calendar_count = SocietyCalendarEvent.query.filter_by(society_id=society.id).count()
+    opp_count = Opportunity.query.filter_by(society_id=society.id).count()
+    society_posts_count = Post.query.filter_by(society_id=society.id).count()
+
+    suggestions = []
+    def _suggest(key: str, title: str, body: str, action_url: str | None = None):
+        if key in dismissed_keys:
+            return
+        suggestions.append({"key": key, "title": title, "body": body, "action_url": action_url})
+
+    if member_count < 5:
+        _suggest("invite_members", "Invita membri", "Aggiungi staff/atleti per far partire il lavoro reale della società.", url_for('social.society_dashboard'))
+    if calendar_count == 0:
+        _suggest("create_calendar_event", "Crea il primo evento nel planner", "Il calendario è il cuore operativo: crea un allenamento o una partita.", url_for('calendar.create'))
+    if opp_count == 0:
+        _suggest("create_crm_opportunity", "Apri la prima opportunità CRM", "Traccia sponsor/iscrizioni/reclutamento con una opportunità.", url_for('crm.new_opportunity'))
+    if society_posts_count == 0:
+        _suggest("publish_society_post", "Pubblica un comunicato", "Usa il social per comunicazioni ufficiali verso la società/atleti.", url_for('social.feed'))
+    if not current_user.has_feature("whatsapp_pro"):
+        _suggest("upsell_whatsapp_pro", "Attiva WhatsApp Pro", "Automazioni WhatsApp avanzate (template/opt-in) per aumentare retention e pagamenti.", url_for('subscription.addons'))
+
+    # Onboarding checklist (hybrid: some auto-detected, some manual)
+    step_defs = [
+        {"key": "invite_one_member", "label": "Invita almeno 1 membro", "auto": member_count >= 2},
+        {"key": "create_one_calendar_event", "label": "Crea 1 evento nel calendario", "auto": calendar_count >= 1},
+        {"key": "create_one_crm_opportunity", "label": "Crea 1 opportunità CRM", "auto": opp_count >= 1},
+        {"key": "publish_one_post", "label": "Pubblica 1 post/comunicato", "auto": society_posts_count >= 1},
+        {"key": "review_permissions", "label": "Rivedi permessi ruoli", "auto": False},
+    ]
+    stored_steps = UserOnboardingStep.query.filter_by(society_id=society.id, user_id=current_user.id).all()
+    stored_keys = {s.step_key for s in stored_steps}
+    onboarding = []
+    completed_count = 0
+    for sd in step_defs:
+        done = bool(sd["auto"]) or (sd["key"] in stored_keys)
+        if done:
+            completed_count += 1
+        onboarding.append({"key": sd["key"], "label": sd["label"], "done": done, "manual": not bool(sd["auto"])})
+    onboarding_progress = int((completed_count / max(1, len(step_defs))) * 100)
+
     invite_form = SocietyInviteForm()
 
     return render_template(
@@ -712,7 +766,47 @@ def society_dashboard():
         memberships=memberships,
         recent_audit=recent_audit,
         invite_form=invite_form,
+        health=health,
+        suggestions=suggestions,
+        onboarding=onboarding,
+        onboarding_progress=onboarding_progress,
     )
+
+
+@bp.route('/society/suggestions/<string:key>/dismiss', methods=['POST'])
+@login_required
+def society_dismiss_suggestion(key: str):
+    if not check_permission(current_user, 'society', 'manage'):
+        abort(403)
+    society = current_user.get_primary_society()
+    if not society:
+        abort(404)
+    key = (key or "").strip()
+    if not key or len(key) > 120:
+        return redirect(url_for('social.society_dashboard'))
+    existing = SocietySuggestionDismissal.query.filter_by(society_id=society.id, user_id=current_user.id, key=key).first()
+    if not existing:
+        db.session.add(SocietySuggestionDismissal(society_id=society.id, user_id=current_user.id, key=key, dismissed_at=datetime.utcnow()))
+        db.session.commit()
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/society/onboarding/<string:step_key>/complete', methods=['POST'])
+@login_required
+def society_onboarding_complete(step_key: str):
+    if not check_permission(current_user, 'society', 'manage'):
+        abort(403)
+    society = current_user.get_primary_society()
+    if not society:
+        abort(404)
+    step_key = (step_key or "").strip()
+    if not step_key or len(step_key) > 80:
+        return redirect(url_for('social.society_dashboard'))
+    existing = UserOnboardingStep.query.filter_by(society_id=society.id, user_id=current_user.id, step_key=step_key).first()
+    if not existing:
+        db.session.add(UserOnboardingStep(society_id=society.id, user_id=current_user.id, step_key=step_key, completed_at=datetime.utcnow()))
+        db.session.commit()
+    return redirect(url_for('social.society_dashboard'))
 
 
 @bp.route('/society/invite', methods=['POST'])

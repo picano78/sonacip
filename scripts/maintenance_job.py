@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import sys
+import json
 from datetime import date, datetime, timedelta, timezone
 
 
@@ -45,6 +46,7 @@ def main() -> int:
     - CALENDAR_REMINDER_WINDOW_MINUTES="15"
     - CERT_EXPIRY_DAYS="14"
     - FEE_DUE_DAYS="7"
+    - RUN_RETENTION=true|false
     """
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     if root not in sys.path:
@@ -57,14 +59,20 @@ def main() -> int:
         MedicalCertificate,
         MedicalCertificateReminderSent,
         Notification,
+        Opportunity,
+        Post,
+        Society,
         SocietyCalendarEvent,
         SocietyCalendarReminderSent,
         SocietyFee,
         SocietyFeeReminderSent,
+        SocietyHealthSnapshot,
+        SocietyMembership,
     )
 
     run_calendar = _truthy(os.environ.get("RUN_CALENDAR_REMINDERS"), True)
     run_compliance = _truthy(os.environ.get("RUN_COMPLIANCE"), True)
+    run_retention = _truthy(os.environ.get("RUN_RETENTION"), True)
 
     calendar_kinds = _parse_kinds(os.environ.get("CALENDAR_REMINDER_KINDS", "24h,1h"))
     window_minutes = _parse_int(os.environ.get("CALENDAR_REMINDER_WINDOW_MINUTES"), 15)
@@ -80,6 +88,7 @@ def main() -> int:
         calendar_sent = 0
         compliance_sent = 0
         compliance_updated = 0
+        health_created = 0
         ads_events_deleted = 0
 
         # --------------------------------------------------------------
@@ -250,6 +259,56 @@ def main() -> int:
                     db.session.rollback()
 
         # --------------------------------------------------------------
+        # Retention: weekly health snapshot per society
+        # --------------------------------------------------------------
+        if run_retention:
+            try:
+                week_key = datetime.utcnow().strftime("%G-W%V")  # ISO week
+                cutoff_dt = datetime.utcnow() - timedelta(days=7)
+                societies = Society.query.all()
+
+                for s in societies:
+                    exists = SocietyHealthSnapshot.query.filter_by(society_id=s.id, week_key=week_key).first()
+                    if exists:
+                        continue
+
+                    members_active = SocietyMembership.query.filter_by(society_id=s.id, status='active').count()
+                    posts_7d = Post.query.filter(Post.society_id == s.id, Post.created_at >= cutoff_dt).count()
+                    events_7d = SocietyCalendarEvent.query.filter(SocietyCalendarEvent.society_id == s.id, SocietyCalendarEvent.created_at >= cutoff_dt).count()
+                    opps_7d = Opportunity.query.filter(Opportunity.society_id == s.id, Opportunity.created_at >= cutoff_dt).count()
+
+                    # Simple adoption score 0-100
+                    score = 20
+                    score += min(20, posts_7d * 5)
+                    score += min(20, events_7d * 5)
+                    score += min(20, opps_7d * 5)
+                    score += min(20, int(members_active / 5) * 5)
+                    score = max(0, min(100, int(score)))
+
+                    details = {
+                        "members_active": members_active,
+                        "posts_7d": posts_7d,
+                        "events_7d": events_7d,
+                        "opportunities_7d": opps_7d,
+                    }
+
+                    db.session.add(
+                        SocietyHealthSnapshot(
+                            society_id=s.id,
+                            week_key=week_key,
+                            score=score,
+                            details=json.dumps(details),
+                            created_at=datetime.utcnow(),
+                        )
+                    )
+                    health_created += 1
+
+                if health_created:
+                    db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        # --------------------------------------------------------------
         # Ads maintenance (retention): delete old ad events
         # --------------------------------------------------------------
         try:
@@ -264,6 +323,7 @@ def main() -> int:
             f"calendar_reminders_sent={calendar_sent} "
             f"compliance_status_updated={compliance_updated} "
             f"compliance_reminders_sent={compliance_sent} "
+            f"health_snapshots_created={health_created} "
             f"ads_events_deleted={ads_events_deleted}"
         )
         return 0

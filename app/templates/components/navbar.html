@@ -89,6 +89,40 @@
                 </ul>
                 
                 <ul class="navbar-nav">
+                    {% if society_scopes and society_scopes|length > 1 %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="societyScopeDropdown"
+                               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-building"></i>
+                                {{ active_society.legal_name if active_society and active_society.legal_name else 'Contesto società' }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Seleziona società</h6></li>
+                                {% for s in society_scopes %}
+                                    <li>
+                                        <form method="post" action="{{ url_for('main.set_society_scope') }}" class="px-3 py-1">
+                                            {{ csrf_token() }}
+                                            <input type="hidden" name="society_id" value="{{ s.id }}">
+                                            <button class="btn btn-sm w-100 text-start {{ 'btn-primary' if active_society_id == s.id else 'btn-outline-secondary' }}"
+                                                    type="submit">
+                                                {{ s.legal_name or ('Società #' ~ s.id) }}
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="{{ url_for('main.set_society_scope') }}" class="px-3 py-1">
+                                        {{ csrf_token() }}
+                                        <button class="btn btn-sm w-100 text-start btn-outline-dark" type="submit">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Ripristina automatico
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    {% endif %}
+
                     <!-- Search -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('social.search') }}">

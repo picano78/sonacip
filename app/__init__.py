@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib
 import os
 
-from flask import Flask, request
+from flask import Flask, request, session
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -124,13 +124,16 @@ def create_app(config_name: str | None = None) -> Flask:
         """Globals used by base templates (theme, privacy, counts, per-page content)."""
         from flask_login import current_user
 
-        from app.utils import can as can_fn
+        from app.utils import can as can_fn, get_active_society_id
 
         appearance = None
         privacy = None
         site = None
         page = None
         nav_links = None
+        society_scopes = []
+        active_society = None
+        active_society_id = None
 
         try:
             from app.models import (
@@ -165,6 +168,36 @@ def create_app(config_name: str | None = None) -> Flask:
                     return 0
                 return Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
 
+            # Society scope switcher (when user has multiple memberships)
+            try:
+                from app.models import SocietyMembership, Society
+
+                if current_user.is_authenticated:
+                    scopes = []
+                    # Society users own their society profile
+                    if current_user.is_society() and getattr(current_user, "society_profile", None):
+                        scopes.append(current_user.society_profile)
+                    # Membership-based scopes
+                    ms = SocietyMembership.query.filter_by(user_id=current_user.id, status='active').all()
+                    for m in ms:
+                        if m.society:
+                            scopes.append(m.society)
+                    # Deduplicate by id
+                    uniq = {}
+                    for s in scopes:
+                        try:
+                            uniq[int(s.id)] = s
+                        except Exception:
+                            continue
+                    society_scopes = list(uniq.values())
+                    active_society_id = get_active_society_id(current_user)
+                    if active_society_id:
+                        active_society = uniq.get(int(active_society_id)) or Society.query.get(int(active_society_id))
+            except Exception:
+                society_scopes = []
+                active_society = None
+                active_society_id = None
+
         except Exception:
             # DB not initialized yet or models unavailable: keep templates functional.
             def get_unread_notifications_count():
@@ -180,6 +213,9 @@ def create_app(config_name: str | None = None) -> Flask:
             'site': site,
             'page': page,
             'nav_links': nav_links,
+            'society_scopes': society_scopes,
+            'active_society': active_society,
+            'active_society_id': active_society_id,
             'get_unread_notifications_count': get_unread_notifications_count,
             'get_unread_messages_count': get_unread_messages_count,
         }

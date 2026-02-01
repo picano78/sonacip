@@ -31,6 +31,17 @@
                 {% elif post.post_type == 'automation' %}
                     <span class="badge bg-secondary ms-2">Automazione</span>
                 {% endif %}
+                {% if post.audience %}
+                    {% if post.audience == 'society' %}
+                        <span class="badge bg-dark ms-2">Società</span>
+                    {% elif post.audience == 'direct' %}
+                        <span class="badge bg-danger ms-2">Diretto</span>
+                    {% elif post.audience == 'followers' %}
+                        <span class="badge bg-secondary ms-2">Follower</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark ms-2">Pubblico</span>
+                    {% endif %}
+                {% endif %}
             </div>
         </div>
         <p class="card-text">{{ post.content }}</p>

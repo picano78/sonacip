@@ -2,7 +2,7 @@
 Common utilities and decorators for the application
 """
 from functools import wraps
-from flask import flash, redirect, url_for, abort, current_app, request
+from flask import flash, redirect, url_for, abort, current_app, request, session
 from flask_login import current_user
 from datetime import datetime
 
@@ -128,7 +128,41 @@ def check_permission(user, resource, action, society_id=None):
 def can(resource, action, society_id=None, user=None):
     """Lightweight helper used by routes and templates to resolve permissions."""
     actor = user or current_user
-    return check_permission(actor, resource, action, society_id)
+    # If no explicit scope is provided, try to infer it for society-scoped resources.
+    inferred_scope = society_id
+    if inferred_scope is None and actor and getattr(actor, "is_authenticated", False):
+        SOCIETY_SCOPED_RESOURCES = {"crm", "calendar", "tournaments", "tasks", "events", "society"}
+        if resource in SOCIETY_SCOPED_RESOURCES:
+            try:
+                inferred_scope = get_active_society_id(actor)
+            except Exception:
+                inferred_scope = None
+    return check_permission(actor, resource, action, inferred_scope)
+
+
+def get_active_society_id(user=None) -> int | None:
+    """
+    Return the currently selected society scope id for the session, if valid.
+    Falls back to user's primary society.
+    """
+    actor = user or current_user
+    if not actor or not getattr(actor, "is_authenticated", False):
+        return None
+
+    raw = session.get("active_society_id")
+    try:
+        sid = int(raw) if raw is not None else None
+    except Exception:
+        sid = None
+
+    if sid and actor.can_access_society(sid):
+        return sid
+
+    try:
+        scope = actor.get_primary_society()
+        return scope.id if scope else None
+    except Exception:
+        return None
 
 
 def enforce_permission(resource, action, society_id=None, user=None):

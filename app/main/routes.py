@@ -1,7 +1,7 @@
 """
 Main routes
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import current_user, login_required
 from app import db
 from app.utils import check_permission
@@ -167,3 +167,25 @@ def reset_dashboard():
     db.session.commit()
     flash('Cruscotto ripristinato al template.', 'success')
     return redirect(url_for('main.dashboard'))
+
+
+@bp.route('/scope/society', methods=['POST'])
+@login_required
+def set_society_scope():
+    """
+    Set active society scope in session.
+    Used to switch context when a user has multiple memberships.
+    """
+    society_id = request.form.get('society_id', type=int)
+    if not society_id:
+        session.pop('active_society_id', None)
+        flash('Contesto società ripristinato.', 'success')
+        return redirect(request.referrer or url_for('main.dashboard'))
+
+    if not current_user.can_access_society(society_id) and not check_permission(current_user, 'admin', 'access'):
+        flash('Non puoi selezionare questa società.', 'danger')
+        return redirect(request.referrer or url_for('main.dashboard'))
+
+    session['active_society_id'] = int(society_id)
+    flash('Contesto società aggiornato.', 'success')
+    return redirect(request.referrer or url_for('main.dashboard'))

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 
 
@@ -23,6 +24,11 @@ def main() -> int:
     - CALENDAR_REMINDER_KINDS="24h,1h"
     - CALENDAR_REMINDER_WINDOW_MINUTES="15"
     """
+    # Ensure project root is on sys.path when executed as a script.
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+
     from app import create_app, db
     from app.models import (
         Notification,

@@ -63,6 +63,8 @@ def _winner_of(match: TournamentMatch) -> TournamentTeam | None:
 
 def _propagate_knockout_winner(match: TournamentMatch) -> None:
     """Place winner into next round match slot based on bracket position."""
+    if not getattr(match, "is_bracket", False):
+        return
     if not match.winner_team_id or not match.round_number:
         return
     next_round = int(match.round_number) + 1
@@ -131,6 +133,7 @@ def _generate_knockout_bracket(tournament: Tournament, teams: list[TournamentTea
             round_number=1,
             position=pos,
             round_label=_round_label(rounds_total, 1),
+            is_bracket=True,
             status="scheduled",
         )
         # Auto-advance BYE if only one team present
@@ -156,6 +159,7 @@ def _generate_knockout_bracket(tournament: Tournament, teams: list[TournamentTea
                     round_number=r,
                     position=pos,
                     round_label=_round_label(rounds_total, r),
+                    is_bracket=True,
                     status="scheduled",
                 )
             )
@@ -236,12 +240,17 @@ def view_tournament(tournament_id):
     teams = tournament.teams.order_by(TournamentTeam.name.asc()).all()
     matches = tournament.matches.order_by(TournamentMatch.match_date.asc()).all()
     standings = tournament.standings.order_by(TournamentStanding.points.desc(), TournamentStanding.goals_for.desc()).all()
+    bracket_matches = tournament.matches.filter_by(is_bracket=True).order_by(TournamentMatch.round_number.asc(), TournamentMatch.position.asc()).all()
+    bracket_rounds = {}
+    for m in bracket_matches:
+        bracket_rounds.setdefault(m.round_number, []).append(m)
     return render_template(
         'tournaments/detail.html',
         tournament=tournament,
         teams=teams,
         matches=matches,
         standings=standings,
+        bracket_rounds=bracket_rounds,
         can_manage=_can_manage_tournament(tournament),
     )
 
@@ -257,7 +266,8 @@ def add_team(tournament_id):
             tournament_id=tournament.id,
             name=form.name.data,
             category=form.category.data,
-            external_ref=form.external_ref.data
+            external_ref=form.external_ref.data,
+            seed=(int(request.form.get('seed')) if request.form.get('seed') else None),
         )
         db.session.add(team)
         db.session.flush()
@@ -277,13 +287,24 @@ def add_match(tournament_id):
     _require_manage(tournament)
     form = TournamentMatchForm()
     if form.validate_on_submit():
+        # Ensure teams are valid for this tournament
+        home_id = form.home_team_id.data
+        away_id = form.away_team_id.data
+        if home_id == away_id:
+            flash('Casa e trasferta non possono essere uguali.', 'danger')
+            return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+        valid_ids = {t.id for t in tournament.teams.all()}
+        if home_id not in valid_ids or away_id not in valid_ids:
+            flash('Squadre non valide per questo torneo.', 'danger')
+            return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
         match = TournamentMatch(
             tournament_id=tournament.id,
-            home_team_id=form.home_team_id.data,
-            away_team_id=form.away_team_id.data,
+            home_team_id=home_id,
+            away_team_id=away_id,
             round_label=form.round_label.data,
             match_date=datetime.combine(form.match_date.data, datetime.min.time()) if form.match_date.data else None,
-            location=form.location.data
+            location=form.location.data,
+            is_bracket=False,
         )
         db.session.add(match)
         db.session.commit()
@@ -357,4 +378,34 @@ def generate_bracket(tournament_id):
     teams = tournament.teams.order_by(TournamentTeam.name.asc()).all()
     created = _generate_knockout_bracket(tournament, teams, seeding=seeding)
     flash('Tabellone generato.' if created else 'Tabellone non generato (verifica squadre/partite).', 'success' if created else 'warning')
+    return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+
+@bp.route('/<int:tournament_id>/teams/seeding', methods=['POST'])
+@login_required
+def update_seeding(tournament_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+    _require_manage(tournament)
+
+    updated = 0
+    teams = tournament.teams.all()
+    for t in teams:
+        raw = request.form.get(f"seed_{t.id}")
+        if raw is None:
+            continue
+        raw = raw.strip()
+        if raw == "":
+            if t.seed is not None:
+                t.seed = None
+                updated += 1
+            continue
+        try:
+            val = int(raw)
+        except Exception:
+            continue
+        if t.seed != val:
+            t.seed = val
+            updated += 1
+    db.session.commit()
+    flash('Seeding aggiornato.' if updated else 'Nessuna modifica.', 'success' if updated else 'info')
     return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))

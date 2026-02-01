@@ -1825,6 +1825,7 @@ class TournamentMatch(db.Model):
     round_label = db.Column(db.String(100))  # group A, quarterfinal, etc.
     round_number = db.Column(db.Integer, default=1, index=True)
     position = db.Column(db.Integer, default=0, index=True)  # bracket position within round (0-based)
+    is_bracket = db.Column(db.Boolean, default=False, index=True)
     match_date = db.Column(db.DateTime)
     location = db.Column(db.String(255))
 

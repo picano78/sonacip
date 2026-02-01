@@ -32,8 +32,18 @@
           {% if can_manage %}
             <form class="d-flex flex-wrap gap-2 align-items-center" method="post" action="{{ url_for('tournaments.add_match', tournament_id=tournament.id) }}">
               {{ csrf_token() }}
-              <input type="number" name="home_team_id" class="form-control form-control-sm" placeholder="Casa" required>
-              <input type="number" name="away_team_id" class="form-control form-control-sm" placeholder="Trasferta" required>
+              <select name="home_team_id" class="form-select form-select-sm" required>
+                <option value="">Casa…</option>
+                {% for t in teams %}
+                  <option value="{{ t.id }}">{{ t.seed if t.seed is not none else '' }} {{ t.name }}</option>
+                {% endfor %}
+              </select>
+              <select name="away_team_id" class="form-select form-select-sm" required>
+                <option value="">Trasferta…</option>
+                {% for t in teams %}
+                  <option value="{{ t.id }}">{{ t.seed if t.seed is not none else '' }} {{ t.name }}</option>
+                {% endfor %}
+              </select>
               <input type="text" name="round_label" class="form-control form-control-sm" placeholder="Turno">
               <input type="date" name="match_date" class="form-control form-control-sm">
               <input type="text" name="location" class="form-control form-control-sm" placeholder="Luogo">
@@ -84,34 +94,32 @@
             {% endif %}
           </div>
 
-          <div class="table-responsive">
-            <table class="table table-sm mb-0">
-              <thead>
-                <tr>
-                  <th>Round</th>
-                  <th>Match</th>
-                  <th>Squadra A</th>
-                  <th>Squadra B</th>
-                  <th>Risultato</th>
-                  <th>Vincitore</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for m in matches if m.round_number %}
-                  <tr>
-                    <td class="text-muted small">{{ m.round_label or ('Round ' ~ m.round_number) }}</td>
-                    <td class="text-muted small">#{{ m.round_number }}.{{ m.position }}</td>
-                    <td>{{ m.home_team.name if m.home_team else 'TBD' }}</td>
-                    <td>{{ m.away_team.name if m.away_team else 'TBD' }}</td>
-                    <td>{{ m.home_score if m.home_score is not none else '-' }} - {{ m.away_score if m.away_score is not none else '-' }}</td>
-                    <td>{{ m.winner_team.name if m.winner_team else '-' }}</td>
-                  </tr>
-                {% else %}
-                  <tr><td colspan="6" class="text-muted">Genera il tabellone per vedere la piramide.</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+          {% if bracket_rounds %}
+            <div class="row g-2">
+              {% for r in bracket_rounds.keys()|list|sort %}
+                <div class="col-md-3">
+                  <div class="fw-semibold mb-2">{{ bracket_rounds[r][0].round_label if bracket_rounds[r] else ('Round ' ~ r) }}</div>
+                  <div class="d-flex flex-column gap-2">
+                    {% for m in bracket_rounds[r] %}
+                      <div class="border rounded p-2">
+                        <div class="small text-muted">#{{ m.round_number }}.{{ m.position }}</div>
+                        <div class="d-flex justify-content-between">
+                          <span class="{{ 'fw-bold' if m.winner_team_id == m.home_team_id else '' }}">{{ m.home_team.name if m.home_team else 'TBD' }}</span>
+                          <span class="text-muted small">{{ m.home_score if m.home_score is not none else '-' }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                          <span class="{{ 'fw-bold' if m.winner_team_id == m.away_team_id else '' }}">{{ m.away_team.name if m.away_team else 'TBD' }}</span>
+                          <span class="text-muted small">{{ m.away_score if m.away_score is not none else '-' }}</span>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-muted">Genera il tabellone per vedere la piramide.</div>
+          {% endif %}
         </div>
       {% endif %}
     </div>
@@ -124,6 +132,7 @@
               {{ csrf_token() }}
               <input type="text" name="name" class="form-control form-control-sm" placeholder="Nome" required>
               <input type="text" name="category" class="form-control form-control-sm" placeholder="Categoria">
+              <input type="number" name="seed" class="form-control form-control-sm" placeholder="Seed" min="1" style="width:90px;">
               <button class="btn btn-sm btn-dark" type="submit">+</button>
             </form>
           {% endif %}
@@ -132,12 +141,28 @@
           {% for team in teams %}
             <li class="list-group-item d-flex justify-content-between align-items-center">
               <span>{{ team.name }}</span>
-              <span class="small text-muted">{{ team.category or '' }}</span>
+              <span class="small text-muted">seed {{ team.seed if team.seed is not none else '-' }} {{ team.category or '' }}</span>
             </li>
           {% else %}
             <li class="list-group-item text-muted">Nessuna squadra.</li>
           {% endfor %}
         </ul>
+
+        {% if can_manage and teams %}
+          <form class="mt-2" method="post" action="{{ url_for('tournaments.update_seeding', tournament_id=tournament.id) }}">
+            {{ csrf_token() }}
+            <div class="fw-semibold small mb-2">Seeding (manuale)</div>
+            <div class="d-flex flex-column gap-2">
+              {% for t in teams %}
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                  <div class="small">{{ t.name }}</div>
+                  <input class="form-control form-control-sm" style="width:90px;" type="number" min="1" name="seed_{{ t.id }}" value="{{ t.seed if t.seed is not none else '' }}">
+                </div>
+              {% endfor %}
+            </div>
+            <button class="btn btn-sm btn-outline-primary mt-2" type="submit">Salva seeding</button>
+          </form>
+        {% endif %}
       </div>
       <div class="glass-card p-3 card-hover">
         <div class="fw-semibold mb-2">Classifica</div>

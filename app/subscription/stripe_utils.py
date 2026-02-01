@@ -8,7 +8,7 @@ import stripe
 from flask import current_app
 
 from app import db
-from app.models import AddOn, AddOnEntitlement, Payment, Plan, Subscription
+from app.models import AddOn, AddOnEntitlement, MarketplacePurchase, Payment, Plan, Subscription
 
 
 def stripe_enabled() -> bool:
@@ -70,6 +70,25 @@ def create_addon_checkout_session(addon: AddOn, *, user_id: int | None, society_
     sess = stripe.checkout.Session.create(
         mode="payment",
         line_items=[{"price": addon.stripe_price_one_time_id, "quantity": 1}],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        allow_promotion_codes=False,
+        metadata=metadata,
+    )
+    return sess.url  # type: ignore[attr-defined]
+
+
+def create_marketplace_checkout_session(*, purchase_id: int, stripe_price_one_time_id: str, success_url: str, cancel_url: str) -> str:
+    """
+    One-time payment checkout session for marketplace packages.
+    """
+    _init_stripe()
+    if not stripe_price_one_time_id:
+        raise ValueError("Pacchetto non configurato per Stripe (stripe_price_one_time_id mancante).")
+    metadata = {"marketplace_purchase_id": str(purchase_id)}
+    sess = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{"price": stripe_price_one_time_id, "quantity": 1}],
         success_url=success_url,
         cancel_url=cancel_url,
         allow_promotion_codes=False,
@@ -235,6 +254,32 @@ def handle_stripe_event(event: Any) -> None:
                     )
                 )
             db.session.commit()
+            return
+
+        # Marketplace package flow (one-time payment)
+        if mode == "payment" and session_obj.get("metadata", {}).get("marketplace_purchase_id"):
+            meta = session_obj.get("metadata") or {}
+            purchase_id = int(meta.get("marketplace_purchase_id"))
+            purchase = MarketplacePurchase.query.get(purchase_id)
+            if not purchase:
+                return
+            if purchase.status == "completed":
+                return
+            p = _upsert_payment_from_checkout_session(
+                session_obj,
+                status="completed",
+                user_id=purchase.user_id,
+                society_id=purchase.society_id,
+            )
+            purchase.payment_id = p.id
+            purchase.status = "completed"
+            db.session.add(purchase)
+            db.session.commit()
+            try:
+                from app.marketplace.utils import install_purchase
+                install_purchase(purchase, actor_user_id=purchase.user_id)
+            except Exception:
+                pass
             return
 
         # Subscription flow

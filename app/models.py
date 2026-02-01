@@ -2008,6 +2008,69 @@ class Template(db.Model):
         return f'<Template {self.name}>'
 
 
+class MarketplacePackage(db.Model):
+    """
+    Sellable package of templates/workflows (internal marketplace).
+    """
+    __tablename__ = 'marketplace_package'
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+
+    price_one_time = db.Column(db.Float, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+    stripe_price_one_time_id = db.Column(db.String(120))
+
+    is_active = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f"<MarketplacePackage {self.slug}>"
+
+
+class MarketplacePackageItem(db.Model):
+    __tablename__ = 'marketplace_package_item'
+
+    id = db.Column(db.Integer, primary_key=True)
+    package_id = db.Column(db.Integer, db.ForeignKey('marketplace_package.id'), nullable=False, index=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('template.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    package = db.relationship('MarketplacePackage', foreign_keys=[package_id], backref=db.backref('items', lazy='dynamic', cascade='all, delete-orphan'))
+    template = db.relationship('Template', foreign_keys=[template_id])
+
+
+class MarketplacePurchase(db.Model):
+    __tablename__ = 'marketplace_purchase'
+
+    id = db.Column(db.Integer, primary_key=True)
+    package_id = db.Column(db.Integer, db.ForeignKey('marketplace_package.id'), nullable=False, index=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), index=True)
+
+    status = db.Column(db.String(20), default='pending')  # pending, completed, failed
+    installed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    package = db.relationship('MarketplacePackage', foreign_keys=[package_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('package_id', 'society_id', 'user_id', name='uq_marketplace_purchase_scope_package'),
+    )
+
+
 class Task(db.Model):
     """
     Advanced Task Management (Asana/Monday.com/ClickUp level)

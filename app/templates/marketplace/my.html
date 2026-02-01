@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}I miei acquisti{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">I miei acquisti</h1>
+    <a class="btn btn-outline-secondary" href="{{ url_for('marketplace.index') }}">Marketplace</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Pacchetto</th>
+            <th>Stato</th>
+            <th>Installato</th>
+            <th class="text-end">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in purchases %}
+            <tr>
+              <td>
+                <strong>{{ p.package.name if p.package else ('Package #' ~ p.package_id) }}</strong>
+                <div class="text-muted small">{{ p.created_at|datetime_format }}</div>
+              </td>
+              <td>
+                <span class="badge bg-{{ 'success' if p.status == 'completed' else ('warning' if p.status == 'pending' else 'danger') }}">
+                  {{ p.status }}
+                </span>
+              </td>
+              <td class="text-muted small">
+                {% if p.installed_at %}
+                  {{ p.installed_at|datetime_format }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if p.status == 'completed' and not p.installed_at %}
+                  <form method="post" action="{{ url_for('marketplace.install', purchase_id=p.id) }}" class="d-inline">
+                    {{ csrf_token() }}
+                    <button class="btn btn-sm btn-primary" type="submit">Installa</button>
+                  </form>
+                {% endif %}
+                {% if p.package %}
+                  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('marketplace.detail', slug=p.package.slug) }}">Dettagli</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-muted">Nessun acquisto.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -41,6 +41,7 @@ CORE_MODULES = [
     'tasks',
     'scheduler',
     'subscription',
+    'marketplace',
 ]
 
 

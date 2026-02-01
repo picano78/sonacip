@@ -20,6 +20,14 @@
         <span class="badge bg-dark text-uppercase">{{ tournament.status }}</span>
         <span class="chip">{{ teams|length }} squadre</span>
         <span class="chip">{{ matches|length }} partite</span>
+        {% if can_manage %}
+          <form method="post" action="{{ url_for('tournaments.publish_tournament', tournament_id=tournament.id) }}">
+            {{ csrf_token() }}
+            <button class="btn btn-sm btn-outline-light" type="submit">
+              <i class="bi bi-megaphone"></i> Pubblica torneo
+            </button>
+          </form>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -65,10 +73,22 @@
                     {{ csrf_token() }}
                     <input type="number" name="home_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol casa" required>
                     <input type="number" name="away_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol trasf" required>
+                    <div class="form-check form-check-inline ms-2">
+                      <input class="form-check-input" type="checkbox" name="publish_to_social" value="1" id="pub_{{ m.id }}" checked>
+                      <label class="form-check-label small" for="pub_{{ m.id }}">Pubblica</label>
+                    </div>
                     <button class="btn btn-sm btn-success" type="submit">Salva</button>
                   </form>
                 {% else %}
                   <div class="fw-bold fs-5">{{ m.home_score }} - {{ m.away_score }}</div>
+                  {% if can_manage and m.status == 'played' %}
+                    <form method="post" action="{{ url_for('tournaments.publish_match_result', tournament_id=tournament.id, match_id=m.id) }}">
+                      {{ csrf_token() }}
+                      <button class="btn btn-sm btn-outline-primary ms-2" type="submit">
+                        <i class="bi bi-send"></i> Pubblica risultato
+                      </button>
+                    </form>
+                  {% endif %}
                 {% endif %}
               </div>
             </div>

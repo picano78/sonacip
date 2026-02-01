@@ -1,5 +1,5 @@
 """Tournament routes implementing multi-format tournaments with scheduling, scoring, standings."""
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
 import random
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
@@ -10,7 +10,7 @@ from app import db
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
 from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity
 from app.automation.utils import execute_rules
-from app.utils import permission_required, check_permission
+from app.utils import permission_required, check_permission, log_action
 
 bp = Blueprint('tournaments', __name__, url_prefix='/tournaments')
 
@@ -54,6 +54,31 @@ def _get_society_id():
 
 def _trigger(event_type, payload):
     execute_rules(event_type, payload)
+
+
+def _post_kwargs_for_tournament(tournament: Tournament) -> dict:
+    """
+    Return Post scoping kwargs depending on tournament ownership.
+    - Society tournaments: scoped to society feed (audience='society').
+    - Personal tournaments: public feed (audience='public').
+    """
+    if tournament.society_id:
+        return {"audience": "society", "society_id": tournament.society_id, "is_public": False}
+    return {"audience": "public", "society_id": None, "is_public": True}
+
+
+def _recent_duplicate_post(user_id: int, post_type: str, content: str, minutes: int = 10) -> bool:
+    """Best-effort dedupe to avoid double-posting the same message."""
+    try:
+        since = datetime.utcnow() - timedelta(minutes=minutes)
+        exists = (
+            Post.query.filter_by(user_id=user_id, post_type=post_type)
+            .filter(Post.content == content, Post.created_at >= since)
+            .first()
+        )
+        return exists is not None
+    except Exception:
+        return False
 
 
 def _winner_of(match: TournamentMatch) -> TournamentTeam | None:
@@ -273,6 +298,100 @@ def view_tournament(tournament_id):
     )
 
 
+@bp.route('/<int:tournament_id>/publish', methods=['POST'])
+@login_required
+def publish_tournament(tournament_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+    _require_manage(tournament)
+
+    teams_count = 0
+    try:
+        teams_count = tournament.teams.count()
+    except Exception:
+        teams_count = 0
+
+    fmt = tournament.format or "tournament"
+    when = ""
+    try:
+        if tournament.start_date:
+            when = f" (inizio {tournament.start_date.strftime('%d/%m/%Y')})"
+    except Exception:
+        when = ""
+
+    content = f'Nuovo torneo: "{tournament.name}" — formato {fmt} — {teams_count} squadre{when}.'
+    if _recent_duplicate_post(current_user.id, "tournament_announcement", content):
+        flash('Torneo già pubblicato di recente.', 'info')
+        return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+    post = Post(
+        user_id=current_user.id,
+        content=content,
+        post_type="tournament_announcement",
+        **_post_kwargs_for_tournament(tournament),
+    )
+    db.session.add(post)
+    db.session.commit()
+
+    try:
+        log_action(
+            "tournament_publish",
+            "Tournament",
+            tournament.id,
+            f'Published tournament "{tournament.name}"',
+            society_id=tournament.society_id,
+        )
+    except Exception:
+        pass
+
+    flash('Torneo pubblicato sul social.', 'success')
+    return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+
+@bp.route('/<int:tournament_id>/matches/<int:match_id>/publish', methods=['POST'])
+@login_required
+def publish_match_result(tournament_id, match_id):
+    tournament = Tournament.query.get_or_404(tournament_id)
+    _require_manage(tournament)
+    match = TournamentMatch.query.get_or_404(match_id)
+    if match.tournament_id != tournament.id:
+        abort(404)
+    if match.status != 'played':
+        flash('Puoi pubblicare solo risultati di partite già giocate.', 'warning')
+        return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+    home_team = match.home_team.name if match.home_team else 'Casa'
+    away_team = match.away_team.name if match.away_team else 'Ospiti'
+    phase = f" — {match.round_label}" if match.round_label else ""
+    content = f'Risultato torneo "{tournament.name}"{phase}: {home_team} {match.home_score} - {match.away_score} {away_team}'
+
+    if _recent_duplicate_post(current_user.id, "tournament_result", content):
+        flash('Risultato già pubblicato di recente.', 'info')
+        return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+    post = Post(
+        user_id=current_user.id,
+        content=content,
+        post_type="tournament_result",
+        **_post_kwargs_for_tournament(tournament),
+    )
+    db.session.add(post)
+    db.session.commit()
+
+    try:
+        log_action(
+            "tournament_result_publish",
+            "TournamentMatch",
+            match.id,
+            f"Published result {match.home_score}-{match.away_score}",
+            society_id=tournament.society_id,
+        )
+    except Exception:
+        pass
+
+    flash('Risultato pubblicato sul social.', 'success')
+    return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+
+
 @bp.route('/<int:tournament_id>/teams/add', methods=['POST'])
 @login_required
 def add_team(tournament_id):
@@ -352,15 +471,24 @@ def set_score(match_id):
         for standing in tournament.standings:
             if standing.team_id in (match.home_team_id, match.away_team_id):
                 standing.update_from_match(match)
-        # Social post for tournament result
-        try:
-            home_team = match.home_team.name if match.home_team else 'Casa'
-            away_team = match.away_team.name if match.away_team else 'Ospiti'
-            content = f'Risultato torneo "{tournament.name}": {home_team} {match.home_score} - {match.away_score} {away_team}'
-            post = Post(user_id=current_user.id, content=content, is_public=True)
-            db.session.add(post)
-        except Exception:
-            pass
+        # Optional: publish result to social (explicit user action)
+        publish = (request.form.get("publish_to_social") or "").strip() == "1"
+        if publish:
+            try:
+                home_team = match.home_team.name if match.home_team else 'Casa'
+                away_team = match.away_team.name if match.away_team else 'Ospiti'
+                phase = f" — {match.round_label}" if match.round_label else ""
+                content = f'Risultato torneo "{tournament.name}"{phase}: {home_team} {match.home_score} - {match.away_score} {away_team}'
+                if not _recent_duplicate_post(current_user.id, "tournament_result", content):
+                    post = Post(
+                        user_id=current_user.id,
+                        content=content,
+                        post_type="tournament_result",
+                        **_post_kwargs_for_tournament(tournament),
+                    )
+                    db.session.add(post)
+            except Exception:
+                pass
         # CRM activity log
         try:
             activity = CRMActivity(

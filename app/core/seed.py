@@ -306,6 +306,12 @@ def seed_defaults(app) -> dict:
         if not SiteCustomization.query.first():
             db.session.add(SiteCustomization())
             summary["settings_created"] += 1
+        try:
+            from app.models import PlatformFeeSetting
+            if not PlatformFeeSetting.query.first():
+                db.session.add(PlatformFeeSetting(take_rate_percent=5, min_fee_cents=0, currency="EUR"))
+        except Exception:
+            pass
         if not SmtpSetting.query.first():
             db.session.add(SmtpSetting(enabled=False))
             summary["smtp_settings_created"] += 1

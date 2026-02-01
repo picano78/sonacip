@@ -21,6 +21,9 @@ from app.models import (
     AuditLog,
     MedicalCertificate,
     SocietyFee,
+    Payment,
+    PlatformFeeSetting,
+    PlatformTransaction,
     CRMPipeline,
     CRMPipelineStage,
 )
@@ -29,8 +32,96 @@ from datetime import datetime
 from app.utils import log_action
 from sqlalchemy.orm import joinedload
 from datetime import date, timedelta
+from app.subscription.stripe_utils import stripe_enabled, create_fee_checkout_session
 
 bp = Blueprint('crm', __name__, url_prefix='/crm')
+
+
+@bp.route('/my-fees')
+@login_required
+def my_fees():
+    """Member view of their fees for the active society scope."""
+    scope_id = get_active_society_id(current_user)
+    q = SocietyFee.query.options(joinedload(SocietyFee.society)).filter_by(user_id=current_user.id)
+    if scope_id:
+        q = q.filter(SocietyFee.society_id == scope_id)
+    fees = q.order_by(SocietyFee.due_on.asc()).all()
+    return render_template('crm/my_fees.html', fees=fees, scope_id=scope_id)
+
+
+@bp.route('/fees/<int:fee_id>/pay', methods=['POST'])
+@login_required
+def pay_fee(fee_id: int):
+    """Pay a pending society fee (Stripe if configured; otherwise local placeholder)."""
+    fee = SocietyFee.query.get_or_404(fee_id)
+    if fee.user_id != current_user.id:
+        flash('Accesso negato.', 'danger')
+        return redirect(url_for('crm.my_fees'))
+    if fee.status != 'pending':
+        flash('Quota non pagabile (stato non pending).', 'warning')
+        return redirect(url_for('crm.my_fees'))
+
+    # Stripe payment (recommended)
+    if stripe_enabled():
+        try:
+            success_url = url_for('crm.my_fees', _external=True) + "?paid=1"
+            cancel_url = url_for('crm.my_fees', _external=True)
+            checkout_url = create_fee_checkout_session(fee, success_url=success_url, cancel_url=cancel_url)
+            return redirect(checkout_url)
+        except Exception as exc:
+            flash(f'Stripe non disponibile: {exc}', 'warning')
+
+    # Local fallback: complete immediately and record take-rate
+    amount_eur = round(float(fee.amount_cents or 0) / 100.0, 2)
+    payment = Payment(
+        user_id=current_user.id,
+        society_id=fee.society_id,
+        subscription_id=None,
+        amount=amount_eur,
+        currency=(fee.currency or 'EUR'),
+        status='completed',
+        payment_method='manual',
+        payment_date=datetime.utcnow(),
+        description=f'Fee payment (SocietyFee #{fee.id})',
+        transaction_id=f'LOCAL_FEE_{fee.id}_{datetime.utcnow().timestamp()}',
+        gateway='local',
+    )
+    db.session.add(payment)
+    db.session.flush()
+
+    fee.status = 'paid'
+    fee.paid_at = datetime.utcnow()
+    db.session.add(fee)
+
+    # Take-rate ledger
+    settings = PlatformFeeSetting.query.first()
+    pct = int(settings.take_rate_percent or 0) if settings else 0
+    min_cents = int(settings.min_fee_cents or 0) if settings else 0
+    gross_cents = int(fee.amount_cents or 0)
+    fee_cents = int(round((gross_cents * max(0, pct)) / 100.0))
+    fee_cents = max(fee_cents, max(0, min_cents))
+    fee_cents = min(fee_cents, gross_cents)
+    platform_fee = round(fee_cents / 100.0, 2)
+    net = round((gross_cents - fee_cents) / 100.0, 2)
+
+    db.session.add(
+        PlatformTransaction(
+            society_id=fee.society_id,
+            user_id=current_user.id,
+            payment_id=payment.id,
+            entity_type='SocietyFee',
+            entity_id=fee.id,
+            gross_amount=amount_eur,
+            platform_fee_amount=platform_fee,
+            net_amount=net,
+            currency=(fee.currency or 'EUR'),
+            status='collected',
+            created_at=datetime.utcnow(),
+        )
+    )
+    db.session.commit()
+    flash('Pagamento completato.', 'success')
+    return redirect(url_for('crm.my_fees'))
 
 
 def _society_scope_id():

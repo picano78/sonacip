@@ -36,6 +36,8 @@ from app.models import (
     Notification,
     PageCustomization,
     Post,
+    PlatformFeeSetting,
+    PlatformTransaction,
     PrivacySetting,
     SiteCustomization,
     SocialSetting,
@@ -417,6 +419,58 @@ def whatsapp_template_toggle(template_id: int):
     log_action('toggle_whatsapp_template', 'WhatsappTemplate', t.id, f'active={t.is_active}')
     flash('Template aggiornato.', 'success')
     return redirect(url_for('admin.whatsapp_templates'))
+
+
+@bp.route('/platform/fees', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def platform_fees():
+    """Configure platform take-rate settings."""
+    settings = PlatformFeeSetting.query.first()
+    if not settings:
+        settings = PlatformFeeSetting(take_rate_percent=5, min_fee_cents=0, currency='EUR', updated_at=datetime.utcnow(), updated_by=current_user.id)
+        db.session.add(settings)
+        db.session.commit()
+
+    if request.method == 'POST':
+        try:
+            pct = int(request.form.get('take_rate_percent') or 5)
+        except Exception:
+            pct = 5
+        try:
+            min_fee_cents = int(request.form.get('min_fee_cents') or 0)
+        except Exception:
+            min_fee_cents = 0
+        currency = (request.form.get('currency') or 'EUR').strip().upper()
+
+        settings.take_rate_percent = max(0, min(100, pct))
+        settings.min_fee_cents = max(0, min_fee_cents)
+        settings.currency = currency or 'EUR'
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        log_action('update_platform_fees', 'PlatformFeeSetting', settings.id, f'pct={settings.take_rate_percent} min={settings.min_fee_cents}')
+        flash('Impostazioni aggiornate.', 'success')
+        return redirect(url_for('admin.platform_fees'))
+
+    return render_template('admin/platform_fees.html', settings=settings)
+
+
+@bp.route('/platform/transactions')
+@login_required
+@admin_required
+def platform_transactions():
+    """View platform take-rate ledger."""
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    pagination = PlatformTransaction.query.order_by(PlatformTransaction.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    items = pagination.items
+
+    total_platform = db.session.query(func.sum(PlatformTransaction.platform_fee_amount)).scalar() or 0
+    total_gross = db.session.query(func.sum(PlatformTransaction.gross_amount)).scalar() or 0
+
+    stats = {"total_gross": float(total_gross), "total_platform": float(total_platform)}
+    return render_template('admin/platform_transactions.html', transactions=items, pagination=pagination, stats=stats)
 
 
 @bp.route('/pages')

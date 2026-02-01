@@ -1872,6 +1872,51 @@ class Payment(db.Model):
         return f'<Payment {self.id}: {self.amount} {self.currency} - {self.status}>'
 
 
+class PlatformFeeSetting(db.Model):
+    """
+    Platform take-rate settings (super admin).
+    Used to compute platform fee on society transactions (fees/tickets/etc.).
+    """
+    __tablename__ = 'platform_fee_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    take_rate_percent = db.Column(db.Integer, default=5)  # e.g. 5 => 5%
+    min_fee_cents = db.Column(db.Integer, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+
+class PlatformTransaction(db.Model):
+    """
+    Ledger for platform revenue share on transactions.
+    """
+    __tablename__ = 'platform_transaction'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), index=True)
+
+    entity_type = db.Column(db.String(50), nullable=False)  # e.g. "SocietyFee"
+    entity_id = db.Column(db.Integer, nullable=False, index=True)
+
+    gross_amount = db.Column(db.Float, default=0)
+    platform_fee_amount = db.Column(db.Float, default=0)
+    net_amount = db.Column(db.Float, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+    status = db.Column(db.String(20), default='collected')  # collected, refunded
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+
 class Coupon(db.Model):
     """
     Coupon codes for monetization (super-admin managed).

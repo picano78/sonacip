@@ -8,7 +8,17 @@ import stripe
 from flask import current_app
 
 from app import db
-from app.models import AddOn, AddOnEntitlement, MarketplacePurchase, Payment, Plan, Subscription
+from app.models import (
+    AddOn,
+    AddOnEntitlement,
+    MarketplacePurchase,
+    Payment,
+    Plan,
+    PlatformFeeSetting,
+    PlatformTransaction,
+    SocietyFee,
+    Subscription,
+)
 
 
 def stripe_enabled() -> bool:
@@ -96,6 +106,56 @@ def create_marketplace_checkout_session(*, purchase_id: int, stripe_price_one_ti
     )
     return sess.url  # type: ignore[attr-defined]
 
+
+def create_fee_checkout_session(fee: SocietyFee, *, success_url: str, cancel_url: str) -> str:
+    """
+    One-time payment checkout for a SocietyFee (dynamic amount via price_data).
+    """
+    _init_stripe()
+    amount_cents = int(fee.amount_cents or 0)
+    if amount_cents <= 0:
+        raise ValueError("Importo quota non valido.")
+    currency = (fee.currency or "EUR").lower()
+    metadata = {
+        "fee_id": str(fee.id),
+        "society_id": str(fee.society_id or ""),
+        "user_id": str(fee.user_id or ""),
+    }
+    sess = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[
+            {
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": amount_cents,
+                    "product_data": {
+                        "name": f"Quota società (#{fee.id})",
+                        "description": fee.description or "Quota",
+                    },
+                },
+                "quantity": 1,
+            }
+        ],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        allow_promotion_codes=False,
+        metadata=metadata,
+    )
+    return sess.url  # type: ignore[attr-defined]
+
+
+def _take_rate_for_amount(amount_eur: float) -> tuple[float, float]:
+    """Return (platform_fee_eur, net_eur)."""
+    settings = PlatformFeeSetting.query.first()
+    pct = int(settings.take_rate_percent or 0) if settings else 0
+    min_cents = int(settings.min_fee_cents or 0) if settings else 0
+    gross_cents = int(round(float(amount_eur) * 100))
+    fee_cents = int(round((gross_cents * max(0, pct)) / 100.0))
+    fee_cents = max(fee_cents, max(0, min_cents))
+    fee_cents = min(fee_cents, gross_cents)
+    platform_fee = round(fee_cents / 100.0, 2)
+    net = round((gross_cents - fee_cents) / 100.0, 2)
+    return platform_fee, net
 
 def _upsert_payment_from_checkout_session(session_obj: Any, status: str, *, user_id: int | None, society_id: int | None) -> Payment:
     """
@@ -280,6 +340,47 @@ def handle_stripe_event(event: Any) -> None:
                 install_purchase(purchase, actor_user_id=purchase.user_id)
             except Exception:
                 pass
+            return
+
+        # Society fee payment flow (one-time payment)
+        if mode == "payment" and session_obj.get("metadata", {}).get("fee_id"):
+            meta = session_obj.get("metadata") or {}
+            fee_id = int(meta.get("fee_id"))
+            fee = SocietyFee.query.get(fee_id)
+            if not fee:
+                return
+            if fee.status == "paid":
+                return
+            p = _upsert_payment_from_checkout_session(
+                session_obj,
+                status="completed",
+                user_id=fee.user_id,
+                society_id=fee.society_id,
+            )
+            fee.status = "paid"
+            fee.paid_at = datetime.utcnow()
+            db.session.add(fee)
+
+            gross = float(p.amount or 0)
+            platform_fee, net = _take_rate_for_amount(gross)
+            existing = PlatformTransaction.query.filter_by(entity_type="SocietyFee", entity_id=fee.id, payment_id=p.id).first()
+            if not existing:
+                db.session.add(
+                    PlatformTransaction(
+                        society_id=fee.society_id,
+                        user_id=fee.user_id,
+                        payment_id=p.id,
+                        entity_type="SocietyFee",
+                        entity_id=fee.id,
+                        gross_amount=gross,
+                        platform_fee_amount=platform_fee,
+                        net_amount=net,
+                        currency=(p.currency or "EUR"),
+                        status="collected",
+                        created_at=datetime.utcnow(),
+                    )
+                )
+            db.session.commit()
             return
 
         # Subscription flow

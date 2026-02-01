@@ -121,6 +121,12 @@
                     <a href="{{ url_for('marketplace.admin_packages') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-shop"></i> Marketplace (pacchetti)
                     </a>
+                    <a href="{{ url_for('admin.platform_fees') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-cash-coin"></i> Take-rate (impostazioni)
+                    </a>
+                    <a href="{{ url_for('admin.platform_transactions') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-receipt"></i> Take-rate (ledger)
+                    </a>
                     <form action="{{ url_for('admin.reset_system') }}" method="post" class="list-group-item d-flex align-items-center justify-content-between">
                         {{ csrf_token() }}
                         <div><i class="bi bi-arrow-repeat"></i> Reset/Restart</div>

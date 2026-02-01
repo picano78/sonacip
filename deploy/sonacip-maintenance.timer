@@ -1,0 +1,11 @@
+[Unit]
+Description=Run SONACIP maintenance periodically
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+RandomizedDelaySec=2m
+
+[Install]
+WantedBy=timers.target
+

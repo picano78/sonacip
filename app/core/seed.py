@@ -233,6 +233,58 @@ def seed_defaults(app) -> dict:
         db.session.commit()
 
         # ---------------------------------------------------------------------
+        # Add-ons (feature-based upsells) - idempotent
+        # ---------------------------------------------------------------------
+        try:
+            from app.models import AddOn
+
+            default_addons = [
+                {
+                    "slug": "whatsapp-pro",
+                    "name": "WhatsApp Pro",
+                    "description": "Invio WhatsApp avanzato (template/opt-in/provider).",
+                    "feature_key": "whatsapp_pro",
+                    "price_one_time": 49.0,
+                    "currency": "EUR",
+                    "display_order": 10,
+                },
+                {
+                    "slug": "ads-self-serve",
+                    "name": "Ads Self‑Serve",
+                    "description": "Campagne sponsor gestibili dagli inserzionisti con report e budget.",
+                    "feature_key": "ads_selfserve",
+                    "price_one_time": 79.0,
+                    "currency": "EUR",
+                    "display_order": 20,
+                },
+                {
+                    "slug": "analytics-pro",
+                    "name": "Analytics Pro",
+                    "description": "Analytics manageriali, KPI e suggerimenti automatici.",
+                    "feature_key": "analytics_pro",
+                    "price_one_time": 99.0,
+                    "currency": "EUR",
+                    "display_order": 30,
+                },
+                {
+                    "slug": "enterprise-pack",
+                    "name": "Enterprise Pack",
+                    "description": "SSO, audit avanzato, SLA, compliance enterprise.",
+                    "feature_key": "enterprise_pack",
+                    "price_one_time": 199.0,
+                    "currency": "EUR",
+                    "display_order": 40,
+                },
+            ]
+            for a in default_addons:
+                row = AddOn.query.filter_by(slug=a["slug"]).first()
+                if not row:
+                    db.session.add(AddOn(**a))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # ---------------------------------------------------------------------
         # Global settings singletons
         # ---------------------------------------------------------------------
         if not AppearanceSetting.query.filter_by(scope="global").first():

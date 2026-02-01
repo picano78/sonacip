@@ -351,22 +351,39 @@ class User(UserMixin, db.Model):
         """
         if self.is_admin():
             return True
-        
+
+        # 1) Plan-based features (if a subscription exists)
         subscription = self.get_active_subscription()
-        if not subscription or not subscription.plan:
-            # No active subscription - check free plan limits
+        if subscription and subscription.plan:
+            plan = subscription.plan
+            feature_map = {
+                'crm': bool(plan.has_crm),
+                'advanced_stats': bool(plan.has_advanced_stats),
+                'api_access': bool(plan.has_api_access),
+                'white_label': bool(plan.has_white_label),
+                'priority_support': bool(plan.has_priority_support),
+            }
+            if bool(feature_map.get(feature_name, False)):
+                return True
+
+        # 2) Add-on entitlements (paid add-ons can unlock features even if the plan doesn't)
+        try:
+            from app.models import AddOnEntitlement
+            now = datetime.utcnow()
+            scope = self.get_primary_society()
+            q = AddOnEntitlement.query.filter_by(feature_key=feature_name, status='active')
+            if scope:
+                q = q.filter(AddOnEntitlement.society_id == scope.id)
+            else:
+                q = q.filter(AddOnEntitlement.user_id == self.id)
+            ent = q.order_by(AddOnEntitlement.created_at.desc()).first()
+            if not ent:
+                return False
+            if ent.end_date and ent.end_date <= now:
+                return False
+            return True
+        except Exception:
             return False
-        
-        plan = subscription.plan
-        feature_map = {
-            'crm': plan.has_crm,
-            'advanced_stats': plan.has_advanced_stats,
-            'api_access': plan.has_api_access,
-            'white_label': plan.has_white_label,
-            'priority_support': plan.has_priority_support
-        }
-        
-        return feature_map.get(feature_name, False)
     
     def can_add_athlete(self):
         """Check if user can add more athletes based on plan limits"""
@@ -1776,6 +1793,67 @@ class CouponRedemption(db.Model):
     subscription = db.relationship('Subscription', foreign_keys=[subscription_id])
     payment = db.relationship('Payment', foreign_keys=[payment_id])
 
+
+
+class AddOn(db.Model):
+    """
+    Optional add-ons that can unlock product features (feature_key).
+    Purchased add-ons are materialized as AddOnEntitlement rows.
+    """
+    __tablename__ = 'addon'
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+
+    feature_key = db.Column(db.String(80), nullable=False, index=True)  # e.g. "crm", "whatsapp_pro"
+
+    # Pricing (one-time today; can evolve to recurring)
+    price_one_time = db.Column(db.Float, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+
+    # Optional Stripe mapping for one-time checkout (mode=payment)
+    stripe_price_one_time_id = db.Column(db.String(120))
+
+    is_active = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def __repr__(self):
+        return f"<AddOn {self.slug} feature={self.feature_key}>"
+
+
+class AddOnEntitlement(db.Model):
+    """
+    The effective access grant derived from an add-on purchase.
+    Entitlements can be scoped to a society (typical) or to an individual user.
+    """
+    __tablename__ = 'addon_entitlement'
+
+    id = db.Column(db.Integer, primary_key=True)
+    addon_id = db.Column(db.Integer, db.ForeignKey('addon.id'), nullable=False, index=True)
+    feature_key = db.Column(db.String(80), nullable=False, index=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), index=True)
+
+    status = db.Column(db.String(20), default='active')  # active, revoked, expired
+    start_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    end_date = db.Column(db.DateTime)
+
+    source = db.Column(db.String(50), default='manual')  # manual, stripe, local
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    addon = db.relationship('AddOn', foreign_keys=[addon_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+    def __repr__(self):
+        return f"<AddOnEntitlement addon={self.addon_id} scope_society={self.society_id} scope_user={self.user_id} status={self.status}>"
 
 
 class Society(db.Model):

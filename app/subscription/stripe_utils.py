@@ -8,7 +8,7 @@ import stripe
 from flask import current_app
 
 from app import db
-from app.models import Payment, Plan, Subscription
+from app.models import AddOn, AddOnEntitlement, Payment, Plan, Subscription
 
 
 def stripe_enabled() -> bool:
@@ -51,6 +51,78 @@ def create_checkout_session(subscription: Subscription, plan: Plan, billing_cycl
     )
     return sess.url  # type: ignore[attr-defined]
 
+
+def create_addon_checkout_session(addon: AddOn, *, user_id: int | None, society_id: int | None, success_url: str, cancel_url: str) -> str:
+    """
+    One-time payment checkout session to purchase an add-on.
+    Requires addon.stripe_price_one_time_id.
+    """
+    _init_stripe()
+    if not addon.stripe_price_one_time_id:
+        raise ValueError("Add-on non configurato per Stripe (stripe_price_one_time_id mancante).")
+
+    metadata = {
+        "addon_id": str(addon.id),
+        "feature_key": str(addon.feature_key),
+        "society_id": str(society_id or ""),
+        "user_id": str(user_id or ""),
+    }
+    sess = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{"price": addon.stripe_price_one_time_id, "quantity": 1}],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        allow_promotion_codes=False,
+        metadata=metadata,
+    )
+    return sess.url  # type: ignore[attr-defined]
+
+
+def _upsert_payment_from_checkout_session(session_obj: Any, status: str, *, user_id: int | None, society_id: int | None) -> Payment:
+    """
+    Create/update a Payment row from Stripe checkout session (mode=payment).
+    transaction_id uses payment_intent when available.
+    """
+    tx_id = session_obj.get("payment_intent") or session_obj.get("id")
+    existing = Payment.query.filter_by(transaction_id=tx_id).first()
+
+    amount_total = session_obj.get("amount_total") or 0
+    currency = (session_obj.get("currency") or "eur").upper()
+    created = session_obj.get("created")
+    created_dt = datetime.utcfromtimestamp(created) if created else datetime.utcnow()
+    amount_eur = round(float(amount_total) / 100.0, 2)
+
+    payload = json.dumps({"checkout_session": session_obj})
+
+    if user_id is None:
+        raise ValueError("checkout.session senza user_id (metadata) - impossibile creare Payment.")
+
+    if not existing:
+        p = Payment(
+            user_id=user_id,
+            society_id=society_id,
+            subscription_id=None,
+            amount=amount_eur,
+            currency=currency,
+            status=status,
+            payment_method="stripe",
+            payment_date=created_dt,
+            description="Stripe checkout (add-on)",
+            transaction_id=tx_id,
+            gateway="stripe",
+        )
+        p.payment_metadata = payload
+        db.session.add(p)
+        db.session.flush()
+        return p
+
+    existing.status = status
+    existing.gateway = "stripe"
+    existing.payment_method = "stripe"
+    existing.payment_metadata = payload
+    db.session.add(existing)
+    db.session.flush()
+    return existing
 
 def create_billing_portal_session(customer_id: str, return_url: str) -> str:
     _init_stripe()
@@ -126,9 +198,46 @@ def handle_stripe_event(event: Any) -> None:
     etype = event["type"]
     obj = event["data"]["object"]
 
-    # Checkout completion: activate the subscription row
+    # Checkout completion: activate the subscription row OR finalize add-on purchase
     if etype == "checkout.session.completed":
         session_obj = obj
+        mode = session_obj.get("mode")
+
+        # Add-on flow (one-time payment)
+        if mode == "payment" and session_obj.get("metadata", {}).get("addon_id"):
+            meta = session_obj.get("metadata") or {}
+            addon_id = int(meta.get("addon_id"))
+            user_id = int(meta.get("user_id")) if str(meta.get("user_id") or "").strip() else None
+            society_id = int(meta.get("society_id")) if str(meta.get("society_id") or "").strip() else None
+
+            addon = AddOn.query.get(addon_id)
+            if not addon:
+                return
+            if user_id is None:
+                return
+            p = _upsert_payment_from_checkout_session(session_obj, status="completed", user_id=user_id, society_id=society_id)
+
+            # Create entitlement (idempotent per payment_id)
+            exists = AddOnEntitlement.query.filter_by(payment_id=p.id).first()
+            if not exists:
+                db.session.add(
+                    AddOnEntitlement(
+                        addon_id=addon.id,
+                        feature_key=addon.feature_key,
+                        user_id=user_id,
+                        society_id=society_id,
+                        payment_id=p.id,
+                        status="active",
+                        source="stripe",
+                        start_date=datetime.utcnow(),
+                        end_date=None,
+                        created_at=datetime.utcnow(),
+                    )
+                )
+            db.session.commit()
+            return
+
+        # Subscription flow
         sub_id = session_obj.get("subscription")
         client_ref = session_obj.get("client_reference_id")
         if not client_ref:

@@ -115,6 +115,9 @@
                     <a href="{{ url_for('subscription.admin_coupons') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-ticket-perforated"></i> Coupon
                     </a>
+                    <a href="{{ url_for('subscription.admin_addons') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-puzzle"></i> Add-on
+                    </a>
                     <form action="{{ url_for('admin.reset_system') }}" method="post" class="list-group-item d-flex align-items-center justify-content-between">
                         {{ csrf_token() }}
                         <div><i class="bi bi-arrow-repeat"></i> Reset/Restart</div>

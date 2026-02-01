@@ -764,6 +764,54 @@ class PrivacySetting(db.Model):
         return f'<PrivacySetting {self.id}>'
 
 
+class SiteCustomization(db.Model):
+    """
+    Global UI/content customization (super admin controlled).
+    Keep it intentionally small and safe: branding + footer + optional custom CSS.
+    """
+    __tablename__ = 'site_customization'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    navbar_brand_text = db.Column(db.String(100), default='SONACIP')
+    navbar_brand_icon = db.Column(db.String(50), default='bi-trophy-fill')  # Bootstrap Icons class
+
+    footer_html = db.Column(db.Text)
+    custom_css = db.Column(db.Text)
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<SiteCustomization {self.id}>'
+
+
+class PageCustomization(db.Model):
+    """
+    Per-page editable content controlled by super admin.
+    `slug` should match a stable page identifier (e.g. 'main.index', 'main.about').
+    """
+    __tablename__ = 'page_customization'
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(120), unique=True, nullable=False, index=True)
+
+    title = db.Column(db.String(200))
+    hero_title = db.Column(db.String(200))
+    hero_subtitle = db.Column(db.String(500))
+    body_html = db.Column(db.Text)
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<PageCustomization {self.slug}>'
+
+
 class Message(db.Model):
     """
     Direct messaging between users
@@ -1616,6 +1664,29 @@ class Team(db.Model):
         return f'<Team {self.name}>'
 
 
+class DashboardTemplate(db.Model):
+    """
+    Default dashboard template for a role (super admin controlled).
+    Used to provision user dashboards and to reset them deterministically.
+    """
+    __tablename__ = 'dashboard_template'
+
+    id = db.Column(db.Integer, primary_key=True)
+    role_name = db.Column(db.String(50), index=True)  # nullable = global fallback
+
+    name = db.Column(db.String(200), nullable=False, default='Default')
+    layout = db.Column(db.String(20), default='grid')
+    widgets = db.Column(db.Text, nullable=False)  # JSON array
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<DashboardTemplate role={self.role_name or "default"}>'
+
+
 class Dashboard(db.Model):
     """
     Custom Dashboards (Databox/Klipfolio style)
@@ -1645,6 +1716,18 @@ class Dashboard(db.Model):
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def get_widgets(self):
+        import json
+        try:
+            data = json.loads(self.widgets or '[]')
+            return data if isinstance(data, list) else [data]
+        except Exception:
+            return []
+
+    def set_widgets(self, widgets):
+        import json
+        self.widgets = json.dumps(widgets or [])
     
     def __repr__(self):
         return f'<Dashboard {self.name}>'

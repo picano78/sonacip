@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib
 import os
 
-from flask import Flask
+from flask import Flask, request
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -118,5 +118,63 @@ def create_app(config_name: str | None = None) -> Flask:
 
     _register_blueprints(app)
     discover_and_register_modules(app, strict=False)
+
+    @app.context_processor
+    def inject_platform_context():
+        """Globals used by base templates (theme, privacy, counts, per-page content)."""
+        from flask_login import current_user
+
+        from app.utils import can as can_fn
+
+        appearance = None
+        privacy = None
+        site = None
+        page = None
+
+        try:
+            from app.models import (
+                AppearanceSetting,
+                Message,
+                Notification,
+                PageCustomization,
+                PrivacySetting,
+                SiteCustomization,
+            )
+
+            appearance = AppearanceSetting.query.filter_by(scope='global').order_by(AppearanceSetting.id.desc()).first()
+            privacy = PrivacySetting.query.order_by(PrivacySetting.id.desc()).first()
+            site = SiteCustomization.query.order_by(SiteCustomization.id.desc()).first()
+
+            endpoint = request.endpoint or ''
+            if endpoint:
+                page = PageCustomization.query.filter_by(slug=endpoint).first()
+
+            def get_unread_notifications_count():
+                if not current_user.is_authenticated:
+                    return 0
+                return Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+
+            def get_unread_messages_count():
+                if not current_user.is_authenticated:
+                    return 0
+                return Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
+
+        except Exception:
+            # DB not initialized yet or models unavailable: keep templates functional.
+            def get_unread_notifications_count():
+                return 0
+
+            def get_unread_messages_count():
+                return 0
+
+        return {
+            'can': can_fn,
+            'appearance': appearance,
+            'privacy': privacy,
+            'site': site,
+            'page': page,
+            'get_unread_notifications_count': get_unread_notifications_count,
+            'get_unread_messages_count': get_unread_messages_count,
+        }
 
     return app

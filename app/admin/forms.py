@@ -133,3 +133,30 @@ class StorageSettingsForm(FlaskForm):
     video_max_width = StringField('Larghezza max video (px)', validators=[Optional(), Length(max=5)])
     max_image_mb = StringField('Limite immagini (MB)', validators=[Optional(), Length(max=4)])
     max_video_mb = StringField('Limite video (MB)', validators=[Optional(), Length(max=4)])
+
+
+class SiteCustomizationForm(FlaskForm):
+    navbar_brand_text = StringField('Testo brand navbar', validators=[Optional(), Length(max=100)])
+    navbar_brand_icon = StringField('Icona navbar (Bootstrap Icons)', validators=[Optional(), Length(max=50)])
+    footer_html = TextAreaField('Footer HTML', validators=[Optional(), Length(max=20000)])
+    custom_css = TextAreaField('CSS personalizzato', validators=[Optional(), Length(max=50000)])
+
+
+class PageCustomizationForm(FlaskForm):
+    slug = StringField('Slug pagina (es: main.index)', validators=[DataRequired(), Length(max=120)])
+    title = StringField('Titolo pagina (tab)', validators=[Optional(), Length(max=200)])
+    hero_title = StringField('Titolo hero', validators=[Optional(), Length(max=200)])
+    hero_subtitle = StringField('Sottotitolo hero', validators=[Optional(), Length(max=500)])
+    body_html = TextAreaField('Contenuto HTML', validators=[Optional(), Length(max=50000)])
+
+
+class DashboardTemplateForm(FlaskForm):
+    role_name = SelectField('Ruolo', choices=[], validators=[Optional()])
+    name = StringField('Nome template', validators=[DataRequired(), Length(max=200)])
+    layout = SelectField('Layout', choices=[('grid', 'Grid')], validators=[DataRequired()])
+    widgets = TextAreaField('Widgets (JSON array)', validators=[DataRequired(), Length(max=50000)])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # '' means global default
+        self.role_name.choices = [('', 'Default (tutti)')] + _load_role_choices(include_empty=False)

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Benvenuto - SONACIP{% endblock %}
+{% block title %}{{ page.title if page and page.title else 'Benvenuto - SONACIP' }}{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
@@ -8,8 +8,8 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6">
-                <h1 class="display-4 fw-bold">Benvenuto su SONACIP</h1>
-                <p class="lead">La piattaforma completa per la gestione delle società sportive, atleti e appassionati.</p>
+                <h1 class="display-4 fw-bold">{{ page.hero_title if page and page.hero_title else 'Benvenuto su SONACIP' }}</h1>
+                <p class="lead">{{ page.hero_subtitle if page and page.hero_subtitle else 'La piattaforma completa per la gestione delle società sportive, atleti e appassionati.' }}</p>
                 <div class="mt-4">
                     <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg me-2">
                         <i class="bi bi-person-plus"></i> Registrati

@@ -6,10 +6,39 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, and_, func, desc
 from app import db
 from app.admin.utils import admin_required
-from app.admin.forms import UserEditForm, UserSearchForm, PrivacySettingsForm, AdsSettingsForm
-from app.models import User, Post, Event, Notification, AuditLog, Backup, Comment, PrivacySetting, AdsSetting, Society
+from app.admin.forms import (
+    AdsSettingsForm,
+    AppearanceSettingsForm,
+    DashboardTemplateForm,
+    PageCustomizationForm,
+    PrivacySettingsForm,
+    SiteCustomizationForm,
+    SocialSettingsAdminForm,
+    StorageSettingsForm,
+    UserEditForm,
+    UserSearchForm,
+)
+from app.models import (
+    AdsSetting,
+    AppearanceSetting,
+    AuditLog,
+    Backup,
+    Comment,
+    DashboardTemplate,
+    Event,
+    Notification,
+    PageCustomization,
+    Post,
+    PrivacySetting,
+    SiteCustomization,
+    SocialSetting,
+    Society,
+    StorageSetting,
+    User,
+)
 from datetime import datetime, timedelta
 import os
+from app.utils import log_action
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -45,6 +74,212 @@ def dashboard():
                          stats=stats,
                          recent_users=recent_users,
                          recent_logs=recent_logs)
+
+
+@bp.route('/appearance', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def appearance_settings():
+    """Tema piattaforma (global)."""
+    settings = AppearanceSetting.query.filter_by(scope='global').first()
+    if not settings:
+        settings = AppearanceSetting(scope='global')
+        db.session.add(settings)
+        db.session.commit()
+
+    form = AppearanceSettingsForm(obj=settings)
+    if form.validate_on_submit():
+        settings.primary_color = form.primary_color.data or settings.primary_color
+        settings.secondary_color = form.secondary_color.data or settings.secondary_color
+        settings.accent_color = form.accent_color.data or settings.accent_color
+        settings.font_family = form.font_family.data or settings.font_family
+        settings.logo_url = form.logo_url.data or None
+        settings.favicon_url = form.favicon_url.data or None
+        settings.layout_style = form.layout_style.data or settings.layout_style
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        log_action('update_appearance', 'AppearanceSetting', settings.id, 'Updated global appearance')
+        flash('Tema aggiornato.', 'success')
+        return redirect(url_for('admin.appearance_settings'))
+
+    return render_template('admin/appearance_settings.html', form=form, settings=settings)
+
+
+@bp.route('/social-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def social_settings():
+    """Governance social (global)."""
+    settings = SocialSetting.query.first()
+    if not settings:
+        settings = SocialSetting()
+        db.session.add(settings)
+        db.session.commit()
+
+    form = SocialSettingsAdminForm(obj=settings)
+    if form.validate_on_submit():
+        settings.feed_enabled = bool(form.feed_enabled.data)
+        settings.allow_likes = bool(form.allow_likes.data)
+        settings.allow_comments = bool(form.allow_comments.data)
+        settings.allow_shares = bool(form.allow_shares.data)
+        settings.boost_official = bool(form.boost_official.data)
+        settings.mute_user_posts = bool(form.mute_user_posts.data)
+        if form.max_posts_per_day.data:
+            try:
+                settings.max_posts_per_day = int(form.max_posts_per_day.data)
+            except Exception:
+                pass
+        settings.boosted_types = form.boosted_types.data or None
+        settings.muted_types = form.muted_types.data or None
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        log_action('update_social_settings', 'SocialSetting', settings.id, 'Updated social governance')
+        flash('Impostazioni social aggiornate.', 'success')
+        return redirect(url_for('admin.social_settings'))
+
+    return render_template('admin/social_settings.html', form=form, settings=settings)
+
+
+@bp.route('/storage-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def storage_settings():
+    """Storage media (global)."""
+    settings = StorageSetting.query.first()
+    if not settings:
+        settings = StorageSetting()
+        db.session.add(settings)
+        db.session.commit()
+
+    form = StorageSettingsForm(obj=settings)
+    if form.validate_on_submit():
+        settings.storage_backend = form.storage_backend.data or settings.storage_backend
+        settings.base_path = form.base_path.data or settings.base_path
+        settings.preferred_image_format = form.preferred_image_format.data or settings.preferred_image_format
+        settings.preferred_video_format = form.preferred_video_format.data or settings.preferred_video_format
+
+        def _int(value, default):
+            try:
+                return int(value)
+            except Exception:
+                return default
+
+        settings.image_quality = _int(form.image_quality.data, settings.image_quality)
+        settings.video_bitrate = _int(form.video_bitrate.data, settings.video_bitrate)
+        settings.video_max_width = _int(form.video_max_width.data, settings.video_max_width)
+        settings.max_image_mb = _int(form.max_image_mb.data, settings.max_image_mb)
+        settings.max_video_mb = _int(form.max_video_mb.data, settings.max_video_mb)
+
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        log_action('update_storage_settings', 'StorageSetting', settings.id, 'Updated storage settings')
+        flash('Impostazioni storage aggiornate.', 'success')
+        return redirect(url_for('admin.storage_settings'))
+
+    return render_template('admin/storage_settings.html', form=form, settings=settings)
+
+
+@bp.route('/site-customization', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def site_customization():
+    """Branding/navbar/footer/CSS (global)."""
+    settings = SiteCustomization.query.first()
+    if not settings:
+        settings = SiteCustomization()
+        db.session.add(settings)
+        db.session.commit()
+
+    form = SiteCustomizationForm(obj=settings)
+    if form.validate_on_submit():
+        settings.navbar_brand_text = form.navbar_brand_text.data or settings.navbar_brand_text
+        settings.navbar_brand_icon = form.navbar_brand_icon.data or settings.navbar_brand_icon
+        settings.footer_html = form.footer_html.data or None
+        settings.custom_css = form.custom_css.data or None
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        log_action('update_site_customization', 'SiteCustomization', settings.id, 'Updated global site customization')
+        flash('Personalizzazione sito aggiornata.', 'success')
+        return redirect(url_for('admin.site_customization'))
+
+    return render_template('admin/site_customization.html', form=form, settings=settings)
+
+
+@bp.route('/pages')
+@login_required
+@admin_required
+def pages():
+    """Elenco pagine personalizzabili."""
+    pages = PageCustomization.query.order_by(PageCustomization.slug.asc()).all()
+    return render_template('admin/pages.html', pages=pages)
+
+
+@bp.route('/pages/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_page():
+    """Crea/modifica una pagina personalizzabile."""
+    slug = request.args.get('slug') or ''
+    settings = PageCustomization.query.filter_by(slug=slug).first() if slug else None
+    if not settings:
+        settings = PageCustomization(slug=slug or '')
+
+    form = PageCustomizationForm(obj=settings)
+    if form.validate_on_submit():
+        existing = PageCustomization.query.filter_by(slug=form.slug.data).first()
+        if existing and existing.id != settings.id:
+            flash('Slug già esistente.', 'danger')
+            return redirect(url_for('admin.edit_page', slug=settings.slug))
+
+        settings.slug = form.slug.data
+        settings.title = form.title.data or None
+        settings.hero_title = form.hero_title.data or None
+        settings.hero_subtitle = form.hero_subtitle.data or None
+        settings.body_html = form.body_html.data or None
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+
+        db.session.add(settings)
+        db.session.commit()
+
+        log_action('update_page_customization', 'PageCustomization', settings.id, f'Updated page {settings.slug}')
+        flash('Pagina aggiornata.', 'success')
+        return redirect(url_for('admin.pages'))
+
+    return render_template('admin/edit_page.html', form=form, settings=settings)
+
+
+@bp.route('/dashboard-templates', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def dashboard_templates():
+    """Gestione template cruscotti (default per ruolo)."""
+    form = DashboardTemplateForm()
+    if form.validate_on_submit():
+        tpl = DashboardTemplate.query.filter_by(role_name=form.role_name.data or None).first()
+        if not tpl:
+            tpl = DashboardTemplate(role_name=form.role_name.data or None, name=form.name.data)
+        tpl.name = form.name.data
+        tpl.layout = form.layout.data
+        tpl.widgets = form.widgets.data
+        tpl.updated_by = current_user.id
+        tpl.updated_at = datetime.utcnow()
+        db.session.add(tpl)
+        db.session.commit()
+        log_action('update_dashboard_template', 'DashboardTemplate', tpl.id, f'Updated template for role={tpl.role_name}')
+        flash('Template cruscotto salvato.', 'success')
+        return redirect(url_for('admin.dashboard_templates'))
+
+    templates = DashboardTemplate.query.order_by(DashboardTemplate.role_name.asc()).all()
+    return render_template('admin/dashboard_templates.html', form=form, templates=templates)
 
 
 @bp.route('/privacy', methods=['GET', 'POST'])

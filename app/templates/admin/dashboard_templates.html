@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Template Cruscotti{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h1 class="h4 mb-3">Template Cruscotti (Super Admin)</h1>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header"><strong>Salva template</strong></div>
+        <div class="card-body">
+          <form method="post">
+            {{ form.hidden_tag() }}
+            <div class="row g-3">
+              <div class="col-md-6">
+                {{ form.role_name.label(class='form-label') }}
+                {{ form.role_name(class='form-select') }}
+              </div>
+              <div class="col-md-6">
+                {{ form.layout.label(class='form-label') }}
+                {{ form.layout(class='form-select') }}
+              </div>
+              <div class="col-12">
+                {{ form.name.label(class='form-label') }}
+                {{ form.name(class='form-control') }}
+              </div>
+              <div class="col-12">
+                {{ form.widgets.label(class='form-label') }}
+                {{ form.widgets(class='form-control', rows=10, placeholder='[{\"type\":\"stats\"}]') }}
+                <div class="form-text">Deve essere un JSON array. Esempio: <code>[{"type":"stats"},{"type":"upcoming_events"}]</code></div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <button class="btn btn-primary" type="submit">Salva</button>
+              <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Torna al pannello</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header"><strong>Template esistenti</strong></div>
+        <div class="card-body">
+          {% if templates %}
+            <div class="list-group">
+              {% for t in templates %}
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between">
+                    <div class="fw-semibold">{{ t.role_name or 'Default (tutti)' }}</div>
+                    <span class="badge bg-secondary">{{ t.layout }}</span>
+                  </div>
+                  <div class="small text-muted">{{ t.name }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="alert alert-info mb-0">Nessun template configurato.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

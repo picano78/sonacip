@@ -1,7 +1,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
         <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
-            <i class="bi bi-trophy-fill"></i> SONACIP
+            <i class="bi {{ (site.navbar_brand_icon if site and site.navbar_brand_icon else 'bi-trophy-fill') }}"></i>
+            {{ (site.navbar_brand_text if site and site.navbar_brand_text else 'SONACIP') }}
         </a>
         
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -12,6 +13,11 @@
             {% if current_user.is_authenticated %}
                 <!-- Authenticated Navigation -->
                 <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Cruscotto
+                        </a>
+                    </li>
                     {% if can('social', 'comment') %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('social.feed') }}">
@@ -135,6 +141,26 @@
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('admin.storage_settings') }}">
                                         <i class="bi bi-hdd"></i> Storage media
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.appearance_settings') }}">
+                                        <i class="bi bi-palette"></i> Tema piattaforma
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.site_customization') }}">
+                                        <i class="bi bi-brush"></i> Personalizzazione sito
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.pages') }}">
+                                        <i class="bi bi-file-earmark-text"></i> Pagine
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.dashboard_templates') }}">
+                                        <i class="bi bi-grid-1x2"></i> Template cruscotti
                                     </a>
                                 </li>
                             {% endif %}

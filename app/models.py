@@ -806,6 +806,24 @@ class SocietyHealthSnapshot(db.Model):
     )
 
 
+class MaintenanceRun(db.Model):
+    """
+    Observability for scheduled jobs (maintenance_job.py).
+    """
+    __tablename__ = 'maintenance_run'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_type = db.Column(db.String(50), default='maintenance')  # maintenance, compliance, calendar, etc.
+    status = db.Column(db.String(20), default='running')  # running, success, failed
+    summary = db.Column(db.Text)  # JSON
+
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    finished_at = db.Column(db.DateTime)
+
+    def __repr__(self):
+        return f"<MaintenanceRun {self.id} {self.run_type} {self.status}>"
+
+
 class UserOnboardingStep(db.Model):
     """
     Onboarding checklist completion for a user in a society scope.

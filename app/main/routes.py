@@ -32,8 +32,21 @@ def contact():
 
 @bp.route('/healthz')
 def healthz():
-    """Lightweight health check for uptime monitoring"""
-    return {'status': 'ok'}, 200
+    """Health check for uptime monitoring (DB + basic app checks)."""
+    from sqlalchemy import text
+    from datetime import datetime
+    try:
+        db.session.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        db_ok = False
+    status = "ok" if db_ok else "degraded"
+    code = 200 if db_ok else 500
+    return {
+        "status": status,
+        "db": "ok" if db_ok else "error",
+        "ts": datetime.utcnow().isoformat() + "Z",
+    }, code
 
 
 @bp.route('/dashboard')

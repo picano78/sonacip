@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 from flask import current_app
 from sqlalchemy import or_, and_, func, desc
 from app import db
+from app.cache import get_cache
 from app.admin.utils import admin_required
 from app.admin.forms import (
     AdsSettingsForm,
@@ -35,6 +36,7 @@ from app.models import (
     Event,
     EnterpriseSSOSetting,
     Notification,
+    MaintenanceRun,
     PageCustomization,
     Post,
     PlatformFeeSetting,
@@ -504,6 +506,15 @@ def enterprise_sso():
         return redirect(url_for('admin.enterprise_sso'))
 
     return render_template('admin/enterprise_sso.html', sso=sso)
+
+
+@bp.route('/maintenance')
+@login_required
+@admin_required
+def maintenance_runs():
+    """View recent scheduled maintenance job runs."""
+    runs = MaintenanceRun.query.order_by(MaintenanceRun.started_at.desc()).limit(100).all()
+    return render_template('admin/maintenance_runs.html', runs=runs)
 
 
 @bp.route('/pages')
@@ -1045,6 +1056,17 @@ def stats():
     start_date = datetime.utcnow() - timedelta(days=days)
     now = datetime.utcnow()
 
+    # Cache heavy stats briefly (admin page can be expensive on large DBs)
+    cache = get_cache()
+    cache_key = f"admin:stats:days={days}"
+    cached = None
+    try:
+        cached = cache.get(cache_key)
+    except Exception:
+        cached = None
+    if isinstance(cached, dict) and cached.get("ok"):
+        return render_template('admin/analytics.html', **cached["payload"])
+
     # 1. Signup Data (Daily for chart)
     signup_map = {}
     # Initialize all days with 0
@@ -1209,15 +1231,21 @@ def stats():
         print(f"Error fetching business stats: {e}")
         business = {}
 
-    return render_template('admin/analytics.html',
-                         days=days,
-                         signup_data=signup_data,
-                         role_data=role_data,
-                         growth_stats=growth_stats,
-                         activity_trend=activity_trend,
-                         top_posters=top_posters,
-                         top_societies=top_societies,
-                         business=business)
+    payload = {
+        "days": days,
+        "signup_data": signup_data,
+        "role_data": role_data,
+        "growth_stats": growth_stats,
+        "activity_trend": activity_trend,
+        "top_posters": top_posters,
+        "top_societies": top_societies,
+        "business": business,
+    }
+    try:
+        cache.set(cache_key, {"ok": True, "payload": payload}, ttl=60)
+    except Exception:
+        pass
+    return render_template('admin/analytics.html', **payload)
 
 
 @bp.route('/user/<int:user_id>/ban', methods=['POST'])

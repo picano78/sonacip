@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Maintenance Runs{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Maintenance runs</h1>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Admin</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Stato</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Summary</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in runs %}
+            <tr>
+              <td class="text-muted small">#{{ r.id }}</td>
+              <td>{{ r.run_type }}</td>
+              <td>
+                <span class="badge bg-{{ 'success' if r.status == 'success' else ('danger' if r.status == 'failed' else 'warning') }}">
+                  {{ r.status }}
+                </span>
+              </td>
+              <td class="text-muted small">{{ r.started_at|datetime_format if r.started_at else '-' }}</td>
+              <td class="text-muted small">{{ r.finished_at|datetime_format if r.finished_at else '-' }}</td>
+              <td class="text-muted small" style="max-width:520px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                {{ r.summary or '-' }}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-muted">Nessun run.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

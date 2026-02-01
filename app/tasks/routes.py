@@ -33,8 +33,12 @@ def _task_scope_id(*args, **kwargs):
         if project:
             return project.society_id
 
-    society = current_user.get_primary_society()
-    return society.id if society else None
+    try:
+        from app.utils import get_active_society_id
+        return get_active_society_id(current_user)
+    except Exception:
+        society = current_user.get_primary_society()
+        return society.id if society else None
 
 
 @bp.route('/')

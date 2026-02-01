@@ -26,7 +26,7 @@ from app.models import (
     SocietyRolePermission,
 )
 from app.cache import get_cache
-from app.utils import permission_required, check_permission
+from app.utils import permission_required, check_permission, get_active_society_id
 from app.utils import log_action
 from datetime import datetime, timedelta
 import os
@@ -55,8 +55,7 @@ def feed():
     start = (page - 1) * per_page
     # Visibility scoping (athletes see only relevant communications)
     admin_access = check_permission(current_user, 'admin', 'access')
-    scope = current_user.get_primary_society()
-    scope_id = scope.id if scope else None
+    scope_id = get_active_society_id(current_user)
     followed_ids = set()
     try:
         followed_ids = {u.id for u in current_user.followed.all()}
@@ -214,8 +213,7 @@ def create_post():
             audience = 'public' if form.is_public.data else 'society'
             # Scope posts to the Society entity, not the User id.
             try:
-                scope = current_user.get_primary_society()
-                society_id = scope.id if scope else None
+                society_id = get_active_society_id(current_user)
             except Exception:
                 society_id = None
 

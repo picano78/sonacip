@@ -2,7 +2,7 @@
 Common utilities and decorators for the application
 """
 from functools import wraps
-from flask import flash, redirect, url_for, abort, current_app, request, session
+from flask import flash, redirect, url_for, abort, current_app, request, session, g
 from flask_login import current_user
 from datetime import datetime
 
@@ -149,18 +149,37 @@ def get_active_society_id(user=None) -> int | None:
     if not actor or not getattr(actor, "is_authenticated", False):
         return None
 
+    # Per-request cache
+    try:
+        cached = getattr(g, "_active_society_id", None)
+        if cached is not None:
+            return cached
+    except Exception:
+        pass
+
     raw = session.get("active_society_id")
     try:
         sid = int(raw) if raw is not None else None
     except Exception:
         sid = None
 
+    # Admin can scope to any society id.
+    try:
+        if sid and actor.is_admin():
+            g._active_society_id = sid
+            return sid
+    except Exception:
+        pass
+
     if sid and actor.can_access_society(sid):
+        g._active_society_id = sid
         return sid
 
     try:
         scope = actor.get_primary_society()
-        return scope.id if scope else None
+        resolved = scope.id if scope else None
+        g._active_society_id = resolved
+        return resolved
     except Exception:
         return None
 

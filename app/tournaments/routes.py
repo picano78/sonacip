@@ -10,7 +10,7 @@ from app import db, limiter
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
 from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity
 from app.automation.utils import execute_rules
-from app.utils import permission_required, check_permission, log_action
+from app.utils import permission_required, check_permission, log_action, get_active_society_id
 
 bp = Blueprint('tournaments', __name__, url_prefix='/tournaments')
 
@@ -46,10 +46,11 @@ def _require_manage(tournament: Tournament) -> None:
 
 
 def _get_society_id():
+    # Admin: optional explicit sid from querystring, otherwise follow active scope.
     if check_permission(current_user, 'admin', 'access'):
-        return request.args.get('society_id', type=int)
-    society = current_user.get_primary_society()
-    return society.id if society else None
+        return request.args.get('society_id', type=int) or get_active_society_id(current_user)
+    # Non-admin: follow active society scope.
+    return get_active_society_id(current_user)
 
 
 def _trigger(event_type, payload):

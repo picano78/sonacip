@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.crm.forms import ContactForm, OpportunityForm, ActivityForm, MedicalCertificateForm, SocietyFeeForm
 from app.models import Contact, Opportunity, CRMActivity, User, AuditLog, MedicalCertificate, SocietyFee
-from app.utils import permission_required, check_permission, feature_required
+from app.utils import permission_required, check_permission, feature_required, get_active_society_id
 from datetime import datetime
 from app.utils import log_action
 from sqlalchemy.orm import joinedload
@@ -17,10 +17,10 @@ bp = Blueprint('crm', __name__, url_prefix='/crm')
 
 
 def _society_scope_id():
+    # Admin can operate cross-society; if an active scope is selected, use it to filter.
     if check_permission(current_user, 'admin', 'access'):
-        return None
-    society = current_user.get_primary_society()
-    return society.id if society else None
+        return get_active_society_id(current_user)
+    return get_active_society_id(current_user)
 
 
 def _enforce_scope(entity_society_id, redirect_endpoint):

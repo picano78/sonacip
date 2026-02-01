@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.crm.forms import ContactForm, OpportunityForm, ActivityForm, MedicalCertificateForm, SocietyFeeForm
 from app.models import Contact, Opportunity, CRMActivity, User, AuditLog, MedicalCertificate, SocietyFee
-from app.utils import permission_required, check_permission
+from app.utils import permission_required, check_permission, feature_required
 from datetime import datetime
 from app.utils import log_action
 from sqlalchemy.orm import joinedload
@@ -34,6 +34,7 @@ def _enforce_scope(entity_society_id, redirect_endpoint):
 @bp.route('/')
 @login_required
 @permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
 def index():
     """CRM Dashboard"""
     # Get statistics
@@ -78,6 +79,7 @@ def index():
 @bp.route('/contacts')
 @login_required
 @permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
 def contacts():
     """List all contacts"""
     # Filter by society
@@ -98,6 +100,7 @@ def contacts():
 @bp.route('/contacts/new', methods=['GET', 'POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def new_contact():
     """Create new contact"""
     form = ContactForm()
@@ -136,6 +139,7 @@ def new_contact():
 @bp.route('/contacts/<int:contact_id>')
 @login_required
 @permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
 def contact_detail(contact_id):
     """View contact details"""
     contact = Contact.query.get_or_404(contact_id)
@@ -157,6 +161,7 @@ def contact_detail(contact_id):
 @bp.route('/contacts/<int:contact_id>/edit', methods=['GET', 'POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def edit_contact(contact_id):
     """Edit contact"""
     contact = Contact.query.get_or_404(contact_id)
@@ -194,6 +199,7 @@ def edit_contact(contact_id):
 @bp.route('/opportunities')
 @login_required
 @permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
 def opportunities():
     """List all opportunities"""
     # Filter by society
@@ -209,6 +215,7 @@ def opportunities():
 @bp.route('/opportunities/new', methods=['GET', 'POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def new_opportunity():
     """Create new opportunity"""
     form = OpportunityForm()
@@ -251,6 +258,7 @@ def new_opportunity():
 @bp.route('/opportunities/<int:opp_id>')
 @login_required
 @permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
 def opportunity_detail(opp_id):
     """View opportunity details"""
     opportunity = Opportunity.query.get_or_404(opp_id)
@@ -270,6 +278,7 @@ def opportunity_detail(opp_id):
 @bp.route('/activities/new', methods=['GET', 'POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def new_activity():
     """Log new activity"""
     form = ActivityForm()
@@ -326,6 +335,7 @@ def new_activity():
 @bp.route('/compliance')
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def compliance():
     """Society compliance: medical certificates and fees."""
     scope_id = _society_scope_id()
@@ -385,6 +395,7 @@ def compliance():
 @bp.route('/compliance/certificates/new', methods=['POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def compliance_certificate_new():
     scope_id = _society_scope_id()
     form = MedicalCertificateForm(society_id=scope_id)
@@ -412,6 +423,7 @@ def compliance_certificate_new():
 @bp.route('/compliance/certificates/<int:cert_id>/delete', methods=['POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def compliance_certificate_delete(cert_id):
     scope_id = _society_scope_id()
     cert = MedicalCertificate.query.get_or_404(cert_id)
@@ -428,6 +440,7 @@ def compliance_certificate_delete(cert_id):
 @bp.route('/compliance/certificates/<int:cert_id>/update', methods=['POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def compliance_certificate_update(cert_id):
     scope_id = _society_scope_id()
     cert = MedicalCertificate.query.get_or_404(cert_id)
@@ -456,6 +469,7 @@ def compliance_certificate_update(cert_id):
 @bp.route('/compliance/fees/new', methods=['POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def compliance_fee_new():
     scope_id = _society_scope_id()
     form = SocietyFeeForm(society_id=scope_id)
@@ -492,6 +506,7 @@ def compliance_fee_new():
 @bp.route('/compliance/fees/<int:fee_id>/delete', methods=['POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def compliance_fee_delete(fee_id):
     scope_id = _society_scope_id()
     fee = SocietyFee.query.get_or_404(fee_id)
@@ -508,6 +523,7 @@ def compliance_fee_delete(fee_id):
 @bp.route('/compliance/fees/<int:fee_id>/update', methods=['POST'])
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def compliance_fee_update(fee_id):
     scope_id = _society_scope_id()
     fee = SocietyFee.query.get_or_404(fee_id)
@@ -538,6 +554,7 @@ def compliance_fee_update(fee_id):
 @bp.route('/compliance/export.csv')
 @login_required
 @permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
 def compliance_export():
     """CSV export for compliance data."""
     import csv

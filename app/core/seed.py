@@ -200,28 +200,34 @@ def seed_defaults(app) -> dict:
         # ---------------------------------------------------------------------
         # Plans (needed by registration auto-attach)
         # ---------------------------------------------------------------------
-        if not Plan.query.filter_by(slug="free").first():
-            db.session.add(
-                Plan(
-                    name="Free",
-                    slug="free",
-                    description="Piano gratuito",
-                    price_monthly=0,
-                    price_yearly=0,
-                    currency="EUR",
-                    is_active=True,
-                    is_featured=False,
-                    display_order=0,
-                    has_crm=False,
-                    has_advanced_stats=False,
-                    has_api_access=False,
-                    has_white_label=False,
-                    has_priority_support=False,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
-                )
+        free_plan = Plan.query.filter_by(slug="free").first()
+        if not free_plan:
+            free_plan = Plan(
+                name="Free",
+                slug="free",
+                description="Piano gratuito",
+                price_monthly=0,
+                price_yearly=0,
+                currency="EUR",
+                is_active=True,
+                is_featured=False,
+                display_order=0,
+                # Keep CRM enabled so societies can operate out-of-the-box.
+                has_crm=True,
+                has_advanced_stats=False,
+                has_api_access=False,
+                has_white_label=False,
+                has_priority_support=False,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
             )
+            db.session.add(free_plan)
             summary["plans_created"] += 1
+        else:
+            # Ensure CRM is available out-of-the-box even on older DBs.
+            if free_plan.has_crm is False:
+                free_plan.has_crm = True
+                free_plan.updated_at = datetime.utcnow()
         db.session.commit()
 
         # ---------------------------------------------------------------------

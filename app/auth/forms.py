@@ -7,25 +7,6 @@ from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Op
 from app.models import User, Role
 
 
-def _registration_role_choices():
-    allowed_names = ['appassionato', 'atleta', 'athlete']
-    try:
-        roles = Role.query.filter(Role.name.in_(allowed_names), Role.is_active == True).all()
-        choices = [(r.name, r.display_name or r.name) for r in roles]
-    except Exception:
-        choices = [
-            ('appassionato', 'Appassionato'),
-            ('atleta', 'Atleta'),
-            ('athlete', 'Athlete')
-        ]
-    ordered = []
-    for name in allowed_names:
-        for slug, label in choices:
-            if slug == name:
-                ordered.append((slug, label))
-    return ordered or choices
-
-
 class LoginForm(FlaskForm):
     """Login form"""
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -34,7 +15,7 @@ class LoginForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
-    """Registration form for individuals (Appassionato/Atleta)"""
+    """Registration form for individuals (Appassionato only)."""
     email = StringField('Email', validators=[DataRequired(), Email()])
     username = StringField('Username', validators=[
         DataRequired(), 
@@ -51,11 +32,6 @@ class RegistrationForm(FlaskForm):
     first_name = StringField('Nome', validators=[DataRequired()])
     last_name = StringField('Cognome', validators=[DataRequired()])
     phone = StringField('Telefono', validators=[Optional()])
-    role = SelectField('Tipo Account', choices=[], validators=[DataRequired()])
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.role.choices = _registration_role_choices()
     
     def validate_email(self, email):
         user = User.query.filter_by(email=email.data).first()

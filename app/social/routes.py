@@ -38,6 +38,31 @@ def feed():
     cached_ids = cache.get(cache_key)
 
     start = (page - 1) * per_page
+    # Visibility scoping (athletes see only relevant communications)
+    admin_access = check_permission(current_user, 'admin', 'access')
+    scope = current_user.get_primary_society()
+    scope_id = scope.id if scope else None
+    followed_ids = set()
+    try:
+        followed_ids = {u.id for u in current_user.followed.all()}
+    except Exception:
+        followed_ids = set()
+
+    def is_visible(p: Post) -> bool:
+        if admin_access:
+            return True
+        if p.user_id == current_user.id:
+            return True
+        if (p.audience or 'public') == 'public':
+            return True
+        if (p.audience or '') == 'direct' and p.target_user_id == current_user.id:
+            return True
+        if (p.audience or '') == 'society' and scope_id and p.society_id == scope_id:
+            return True
+        if (p.audience or '') == 'followers' and p.user_id in followed_ids:
+            return True
+        return False
+
     if cached_ids is None:
         # Get posts from followed users + own posts
         try:
@@ -62,6 +87,8 @@ def feed():
             if p.id not in seen:
                 combined.append(p)
                 seen.add(p.id)
+        # Apply visibility filter in-memory (keeps existing query behavior stable)
+        combined = [p for p in combined if is_visible(p)]
 
     boosted_types = []
     muted_types = []
@@ -101,7 +128,7 @@ def feed():
         return score
     if cached_ids is None:
         sorted_posts = sorted(combined, key=engagement_score, reverse=True)
-        total = posts_query.count() if 'posts_query' in locals() else len(sorted_posts)
+        total = len(sorted_posts)
         end = start + per_page
         page_ids = [p.id for p in sorted_posts[start:end]] if start < len(sorted_posts) else []
         cache.set(cache_key, {'ids': page_ids, 'total': total}, ttl=cache_ttl)
@@ -164,10 +191,20 @@ def create_post():
         return redirect(url_for('social.feed'))
     
     if form.validate_on_submit():
+        # Map legacy `is_public` to explicit audience rules
+        audience = 'public' if form.is_public.data else 'followers'
+        society_id = None
+        if current_user.is_society():
+            audience = 'public' if form.is_public.data else 'society'
+            society_id = current_user.id
+
         post = Post(
             user_id=current_user.id,
             content=form.content.data,
-            is_public=form.is_public.data
+            is_public=form.is_public.data,
+            audience=audience,
+            society_id=society_id,
+            post_type='official' if current_user.is_society() else 'personal',
         )
         
         # Handle image upload

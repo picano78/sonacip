@@ -335,6 +335,10 @@ class Post(db.Model):
     
     # Visibility
     is_public = db.Column(db.Boolean, default=True)
+    # New: explicit audience/scoping (for society CRM communications)
+    audience = db.Column(db.String(20), default='public')  # public, followers, society, direct
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))  # owning society for scoped comms
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # direct-to user comms
     post_type = db.Column(db.String(50), default='personal')  # personal, official, tournament, match, automation
 
     # Promotion/ads
@@ -358,6 +362,9 @@ class Post(db.Model):
     liked_by = db.relationship('User', secondary=post_likes,
                               backref=db.backref('liked_posts', lazy='dynamic'),
                               lazy='dynamic')
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    target_user = db.relationship('User', foreign_keys=[target_user_id])
     
     def is_liked_by(self, user):
         """Check if user liked this post"""
@@ -365,6 +372,38 @@ class Post(db.Model):
     
     def __repr__(self):
         return f'<Post {self.id} by {self.user_id}>'
+
+
+class SocietyMembership(db.Model):
+    """
+    Link between a Society and a User (staff/athlete/coach/dirigente/appassionato).
+    This powers CRM+planner scoping and "who sees what".
+    """
+    __tablename__ = 'society_membership'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    role_name = db.Column(db.String(50), nullable=False, default='appassionato')  # atleta, staff, coach, dirigente, appassionato
+    status = db.Column(db.String(20), nullable=False, default='active')  # pending, active, rejected, revoked
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('memberships', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('society_memberships', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', name='uq_society_membership'),
+    )
+
+    def __repr__(self):
+        return f'<SocietyMembership society={self.society_id} user={self.user_id} role={self.role_name} status={self.status}>'
 
 
 class Comment(db.Model):

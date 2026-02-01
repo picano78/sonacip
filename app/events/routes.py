@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
 from app import db
 from app.events.forms import EventForm
-from app.models import Event, User, Notification, event_athletes
+from app.models import Event, User, Notification, event_athletes, Post
 from app.automation.utils import execute_automations, execute_rules
 from app.utils import permission_required, check_permission
 from datetime import datetime
@@ -198,6 +198,20 @@ def convocate(event_id):
                     link=url_for('events.detail', event_id=event.id)
                 )
                 db.session.add(notification)
+
+                # Create a direct social communication for the athlete (scoped)
+                society = current_user.get_primary_society()
+                society_id = society.id if society else None
+                comm = Post(
+                    user_id=current_user.id,
+                    content=f'Convocazione: {event.title}. Rispondi dalla pagina evento.',
+                    is_public=False,
+                    audience='direct',
+                    society_id=society_id,
+                    target_user_id=athlete.id,
+                    post_type='official',
+                )
+                db.session.add(comm)
         
         db.session.commit()
         

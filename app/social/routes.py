@@ -157,9 +157,11 @@ def feed():
     else:
         posts = []
 
-    # Autopilot banner (Facebook-like): pick a creative for this feed page.
+    # Autopilot banners (Facebook-like): pick creatives for placements.
     ad = None
     ad_token = None
+    sidebar_ad = None
+    sidebar_ad_token = None
     try:
         ad = choose_creative("feed_inline", society_id=scope_id, user_id=current_user.id)
         if ad:
@@ -167,6 +169,13 @@ def feed():
     except Exception:
         ad = None
         ad_token = None
+    try:
+        sidebar_ad = choose_creative("sidebar_card", society_id=scope_id, user_id=current_user.id)
+        if sidebar_ad:
+            sidebar_ad_token = make_token(sidebar_ad, "sidebar_card", society_id=scope_id, user_id=current_user.id)
+    except Exception:
+        sidebar_ad = None
+        sidebar_ad_token = None
 
     # Update promotion views and disable expired ones (no-op if empty)
     if posts:
@@ -204,7 +213,9 @@ def feed():
                          pagination=pagination,
                          form=form,
                          ad=ad,
-                         ad_token=ad_token)
+                         ad_token=ad_token,
+                         sidebar_ad=sidebar_ad,
+                         sidebar_ad_token=sidebar_ad_token)
 
 
 @bp.route('/post/create', methods=['POST'])

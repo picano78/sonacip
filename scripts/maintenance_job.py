@@ -53,6 +53,7 @@ def main() -> int:
     from app import create_app, db
     from app.automation.utils import execute_rules
     from app.models import (
+        AdEvent,
         MedicalCertificate,
         MedicalCertificateReminderSent,
         Notification,
@@ -79,6 +80,7 @@ def main() -> int:
         calendar_sent = 0
         compliance_sent = 0
         compliance_updated = 0
+        ads_events_deleted = 0
 
         # --------------------------------------------------------------
         # Calendar reminders
@@ -247,11 +249,22 @@ def main() -> int:
                 except Exception:
                     db.session.rollback()
 
+        # --------------------------------------------------------------
+        # Ads maintenance (retention): delete old ad events
+        # --------------------------------------------------------------
+        try:
+            cutoff = datetime.utcnow() - timedelta(days=90)
+            ads_events_deleted = AdEvent.query.filter(AdEvent.created_at < cutoff).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
         print(
             "maintenance "
             f"calendar_reminders_sent={calendar_sent} "
             f"compliance_status_updated={compliance_updated} "
-            f"compliance_reminders_sent={compliance_sent}"
+            f"compliance_reminders_sent={compliance_sent} "
+            f"ads_events_deleted={ads_events_deleted}"
         )
         return 0
 

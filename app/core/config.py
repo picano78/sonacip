@@ -26,6 +26,7 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() in ['true', 'on', '1']
 
     # File upload configuration
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
@@ -100,6 +101,13 @@ class Config:
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
     STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
     STRIPE_PORTAL_RETURN_URL = os.environ.get('STRIPE_PORTAL_RETURN_URL')
+
+    # Security headers (safe defaults; CSP is off by default because of CDNs)
+    SECURITY_HEADERS_ENABLED = os.environ.get('SECURITY_HEADERS_ENABLED', 'true').lower() in ['true', 'on', '1']
+    HSTS_ENABLED = os.environ.get('HSTS_ENABLED', 'true').lower() in ['true', 'on', '1']
+    HSTS_MAX_AGE = int(os.environ.get('HSTS_MAX_AGE', '31536000'))  # 1 year
+    CSP_ENABLED = os.environ.get('CSP_ENABLED', 'false').lower() in ['true', 'on', '1']
+    CSP_REPORT_ONLY = os.environ.get('CSP_REPORT_ONLY', 'false').lower() in ['true', 'on', '1']
 
 
 class DevelopmentConfig(Config):

@@ -225,4 +225,43 @@ def create_app(config_name: str | None = None) -> Flask:
             'get_unread_messages_count': get_unread_messages_count,
         }
 
+    @app.after_request
+    def apply_security_headers(resp):
+        """Security headers (safe defaults; CSP optional)."""
+        try:
+            if not app.config.get("SECURITY_HEADERS_ENABLED", True):
+                return resp
+
+            resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+            resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+            resp.headers.setdefault("X-Frame-Options", "DENY")
+            resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+
+            # HSTS only on HTTPS
+            try:
+                if request.is_secure and app.config.get("HSTS_ENABLED", True):
+                    max_age = int(app.config.get("HSTS_MAX_AGE", 31536000))
+                    resp.headers.setdefault("Strict-Transport-Security", f"max-age={max_age}; includeSubDomains")
+            except Exception:
+                pass
+
+            # Optional CSP (off by default due to external CDNs and inline scripts/styles)
+            if app.config.get("CSP_ENABLED", False):
+                csp = (
+                    "default-src 'self'; "
+                    "base-uri 'self'; "
+                    "object-src 'none'; "
+                    "frame-ancestors 'none'; "
+                    "img-src 'self' data: https:; "
+                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
+                    "connect-src 'self' https:; "
+                    "manifest-src 'self'; "
+                )
+                header = "Content-Security-Policy-Report-Only" if app.config.get("CSP_REPORT_ONLY", False) else "Content-Security-Policy"
+                resp.headers.setdefault(header, csp)
+        except Exception:
+            return resp
+        return resp
+
     return app

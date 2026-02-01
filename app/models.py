@@ -1122,6 +1122,94 @@ class Message(db.Model):
         return f'<Message {self.id} from {self.sender_id} to {self.recipient_id}>'
 
 
+class MedicalCertificate(db.Model):
+    """
+    Medical certificate for an athlete (society-managed), used for automated expiry reminders.
+    """
+    __tablename__ = 'medical_certificate'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    issued_on = db.Column(db.Date)
+    expires_on = db.Column(db.Date, nullable=False, index=True)
+    status = db.Column(db.String(20), default='valid')  # valid, expired, revoked
+    notes = db.Column(db.Text)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', 'expires_on', name='uq_medical_certificate_society_user_expires'),
+    )
+
+    def __repr__(self):
+        return f'<MedicalCertificate user={self.user_id} expires={self.expires_on}>'
+
+
+class SocietyFee(db.Model):
+    """
+    Society membership fee/payment due for a member (internal billing), used for automated reminders.
+    """
+    __tablename__ = 'society_fee'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    description = db.Column(db.String(255))
+    amount_cents = db.Column(db.Integer, nullable=False, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+    due_on = db.Column(db.Date, nullable=False, index=True)
+    status = db.Column(db.String(20), default='pending')  # pending, paid, cancelled
+    paid_at = db.Column(db.DateTime)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<SocietyFee user={self.user_id} due={self.due_on} status={self.status}>'
+
+
+class MedicalCertificateReminderSent(db.Model):
+    """Idempotency for certificate expiry reminders."""
+    __tablename__ = 'medical_certificate_reminder_sent'
+
+    id = db.Column(db.Integer, primary_key=True)
+    certificate_id = db.Column(db.Integer, db.ForeignKey('medical_certificate.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    kind = db.Column(db.String(50), nullable=False)  # e.g. '14d', '7d', '1d'
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('certificate_id', 'user_id', 'kind', name='uq_medical_certificate_reminder_sent'),
+    )
+
+
+class SocietyFeeReminderSent(db.Model):
+    """Idempotency for fee due reminders."""
+    __tablename__ = 'society_fee_reminder_sent'
+
+    id = db.Column(db.Integer, primary_key=True)
+    fee_id = db.Column(db.Integer, db.ForeignKey('society_fee.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    kind = db.Column(db.String(50), nullable=False)  # e.g. '7d', '1d'
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('fee_id', 'user_id', 'kind', name='uq_society_fee_reminder_sent'),
+    )
+
+
 class Contact(db.Model):
     """
     CRM Contact model
@@ -1884,7 +1972,7 @@ class AutomationRule(db.Model):
                 if not isinstance(action, dict) or 'type' not in action:
                     return False, 'Each action must have a type'
                 atype = action['type']
-                if atype not in ['notify', 'email', 'social_post', 'webhook', 'task_create']:
+                if atype not in ['notify', 'email', 'social_post', 'webhook', 'task_create', 'whatsapp']:
                     return False, f'Invalid action type: {atype}'
                 if atype in ['notify', 'email'] and 'user_id' not in action:
                     return False, f'{atype} action requires user_id'

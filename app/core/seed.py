@@ -32,6 +32,7 @@ def seed_defaults(app) -> dict:
         SiteCustomization,
         SocialSetting,
         SmtpSetting,
+        AutomationRule,
         WhatsappSetting,
         StorageSetting,
         User,
@@ -47,6 +48,7 @@ def seed_defaults(app) -> dict:
         "navbar_created": 0,
         "smtp_settings_created": 0,
         "whatsapp_settings_created": 0,
+        "automation_rules_created": 0,
     }
 
     with app.app_context():
@@ -250,6 +252,66 @@ def seed_defaults(app) -> dict:
             db.session.add(WhatsappSetting(enabled=False, provider="webhook"))
             summary["whatsapp_settings_created"] += 1
         db.session.commit()
+
+        # ---------------------------------------------------------------------
+        # Default automation rules (super admin can edit)
+        # ---------------------------------------------------------------------
+        import json as _json
+
+        def _ensure_rule(event_type: str, name: str, actions: list[dict]) -> None:
+            nonlocal summary
+            if AutomationRule.query.filter_by(event_type=event_type).first():
+                return
+            db.session.add(
+                AutomationRule(
+                    name=name,
+                    event_type=event_type,
+                    condition="",
+                    actions=_json.dumps(actions),
+                    is_active=True,
+                    max_retries=3,
+                    retry_delay=60,
+                    created_at=datetime.utcnow(),
+                )
+            )
+            db.session.commit()
+            summary["automation_rules_created"] += 1
+
+        _ensure_rule(
+            "medical_certificate.expiring",
+            "Certificato medico in scadenza (notify+WhatsApp)",
+            [
+                {
+                    "type": "notify",
+                    "user_id": "{{ user_id }}",
+                    "title": "Certificato medico in scadenza",
+                    "message": "Il tuo certificato medico scade il {{ expires_on }} (tra {{ days_left }} giorni).",
+                },
+                {
+                    "type": "whatsapp",
+                    "user_id": "{{ user_id }}",
+                    "message": "SONACIP: il tuo certificato medico scade il {{ expires_on }} (tra {{ days_left }} giorni).",
+                },
+            ],
+        )
+
+        _ensure_rule(
+            "fee.due",
+            "Quota in scadenza (notify+WhatsApp)",
+            [
+                {
+                    "type": "notify",
+                    "user_id": "{{ user_id }}",
+                    "title": "Quota in scadenza",
+                    "message": "Quota in scadenza il {{ due_on }}: €{{ amount_eur }}. {{ description }}",
+                },
+                {
+                    "type": "whatsapp",
+                    "user_id": "{{ user_id }}",
+                    "message": "SONACIP: quota in scadenza il {{ due_on }}: €{{ amount_eur }}. {{ description }}",
+                },
+            ],
+        )
 
         # ---------------------------------------------------------------------
         # Default navbar config (CustomizationKV)

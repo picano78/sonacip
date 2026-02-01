@@ -64,6 +64,23 @@ class SocietyCalendarAttendance(db.Model):
     )
 
 
+class SocietyCalendarReminderSent(db.Model):
+    """
+    Idempotency for calendar reminder jobs (per event/user/kind).
+    """
+    __tablename__ = 'society_calendar_reminder_sent'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('society_calendar_event.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    kind = db.Column(db.String(50), nullable=False)  # e.g. '24h', '1h'
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', 'kind', name='uq_society_calendar_reminder_sent'),
+    )
+
+
 class User(UserMixin, db.Model):
     """
     User model - handles all user types

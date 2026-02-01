@@ -128,12 +128,15 @@ install -m 0644 "$APP_DIR/deploy/sonacip-backup.service" /etc/systemd/system/son
 install -m 0644 "$APP_DIR/deploy/sonacip-backup.timer" /etc/systemd/system/sonacip-backup.timer
 install -m 0644 "$APP_DIR/deploy/sonacip-healthcheck.service" /etc/systemd/system/sonacip-healthcheck.service
 install -m 0644 "$APP_DIR/deploy/sonacip-healthcheck.timer" /etc/systemd/system/sonacip-healthcheck.timer
+install -m 0644 "$APP_DIR/deploy/sonacip-calendar-reminders.service" /etc/systemd/system/sonacip-calendar-reminders.service
+install -m 0644 "$APP_DIR/deploy/sonacip-calendar-reminders.timer" /etc/systemd/system/sonacip-calendar-reminders.timer
 install -m 0644 "$APP_DIR/deploy/logrotate_sonacip" /etc/logrotate.d/sonacip
 
 systemctl daemon-reload
 systemctl enable sonacip.service
 systemctl enable --now sonacip-backup.timer
 systemctl enable --now sonacip-healthcheck.timer
+systemctl enable --now sonacip-calendar-reminders.timer
 
 
 echo "[8/10] Configurazione Nginx (HTTP)..."

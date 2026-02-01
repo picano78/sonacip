@@ -110,6 +110,10 @@
                         </select>
                         <button class="btn btn-sm btn-outline-primary ms-2" type="submit">Salva</button>
                       </form>
+                      <form class="mt-1" method="post" action="{{ url_for('crm.compliance_certificate_remind', cert_id=c.id) }}" onsubmit="return confirm('Inviare un promemoria manuale?');">
+                        {{ csrf_token() }}
+                        <button class="btn btn-sm btn-outline-secondary" type="submit">Invia promemoria</button>
+                      </form>
                       <form class="mt-1" method="post" action="{{ url_for('crm.compliance_certificate_delete', cert_id=c.id) }}" onsubmit="return confirm('Eliminare questo certificato?');">
                         {{ csrf_token() }}
                         <button class="btn btn-sm btn-outline-danger" type="submit">Elimina</button>
@@ -196,6 +200,10 @@
                           <option value="cancelled" {{ 'selected' if f.status=='cancelled' else '' }}>cancelled</option>
                         </select>
                         <button class="btn btn-sm btn-outline-primary ms-2" type="submit">Salva</button>
+                      </form>
+                      <form class="mt-1" method="post" action="{{ url_for('crm.compliance_fee_remind', fee_id=f.id) }}" onsubmit="return confirm('Inviare un sollecito manuale?');">
+                        {{ csrf_token() }}
+                        <button class="btn btn-sm btn-outline-secondary" type="submit">Invia sollecito</button>
                       </form>
                       <form class="mt-1" method="post" action="{{ url_for('crm.compliance_fee_delete', fee_id=f.id) }}" onsubmit="return confirm('Eliminare questa quota?');">
                         {{ csrf_token() }}

@@ -581,3 +581,87 @@ def compliance_export():
     resp = Response(out.getvalue(), mimetype='text/csv')
     resp.headers['Content-Disposition'] = 'attachment; filename="sonacip_compliance.csv"'
     return resp
+
+
+@bp.route('/compliance/certificates/<int:cert_id>/remind', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
+def compliance_certificate_remind(cert_id):
+    """Send a manual reminder for a certificate via AutomationRule."""
+    from app.automation.utils import execute_rules
+    from app.models import MedicalCertificateReminderSent
+
+    scope_id = _society_scope_id()
+    cert = MedicalCertificate.query.get_or_404(cert_id)
+    scoped = _enforce_scope(cert.society_id, 'crm.compliance')
+    if scoped:
+        return scoped
+
+    kind = 'manual'
+    exists = MedicalCertificateReminderSent.query.filter_by(
+        certificate_id=cert.id, user_id=cert.user_id, kind=kind
+    ).first()
+    if exists:
+        flash('Promemoria già inviato (manual).', 'info')
+        return redirect(url_for('crm.compliance'))
+
+    today = date.today()
+    payload = {
+        "society_id": cert.society_id,
+        "user_id": cert.user_id,
+        "certificate_id": cert.id,
+        "expires_on": cert.expires_on.isoformat(),
+        "days_left": (cert.expires_on - today).days if cert.expires_on else None,
+        "kind": kind,
+    }
+    execute_rules("medical_certificate.expiring", payload=payload)
+    db.session.add(MedicalCertificateReminderSent(certificate_id=cert.id, user_id=cert.user_id, kind=kind, sent_at=datetime.utcnow()))
+    db.session.commit()
+    log_action('manual_certificate_reminder', 'MedicalCertificate', cert.id, 'manual reminder sent', society_id=scope_id)
+    flash('Promemoria inviato.', 'success')
+    return redirect(url_for('crm.compliance'))
+
+
+@bp.route('/compliance/fees/<int:fee_id>/remind', methods=['POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
+def compliance_fee_remind(fee_id):
+    """Send a manual reminder for a fee via AutomationRule."""
+    from app.automation.utils import execute_rules
+    from app.models import SocietyFeeReminderSent
+
+    scope_id = _society_scope_id()
+    fee = SocietyFee.query.get_or_404(fee_id)
+    scoped = _enforce_scope(fee.society_id, 'crm.compliance')
+    if scoped:
+        return scoped
+
+    kind = 'manual'
+    exists = SocietyFeeReminderSent.query.filter_by(
+        fee_id=fee.id, user_id=fee.user_id, kind=kind
+    ).first()
+    if exists:
+        flash('Sollecito già inviato (manual).', 'info')
+        return redirect(url_for('crm.compliance'))
+
+    today = date.today()
+    payload = {
+        "society_id": fee.society_id,
+        "user_id": fee.user_id,
+        "fee_id": fee.id,
+        "due_on": fee.due_on.isoformat(),
+        "amount_cents": fee.amount_cents,
+        "amount_eur": round((fee.amount_cents or 0) / 100.0, 2),
+        "currency": fee.currency,
+        "description": fee.description or "",
+        "days_left": (fee.due_on - today).days if fee.due_on else None,
+        "kind": kind,
+    }
+    execute_rules("fee.due", payload=payload)
+    db.session.add(SocietyFeeReminderSent(fee_id=fee.id, user_id=fee.user_id, kind=kind, sent_at=datetime.utcnow()))
+    db.session.commit()
+    log_action('manual_fee_reminder', 'SocietyFee', fee.id, 'manual reminder sent', society_id=scope_id)
+    flash('Sollecito inviato.', 'success')
+    return redirect(url_for('crm.compliance'))

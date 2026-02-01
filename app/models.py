@@ -45,6 +45,25 @@ society_calendar_event_athletes = db.Table('society_calendar_event_athletes',
 )
 
 
+class SocietyCalendarAttendance(db.Model):
+    """
+    RSVP tracking for society calendar convocations (per athlete).
+    """
+    __tablename__ = 'society_calendar_attendance'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('society_calendar_event.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, accepted, declined
+    responded_at = db.Column(db.DateTime)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', name='uq_society_calendar_attendance'),
+    )
+
+
 class User(UserMixin, db.Model):
     """
     User model - handles all user types

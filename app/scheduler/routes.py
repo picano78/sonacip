@@ -13,10 +13,15 @@ from app.models import (
     Notification,
     Post,
     Facility,
+    SocietyCalendarAttendance,
 )
 from app.utils import permission_required, check_permission
 
 bp = Blueprint('scheduler', __name__, url_prefix='/scheduler')
+
+def _scope_id():
+    s = current_user.get_primary_society()
+    return s.id if s else None
 
 
 def _date_range(view_mode: str, start_date: datetime.date):
@@ -43,7 +48,7 @@ def _base_query_for_user():
 
 @bp.route('/calendar')
 @login_required
-@permission_required('calendar', 'view')
+@permission_required('calendar', 'view', society_id_func=lambda: _scope_id())
 def index():
     view = request.args.get('view', 'week')
     try:
@@ -93,17 +98,21 @@ def index():
 
 @bp.route('/calendar/<int:event_id>')
 @login_required
-@permission_required('calendar', 'view')
+@permission_required('calendar', 'view', society_id_func=lambda event_id: (SocietyCalendarEvent.query.get(event_id).society_id if SocietyCalendarEvent.query.get(event_id) else None))
 def detail(event_id):
     event = SocietyCalendarEvent.query.get_or_404(event_id)
     if not event.is_visible_to(current_user):
         abort(403)
-    return render_template('calendar/detail.html', event=event)
+    # RSVP statuses for athletes
+    attendance = SocietyCalendarAttendance.query.filter_by(event_id=event.id).all()
+    attendance_map = {a.user_id: a.status for a in attendance}
+    my_status = attendance_map.get(current_user.id)
+    return render_template('calendar/detail.html', event=event, attendance_map=attendance_map, my_status=my_status)
 
 
 @bp.route('/calendar/new', methods=['GET', 'POST'])
 @login_required
-@permission_required('calendar', 'manage')
+@permission_required('calendar', 'manage', society_id_func=lambda: _scope_id())
 def create():
     form = SocietyCalendarEventForm(current_user=current_user)
     scope = current_user.get_primary_society()
@@ -181,6 +190,15 @@ def create():
 
         db.session.commit()
 
+        # Create RSVP rows for athletes
+        try:
+            for athlete in event.athletes.all():
+                if not SocietyCalendarAttendance.query.filter_by(event_id=event.id, user_id=athlete.id).first():
+                    db.session.add(SocietyCalendarAttendance(event_id=event.id, user_id=athlete.id, status='pending'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
         # Notify staff and athletes linked to the event
         try:
             recipients = event.staff_members.all() + event.athletes.all()
@@ -193,6 +211,24 @@ def create():
                     link=url_for('calendar.detail', event_id=event.id)
                 )
                 db.session.add(notification)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # Direct social post for each athlete (so they see it in their feed)
+        try:
+            for athlete in event.athletes.all():
+                db.session.add(
+                    Post(
+                        user_id=current_user.id,
+                        content=f'Convocazione: {event.title} ({event.start_datetime.strftime("%d/%m/%Y %H:%M")}). Conferma disponibilità.',
+                        is_public=False,
+                        audience='direct',
+                        society_id=event.society_id,
+                        target_user_id=athlete.id,
+                        post_type='calendar_invite',
+                    )
+                )
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -218,9 +254,37 @@ def create():
     return render_template('calendar/create.html', form=form)
 
 
+@bp.route('/calendar/<int:event_id>/respond/<string:response>', methods=['POST'])
+@login_required
+@permission_required('calendar', 'view', society_id_func=lambda event_id, response: (SocietyCalendarEvent.query.get(event_id).society_id if SocietyCalendarEvent.query.get(event_id) else None))
+def respond(event_id, response):
+    """Athlete responds to a society calendar convocation."""
+    event = SocietyCalendarEvent.query.get_or_404(event_id)
+    if not event.is_visible_to(current_user):
+        abort(403)
+    if current_user.id not in [u.id for u in event.athletes.all()]:
+        flash('Non sei convocato per questo evento.', 'warning')
+        return redirect(url_for('calendar.detail', event_id=event.id))
+
+    if response not in ('accepted', 'declined'):
+        flash('Risposta non valida.', 'danger')
+        return redirect(url_for('calendar.detail', event_id=event.id))
+
+    row = SocietyCalendarAttendance.query.filter_by(event_id=event.id, user_id=current_user.id).first()
+    if not row:
+        row = SocietyCalendarAttendance(event_id=event.id, user_id=current_user.id, status='pending')
+        db.session.add(row)
+    row.status = response
+    row.responded_at = datetime.utcnow()
+    db.session.commit()
+
+    flash('Risposta registrata.', 'success')
+    return redirect(url_for('calendar.detail', event_id=event.id))
+
+
 @bp.route('/facilities', methods=['GET', 'POST'])
 @login_required
-@permission_required('calendar', 'manage')
+@permission_required('calendar', 'manage', society_id_func=lambda: _scope_id())
 def facilities():
     """Manage society facilities/resources (palestre)."""
     society = current_user.get_primary_society()

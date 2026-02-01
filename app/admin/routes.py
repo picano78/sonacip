@@ -3,6 +3,7 @@ Admin routes
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from flask import current_app
 from sqlalchemy import or_, and_, func, desc
 from app import db
 from app.admin.utils import admin_required
@@ -10,6 +11,7 @@ from app.admin.forms import (
     AdsSettingsForm,
     AppearanceSettingsForm,
     DashboardTemplateForm,
+    NavigationConfigForm,
     PageCustomizationForm,
     PrivacySettingsForm,
     SiteCustomizationForm,
@@ -24,6 +26,7 @@ from app.models import (
     AuditLog,
     Backup,
     Comment,
+    CustomizationKV,
     DashboardTemplate,
     Event,
     Notification,
@@ -213,13 +216,75 @@ def site_customization():
     return render_template('admin/site_customization.html', form=form, settings=settings)
 
 
+@bp.route('/navigation', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def navigation():
+    """Navbar navigation (site-wide)."""
+    import json
+
+    row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='navbar.links').first()
+    if not row:
+        default_links = [
+            {"label": "Home", "endpoint": "social.feed", "icon": "bi-house-fill", "resource": "social", "action": "comment"},
+            {"label": "Esplora", "endpoint": "social.explore", "icon": "bi-compass"},
+            {"label": "Eventi", "endpoint": "events.index", "icon": "bi-calendar-event", "resource": "events", "action": "view"},
+            {"label": "Tornei", "endpoint": "tournaments.list_tournaments", "icon": "bi-trophy", "resource": "tournaments", "action": "view"},
+            {"label": "Calendario Società", "endpoint": "calendar.index", "icon": "bi-calendar3-range", "resource": "calendar", "action": "view"},
+            {"label": "CRM", "endpoint": "crm.index", "icon": "bi-briefcase", "resource": "crm", "action": "access"},
+            {"label": "Admin", "endpoint": "admin.dashboard", "icon": "bi-gear-fill", "resource": "admin", "action": "access"},
+        ]
+        row = CustomizationKV(scope='site', scope_key=None, key='navbar.links', value_json=json.dumps(default_links))
+        db.session.add(row)
+        db.session.commit()
+
+    form = NavigationConfigForm()
+    if request.method == 'GET':
+        form.links_json.data = row.value_json
+
+    if form.validate_on_submit():
+        try:
+            parsed = json.loads(form.links_json.data or '[]')
+            if not isinstance(parsed, list):
+                raise ValueError('Deve essere un JSON array')
+        except Exception as exc:
+            flash(f'JSON non valido: {exc}', 'danger')
+            return render_template('admin/navigation.html', form=form)
+
+        row.value_json = form.links_json.data
+        row.updated_by = current_user.id
+        row.updated_at = datetime.utcnow()
+        db.session.add(row)
+        db.session.commit()
+        log_action('update_navigation', 'CustomizationKV', row.id, 'Updated navbar links')
+        flash('Navbar aggiornata.', 'success')
+        return redirect(url_for('admin.navigation'))
+
+    return render_template('admin/navigation.html', form=form)
+
+
 @bp.route('/pages')
 @login_required
 @admin_required
 def pages():
     """Elenco pagine personalizzabili."""
     pages = PageCustomization.query.order_by(PageCustomization.slug.asc()).all()
-    return render_template('admin/pages.html', pages=pages)
+    existing = {p.slug: p for p in pages}
+
+    endpoints = []
+    for rule in current_app.url_map.iter_rules():
+        if rule.endpoint == 'static':
+            continue
+        if 'GET' not in rule.methods:
+            continue
+        endpoints.append({
+            'endpoint': rule.endpoint,
+            'url': str(rule),
+            'has_custom': rule.endpoint in existing,
+        })
+    endpoints.sort(key=lambda x: x['endpoint'])
+
+    return render_template('admin/pages.html', pages=pages, endpoints=endpoints)
 
 
 @bp.route('/pages/edit', methods=['GET', 'POST'])

@@ -12,7 +12,8 @@
   <div class="card">
     <div class="card-body">
       <p class="text-muted mb-3">
-        Lo <strong>slug</strong> deve corrispondere all’endpoint Flask (es: <code>main.index</code>, <code>main.about</code>, <code>main.contact</code>).
+        Lo <strong>slug</strong> deve corrispondere all’endpoint Flask (es: <code>main.index</code>).
+        Qui sotto trovi anche l’elenco degli endpoint reali registrati.
       </p>
       {% if pages %}
         <div class="list-group">
@@ -32,6 +33,40 @@
       {% endif %}
     </div>
   </div>
+
+  {% if endpoints %}
+    <div class="card mt-3">
+      <div class="card-header"><strong>Endpoint registrati</strong></div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>URL</th>
+                <th>Personalizzazione</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in endpoints %}
+                <tr>
+                  <td><code>{{ e.endpoint }}</code></td>
+                  <td><code>{{ e.url }}</code></td>
+                  <td>
+                    {% if e.has_custom %}
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.edit_page', slug=e.endpoint) }}">Modifica</a>
+                    {% else %}
+                      <a class="btn btn-sm btn-primary" href="{{ url_for('admin.edit_page', slug=e.endpoint) }}">Crea</a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
 

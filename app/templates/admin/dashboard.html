@@ -85,6 +85,21 @@
                     <a href="{{ url_for('admin.moderation') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-shield-check"></i> Moderazione
                     </a>
+                    <a href="{{ url_for('admin.appearance_settings') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-palette"></i> Tema piattaforma
+                    </a>
+                    <a href="{{ url_for('admin.site_customization') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-brush"></i> Personalizzazione sito
+                    </a>
+                    <a href="{{ url_for('admin.navigation') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-list"></i> Navbar
+                    </a>
+                    <a href="{{ url_for('admin.pages') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-file-earmark-text"></i> Pagine
+                    </a>
+                    <a href="{{ url_for('admin.dashboard_templates') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-grid-1x2"></i> Template cruscotti
+                    </a>
                     <form action="{{ url_for('admin.reset_system') }}" method="post" class="list-group-item d-flex align-items-center justify-content-between">
                         {{ csrf_token() }}
                         <div><i class="bi bi-arrow-repeat"></i> Reset/Restart</div>

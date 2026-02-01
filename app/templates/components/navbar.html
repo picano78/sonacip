@@ -18,52 +18,73 @@
                             <i class="bi bi-speedometer2"></i> Cruscotto
                         </a>
                     </li>
-                    {% if can('social', 'comment') %}
+                    {% if nav_links %}
+                        {% for l in nav_links %}
+                            {% set endpoint = l.endpoint if l.endpoint is defined else l.get('endpoint') %}
+                            {% set label = l.label if l.label is defined else l.get('label') %}
+                            {% set icon = l.icon if l.icon is defined else l.get('icon') %}
+                            {% set res = l.resource if l.resource is defined else l.get('resource') %}
+                            {% set act = l.action if l.action is defined else l.get('action') %}
+                            {% if endpoint and label %}
+                                {% if res and act and not can(res, act) %}
+                                    {# skip #}
+                                {% else %}
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{{ url_for(endpoint) }}">
+                                            {% if icon %}<i class="bi {{ icon }}"></i>{% endif %} {{ label }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% if can('social', 'comment') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('social.feed') }}">
+                                    <i class="bi bi-house-fill"></i> Home
+                                </a>
+                            </li>
+                        {% endif %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('social.feed') }}">
-                                <i class="bi bi-house-fill"></i> Home
+                            <a class="nav-link" href="{{ url_for('social.explore') }}">
+                                <i class="bi bi-compass"></i> Esplora
                             </a>
                         </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('social.explore') }}">
-                            <i class="bi bi-compass"></i> Esplora
-                        </a>
-                    </li>
-                    {% if can('events', 'view') %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('events.index') }}">
-                                <i class="bi bi-calendar-event"></i> Eventi
-                            </a>
-                        </li>
-                    {% endif %}
-                    {% if can('tournaments', 'view') %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('tournaments.list_tournaments') }}">
-                                <i class="bi bi-trophy"></i> Tornei
-                            </a>
-                        </li>
-                    {% endif %}
-                    {% if can('calendar', 'view') %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('calendar.index') }}">
-                                <i class="bi bi-calendar3-range"></i> Calendario Società
-                            </a>
-                        </li>
-                    {% endif %}
-                    {% if can('crm', 'access') %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('crm.index') }}">
-                                <i class="bi bi-briefcase"></i> CRM
-                            </a>
-                        </li>
-                    {% endif %}
-                    {% if can('admin', 'access') %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
-                                <i class="bi bi-gear-fill"></i> Admin
-                            </a>
-                        </li>
+                        {% if can('events', 'view') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('events.index') }}">
+                                    <i class="bi bi-calendar-event"></i> Eventi
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if can('tournaments', 'view') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('tournaments.list_tournaments') }}">
+                                    <i class="bi bi-trophy"></i> Tornei
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if can('calendar', 'view') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('calendar.index') }}">
+                                    <i class="bi bi-calendar3-range"></i> Calendario Società
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if can('crm', 'access') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('crm.index') }}">
+                                    <i class="bi bi-briefcase"></i> CRM
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if can('admin', 'access') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+                                    <i class="bi bi-gear-fill"></i> Admin
+                                </a>
+                            </li>
+                        {% endif %}
                     {% endif %}
                 </ul>
                 

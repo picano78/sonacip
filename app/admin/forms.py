@@ -160,3 +160,7 @@ class DashboardTemplateForm(FlaskForm):
         super().__init__(*args, **kwargs)
         # '' means global default
         self.role_name.choices = [('', 'Default (tutti)')] + _load_role_choices(include_empty=False)
+
+
+class NavigationConfigForm(FlaskForm):
+    links_json = TextAreaField('Link navbar (JSON array)', validators=[DataRequired(), Length(max=50000)])

@@ -812,6 +812,42 @@ class PageCustomization(db.Model):
         return f'<PageCustomization {self.slug}>'
 
 
+class CustomizationKV(db.Model):
+    """
+    Generic customization key/value storage (JSON as text).
+    Designed to scale "everything customizable" without schema churn.
+    """
+    __tablename__ = 'customization_kv'
+    __table_args__ = (
+        db.UniqueConstraint('scope', 'scope_key', 'key', name='uq_customization_scope_key'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    scope = db.Column(db.String(20), nullable=False, index=True)  # site, page, user, role
+    scope_key = db.Column(db.String(120), index=True)  # e.g. endpoint for page, user_id for user
+    key = db.Column(db.String(120), nullable=False, index=True)
+    value_json = db.Column(db.Text, nullable=False, default='{}')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def get_value(self, default=None):
+        import json
+        try:
+            return json.loads(self.value_json or 'null')
+        except Exception:
+            return default
+
+    def set_value(self, value):
+        import json
+        self.value_json = json.dumps(value)
+
+    def __repr__(self):
+        return f'<CustomizationKV {self.scope}:{self.scope_key}:{self.key}>'
+
+
 class Message(db.Model):
     """
     Direct messaging between users

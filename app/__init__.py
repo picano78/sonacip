@@ -130,10 +130,12 @@ def create_app(config_name: str | None = None) -> Flask:
         privacy = None
         site = None
         page = None
+        nav_links = None
 
         try:
             from app.models import (
                 AppearanceSetting,
+                CustomizationKV,
                 Message,
                 Notification,
                 PageCustomization,
@@ -148,6 +150,10 @@ def create_app(config_name: str | None = None) -> Flask:
             endpoint = request.endpoint or ''
             if endpoint:
                 page = PageCustomization.query.filter_by(slug=endpoint).first()
+
+            # Admin-configurable navigation links (site scope)
+            nav_row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='navbar.links').first()
+            nav_links = nav_row.get_value(default=None) if nav_row else None
 
             def get_unread_notifications_count():
                 if not current_user.is_authenticated:
@@ -173,6 +179,7 @@ def create_app(config_name: str | None = None) -> Flask:
             'privacy': privacy,
             'site': site,
             'page': page,
+            'nav_links': nav_links,
             'get_unread_notifications_count': get_unread_notifications_count,
             'get_unread_messages_count': get_unread_messages_count,
         }

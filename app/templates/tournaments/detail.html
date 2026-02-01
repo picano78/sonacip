@@ -29,7 +29,7 @@
       <div class="glass-card h-100 p-3 card-hover">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <span class="fw-semibold"><i class="bi bi-controller"></i> Partite</span>
-          {% if can('tournaments', 'manage') %}
+          {% if can_manage %}
             <form class="d-flex flex-wrap gap-2 align-items-center" method="post" action="{{ url_for('tournaments.add_match', tournament_id=tournament.id) }}">
               {{ csrf_token() }}
               <input type="number" name="home_team_id" class="form-control form-control-sm" placeholder="Casa" required>
@@ -45,12 +45,12 @@
           {% for m in matches %}
             <div class="p-3 border rounded card-hover">
               <div class="d-flex justify-content-between align-items-center mb-1">
-                <div class="fw-semibold">{{ m.home_team.name }} vs {{ m.away_team.name }}</div>
+                <div class="fw-semibold">{{ m.home_team.name if m.home_team else 'TBD' }} vs {{ m.away_team.name if m.away_team else 'TBD' }}</div>
                 <span class="badge bg-dark text-uppercase">{{ m.status }}</span>
               </div>
               <div class="small text-muted mb-2">{{ m.round_label or 'Turno' }} | {{ m.match_date.strftime('%d/%m/%Y') if m.match_date else 'Data da definire' }} | {{ m.location or 'Luogo da definire' }}</div>
               <div class="d-flex align-items-center gap-3">
-                {% if m.status != 'played' and can('tournaments', 'manage') %}
+                {% if m.status != 'played' and can_manage and m.home_team and m.away_team %}
                   <form class="d-flex align-items-center gap-2" method="post" action="{{ url_for('tournaments.set_score', match_id=m.id) }}">
                     {{ csrf_token() }}
                     <input type="number" name="home_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol casa" required>
@@ -67,12 +67,59 @@
           {% endfor %}
         </div>
       </div>
+
+      {% if tournament.format == 'knockout' %}
+        <div class="glass-card p-3 mt-3 card-hover">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold"><i class="bi bi-diagram-3"></i> Tabellone (piramidale)</span>
+            {% if can_manage %}
+              <form method="post" action="{{ url_for('tournaments.generate_bracket', tournament_id=tournament.id) }}" class="d-flex gap-2 align-items-center">
+                {{ csrf_token() }}
+                <select name="seeding" class="form-select form-select-sm">
+                  <option value="random">Accoppiamenti casuali</option>
+                  <option value="manual">Accoppiamenti decisi (per seed/ordine)</option>
+                </select>
+                <button class="btn btn-sm btn-outline-primary" type="submit">Genera tabellone</button>
+              </form>
+            {% endif %}
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Round</th>
+                  <th>Match</th>
+                  <th>Squadra A</th>
+                  <th>Squadra B</th>
+                  <th>Risultato</th>
+                  <th>Vincitore</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in matches if m.round_number %}
+                  <tr>
+                    <td class="text-muted small">{{ m.round_label or ('Round ' ~ m.round_number) }}</td>
+                    <td class="text-muted small">#{{ m.round_number }}.{{ m.position }}</td>
+                    <td>{{ m.home_team.name if m.home_team else 'TBD' }}</td>
+                    <td>{{ m.away_team.name if m.away_team else 'TBD' }}</td>
+                    <td>{{ m.home_score if m.home_score is not none else '-' }} - {{ m.away_score if m.away_score is not none else '-' }}</td>
+                    <td>{{ m.winner_team.name if m.winner_team else '-' }}</td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="6" class="text-muted">Genera il tabellone per vedere la piramide.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
     </div>
     <div class="col-md-4">
       <div class="glass-card p-3 mb-3 card-hover">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="fw-semibold">Squadre</span>
-          {% if can('tournaments', 'manage') %}
+          {% if can_manage %}
             <form class="d-flex flex-wrap gap-2" method="post" action="{{ url_for('tournaments.add_team', tournament_id=tournament.id) }}">
               {{ csrf_token() }}
               <input type="text" name="name" class="form-control form-control-sm" placeholder="Nome" required>

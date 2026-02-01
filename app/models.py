@@ -1770,7 +1770,7 @@ class Tournament(db.Model):
     __tablename__ = 'tournament'
 
     id = db.Column(db.Integer, primary_key=True)
-    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     name = db.Column(db.String(200), nullable=False)
@@ -1805,6 +1805,7 @@ class TournamentTeam(db.Model):
     name = db.Column(db.String(150), nullable=False)
     category = db.Column(db.String(100))
     external_ref = db.Column(db.String(100))
+    seed = db.Column(db.Integer)
 
     tournament = db.relationship('Tournament', backref=db.backref('teams', lazy='dynamic', cascade='all, delete-orphan'))
 
@@ -1817,10 +1818,13 @@ class TournamentMatch(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
-    home_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=False)
-    away_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=False)
+    home_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=True)
+    away_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'), nullable=True)
+    winner_team_id = db.Column(db.Integer, db.ForeignKey('tournament_team.id'))
 
     round_label = db.Column(db.String(100))  # group A, quarterfinal, etc.
+    round_number = db.Column(db.Integer, default=1, index=True)
+    position = db.Column(db.Integer, default=0, index=True)  # bracket position within round (0-based)
     match_date = db.Column(db.DateTime)
     location = db.Column(db.String(255))
 
@@ -1832,11 +1836,14 @@ class TournamentMatch(db.Model):
 
     home_team = db.relationship('TournamentTeam', foreign_keys=[home_team_id])
     away_team = db.relationship('TournamentTeam', foreign_keys=[away_team_id])
+    winner_team = db.relationship('TournamentTeam', foreign_keys=[winner_team_id])
 
     def set_score(self, home, away):
         self.home_score = home
         self.away_score = away
         self.status = 'played'
+        if home is not None and away is not None and home != away:
+            self.winner_team_id = self.home_team_id if home > away else self.away_team_id
 
     def __repr__(self):
         return f'<TournamentMatch {self.home_team_id} vs {self.away_team_id}>'

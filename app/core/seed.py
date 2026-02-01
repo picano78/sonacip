@@ -87,11 +87,21 @@ def seed_defaults(app) -> dict:
         perm_defs = [
             ("admin:access", "admin", "access", "Accesso pannello admin"),
             ("social:comment", "social", "comment", "Interagire nel feed social"),
+            ("social:post", "social", "post", "Pubblicare post"),
             ("events:view", "events", "view", "Vedere eventi"),
+            ("events:create", "events", "create", "Creare eventi"),
+            ("events:manage", "events", "manage", "Gestire eventi"),
             ("tournaments:view", "tournaments", "view", "Vedere tornei"),
+            ("tournaments:manage", "tournaments", "manage", "Gestire tornei"),
             ("calendar:view", "calendar", "view", "Vedere calendario società"),
+            ("calendar:manage", "calendar", "manage", "Gestire calendario società"),
             ("crm:access", "crm", "access", "Accedere al CRM"),
+            ("crm:manage", "crm", "manage", "Gestire CRM"),
+            ("tasks:manage", "tasks", "manage", "Gestire task e planner"),
             ("society:manage", "society", "manage", "Gestire società"),
+            ("society:manage_staff", "society", "manage_staff", "Gestire staff/membri società"),
+            ("users:edit", "users", "edit", "Gestire utenti"),
+            ("users:view_all", "users", "view_all", "Vedere profili utenti"),
         ]
 
         perms: dict[str, Permission] = {}
@@ -135,10 +145,50 @@ def seed_defaults(app) -> dict:
         _grant(Role.query.filter_by(name="moderator").first(), ["social:comment"])
 
         # Society roles
-        _grant(role_society, ["social:comment", "events:view", "tournaments:view", "calendar:view", "crm:access", "society:manage"])
-        _grant(role_society_admin, ["social:comment", "events:view", "tournaments:view", "calendar:view", "crm:access", "society:manage"])
-        _grant(role_staff, ["social:comment", "events:view", "tournaments:view", "calendar:view"])
-        _grant(role_coach, ["social:comment", "events:view", "tournaments:view", "calendar:view"])
+        _grant(
+            role_society,
+            [
+                "social:comment",
+                "social:post",
+                "events:view",
+                "events:create",
+                "events:manage",
+                "tournaments:view",
+                "tournaments:manage",
+                "calendar:view",
+                "calendar:manage",
+                "crm:access",
+                "crm:manage",
+                "tasks:manage",
+                "society:manage",
+                "society:manage_staff",
+                "users:edit",
+                "users:view_all",
+            ],
+        )
+        _grant(
+            role_society_admin,
+            [
+                "social:comment",
+                "social:post",
+                "events:view",
+                "events:create",
+                "events:manage",
+                "tournaments:view",
+                "tournaments:manage",
+                "calendar:view",
+                "calendar:manage",
+                "crm:access",
+                "crm:manage",
+                "tasks:manage",
+                "society:manage",
+                "society:manage_staff",
+                "users:edit",
+                "users:view_all",
+            ],
+        )
+        _grant(role_staff, ["social:comment", "events:view", "tournaments:view", "calendar:view", "tasks:manage"])
+        _grant(role_coach, ["social:comment", "events:view", "tournaments:view", "calendar:view", "tasks:manage"])
         _grant(role_user, ["social:comment"])
 
         db.session.commit()

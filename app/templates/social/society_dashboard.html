@@ -124,6 +124,60 @@
 
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Membri (ruoli e poteri)</h5>
+            <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('social.society_permissions') }}">
+                    <i class="bi bi-shield-lock"></i> Permessi Ruoli
+                </a>
+                <span class="badge bg-secondary">{{ memberships|length }}</span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Utente</th>
+                        <th>Ruolo</th>
+                        <th>Da</th>
+                        <th class="text-end">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in memberships %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('social.profile', user_id=m.user.id) }}">{{ m.user.get_full_name() }}</a>
+                                <div class="text-muted small">{{ m.user.email }}</div>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ m.role_name }}</span></td>
+                            <td class="text-muted small">{{ m.created_at|datetime_format }}</td>
+                            <td class="text-end">
+                                <form class="d-inline-flex gap-2" method="post" action="{{ url_for('social.society_set_member_role', user_id=m.user.id) }}">
+                                    {{ csrf_token() }}
+                                    <select class="form-select form-select-sm" name="role_name" style="width: 140px;">
+                                        <option value="atleta" {{ 'selected' if m.role_name == 'atleta' else '' }}>Atleta</option>
+                                        <option value="coach" {{ 'selected' if m.role_name == 'coach' else '' }}>Coach</option>
+                                        <option value="staff" {{ 'selected' if m.role_name == 'staff' else '' }}>Staff</option>
+                                        <option value="dirigente" {{ 'selected' if m.role_name == 'dirigente' else '' }}>Dirigente</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">Salva</button>
+                                </form>
+                                <form class="d-inline" method="post" action="{{ url_for('social.society_remove_member', user_id=m.user.id) }}" onsubmit="return confirm('Rimuovere questo membro dalla società?');">
+                                    {{ csrf_token() }}
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Rimuovi</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-muted">Nessun membro</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Audit Società (chi fa cosa e quando)</h5>
             <span class="badge bg-secondary">{{ recent_audit|length }}</span>
         </div>

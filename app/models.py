@@ -241,15 +241,52 @@ class User(UserMixin, db.Model):
         """Return True if user is scoped to the given society (or no scope requested)."""
         if not society_id:
             return True
-        society = self.get_primary_society()
-        if not society:
-            return False
-        return society.id == society_id
+        # Society owners can always access their own society scope.
+        if self.is_society() and self.society_profile and self.society_profile.id == society_id:
+            return True
+        # Staff/athletes can access if they have an active membership for that society.
+        try:
+            from app.models import SocietyMembership
+            return (
+                SocietyMembership.query.filter_by(
+                    society_id=society_id, user_id=self.id, status='active'
+                ).first()
+                is not None
+            )
+        except Exception:
+            # Fallback to legacy fields if DB isn't ready yet.
+            society = self.get_primary_society()
+            if not society:
+                return False
+            return society.id == society_id
+
+    def get_society_role(self, society_id: int | None) -> str | None:
+        """Return the society-specific role_name (from SocietyMembership) for a given society."""
+        if not society_id:
+            return None
+        if self.is_society() and self.society_profile and self.society_profile.id == society_id:
+            return 'societa'
+        try:
+            from app.models import SocietyMembership
+            m = SocietyMembership.query.filter_by(
+                society_id=society_id, user_id=self.id, status='active'
+            ).first()
+            return m.role_name if m else None
+        except Exception:
+            return None
 
     def get_primary_society(self):
         """Return Society entity for this user, if any."""
         if self.is_society() and self.society_profile:
             return self.society_profile
+        # Prefer explicit memberships (canonical) when present.
+        try:
+            from app.models import SocietyMembership
+            m = SocietyMembership.query.filter_by(user_id=self.id, status='active').order_by(SocietyMembership.created_at.desc()).first()
+            if m and m.society:
+                return m.society
+        except Exception:
+            pass
         if self.society_id:
             return self.society
         if self.athlete_society_id:
@@ -404,6 +441,34 @@ class SocietyMembership(db.Model):
 
     def __repr__(self):
         return f'<SocietyMembership society={self.society_id} user={self.user_id} role={self.role_name} status={self.status}>'
+
+
+class SocietyRolePermission(db.Model):
+    """
+    Society-scoped RBAC: per-society permissions granted/denied to society roles
+    (atleta, coach, staff, dirigente, etc.)
+    """
+    __tablename__ = 'society_role_permission'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    role_name = db.Column(db.String(50), nullable=False, index=True)
+    permission_id = db.Column(db.Integer, db.ForeignKey('permission.id'), nullable=False, index=True)
+    effect = db.Column(db.String(10), nullable=False, default='allow')  # allow / deny
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    permission = db.relationship('Permission', foreign_keys=[permission_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'role_name', 'permission_id', name='uq_society_role_permission'),
+    )
+
+    def __repr__(self):
+        return f'<SocietyRolePermission society={self.society_id} role={self.role_name} perm={self.permission_id} {self.effect}>'
 
 
 class Comment(db.Model):

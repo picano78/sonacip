@@ -10,7 +10,21 @@ from app import db
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.society_forms import SocietyInviteForm
 from app.social.utils import save_picture
-from app.models import User, Post, Comment, Notification, AuditLog, AdsSetting, Payment, SocialSetting, TournamentMatch, SocietyInvite, SocietyMembership
+from app.models import (
+    User,
+    Post,
+    Comment,
+    Notification,
+    AuditLog,
+    AdsSetting,
+    Payment,
+    SocialSetting,
+    TournamentMatch,
+    SocietyInvite,
+    SocietyMembership,
+    Permission,
+    SocietyRolePermission,
+)
 from app.cache import get_cache
 from app.utils import permission_required, check_permission
 from app.utils import log_action
@@ -706,6 +720,180 @@ def society_invite():
 
     log_action('society_invite', 'SocietyInvite', inv.id, f'Invited {user.id} role={inv.requested_role}', society_id=society.id)
     flash('Invito inviato.', 'success')
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/society/permissions', methods=['GET', 'POST'])
+@login_required
+def society_permissions():
+    """Manage society-scoped role permissions (view/edit powers per role)."""
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    managed_roles = ['dirigente', 'coach', 'staff', 'atleta']
+    managed_perms = Permission.query.filter(
+        Permission.resource.in_(['social', 'events', 'calendar', 'crm', 'tasks', 'tournaments', 'society', 'users'])
+    ).order_by(Permission.resource.asc(), Permission.action.asc()).all()
+
+    if request.method == 'POST':
+        # Parse tri-state selects: inherit/allow/deny
+        changed = 0
+        for role_name in managed_roles:
+            for perm in managed_perms:
+                key = f"p__{role_name}__{perm.id}"
+                if key not in request.form:
+                    continue
+                val = (request.form.get(key) or 'inherit').strip()
+                row = SocietyRolePermission.query.filter_by(
+                    society_id=society.id, role_name=role_name, permission_id=perm.id
+                ).first()
+                if val == 'inherit':
+                    if row:
+                        db.session.delete(row)
+                        changed += 1
+                    continue
+                if val not in ('allow', 'deny'):
+                    continue
+                if not row:
+                    row = SocietyRolePermission(
+                        society_id=society.id,
+                        role_name=role_name,
+                        permission_id=perm.id,
+                        effect=val,
+                        created_by=current_user.id,
+                    )
+                    db.session.add(row)
+                    changed += 1
+                else:
+                    if row.effect != val:
+                        row.effect = val
+                        changed += 1
+
+        db.session.commit()
+        log_action('society_permissions_update', 'Society', society.id, f'Changed={changed}', society_id=society.id)
+        flash('Permessi aggiornati.', 'success')
+        return redirect(url_for('social.society_permissions'))
+
+    overrides = SocietyRolePermission.query.filter_by(society_id=society.id).all()
+    override_map = {(o.role_name, o.permission_id): o.effect for o in overrides}
+
+    return render_template(
+        'social/society_permissions.html',
+        society=society,
+        roles=managed_roles,
+        permissions=managed_perms,
+        override_map=override_map,
+    )
+
+
+@bp.route('/society/members/<int:user_id>/set-role', methods=['POST'])
+@login_required
+def society_set_member_role(user_id):
+    """Change a member role within the current society."""
+    if not check_permission(current_user, 'society', 'manage_staff'):
+        flash('Permesso negato.', 'danger')
+        return redirect(url_for('social.society_dashboard'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    role_name = (request.form.get('role_name') or '').strip()
+    if role_name not in ('atleta', 'coach', 'staff', 'dirigente'):
+        flash('Ruolo non valido.', 'danger')
+        return redirect(url_for('social.society_dashboard'))
+
+    membership = SocietyMembership.query.filter_by(society_id=society.id, user_id=user_id, status='active').first()
+    if not membership:
+        flash('Membro non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    member = User.query.get_or_404(user_id)
+    membership.role_name = role_name
+    membership.updated_by = current_user.id
+
+    # Keep legacy linkages aligned for now (until full migration off legacy fields)
+    if role_name == 'atleta':
+        member.role = 'atleta'
+        member.athlete_society_id = society.id
+        member.society_id = None
+        member.staff_role = None
+    elif role_name == 'coach':
+        member.role = 'coach'
+        member.society_id = society.id
+        member.athlete_society_id = None
+        member.staff_role = 'coach'
+    elif role_name == 'dirigente':
+        member.role = 'staff'
+        member.society_id = society.id
+        member.athlete_society_id = None
+        member.staff_role = 'dirigente'
+    else:
+        member.role = 'staff'
+        member.society_id = society.id
+        member.athlete_society_id = None
+        member.staff_role = 'staff'
+
+    db.session.commit()
+    log_action('society_member_role_change', 'User', member.id, f'role={role_name}', society_id=society.id)
+    flash('Ruolo aggiornato.', 'success')
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/society/members/<int:user_id>/remove', methods=['POST'])
+@login_required
+def society_remove_member(user_id):
+    """Remove/deactivate a member from the current society."""
+    if not check_permission(current_user, 'society', 'manage_staff'):
+        flash('Permesso negato.', 'danger')
+        return redirect(url_for('social.society_dashboard'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    membership = SocietyMembership.query.filter_by(society_id=society.id, user_id=user_id, status='active').first()
+    if not membership:
+        flash('Membro non trovato.', 'warning')
+        return redirect(url_for('social.society_dashboard'))
+
+    member = User.query.get_or_404(user_id)
+    membership.status = 'inactive'
+    membership.updated_by = current_user.id
+
+    # Clear legacy links if they match this society
+    if member.society_id == society.id:
+        member.society_id = None
+    if member.athlete_society_id == society.id:
+        member.athlete_society_id = None
+    member.staff_role = None
+
+    # If the user has no other active memberships, revert to appassionato
+    still_active = SocietyMembership.query.filter(
+        SocietyMembership.user_id == member.id,
+        SocietyMembership.status == 'active',
+    ).count()
+    if still_active == 0 and not member.is_society():
+        member.role = 'appassionato'
+
+    db.session.add(
+        Notification(
+            user_id=member.id,
+            title='Rimozione da società',
+            message=f'Sei stato rimosso dalla società {society.legal_name}.',
+            notification_type='system',
+            link=url_for('main.dashboard'),
+        )
+    )
+
+    db.session.commit()
+    log_action('society_member_remove', 'User', member.id, 'removed', society_id=society.id)
+    flash('Membro rimosso.', 'success')
     return redirect(url_for('social.society_dashboard'))
 
 

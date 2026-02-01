@@ -96,6 +96,11 @@ class Config:
     SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL')
     SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD')
 
+    # Stripe (payments)
+    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+    STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+    STRIPE_PORTAL_RETURN_URL = os.environ.get('STRIPE_PORTAL_RETURN_URL')
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""

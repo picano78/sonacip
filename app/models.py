@@ -1593,6 +1593,11 @@ class Plan(db.Model):
     price_monthly = db.Column(db.Float, default=0)
     price_yearly = db.Column(db.Float, default=0)
     currency = db.Column(db.String(3), default='EUR')
+
+    # Stripe mapping (optional)
+    stripe_product_id = db.Column(db.String(120))
+    stripe_price_monthly_id = db.Column(db.String(120))
+    stripe_price_yearly_id = db.Column(db.String(120))
     
     # Features and limits
     max_users = db.Column(db.Integer)  # null = unlimited
@@ -1644,6 +1649,12 @@ class Subscription(db.Model):
     # Billing
     next_billing_date = db.Column(db.DateTime)
     amount = db.Column(db.Float)
+
+    # Stripe billing
+    stripe_customer_id = db.Column(db.String(120), index=True)
+    stripe_subscription_id = db.Column(db.String(120), index=True)
+    cancel_at_period_end = db.Column(db.Boolean, default=False)
+    current_period_end = db.Column(db.DateTime)
     
     # Auto-renewal
     auto_renew = db.Column(db.Boolean, default=True)

@@ -422,7 +422,13 @@ def refund_payment(payment_id):
     
     # Mark payment as refunded
     payment.status = 'refunded'
-    payment.notes = f'Refunded: {reason}'
+    try:
+        meta = json.loads(payment.payment_metadata or '{}')
+    except Exception:
+        meta = {}
+    meta['refund_reason'] = reason
+    meta['refunded_at'] = datetime.utcnow().isoformat()
+    payment.payment_metadata = json.dumps(meta)
     payment.updated_at = datetime.utcnow()
     
     # Cancel associated subscription if active

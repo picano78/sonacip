@@ -83,6 +83,8 @@ def _evaluate_simple_expression(expr: str, payload: Dict[str, Any]) -> bool:
     patterns = [
         (r'(\w+(?:\.\w+)*)\s*==\s*["\']([^"\']+)["\']', lambda m: _get_nested_value(payload, m.group(1)) == m.group(2)),
         (r'(\w+(?:\.\w+)*)\s*!=\s*["\']([^"\']+)["\']', lambda m: _get_nested_value(payload, m.group(1)) != m.group(2)),
+        (r'(\w+(?:\.\w+)*)\s*>=\s*(\d+(?:\.\d+)?)', lambda m: float(_get_nested_value(payload, m.group(1)) or 0) >= float(m.group(2))),
+        (r'(\w+(?:\.\w+)*)\s*<=\s*(\d+(?:\.\d+)?)', lambda m: float(_get_nested_value(payload, m.group(1)) or 0) <= float(m.group(2))),
         (r'(\w+(?:\.\w+)*)\s*>\s*(\d+(?:\.\d+)?)', lambda m: float(_get_nested_value(payload, m.group(1)) or 0) > float(m.group(2))),
         (r'(\w+(?:\.\w+)*)\s*<\s*(\d+(?:\.\d+)?)', lambda m: float(_get_nested_value(payload, m.group(1)) or 0) < float(m.group(2))),
         (r'(\w+(?:\.\w+)*)\s+contains\s+["\']([^"\']+)["\']', lambda m: m.group(2) in str(_get_nested_value(payload, m.group(1)) or '')),

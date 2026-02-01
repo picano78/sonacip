@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from app import create_app
 from app import db
-from app.models import User, AutomationRule, AutomationRun, Notification, Post, Task
+from app.models import User, Role, AutomationRule, AutomationRun, Notification, Post, Task
 from app.automation.utils import execute_rules
 from app.automation.validation import evaluate_condition, validate_action_schema
 
@@ -21,6 +21,11 @@ def app():
     
     with app.app_context():
         db.create_all()
+
+        # Minimal RBAC seed for tests (User.role_id is NOT NULL)
+        if not Role.query.filter_by(name='super_admin').first():
+            db.session.add(Role(name='super_admin', display_name='Super Admin', level=100, is_active=True, is_system=True))
+            db.session.commit()
         
         # Create test user
         user = User(

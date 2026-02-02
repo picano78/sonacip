@@ -5,14 +5,15 @@ import importlib
 import os
 import secrets
 
-from flask import Flask, request, session
+from flask import Flask, flash, redirect, request, session, url_for
 from flask_login import LoginManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFError, CSRFProtect
+from werkzeug.exceptions import BadRequest, TooManyRequests
 from werkzeug.middleware.proxy_fix import ProxyFix
 from authlib.integrations.flask_client import OAuth
 
@@ -111,42 +112,78 @@ def _ensure_secret_key(app: Flask) -> None:
         app.config["SECRET_KEY"] = env_secret
         return
 
-    secret_file = os.path.join(app.instance_path, "secret_key")
-    try:
-        os.makedirs(app.instance_path, exist_ok=True)
-        if os.path.exists(secret_file):
-            try:
-                with open(secret_file, "r", encoding="utf-8") as f:
-                    val = (f.read() or "").strip()
-                if val:
-                    app.config["SECRET_KEY"] = val
-                    os.environ["SECRET_KEY"] = val
-                    return
-            except Exception:
-                # Fall through to regenerate
-                pass
+    def _try_secret_dir(dir_path: str | None) -> str | None:
+        if not dir_path:
+            return None
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except Exception:
+            return None
 
-        val = secrets.token_hex(32)
-        with open(secret_file, "w", encoding="utf-8") as f:
-            f.write(val)
+        secret_file = os.path.join(dir_path, "secret_key")
+
+        # Read existing
         try:
-            os.chmod(secret_file, 0o600)
+            if os.path.exists(secret_file):
+                with open(secret_file, "r", encoding="utf-8") as f:
+                    existing = (f.read() or "").strip()
+                if existing:
+                    return existing
         except Exception:
             pass
-        app.config["SECRET_KEY"] = val
-        os.environ["SECRET_KEY"] = val
-        return
+
+        # Create new
+        try:
+            val = secrets.token_hex(32)
+            with open(secret_file, "w", encoding="utf-8") as f:
+                f.write(val)
+            try:
+                os.chmod(secret_file, 0o600)
+            except Exception:
+                pass
+            return val
+        except Exception:
+            return None
+
+    # Try multiple persistent locations (ordered).
+    # instance_path may be read-only under some systemd deployments.
+    candidates = [
+        app.instance_path,
+        app.config.get("LOGS_FOLDER"),
+        app.config.get("BACKUP_FOLDER"),
+        os.path.expanduser("~/.sonacip"),
+    ]
+
+    for d in candidates:
+        val = _try_secret_dir(d)
+        if val:
+            app.config["SECRET_KEY"] = val
+            os.environ["SECRET_KEY"] = val
+            return
+
+    # Last resort: ephemeral secret (keeps app alive; sessions reset on restart)
+    val = secrets.token_hex(32)
+    app.config["SECRET_KEY"] = val
+    os.environ["SECRET_KEY"] = val
+    try:
+        app.logger.warning(
+            "SECRET_KEY was missing and could not be persisted; using an ephemeral key."
+        )
     except Exception:
-        # Last resort: ephemeral secret (keeps app alive; sessions reset on restart)
-        val = secrets.token_hex(32)
-        app.config["SECRET_KEY"] = val
-        os.environ["SECRET_KEY"] = val
-        try:
-            app.logger.warning(
-                "SECRET_KEY was missing and could not be persisted; using an ephemeral key."
-            )
-        except Exception:
-            pass
+        pass
+
+
+def _is_safe_referrer(app: Flask, ref: str | None) -> bool:
+    if not ref:
+        return False
+    try:
+        # Allow relative URLs
+        if ref.startswith("/"):
+            return True
+        # Allow same-origin absolute URLs
+        return ref.startswith(app.config.get("PREFERRED_URL_SCHEME", "http") + "://") and ref.startswith(request.host_url)
+    except Exception:
+        return False
 
 
 def create_app(config_name: str | None = None) -> Flask:
@@ -189,6 +226,65 @@ def create_app(config_name: str | None = None) -> Flask:
     oauth.init_app(app)
 
     login_manager.login_view = 'auth.login'
+
+    def _wants_json() -> bool:
+        try:
+            if request.is_json:
+                return True
+            best = request.accept_mimetypes.best or ""
+            return "json" in best
+        except Exception:
+            return False
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(err: CSRFError):
+        # Do not show Werkzeug default HTML (it leaks implementation details).
+        if _wants_json():
+            return {"error": "csrf_failed"}, 400
+
+        flash("Sessione scaduta o richiesta non valida. Riprova.", "warning")
+
+        # Prefer redirecting back to the relevant form.
+        if request.endpoint in ("auth.login", "auth.register", "auth.register_society"):
+            return redirect(url_for(request.endpoint))
+
+        ref = request.referrer
+        if _is_safe_referrer(app, ref):
+            return redirect(ref)
+
+        return redirect(url_for("main.index"))
+
+    @app.errorhandler(TooManyRequests)
+    def handle_rate_limited(err: TooManyRequests):
+        if _wants_json():
+            return {"error": "rate_limited"}, 429
+
+        # Friendly page instead of default 429 HTML
+        return (
+            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            "<title>Troppe richieste</title></head><body>"
+            "<h1>Troppe richieste</h1>"
+            "<p>Hai effettuato troppe operazioni in poco tempo. Attendi e riprova.</p>"
+            "<p><a href='/'>Torna alla home</a></p>"
+            "</body></html>",
+            429,
+        )
+
+    @app.errorhandler(BadRequest)
+    def handle_bad_request(err: BadRequest):
+        if _wants_json():
+            return {"error": "bad_request"}, 400
+        return (
+            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            "<title>Richiesta non valida</title></head><body>"
+            "<h1>Richiesta non valida</h1>"
+            "<p>La richiesta non è valida o la sessione è scaduta. Riprova.</p>"
+            "<p><a href='/'>Torna alla home</a></p>"
+            "</body></html>",
+            400,
+        )
 
     @login_manager.user_loader
     def load_user(user_id):

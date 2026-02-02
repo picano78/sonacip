@@ -26,7 +26,11 @@ def login_redirect():
     Some deployments (or old links) point to `/login`, while the auth blueprint
     uses `/auth/login`. Keep this stable to avoid 404/500 at the edge (nginx rewrites).
     """
-    return redirect(url_for('auth.login'))
+    # Always return a proper Flask Response (302) and preserve `next` if present.
+    next_page = request.args.get("next")
+    if next_page:
+        return redirect(url_for("auth.login", next=next_page), code=302)
+    return redirect(url_for("auth.login"), code=302)
 
 
 @bp.route('/about')

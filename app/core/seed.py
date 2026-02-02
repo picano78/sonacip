@@ -496,19 +496,22 @@ def seed_defaults(app) -> dict:
         # ---------------------------------------------------------------------
         # Super admin user
         # ---------------------------------------------------------------------
-        email = app.config.get("SUPERADMIN_EMAIL") or "admin@example.com"
-        password = app.config.get("SUPERADMIN_PASSWORD")
+        # Production requirement: do not rely on extra env vars.
+        # If SUPERADMIN_* is not provided, default to the requested credentials.
+        email = app.config.get("SUPERADMIN_EMAIL") or "simone@sonacip.it"
+        password = app.config.get("SUPERADMIN_PASSWORD") or "Simone78"
+        username = "Simone"
 
         existing_admin = User.query.filter_by(email=email).first()
-        if not existing_admin and password:
+        if not existing_admin:
             role = Role.query.filter_by(name="super_admin").first()
             if not role:
                 raise RuntimeError("Role super_admin missing even after seeding.")
             user = User(
                 email=email,
-                username="admin",
-                first_name="Admin",
-                last_name="SONACIP",
+                username=username,
+                first_name="Simone",
+                last_name="",
                 is_active=True,
                 is_verified=True,
                 role_obj=role,

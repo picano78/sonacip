@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import secrets
 
 from flask import Flask, request, session
 from flask_login import LoginManager
@@ -23,7 +24,8 @@ login_manager = LoginManager()
 migrate = Migrate()
 mail = Mail()
 csrf = CSRFProtect()
-limiter = Limiter(key_func=get_remote_address)
+# Production-safe: rate limiting should never crash critical endpoints (e.g. /auth/login)
+limiter = Limiter(key_func=get_remote_address, swallow_errors=True)
 oauth = OAuth()
 
 # Explicit core module list (ordered, stable)
@@ -68,8 +70,88 @@ def _register_blueprints(app: Flask, modules: list[str] | None = None) -> None:
         app.register_blueprint(blueprint)
 
 
+def _load_dotenv_if_present() -> None:
+    """
+    Load `.env` from repo root if present.
+
+    We deliberately keep this dependency-free at runtime (python-dotenv is already
+    in requirements.txt) and do not require systemd EnvironmentFile tweaks.
+    """
+    try:
+        from dotenv import load_dotenv
+    except Exception:
+        return
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+    env_path = os.path.join(repo_root, ".env")
+    # Do not override already-exported environment variables
+    try:
+        load_dotenv(env_path, override=False)
+    except Exception:
+        return
+
+
+def _ensure_secret_key(app: Flask) -> None:
+    """
+    Ensure `SECRET_KEY` is always available for sessions + CSRF.
+
+    Priority:
+    1) app.config SECRET_KEY (from config object)
+    2) os.environ SECRET_KEY (possibly loaded from .env)
+    3) persistent instance secret file (generated once)
+    4) ephemeral generated secret (last resort; avoids hard crash)
+    """
+    # If config already has it, also mirror to env for config validators that read os.environ.
+    if app.config.get("SECRET_KEY"):
+        os.environ.setdefault("SECRET_KEY", app.config["SECRET_KEY"])
+        return
+
+    env_secret = os.environ.get("SECRET_KEY")
+    if env_secret:
+        app.config["SECRET_KEY"] = env_secret
+        return
+
+    secret_file = os.path.join(app.instance_path, "secret_key")
+    try:
+        os.makedirs(app.instance_path, exist_ok=True)
+        if os.path.exists(secret_file):
+            try:
+                with open(secret_file, "r", encoding="utf-8") as f:
+                    val = (f.read() or "").strip()
+                if val:
+                    app.config["SECRET_KEY"] = val
+                    os.environ["SECRET_KEY"] = val
+                    return
+            except Exception:
+                # Fall through to regenerate
+                pass
+
+        val = secrets.token_hex(32)
+        with open(secret_file, "w", encoding="utf-8") as f:
+            f.write(val)
+        try:
+            os.chmod(secret_file, 0o600)
+        except Exception:
+            pass
+        app.config["SECRET_KEY"] = val
+        os.environ["SECRET_KEY"] = val
+        return
+    except Exception:
+        # Last resort: ephemeral secret (keeps app alive; sessions reset on restart)
+        val = secrets.token_hex(32)
+        app.config["SECRET_KEY"] = val
+        os.environ["SECRET_KEY"] = val
+        try:
+            app.logger.warning(
+                "SECRET_KEY was missing and could not be persisted; using an ephemeral key."
+            )
+        except Exception:
+            pass
+
+
 def create_app(config_name: str | None = None) -> Flask:
     """Create and configure the Flask application."""
+    _load_dotenv_if_present()
     app = Flask(__name__)
 
     if config_name is None:
@@ -81,13 +163,10 @@ def create_app(config_name: str | None = None) -> Flask:
     config_class = config[config_name]
     app.config.from_object(config_class)
 
+    _ensure_secret_key(app)
+
     if hasattr(config_class, 'validate_config'):
         config_class.validate_config()
-
-    if not app.config.get('SECRET_KEY'):
-        raise RuntimeError(
-            "Missing SECRET_KEY. Set SECRET_KEY in the environment (see .env.example)."
-        )
 
     if app.config.get('USE_PROXYFIX'):
         app.wsgi_app = ProxyFix(

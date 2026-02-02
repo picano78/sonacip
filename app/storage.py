@@ -16,63 +16,46 @@ from app.models import StorageSetting
 
 
 def get_storage_settings() -> StorageSetting:
-    """Return persisted storage settings or create defaults from config."""
-    _ensure_storage_schema()
+    """
+    Return persisted storage settings.
+
+    IMPORTANT (no runtime fix policy):
+    - This function MUST NOT mutate DB schema (no ALTER TABLE).
+    - This function MUST NOT auto-create default rows at runtime.
+    Run `python manage.py db upgrade` and `python manage.py seed` during install/deploy.
+    """
     settings = StorageSetting.query.first()
     if not settings:
-        settings = StorageSetting(
-            storage_backend=current_app.config.get('STORAGE_BACKEND', 'local'),
-            base_path=current_app.config.get('STORAGE_LOCAL_PATH') or current_app.config.get('UPLOAD_FOLDER'),
-            preferred_image_format=current_app.config.get('MEDIA_PREFERRED_IMAGE_FORMAT', 'webp'),
-            preferred_video_format=current_app.config.get('MEDIA_PREFERRED_VIDEO_FORMAT', 'mp4'),
-            image_quality=current_app.config.get('MEDIA_IMAGE_QUALITY', 75),
-            video_bitrate=current_app.config.get('MEDIA_VIDEO_MAX_BITRATE', 1200000),
-            video_max_width=current_app.config.get('MEDIA_VIDEO_MAX_WIDTH', 1280),
-            max_image_mb=current_app.config.get('MEDIA_MAX_IMAGE_MB', 8),
-            max_video_mb=current_app.config.get('MEDIA_MAX_VIDEO_MB', 64),
+        raise RuntimeError(
+            "StorageSetting mancante. Esegui `python manage.py db upgrade` e `python manage.py seed`."
         )
-        db.session.add(settings)
-        db.session.commit()
-    if not settings.base_path:
-        settings.base_path = current_app.config.get('STORAGE_LOCAL_PATH') or current_app.config.get('UPLOAD_FOLDER')
-        db.session.commit()
     return settings
-
-
-def _ensure_storage_schema():
-    """Ensure new columns exist for storage settings (works on SQLite)."""
-    engine = db.get_engine()
-    insp = db.inspect(engine)
-    columns = {col['name'] for col in insp.get_columns('storage_setting')} if insp.has_table('storage_setting') else set()
-    required = {
-        'video_bitrate': 'INTEGER',
-        'video_max_width': 'INTEGER',
-        'max_image_mb': 'INTEGER',
-        'max_video_mb': 'INTEGER'
-    }
-    if not insp.has_table('storage_setting'):
-        return
-    for col, coltype in required.items():
-        if col not in columns:
-            try:
-                with engine.begin() as conn:
-                    conn.execute(f"ALTER TABLE storage_setting ADD COLUMN {col} {coltype}")
-            except Exception as exc:
-                current_app.logger.warning(f"Non riesco ad aggiungere colonna {col} a storage_setting: {exc}")
 
 
 def _media_root() -> str:
     settings = get_storage_settings()
-    root = settings.base_path or current_app.config.get('UPLOAD_FOLDER')
-    os.makedirs(root, exist_ok=True)
+    root = settings.base_path or current_app.config.get('STORAGE_LOCAL_PATH') or current_app.config.get('UPLOAD_FOLDER')
+    if not root:
+        raise RuntimeError("Storage root non configurata. Imposta STORAGE_LOCAL_PATH o UPLOAD_FOLDER.")
+    if not os.path.isdir(root):
+        raise RuntimeError(
+            f"Storage root '{root}' non esiste. Creala durante l'install/deploy (no runtime fixes)."
+        )
+    if not os.access(root, os.W_OK):
+        raise RuntimeError(f"Storage root '{root}' non è scrivibile dal processo.")
     return root
 
 
 def ensure_subfolder(folder: str) -> str:
-    """Ensure a subfolder exists under the active media root."""
+    """Return an existing subfolder under the active media root (no auto-create)."""
     root = _media_root()
     target = os.path.join(root, folder)
-    os.makedirs(target, exist_ok=True)
+    if not os.path.isdir(target):
+        raise RuntimeError(
+            f"Cartella media '{target}' mancante. Creala durante l'install/deploy (no runtime fixes)."
+        )
+    if not os.access(target, os.W_OK):
+        raise RuntimeError(f"Cartella media '{target}' non è scrivibile dal processo.")
     return target
 
 

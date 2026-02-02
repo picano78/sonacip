@@ -1,7 +1,7 @@
 """
 Authentication routes
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, current_app, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
 from app import db, limiter, oauth
 from app.auth.forms import LoginForm, RegistrationForm, SocietyRegistrationForm
@@ -11,6 +11,27 @@ import json
 import secrets
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+def _safe_commit(context: str) -> bool:
+    """
+    Best-effort commit helper.
+
+    In production with SQLite (or partially upgraded schemas), auxiliary writes
+    like audit logs/subscriptions must never break login/registration flows.
+    """
+    try:
+        db.session.commit()
+        return True
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            current_app.logger.exception("DB commit failed (%s)", context)
+        except Exception:
+            pass
+        return False
 
 
 def _enterprise_oidc_client():
@@ -54,18 +75,25 @@ def login():
         
         login_user(user, remember=form.remember_me.data)
         user.last_seen = datetime.utcnow()
-        db.session.commit()
+        _safe_commit("auth.login:last_seen")
         
         # Log the login
-        log = AuditLog(
-            user_id=user.id,
-            action='login',
-            entity_type='User',
-            entity_id=user.id,
-            ip_address=request.remote_addr
-        )
-        db.session.add(log)
-        db.session.commit()
+        try:
+            db.session.add(
+                AuditLog(
+                    user_id=user.id,
+                    action='login',
+                    entity_type='User',
+                    entity_id=user.id,
+                    ip_address=request.remote_addr,
+                )
+            )
+            _safe_commit("auth.login:audit_log")
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
         
         flash(f'Benvenuto, {user.get_full_name()}!', 'success')
         
@@ -158,18 +186,24 @@ def sso_callback():
 
     login_user(user, remember=True)
     user.last_seen = datetime.utcnow()
-    db.session.commit()
+    _safe_commit("auth.sso:last_seen")
 
-    db.session.add(
-        AuditLog(
-            user_id=user.id,
-            action='sso_login',
-            entity_type='User',
-            entity_id=user.id,
-            ip_address=request.remote_addr,
+    try:
+        db.session.add(
+            AuditLog(
+                user_id=user.id,
+                action='sso_login',
+                entity_type='User',
+                entity_id=user.id,
+                ip_address=request.remote_addr,
+            )
         )
-    )
-    db.session.commit()
+        _safe_commit("auth.sso:audit_log")
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
     flash(f'Benvenuto, {user.get_full_name()}!', 'success')
     return redirect(url_for('social.feed'))
 
@@ -204,7 +238,9 @@ def register():
         user.set_password(form.password.data)
 
         db.session.add(user)
-        db.session.commit()
+        if not _safe_commit("auth.register:create_user"):
+            flash('Errore durante la registrazione. Riprova.', 'danger')
+            return redirect(url_for('auth.register'))
 
         # Provision a default personal dashboard for the new user
         try:
@@ -234,37 +270,52 @@ def register():
                 is_default=True,
             )
             db.session.add(dash)
-            db.session.commit()
+            _safe_commit("auth.register:dashboard")
         except Exception:
             db.session.rollback()
 
         # Auto-attach free plan subscription for individuals
-        free_plan = Plan.query.filter_by(slug='free').first()
-        if free_plan:
-            existing_sub = Subscription.query.filter_by(user_id=user.id, status='active').first()
-            if not existing_sub:
-                sub = Subscription(
-                    user_id=user.id,
-                    plan_id=free_plan.id,
-                    status='active',
-                    billing_cycle='monthly',
-                    start_date=datetime.utcnow(),
-                    amount=0,
-                    auto_renew=False
-                )
-                db.session.add(sub)
+        try:
+            free_plan = Plan.query.filter_by(slug='free').first()
+            if free_plan:
+                existing_sub = Subscription.query.filter_by(user_id=user.id, status='active').first()
+                if not existing_sub:
+                    db.session.add(
+                        Subscription(
+                            user_id=user.id,
+                            plan_id=free_plan.id,
+                            status='active',
+                            billing_cycle='monthly',
+                            start_date=datetime.utcnow(),
+                            amount=0,
+                            auto_renew=False,
+                        )
+                    )
+                    _safe_commit("auth.register:subscription")
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
         
         # Log the registration
-        log = AuditLog(
-            user_id=user.id,
-            action='register',
-            entity_type='User',
-            entity_id=user.id,
-            details=f'New {role_name} registered',
-            ip_address=request.remote_addr
-        )
-        db.session.add(log)
-        db.session.commit()
+        try:
+            db.session.add(
+                AuditLog(
+                    user_id=user.id,
+                    action='register',
+                    entity_type='User',
+                    entity_id=user.id,
+                    details=f'New {role_name} registered',
+                    ip_address=request.remote_addr,
+                )
+            )
+            _safe_commit("auth.register:audit_log")
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
         
         flash('Registrazione completata! Effettua il login.', 'success')
         return redirect(url_for('auth.login', next=url_for('social.feed')))

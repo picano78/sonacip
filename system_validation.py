@@ -12,9 +12,22 @@ from sqlalchemy import text
 
 MIN_PYTHON = (3, 10)
 EXPECTED_BLUEPRINTS = {
-    'main', 'auth', 'admin', 'crm', 'events', 'social', 'backup',
-    'notifications', 'analytics', 'messages', 'tournaments',
-    'tasks', 'scheduler', 'subscription'
+    'main',
+    'auth',
+    'admin',
+    'ads',
+    'crm',
+    'events',
+    'social',
+    'backup',
+    'notifications',
+    'analytics',
+    'messages',
+    'tournaments',
+    'tasks',
+    'scheduler',
+    'subscription',
+    'marketplace',
 }
 
 

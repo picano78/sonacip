@@ -14,6 +14,14 @@ SONACIP_ENABLE_UFW="${SONACIP_ENABLE_UFW:-false}"
 SONACIP_ENABLE_REDIS="${SONACIP_ENABLE_REDIS:-false}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+ensure_dir() {
+  local path="$1"
+  local mode="${2:-0750}"
+  mkdir -p "$path"
+  chown "$APP_USER":"$APP_USER" "$path"
+  chmod "$mode" "$path"
+}
+
 if [[ $EUID -ne 0 ]]; then
   echo "Eseguire come root." >&2
   exit 1
@@ -27,7 +35,7 @@ if [[ -r /etc/os-release ]]; then
   fi
 fi
 
-echo "[1/8] Installazione pacchetti di sistema..."
+echo "[1/10] Installazione pacchetti di sistema..."
 apt-get update -y
 apt-get install -y --no-install-recommends \
   python3 \
@@ -50,14 +58,14 @@ if [[ "$SONACIP_ENABLE_REDIS" == "true" || "$SONACIP_ENABLE_REDIS" == "on" || "$
   systemctl enable --now redis-server
 fi
 
-echo "[2/8] Creazione utente e directory applicativa..."
+echo "[2/10] Creazione utente e directory applicativa..."
 if ! id -u "$APP_USER" >/dev/null 2>&1; then
   useradd --system --create-home --home-dir "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER"
 fi
 mkdir -p "$APP_DIR"
 
 
-echo "[3/8] Copia file progetto in ${APP_DIR}..."
+echo "[3/10] Copia file progetto in ${APP_DIR}..."
 rsync -a --delete \
   --exclude '.git' \
   --exclude 'venv' \
@@ -69,11 +77,10 @@ rsync -a --delete \
   --exclude 'instance' \
   "$SCRIPT_DIR/" "$APP_DIR/"
 
-mkdir -p "$APP_DIR/logs" "$APP_DIR/uploads" "$APP_DIR/backups"
 chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
 
 
-echo "[4/8] Creazione venv e installazione dipendenze..."
+echo "[4/10] Creazione venv e installazione dipendenze..."
 if [[ ! -d "$APP_DIR/venv" ]]; then
   sudo -u "$APP_USER" python3 -m venv "$APP_DIR/venv"
 fi
@@ -81,7 +88,7 @@ sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install --upgrade pip
 sudo -u "$APP_USER" "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 
 
-echo "[5/8] Scrittura environment file..."
+echo "[5/10] Scrittura environment file..."
 if [[ ! -f "$ENV_FILE" ]]; then
   SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
   ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(16))')"
@@ -101,6 +108,24 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "  password: $ADMIN_PASSWORD"
 fi
 
+# Ensure required writable directories exist (no runtime fixes inside app)
+set -a
+# shellcheck disable=SC1090
+. "$ENV_FILE"
+set +a
+
+# Defaults match app/core/config.py if not specified in .env
+STORAGE_ROOT="${STORAGE_LOCAL_PATH:-$APP_DIR/uploads}"
+BACKUP_DIR="${BACKUP_FOLDER:-$APP_DIR/backups}"
+LOGS_DIR="${LOGS_FOLDER:-$APP_DIR/logs}"
+
+ensure_dir "$STORAGE_ROOT" "0750"
+ensure_dir "$STORAGE_ROOT/avatars" "0750"
+ensure_dir "$STORAGE_ROOT/covers" "0750"
+ensure_dir "$STORAGE_ROOT/posts" "0750"
+ensure_dir "$BACKUP_DIR" "0750"
+ensure_dir "$LOGS_DIR" "0750"
+
 # Ensure Redis config is present if enabled
 if [[ "$SONACIP_ENABLE_REDIS" == "true" || "$SONACIP_ENABLE_REDIS" == "on" || "$SONACIP_ENABLE_REDIS" == "1" ]]; then
   if ! grep -qE '^REDIS_URL=' "$ENV_FILE"; then
@@ -114,10 +139,6 @@ fi
 
 
 echo "[6/10] Migrazioni DB + seed iniziale..."
-set -a
-# shellcheck disable=SC1090
-. "$ENV_FILE"
-set +a
 sudo -u "$APP_USER" "$APP_DIR/venv/bin/python" "$APP_DIR/manage.py" db upgrade
 sudo -u "$APP_USER" "$APP_DIR/venv/bin/python" "$APP_DIR/manage.py" seed
 

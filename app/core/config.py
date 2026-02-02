@@ -61,7 +61,6 @@ class Config:
 
     # Migrations
     MIGRATIONS_DIR = os.environ.get('MIGRATIONS_DIR') or os.path.join(BASE_DIR, 'migrations')
-    AUTO_MIGRATE_ON_STARTUP = os.environ.get('AUTO_MIGRATE_ON_STARTUP', 'false').lower() in ['true', 'on', '1']
 
     # ProxyFix (reverse proxy support)
     USE_PROXYFIX = os.environ.get('USE_PROXYFIX', 'false').lower() in ['true', 'on', '1']
@@ -113,7 +112,6 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = False
-    AUTO_MIGRATE_ON_STARTUP = False
     USE_PROXYFIX = False
 
 
@@ -123,7 +121,6 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() in ['true', 'on', '1']
-    # AUTO_MIGRATE_ON_STARTUP inherited from Config (respects env var)
     USE_PROXYFIX = True
     PROPAGATE_EXCEPTIONS = False
     TRAP_HTTP_EXCEPTIONS = False

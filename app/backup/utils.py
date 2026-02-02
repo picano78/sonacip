@@ -23,8 +23,14 @@ def create_backup(created_by_id, backup_type='full', notes=None):
         backup_filename = f'sonacip_backup_{backup_type}_{timestamp}.zip'
         backup_path = os.path.join(current_app.config['BACKUP_FOLDER'], backup_filename)
         
-        # Ensure backup folder exists
-        os.makedirs(current_app.config['BACKUP_FOLDER'], exist_ok=True)
+        # No runtime fix policy: do not auto-create persistent folders at runtime.
+        backup_dir = current_app.config['BACKUP_FOLDER']
+        if not os.path.isdir(backup_dir):
+            raise RuntimeError(
+                f"BACKUP_FOLDER '{backup_dir}' non esiste. Creala durante l'install/deploy (no runtime fixes)."
+            )
+        if not os.access(backup_dir, os.W_OK):
+            raise RuntimeError(f"BACKUP_FOLDER '{backup_dir}' non è scrivibile dal processo.")
         
         # Create temporary directory for organizing files
         with tempfile.TemporaryDirectory() as temp_dir:

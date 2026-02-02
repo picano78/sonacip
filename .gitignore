@@ -41,6 +41,8 @@ logs/*
 # Uploads & Backups
 uploads/*
 !uploads/.gitkeep
+!uploads/*/
+!uploads/*/.gitkeep
 backups/*
 !backups/.gitkeep
 

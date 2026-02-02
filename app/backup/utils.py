@@ -21,10 +21,10 @@ def create_backup(created_by_id, backup_type='full', notes=None):
     try:
         timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
         backup_filename = f'sonacip_backup_{backup_type}_{timestamp}.zip'
-        backup_path = os.path.join(current_app.config['BACKUP_FOLDER'], backup_filename)
+        backup_dir = current_app.config.get('BACKUP_FOLDER') or os.path.join(current_app.root_path, '..', 'backups')
+        backup_path = os.path.join(backup_dir, backup_filename)
         
         # No runtime fix policy: do not auto-create persistent folders at runtime.
-        backup_dir = current_app.config['BACKUP_FOLDER']
         if not os.path.isdir(backup_dir):
             raise RuntimeError(
                 f"BACKUP_FOLDER '{backup_dir}' non esiste. Creala durante l'install/deploy (no runtime fixes)."
@@ -37,13 +37,14 @@ def create_backup(created_by_id, backup_type='full', notes=None):
             
             if backup_type in ['full', 'database']:
                 # Backup database
-                db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+                db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI') or ''
+                db_path = db_uri.replace('sqlite:///', '')
                 if os.path.exists(db_path):
                     shutil.copy2(db_path, os.path.join(temp_dir, 'sonacip.db'))
             
             if backup_type in ['full', 'uploads']:
                 # Backup uploads folder
-                uploads_folder = current_app.config['UPLOAD_FOLDER']
+                uploads_folder = current_app.config.get('UPLOAD_FOLDER') or os.path.join(current_app.root_path, '..', 'uploads')
                 if os.path.exists(uploads_folder):
                     shutil.copytree(
                         uploads_folder,
@@ -196,7 +197,8 @@ def restore_backup(backup_id):
             # Restore database
             db_backup_path = os.path.join(temp_dir, 'sonacip.db')
             if os.path.exists(db_backup_path):
-                db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+                db_uri = current_app.config.get('SQLALCHEMY_DATABASE_URI') or ''
+                db_path = db_uri.replace('sqlite:///', '')
                 
                 # Create backup of current database before restoring
                 if os.path.exists(db_path):
@@ -209,7 +211,7 @@ def restore_backup(backup_id):
             # Restore uploads
             uploads_backup_path = os.path.join(temp_dir, 'uploads')
             if os.path.exists(uploads_backup_path):
-                uploads_folder = current_app.config['UPLOAD_FOLDER']
+                uploads_folder = current_app.config.get('UPLOAD_FOLDER') or os.path.join(current_app.root_path, '..', 'uploads')
                 
                 # Backup current uploads
                 if os.path.exists(uploads_folder):

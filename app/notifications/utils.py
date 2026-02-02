@@ -175,7 +175,7 @@ def send_email(recipient, subject, body, html_body=None):
             recipients=recipients,
             body=body,
             html=html_body,
-            sender=current_app.config['MAIL_DEFAULT_SENDER']
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER') or 'noreply@sonacip.it'
         )
         
         mail.send(msg)

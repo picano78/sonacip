@@ -50,6 +50,13 @@
 
             <div class="mt-3">
                 <a href="{{ url_for('subscription.plans') }}" class="btn btn-outline-primary">Cambia Piano</a>
+                <a href="{{ url_for('subscription.addons') }}" class="btn btn-outline-primary">Add-on</a>
+                {% if subscription.stripe_customer_id %}
+                  <form method="POST" action="{{ url_for('subscription.stripe_portal') }}" class="d-inline">
+                    {{ csrf_token() }}
+                    <button type="submit" class="btn btn-outline-secondary">Gestisci fatturazione (Stripe)</button>
+                  </form>
+                {% endif %}
                 {% if subscription.status == 'active' %}
                 <form method="POST" action="{{ url_for('subscription.cancel_subscription', subscription_id=subscription.id) }}" class="d-inline">
                     <button type="submit" class="btn btn-outline-danger" 

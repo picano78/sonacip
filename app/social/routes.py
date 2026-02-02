@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
-from app import db
+from app import db, limiter
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.society_forms import SocietyInviteForm
 from app.social.utils import save_picture
@@ -16,20 +16,29 @@ from app.models import (
     Comment,
     Notification,
     AuditLog,
+    AddOn,
+    AddOnEntitlement,
     AdsSetting,
     Payment,
     SocialSetting,
+    SocietyCalendarEvent,
+    SocietyHealthSnapshot,
+    SocietySuggestionDismissal,
     TournamentMatch,
     SocietyInvite,
     SocietyMembership,
+    WhatsappOptIn,
+    UserOnboardingStep,
+    Opportunity,
     Permission,
     SocietyRolePermission,
 )
 from app.cache import get_cache
-from app.utils import permission_required, check_permission
+from app.utils import permission_required, check_permission, get_active_society_id
 from app.utils import log_action
 from datetime import datetime, timedelta
 import os
+from app.ads.utils import choose_creative, make_token
 
 bp = Blueprint('social', __name__, url_prefix='/social')
 
@@ -55,8 +64,7 @@ def feed():
     start = (page - 1) * per_page
     # Visibility scoping (athletes see only relevant communications)
     admin_access = check_permission(current_user, 'admin', 'access')
-    scope = current_user.get_primary_society()
-    scope_id = scope.id if scope else None
+    scope_id = get_active_society_id(current_user)
     followed_ids = set()
     try:
         followed_ids = {u.id for u in current_user.followed.all()}
@@ -157,6 +165,26 @@ def feed():
     else:
         posts = []
 
+    # Autopilot banners (Facebook-like): pick creatives for placements.
+    ad = None
+    ad_token = None
+    sidebar_ad = None
+    sidebar_ad_token = None
+    try:
+        ad = choose_creative("feed_inline", society_id=scope_id, user_id=current_user.id)
+        if ad:
+            ad_token = make_token(ad, "feed_inline", society_id=scope_id, user_id=current_user.id)
+    except Exception:
+        ad = None
+        ad_token = None
+    try:
+        sidebar_ad = choose_creative("sidebar_card", society_id=scope_id, user_id=current_user.id)
+        if sidebar_ad:
+            sidebar_ad_token = make_token(sidebar_ad, "sidebar_card", society_id=scope_id, user_id=current_user.id)
+    except Exception:
+        sidebar_ad = None
+        sidebar_ad_token = None
+
     # Update promotion views and disable expired ones (no-op if empty)
     if posts:
         for p in posts:
@@ -191,12 +219,17 @@ def feed():
     return render_template('social/feed.html',
                          posts=posts,
                          pagination=pagination,
-                         form=form)
+                         form=form,
+                         ad=ad,
+                         ad_token=ad_token,
+                         sidebar_ad=sidebar_ad,
+                         sidebar_ad_token=sidebar_ad_token)
 
 
 @bp.route('/post/create', methods=['POST'])
 @login_required
 @permission_required('social', 'post')
+@limiter.limit("10 per minute")
 def create_post():
     """Create a new post"""
     form = PostForm()
@@ -211,7 +244,11 @@ def create_post():
         society_id = None
         if current_user.is_society():
             audience = 'public' if form.is_public.data else 'society'
-            society_id = current_user.id
+            # Scope posts to the Society entity, not the User id.
+            try:
+                society_id = get_active_society_id(current_user)
+            except Exception:
+                society_id = None
 
         post = Post(
             user_id=current_user.id,
@@ -229,6 +266,17 @@ def create_post():
         
         db.session.add(post)
         db.session.commit()
+
+        try:
+            log_action(
+                'post_create',
+                'Post',
+                post.id,
+                f'post_type={post.post_type} audience={post.audience}',
+                society_id=post.society_id,
+            )
+        except Exception:
+            pass
         
         flash('Post pubblicato!', 'success')
     else:
@@ -441,13 +489,28 @@ def profile(user_id):
     
     # Check if current user follows this user
     is_following = current_user.is_following(user) if current_user.is_authenticated else False
+
+    whatsapp_opted_in = None
+    active_sid = None
+    try:
+        active_sid = get_active_society_id(current_user)
+    except Exception:
+        active_sid = None
+    if current_user.is_authenticated and current_user.id == user.id and active_sid:
+        try:
+            row = WhatsappOptIn.query.filter_by(society_id=active_sid, user_id=user.id).first()
+            whatsapp_opted_in = bool(row.is_opted_in) if row else False
+        except Exception:
+            whatsapp_opted_in = None
     
     return render_template('social/profile.html',
                          user=user,
                          posts=posts,
                          pagination=pagination,
                          stats=stats,
-                         is_following=is_following)
+                         is_following=is_following,
+                         whatsapp_opted_in=whatsapp_opted_in,
+                         active_society_id=active_sid)
 
 
 @bp.route('/profile/edit', methods=['GET', 'POST'])
@@ -617,16 +680,25 @@ def society_dashboard():
         flash('Profilo società non trovato.', 'warning')
         return redirect(url_for('social.feed'))
     
-    # Get society's staff and athletes
-    staff = User.query.filter(
-        User.role.in_(['staff', 'coach']),
-        User.society_id == society.id
-    ).all()
-
-    athletes = User.query.filter(
-        User.role.in_(['atleta', 'athlete']),
-        User.athlete_society_id == society.id
-    ).all()
+    # Get society's staff and athletes (canonical: SocietyMembership)
+    try:
+        staff_memberships = (
+            SocietyMembership.query.filter_by(society_id=society.id, status='active')
+            .filter(SocietyMembership.role_name.in_(['staff', 'coach', 'dirigente']))
+            .options(joinedload(SocietyMembership.user))
+            .all()
+        )
+        athlete_memberships = (
+            SocietyMembership.query.filter_by(society_id=society.id, status='active')
+            .filter(SocietyMembership.role_name.in_(['atleta', 'athlete']))
+            .options(joinedload(SocietyMembership.user))
+            .all()
+        )
+        staff = [m.user for m in staff_memberships if m.user]
+        athletes = [m.user for m in athlete_memberships if m.user]
+    except Exception:
+        staff = []
+        athletes = []
     
     # Get society's events
     from app.models import Event
@@ -651,6 +723,53 @@ def society_dashboard():
     # Audit logs scoped to this society
     recent_audit = AuditLog.query.filter_by(society_id=society.id).order_by(AuditLog.created_at.desc()).limit(20).all()
 
+    # Retention / onboarding / next-best-actions
+    health = SocietyHealthSnapshot.query.filter_by(society_id=society.id).order_by(SocietyHealthSnapshot.created_at.desc()).first()
+
+    dismissed = SocietySuggestionDismissal.query.filter_by(society_id=society.id, user_id=current_user.id).all()
+    dismissed_keys = {d.key for d in dismissed}
+
+    member_count = SocietyMembership.query.filter_by(society_id=society.id, status='active').count()
+    calendar_count = SocietyCalendarEvent.query.filter_by(society_id=society.id).count()
+    opp_count = Opportunity.query.filter_by(society_id=society.id).count()
+    society_posts_count = Post.query.filter_by(society_id=society.id).count()
+
+    suggestions = []
+    def _suggest(key: str, title: str, body: str, action_url: str | None = None):
+        if key in dismissed_keys:
+            return
+        suggestions.append({"key": key, "title": title, "body": body, "action_url": action_url})
+
+    if member_count < 5:
+        _suggest("invite_members", "Invita membri", "Aggiungi staff/atleti per far partire il lavoro reale della società.", url_for('social.society_dashboard'))
+    if calendar_count == 0:
+        _suggest("create_calendar_event", "Crea il primo evento nel planner", "Il calendario è il cuore operativo: crea un allenamento o una partita.", url_for('calendar.create'))
+    if opp_count == 0:
+        _suggest("create_crm_opportunity", "Apri la prima opportunità CRM", "Traccia sponsor/iscrizioni/reclutamento con una opportunità.", url_for('crm.new_opportunity'))
+    if society_posts_count == 0:
+        _suggest("publish_society_post", "Pubblica un comunicato", "Usa il social per comunicazioni ufficiali verso la società/atleti.", url_for('social.feed'))
+    if not current_user.has_feature("whatsapp_pro"):
+        _suggest("upsell_whatsapp_pro", "Attiva WhatsApp Pro", "Automazioni WhatsApp avanzate (template/opt-in) per aumentare retention e pagamenti.", url_for('subscription.addons'))
+
+    # Onboarding checklist (hybrid: some auto-detected, some manual)
+    step_defs = [
+        {"key": "invite_one_member", "label": "Invita almeno 1 membro", "auto": member_count >= 2},
+        {"key": "create_one_calendar_event", "label": "Crea 1 evento nel calendario", "auto": calendar_count >= 1},
+        {"key": "create_one_crm_opportunity", "label": "Crea 1 opportunità CRM", "auto": opp_count >= 1},
+        {"key": "publish_one_post", "label": "Pubblica 1 post/comunicato", "auto": society_posts_count >= 1},
+        {"key": "review_permissions", "label": "Rivedi permessi ruoli", "auto": False},
+    ]
+    stored_steps = UserOnboardingStep.query.filter_by(society_id=society.id, user_id=current_user.id).all()
+    stored_keys = {s.step_key for s in stored_steps}
+    onboarding = []
+    completed_count = 0
+    for sd in step_defs:
+        done = bool(sd["auto"]) or (sd["key"] in stored_keys)
+        if done:
+            completed_count += 1
+        onboarding.append({"key": sd["key"], "label": sd["label"], "done": done, "manual": not bool(sd["auto"])})
+    onboarding_progress = int((completed_count / max(1, len(step_defs))) * 100)
+
     invite_form = SocietyInviteForm()
 
     return render_template(
@@ -663,11 +782,131 @@ def society_dashboard():
         memberships=memberships,
         recent_audit=recent_audit,
         invite_form=invite_form,
+        health=health,
+        suggestions=suggestions,
+        onboarding=onboarding,
+        onboarding_progress=onboarding_progress,
     )
+
+
+@bp.route('/society/audit/export.csv')
+@login_required
+def society_audit_export():
+    """Enterprise: export society audit logs as CSV."""
+    from flask import Response
+    import io
+    import csv
+
+    if not check_permission(current_user, 'society', 'manage'):
+        abort(403)
+    if not current_user.has_feature('enterprise_pack'):
+        flash('Questa funzione richiede Enterprise Pack.', 'warning')
+        return redirect(url_for('subscription.addons'))
+    society = current_user.get_primary_society()
+    if not society:
+        abort(404)
+
+    logs = AuditLog.query.filter_by(society_id=society.id).order_by(AuditLog.created_at.desc()).limit(2000).all()
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['created_at', 'user_id', 'action', 'entity_type', 'entity_id', 'details', 'ip'])
+    for l in logs:
+        w.writerow([
+            l.created_at.isoformat() if l.created_at else '',
+            l.user_id or '',
+            l.action or '',
+            l.entity_type or '',
+            l.entity_id or '',
+            (l.details or '').replace('\n', ' ')[:2000],
+            l.ip_address or '',
+        ])
+    out = buf.getvalue()
+    return Response(out, mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename="audit_society.csv"'})
+
+
+@bp.route('/society/suggestions/<string:key>/dismiss', methods=['POST'])
+@login_required
+def society_dismiss_suggestion(key: str):
+    if not check_permission(current_user, 'society', 'manage'):
+        abort(403)
+    society = current_user.get_primary_society()
+    if not society:
+        abort(404)
+    key = (key or "").strip()
+    if not key or len(key) > 120:
+        return redirect(url_for('social.society_dashboard'))
+    existing = SocietySuggestionDismissal.query.filter_by(society_id=society.id, user_id=current_user.id, key=key).first()
+    if not existing:
+        db.session.add(SocietySuggestionDismissal(society_id=society.id, user_id=current_user.id, key=key, dismissed_at=datetime.utcnow()))
+        db.session.commit()
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/society/onboarding/<string:step_key>/complete', methods=['POST'])
+@login_required
+def society_onboarding_complete(step_key: str):
+    if not check_permission(current_user, 'society', 'manage'):
+        abort(403)
+    society = current_user.get_primary_society()
+    if not society:
+        abort(404)
+    step_key = (step_key or "").strip()
+    if not step_key or len(step_key) > 80:
+        return redirect(url_for('social.society_dashboard'))
+    existing = UserOnboardingStep.query.filter_by(society_id=society.id, user_id=current_user.id, step_key=step_key).first()
+    if not existing:
+        db.session.add(UserOnboardingStep(society_id=society.id, user_id=current_user.id, step_key=step_key, completed_at=datetime.utcnow()))
+        db.session.commit()
+    return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/whatsapp/optin', methods=['POST'])
+@login_required
+def whatsapp_optin():
+    """User opt-in to receive WhatsApp messages for the active society scope."""
+    society_id = get_active_society_id(current_user)
+    if not society_id:
+        flash('Seleziona una società per attivare WhatsApp.', 'warning')
+        return redirect(url_for('main.dashboard'))
+    if not current_user.phone:
+        flash('Imposta un numero di telefono nel profilo per attivare WhatsApp.', 'warning')
+        return redirect(url_for('social.edit_profile'))
+    row = WhatsappOptIn.query.filter_by(society_id=society_id, user_id=current_user.id).first()
+    if not row:
+        row = WhatsappOptIn(society_id=society_id, user_id=current_user.id)
+        db.session.add(row)
+    row.phone_number = current_user.phone
+    row.is_opted_in = True
+    row.opted_in_at = datetime.utcnow()
+    row.opted_out_at = None
+    row.source = 'user'
+    db.session.commit()
+    flash('WhatsApp attivato per questa società.', 'success')
+    return redirect(url_for('social.profile', user_id=current_user.id))
+
+
+@bp.route('/whatsapp/optout', methods=['POST'])
+@login_required
+def whatsapp_optout():
+    """User opt-out from WhatsApp messages for the active society scope."""
+    society_id = get_active_society_id(current_user)
+    if not society_id:
+        return redirect(url_for('main.dashboard'))
+    row = WhatsappOptIn.query.filter_by(society_id=society_id, user_id=current_user.id).first()
+    if not row:
+        row = WhatsappOptIn(society_id=society_id, user_id=current_user.id, phone_number=current_user.phone)
+        db.session.add(row)
+    row.is_opted_in = False
+    row.opted_out_at = datetime.utcnow()
+    row.source = 'user'
+    db.session.commit()
+    flash('WhatsApp disattivato per questa società.', 'info')
+    return redirect(url_for('social.profile', user_id=current_user.id))
 
 
 @bp.route('/society/invite', methods=['POST'])
 @login_required
+@limiter.limit("10 per minute")
 def society_invite():
     """Society invites a user to join with a specific role."""
     if not check_permission(current_user, 'society', 'manage'):
@@ -907,6 +1146,7 @@ def my_invites():
 
 @bp.route('/invites/<int:invite_id>/<string:action>', methods=['POST'])
 @login_required
+@limiter.limit("20 per minute")
 def respond_invite(invite_id, action):
     """Accept/reject an invite."""
     inv = SocietyInvite.query.get_or_404(invite_id)

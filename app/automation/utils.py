@@ -306,11 +306,32 @@ def _action_whatsapp(action: Dict[str, Any], payload: Dict[str, Any]):
     from app.notifications.utils import send_whatsapp
     to_user_id = _resolve_int(action.get('user_id'), payload)
     message = _render_template(action.get('message') or json.dumps(payload), payload)
+    template_key = (action.get('template_key') or '').strip() or None
+    raw_params = action.get('template_params')
+    template_params: list[str] | None = None
+    if isinstance(raw_params, list):
+        template_params = [_render_template(str(p), payload) for p in raw_params]
+    elif isinstance(raw_params, str) and raw_params.strip():
+        # support "a,b,c"
+        parts = [p.strip() for p in raw_params.split(",") if p.strip()]
+        template_params = [_render_template(p, payload) for p in parts]
     if not to_user_id:
         return
     user = User.query.get(to_user_id)
     if not user or not user.phone:
         return
-    ok = send_whatsapp(user.phone, message)
+    society_id = None
+    try:
+        society_id = int(payload.get('society_id')) if payload.get('society_id') is not None else None
+    except Exception:
+        society_id = None
+    ok = send_whatsapp(
+        user.phone,
+        message,
+        society_id=society_id,
+        user_id=user.id,
+        template_key=template_key,
+        template_params=template_params,
+    )
     if not ok:
         raise RuntimeError("WhatsApp not configured or sending failed")

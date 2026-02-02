@@ -351,22 +351,39 @@ class User(UserMixin, db.Model):
         """
         if self.is_admin():
             return True
-        
+
+        # 1) Plan-based features (if a subscription exists)
         subscription = self.get_active_subscription()
-        if not subscription or not subscription.plan:
-            # No active subscription - check free plan limits
+        if subscription and subscription.plan:
+            plan = subscription.plan
+            feature_map = {
+                'crm': bool(plan.has_crm),
+                'advanced_stats': bool(plan.has_advanced_stats),
+                'api_access': bool(plan.has_api_access),
+                'white_label': bool(plan.has_white_label),
+                'priority_support': bool(plan.has_priority_support),
+            }
+            if bool(feature_map.get(feature_name, False)):
+                return True
+
+        # 2) Add-on entitlements (paid add-ons can unlock features even if the plan doesn't)
+        try:
+            from app.models import AddOnEntitlement
+            now = datetime.utcnow()
+            scope = self.get_primary_society()
+            q = AddOnEntitlement.query.filter_by(feature_key=feature_name, status='active')
+            if scope:
+                q = q.filter(AddOnEntitlement.society_id == scope.id)
+            else:
+                q = q.filter(AddOnEntitlement.user_id == self.id)
+            ent = q.order_by(AddOnEntitlement.created_at.desc()).first()
+            if not ent:
+                return False
+            if ent.end_date and ent.end_date <= now:
+                return False
+            return True
+        except Exception:
             return False
-        
-        plan = subscription.plan
-        feature_map = {
-            'crm': plan.has_crm,
-            'advanced_stats': plan.has_advanced_stats,
-            'api_access': plan.has_api_access,
-            'white_label': plan.has_white_label,
-            'priority_support': plan.has_priority_support
-        }
-        
-        return feature_map.get(feature_name, False)
     
     def can_add_athlete(self):
         """Check if user can add more athletes based on plan limits"""
@@ -766,6 +783,89 @@ class AuditLog(db.Model):
         return f'<AuditLog {self.action} by User {self.user_id}>'
 
 
+class SocietyHealthSnapshot(db.Model):
+    """
+    Retention health snapshot (weekly) for a society.
+    Used to surface adoption KPIs and next-best actions.
+    """
+    __tablename__ = 'society_health_snapshot'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    week_key = db.Column(db.String(12), nullable=False, index=True)  # e.g. "2026-W05"
+
+    score = db.Column(db.Integer, default=0)  # 0-100
+    details = db.Column(db.Text)  # JSON blob
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'week_key', name='uq_society_health_snapshot_week'),
+    )
+
+
+class MaintenanceRun(db.Model):
+    """
+    Observability for scheduled jobs (maintenance_job.py).
+    """
+    __tablename__ = 'maintenance_run'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_type = db.Column(db.String(50), default='maintenance')  # maintenance, compliance, calendar, etc.
+    status = db.Column(db.String(20), default='running')  # running, success, failed
+    summary = db.Column(db.Text)  # JSON
+
+    started_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    finished_at = db.Column(db.DateTime)
+
+    def __repr__(self):
+        return f"<MaintenanceRun {self.id} {self.run_type} {self.status}>"
+
+
+class UserOnboardingStep(db.Model):
+    """
+    Onboarding checklist completion for a user in a society scope.
+    """
+    __tablename__ = 'user_onboarding_step'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    step_key = db.Column(db.String(80), nullable=False, index=True)
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', 'step_key', name='uq_user_onboarding_step'),
+    )
+
+
+class SocietySuggestionDismissal(db.Model):
+    """
+    Persisted dismissal state for next-best-action suggestions.
+    """
+    __tablename__ = 'society_suggestion_dismissal'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    key = db.Column(db.String(120), nullable=False, index=True)
+    dismissed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', 'key', name='uq_society_suggestion_dismissal'),
+    )
+
+
 class SocietyInvite(db.Model):
     """
     Society invites a user to join as a specific role (athlete/staff/coach/dirigente).
@@ -868,6 +968,112 @@ class AdsSetting(db.Model):
 
     def __repr__(self):
         return f'<AdsSetting CPM={self.price_per_thousand_views}>'
+
+
+class AdCampaign(db.Model):
+    """
+    Ad campaign (Facebook-like): groups creatives and controls delivery.
+    For now: managed by super admin (global) or scoped to a society.
+    """
+    __tablename__ = 'ad_campaign'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    objective = db.Column(db.String(50), default='traffic')  # traffic, awareness, conversions (future)
+
+    # Scope: if set, ads show only inside that society scope.
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
+
+    # Self-serve sponsor mode (advertisers)
+    is_self_serve = db.Column(db.Boolean, default=False, index=True)
+    advertiser_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+
+    # Budgeting (CPM-based spend tracking)
+    budget_cents = db.Column(db.Integer, default=0)
+    spend_cents = db.Column(db.Integer, default=0)
+
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    starts_at = db.Column(db.DateTime)
+    ends_at = db.Column(db.DateTime)
+
+    # Basic caps (autopilot safety)
+    max_impressions = db.Column(db.Integer)
+    max_clicks = db.Column(db.Integer)
+
+    # Autopilot: if true, delivery uses bandit (CTR) instead of fixed weights.
+    autopilot = db.Column(db.Boolean, default=True)
+
+    # Counters (fast stats)
+    impressions_count = db.Column(db.Integer, default=0)
+    clicks_count = db.Column(db.Integer, default=0)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    creator = db.relationship('User', foreign_keys=[created_by])
+    advertiser = db.relationship('User', foreign_keys=[advertiser_user_id])
+
+    def __repr__(self):
+        return f'<AdCampaign {self.id} {self.name} active={self.is_active}>'
+
+
+class AdCreative(db.Model):
+    """Ad creative: what gets displayed and clicked."""
+    __tablename__ = 'ad_creative'
+
+    id = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('ad_campaign.id'), nullable=False, index=True)
+
+    placement = db.Column(db.String(50), nullable=False, index=True)  # e.g. feed_inline, sidebar_card
+    headline = db.Column(db.String(120))
+    body = db.Column(db.String(500))
+    image_url = db.Column(db.String(500))
+    link_url = db.Column(db.String(800), nullable=False)
+    cta_label = db.Column(db.String(50), default='Scopri di più')
+
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    weight = db.Column(db.Integer, default=100)  # used when autopilot disabled
+
+    impressions_count = db.Column(db.Integer, default=0)
+    clicks_count = db.Column(db.Integer, default=0)
+    last_served_at = db.Column(db.DateTime)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    campaign = db.relationship('AdCampaign', foreign_keys=[campaign_id], backref=db.backref('creatives', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<AdCreative {self.id} placement={self.placement} active={self.is_active}>'
+
+
+class AdEvent(db.Model):
+    """Event log for impressions/clicks (for analytics and debugging)."""
+    __tablename__ = 'ad_event'
+
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(20), nullable=False)  # impression, click
+    campaign_id = db.Column(db.Integer, db.ForeignKey('ad_campaign.id'), nullable=False, index=True)
+    creative_id = db.Column(db.Integer, db.ForeignKey('ad_creative.id'), nullable=False, index=True)
+    placement = db.Column(db.String(50), nullable=False, index=True)
+
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+
+    ip = db.Column(db.String(80))
+    user_agent = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    campaign = db.relationship('AdCampaign', foreign_keys=[campaign_id])
+    creative = db.relationship('AdCreative', foreign_keys=[creative_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f'<AdEvent {self.kind} creative={self.creative_id} at={self.created_at}>'
 
 
 class SocialSetting(db.Model):
@@ -1073,6 +1279,27 @@ class SmtpSetting(db.Model):
         return f'<SmtpSetting enabled={self.enabled}>'
 
 
+class EnterpriseSSOSetting(db.Model):
+    """
+    Enterprise SSO (OIDC) settings controlled by super admin.
+    When enabled and configured, users can login via /auth/sso/login.
+    """
+    __tablename__ = 'enterprise_sso_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, default=False)
+
+    issuer_url = db.Column(db.String(500))
+    client_id = db.Column(db.String(255))
+    client_secret = db.Column(db.String(255))
+    scopes = db.Column(db.String(255), default='openid email profile')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+
 class WhatsappSetting(db.Model):
     """
     WhatsApp integration settings (super admin).
@@ -1095,6 +1322,74 @@ class WhatsappSetting(db.Model):
 
     def __repr__(self):
         return f'<WhatsappSetting enabled={self.enabled} provider={self.provider}>'
+
+
+class WhatsappTemplate(db.Model):
+    """
+    WhatsApp Business template registry (admin-managed).
+    For Meta Cloud API, `provider_template_name` is the approved template name.
+    """
+    __tablename__ = 'whatsapp_template'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(120), unique=True, nullable=False, index=True)  # internal key (stable)
+    provider_template_name = db.Column(db.String(200), nullable=False)
+    language_code = db.Column(db.String(20), default='it')  # e.g. it, it_IT, en_US
+    category = db.Column(db.String(50), default='utility')
+    body_preview = db.Column(db.String(500))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
+class WhatsappOptIn(db.Model):
+    """
+    Explicit opt-in/out per society to satisfy WhatsApp policy/compliance.
+    """
+    __tablename__ = 'whatsapp_optin'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    phone_number = db.Column(db.String(30))
+
+    is_opted_in = db.Column(db.Boolean, default=False)
+    opted_in_at = db.Column(db.DateTime)
+    opted_out_at = db.Column(db.DateTime)
+    source = db.Column(db.String(50), default='user')
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('society_id', 'user_id', name='uq_whatsapp_optin_scope'),
+    )
+
+
+class WhatsappMessageLog(db.Model):
+    """
+    Delivery/audit log for WhatsApp messages (for troubleshooting and compliance).
+    """
+    __tablename__ = 'whatsapp_message_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+
+    to_number = db.Column(db.String(30))
+    template_key = db.Column(db.String(120))
+    body = db.Column(db.Text)
+    status = db.Column(db.String(30), default='queued')  # queued, sent, failed
+    provider = db.Column(db.String(50))
+    provider_response = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    sent_at = db.Column(db.DateTime)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
 
 
 class Message(db.Model):
@@ -1208,6 +1503,60 @@ class SocietyFeeReminderSent(db.Model):
     __table_args__ = (
         db.UniqueConstraint('fee_id', 'user_id', 'kind', name='uq_society_fee_reminder_sent'),
     )
+
+
+class CRMPipeline(db.Model):
+    """
+    CRM pipeline configuration (per-society).
+    Minimal version: one active pipeline per society.
+    """
+    __tablename__ = 'crm_pipeline'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True, unique=True)
+    name = db.Column(db.String(120), nullable=False, default='Pipeline')
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('crm_pipeline', uselist=False))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<CRMPipeline society={self.society_id} name={self.name}>'
+
+
+class CRMPipelineStage(db.Model):
+    """
+    CRM pipeline stage configuration.
+    Stored separately so Opportunity.stage can stay a stable key (string).
+    """
+    __tablename__ = 'crm_pipeline_stage'
+
+    id = db.Column(db.Integer, primary_key=True)
+    pipeline_id = db.Column(db.Integer, db.ForeignKey('crm_pipeline.id'), nullable=False, index=True)
+
+    key = db.Column(db.String(50), nullable=False)  # stable key stored on Opportunity.stage
+    label = db.Column(db.String(120), nullable=False)
+    position = db.Column(db.Integer, nullable=False, default=0, index=True)
+    color = db.Column(db.String(20))  # e.g. '#0d6efd' or bootstrap token
+
+    is_active = db.Column(db.Boolean, default=True)
+    is_won = db.Column(db.Boolean, default=False)
+    is_lost = db.Column(db.Boolean, default=False)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    pipeline = db.relationship('CRMPipeline', foreign_keys=[pipeline_id], backref=db.backref('stages', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    __table_args__ = (
+        db.UniqueConstraint('pipeline_id', 'key', name='uq_crm_pipeline_stage_key'),
+    )
+
+    def __repr__(self):
+        return f'<CRMPipelineStage {self.key} ({self.label}) pipeline={self.pipeline_id}>'
 
 
 class Contact(db.Model):
@@ -1442,6 +1791,11 @@ class Plan(db.Model):
     price_monthly = db.Column(db.Float, default=0)
     price_yearly = db.Column(db.Float, default=0)
     currency = db.Column(db.String(3), default='EUR')
+
+    # Stripe mapping (optional)
+    stripe_product_id = db.Column(db.String(120))
+    stripe_price_monthly_id = db.Column(db.String(120))
+    stripe_price_yearly_id = db.Column(db.String(120))
     
     # Features and limits
     max_users = db.Column(db.Integer)  # null = unlimited
@@ -1493,6 +1847,12 @@ class Subscription(db.Model):
     # Billing
     next_billing_date = db.Column(db.DateTime)
     amount = db.Column(db.Float)
+
+    # Stripe billing
+    stripe_customer_id = db.Column(db.String(120), index=True)
+    stripe_subscription_id = db.Column(db.String(120), index=True)
+    cancel_at_period_end = db.Column(db.Boolean, default=False)
+    current_period_end = db.Column(db.DateTime)
     
     # Auto-renewal
     auto_renew = db.Column(db.Boolean, default=True)
@@ -1560,6 +1920,51 @@ class Payment(db.Model):
         return f'<Payment {self.id}: {self.amount} {self.currency} - {self.status}>'
 
 
+class PlatformFeeSetting(db.Model):
+    """
+    Platform take-rate settings (super admin).
+    Used to compute platform fee on society transactions (fees/tickets/etc.).
+    """
+    __tablename__ = 'platform_fee_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    take_rate_percent = db.Column(db.Integer, default=5)  # e.g. 5 => 5%
+    min_fee_cents = db.Column(db.Integer, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+
+class PlatformTransaction(db.Model):
+    """
+    Ledger for platform revenue share on transactions.
+    """
+    __tablename__ = 'platform_transaction'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), index=True)
+
+    entity_type = db.Column(db.String(50), nullable=False)  # e.g. "SocietyFee"
+    entity_id = db.Column(db.Integer, nullable=False, index=True)
+
+    gross_amount = db.Column(db.Float, default=0)
+    platform_fee_amount = db.Column(db.Float, default=0)
+    net_amount = db.Column(db.Float, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+    status = db.Column(db.String(20), default='collected')  # collected, refunded
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    society = db.relationship('Society', foreign_keys=[society_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+
 class Coupon(db.Model):
     """
     Coupon codes for monetization (super-admin managed).
@@ -1614,6 +2019,67 @@ class CouponRedemption(db.Model):
     subscription = db.relationship('Subscription', foreign_keys=[subscription_id])
     payment = db.relationship('Payment', foreign_keys=[payment_id])
 
+
+
+class AddOn(db.Model):
+    """
+    Optional add-ons that can unlock product features (feature_key).
+    Purchased add-ons are materialized as AddOnEntitlement rows.
+    """
+    __tablename__ = 'addon'
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+
+    feature_key = db.Column(db.String(80), nullable=False, index=True)  # e.g. "crm", "whatsapp_pro"
+
+    # Pricing (one-time today; can evolve to recurring)
+    price_one_time = db.Column(db.Float, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+
+    # Optional Stripe mapping for one-time checkout (mode=payment)
+    stripe_price_one_time_id = db.Column(db.String(120))
+
+    is_active = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def __repr__(self):
+        return f"<AddOn {self.slug} feature={self.feature_key}>"
+
+
+class AddOnEntitlement(db.Model):
+    """
+    The effective access grant derived from an add-on purchase.
+    Entitlements can be scoped to a society (typical) or to an individual user.
+    """
+    __tablename__ = 'addon_entitlement'
+
+    id = db.Column(db.Integer, primary_key=True)
+    addon_id = db.Column(db.Integer, db.ForeignKey('addon.id'), nullable=False, index=True)
+    feature_key = db.Column(db.String(80), nullable=False, index=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), index=True)
+
+    status = db.Column(db.String(20), default='active')  # active, revoked, expired
+    start_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    end_date = db.Column(db.DateTime)
+
+    source = db.Column(db.String(50), default='manual')  # manual, stripe, local
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    addon = db.relationship('AddOn', foreign_keys=[addon_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+    def __repr__(self):
+        return f"<AddOnEntitlement addon={self.addon_id} scope_society={self.society_id} scope_user={self.user_id} status={self.status}>"
 
 
 class Society(db.Model):
@@ -1701,6 +2167,69 @@ class Template(db.Model):
     
     def __repr__(self):
         return f'<Template {self.name}>'
+
+
+class MarketplacePackage(db.Model):
+    """
+    Sellable package of templates/workflows (internal marketplace).
+    """
+    __tablename__ = 'marketplace_package'
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+
+    price_one_time = db.Column(db.Float, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+    stripe_price_one_time_id = db.Column(db.String(120))
+
+    is_active = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f"<MarketplacePackage {self.slug}>"
+
+
+class MarketplacePackageItem(db.Model):
+    __tablename__ = 'marketplace_package_item'
+
+    id = db.Column(db.Integer, primary_key=True)
+    package_id = db.Column(db.Integer, db.ForeignKey('marketplace_package.id'), nullable=False, index=True)
+    template_id = db.Column(db.Integer, db.ForeignKey('template.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    package = db.relationship('MarketplacePackage', foreign_keys=[package_id], backref=db.backref('items', lazy='dynamic', cascade='all, delete-orphan'))
+    template = db.relationship('Template', foreign_keys=[template_id])
+
+
+class MarketplacePurchase(db.Model):
+    __tablename__ = 'marketplace_purchase'
+
+    id = db.Column(db.Integer, primary_key=True)
+    package_id = db.Column(db.Integer, db.ForeignKey('marketplace_package.id'), nullable=False, index=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), index=True)
+
+    status = db.Column(db.String(20), default='pending')  # pending, completed, failed
+    installed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    package = db.relationship('MarketplacePackage', foreign_keys=[package_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('package_id', 'society_id', 'user_id', name='uq_marketplace_purchase_scope_package'),
+    )
 
 
 class Task(db.Model):

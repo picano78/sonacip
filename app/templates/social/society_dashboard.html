@@ -39,6 +39,98 @@
         </div>
     </div>
     
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Health (Retention)</h5>
+                    {% if health %}
+                      <span class="badge bg-{{ 'success' if health.score >= 75 else ('warning' if health.score >= 50 else 'danger') }}">{{ health.score }}/100</span>
+                    {% else %}
+                      <span class="badge bg-secondary">n/d</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if health %}
+                      <div class="text-muted small">Settimana: {{ health.week_key }}</div>
+                      <div class="small text-muted mt-2">Questo punteggio aiuta a capire adozione e rischi di abbandono.</div>
+                    {% else %}
+                      <div class="text-muted">In attesa del primo snapshot automatico.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Onboarding</h5>
+                    <span class="badge bg-primary">{{ onboarding_progress }}%</span>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 10px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ onboarding_progress }}%;" aria-valuenow="{{ onboarding_progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {% for s in onboarding %}
+                          <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                              {% if s.done %}
+                                <span class="badge bg-success me-2">OK</span>
+                              {% else %}
+                                <span class="badge bg-secondary me-2">TODO</span>
+                              {% endif %}
+                              {{ s.label }}
+                            </div>
+                            {% if not s.done and s.manual %}
+                              <form method="post" action="{{ url_for('social.society_onboarding_complete', step_key=s.key) }}">
+                                {{ csrf_token() }}
+                                <button class="btn btn-sm btn-outline-primary" type="submit">Segna fatto</button>
+                              </form>
+                            {% endif %}
+                          </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3">
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('social.society_permissions') }}">Permessi Ruoli</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Suggerimenti</h5>
+                    <span class="badge bg-secondary">{{ suggestions|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if suggestions and suggestions|length %}
+                      <div class="list-group list-group-flush">
+                        {% for s in suggestions %}
+                          <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                              <div>
+                                <strong>{{ s.title }}</strong>
+                                <div class="text-muted small">{{ s.body }}</div>
+                                {% if s.action_url %}
+                                  <a class="btn btn-sm btn-outline-primary mt-2" href="{{ s.action_url }}">Apri</a>
+                                {% endif %}
+                              </div>
+                              <form method="post" action="{{ url_for('social.society_dismiss_suggestion', key=s.key) }}">
+                                {{ csrf_token() }}
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">Nascondi</button>
+                              </form>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <div class="text-muted">Nessun suggerimento al momento.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-md-6">
             <div class="card mb-3">
@@ -179,7 +271,12 @@
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Audit Società (chi fa cosa e quando)</h5>
-            <span class="badge bg-secondary">{{ recent_audit|length }}</span>
+            <div class="d-flex gap-2 align-items-center">
+                {% if current_user.has_feature('enterprise_pack') %}
+                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('social.society_audit_export') }}">Export CSV</a>
+                {% endif %}
+                <span class="badge bg-secondary">{{ recent_audit|length }}</span>
+            </div>
         </div>
         <div class="list-group list-group-flush">
             {% for log in recent_audit %}

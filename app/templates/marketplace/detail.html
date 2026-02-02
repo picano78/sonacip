@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Marketplace - {{ package.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">{{ package.name }}</h1>
+      <div class="text-muted">{{ package.slug }}</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('marketplace.index') }}">Torna al marketplace</a>
+  </div>
+
+  {% if package.description %}
+    <div class="mb-3">{{ package.description }}</div>
+  {% endif %}
+
+  <div class="mb-3">
+    <span class="badge bg-light text-dark">€{{ "%.2f"|format(package.price_one_time or 0) }} {{ package.currency or 'EUR' }}</span>
+    {% if package.stripe_price_one_time_id %}
+      <span class="text-muted small ms-2">Stripe</span>
+    {% endif %}
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header"><strong>Contenuto</strong></div>
+    <div class="card-body">
+      <ul class="mb-0">
+        {% for it in items %}
+          <li>
+            {{ it.template.name if it.template else ('Template #' ~ it.template_id) }}
+            <span class="text-muted small">({{ it.template.template_type if it.template else '-' }})</span>
+          </li>
+        {% else %}
+          <li class="text-muted">Nessun item associato.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  {% if current_user.is_authenticated %}
+    <form method="post" action="{{ url_for('marketplace.buy', package_id=package.id) }}">
+      {{ csrf_token() }}
+      <button class="btn btn-primary" type="submit">Acquista</button>
+      <a class="btn btn-outline-primary" href="{{ url_for('marketplace.my_purchases') }}">I miei acquisti</a>
+    </form>
+  {% else %}
+    <div class="alert alert-info">
+      Effettua il login per acquistare e installare pacchetti.
+      <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-primary ms-2">Login</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+

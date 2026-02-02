@@ -2,13 +2,22 @@
 Subscription routes
 Plans, subscriptions, and payment management
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
-from app.models import Plan, Subscription, Payment, User, Coupon, CouponRedemption
+from app.models import AddOn, AddOnEntitlement, Plan, Subscription, Payment, User, Coupon, CouponRedemption
 from app.utils import admin_required, log_action, check_permission
 from datetime import datetime, timedelta
 import json
+import stripe
+
+from app.subscription.stripe_utils import (
+    stripe_enabled,
+    create_checkout_session,
+    create_addon_checkout_session,
+    create_billing_portal_session,
+    handle_stripe_event,
+)
 
 bp = Blueprint('subscription', __name__, url_prefix='/subscription')
 
@@ -112,8 +121,79 @@ def subscribe(plan_id):
         flash(f'Sottoscrizione a {plan.name} completata!', 'success')
         return redirect(url_for('subscription.my_subscription'))
     else:
+        # Stripe-first (real billing) when configured
+        if stripe_enabled():
+            try:
+                success_url = url_for('subscription.stripe_success', subscription_id=subscription.id, _external=True)
+                cancel_url = url_for('subscription.payment', subscription_id=subscription.id, _external=True)
+                checkout_url = create_checkout_session(subscription, plan, billing_cycle, success_url, cancel_url)
+                return redirect(checkout_url)
+            except Exception as exc:
+                flash(f'Stripe non disponibile per questo piano: {exc}', 'warning')
         flash(f'Procedi con il pagamento per attivare {plan.name}.', 'info')
         return redirect(url_for('subscription.payment', subscription_id=subscription.id))
+
+
+@bp.route('/stripe/success/<int:subscription_id>')
+@login_required
+def stripe_success(subscription_id):
+    """Return page after Stripe checkout (webhook will finalize)."""
+    subscription = Subscription.query.get_or_404(subscription_id)
+    flash('Pagamento completato (in verifica). Se non vedi l’attivazione immediata, aggiorna tra pochi secondi.', 'success')
+    return redirect(url_for('subscription.my_subscription'))
+
+
+@bp.route('/stripe/portal', methods=['POST'])
+@login_required
+def stripe_portal():
+    """Open Stripe customer portal for current subscription."""
+    subscription = current_user.get_active_subscription()
+    if not subscription or not subscription.stripe_customer_id:
+        flash('Portale Stripe non disponibile per questa sottoscrizione.', 'warning')
+        return redirect(url_for('subscription.my_subscription'))
+    # Only society owners should manage society billing
+    if subscription.society_id and (not current_user.is_society()) and (not check_permission(current_user, 'admin', 'access')):
+        flash('Solo la società può gestire la fatturazione.', 'danger')
+        return redirect(url_for('subscription.my_subscription'))
+    if not stripe_enabled():
+        flash('Stripe non configurato.', 'warning')
+        return redirect(url_for('subscription.my_subscription'))
+    try:
+        return_url = (
+            current_app.config.get("STRIPE_PORTAL_RETURN_URL")
+            or url_for('subscription.my_subscription', _external=True)
+        )
+        portal_url = create_billing_portal_session(subscription.stripe_customer_id, return_url=return_url)
+        return redirect(portal_url)
+    except Exception as exc:
+        flash(f'Errore Stripe portal: {exc}', 'danger')
+        return redirect(url_for('subscription.my_subscription'))
+
+
+@bp.route('/stripe/webhook', methods=['POST'])
+def stripe_webhook():
+    """Stripe webhook endpoint (no auth)."""
+    payload = request.data
+    sig_header = request.headers.get("Stripe-Signature")
+    wh_secret = current_app.config.get("STRIPE_WEBHOOK_SECRET")
+
+    if wh_secret and sig_header:
+        try:
+            event = stripe.Webhook.construct_event(payload=payload, sig_header=sig_header, secret=wh_secret)
+        except Exception:
+            return ("bad signature", 400)
+    else:
+        # Dev fallback (NOT recommended in production)
+        try:
+            event = json.loads(payload.decode("utf-8"))
+        except Exception:
+            return ("bad payload", 400)
+
+    try:
+        handle_stripe_event(event)
+    except Exception:
+        return ("handler error", 500)
+    return ("ok", 200)
 
 
 @bp.route('/my-subscription')
@@ -137,6 +217,94 @@ def my_subscription():
                          subscription=subscription,
                          all_subscriptions=all_subscriptions,
                          payments=payments)
+
+
+@bp.route('/addons')
+@login_required
+def addons():
+    """List available add-ons and current entitlements."""
+    addons = AddOn.query.filter_by(is_active=True).order_by(AddOn.display_order.asc(), AddOn.created_at.desc()).all()
+    society = current_user.get_primary_society()
+    if society:
+        entitlements = AddOnEntitlement.query.filter_by(society_id=society.id, status='active').order_by(AddOnEntitlement.created_at.desc()).all()
+    else:
+        entitlements = AddOnEntitlement.query.filter_by(user_id=current_user.id, status='active').order_by(AddOnEntitlement.created_at.desc()).all()
+    ent_by_feature = {e.feature_key: e for e in entitlements}
+    return render_template('subscription/addons.html', addons=addons, entitlements=entitlements, ent_by_feature=ent_by_feature)
+
+
+@bp.route('/addons/<int:addon_id>/buy', methods=['POST'])
+@login_required
+def buy_addon(addon_id):
+    """Purchase an add-on (Stripe if configured, otherwise local placeholder)."""
+    addon = AddOn.query.get_or_404(addon_id)
+    if not addon.is_active:
+        flash('Add-on non disponibile.', 'warning')
+        return redirect(url_for('subscription.addons'))
+
+    society = current_user.get_primary_society()
+    scope_society_id = society.id if society else None
+
+    # Already active?
+    existing = AddOnEntitlement.query.filter_by(
+        feature_key=addon.feature_key,
+        status='active',
+        society_id=scope_society_id,
+        user_id=None if society else current_user.id,
+    ).first()
+    if existing and (not existing.end_date or existing.end_date > datetime.utcnow()):
+        flash('Add-on già attivo.', 'info')
+        return redirect(url_for('subscription.addons'))
+
+    # Stripe checkout (one-time)
+    if stripe_enabled() and addon.stripe_price_one_time_id:
+        try:
+            success_url = url_for('subscription.addons', _external=True) + "?success=1"
+            cancel_url = url_for('subscription.addons', _external=True)
+            checkout_url = create_addon_checkout_session(
+                addon,
+                user_id=current_user.id,
+                society_id=scope_society_id,
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+            return redirect(checkout_url)
+        except Exception as exc:
+            flash(f'Stripe non disponibile per questo add-on: {exc}', 'warning')
+
+    # Local fallback: mark as paid + enable immediately
+    payment = Payment(
+        user_id=current_user.id,
+        society_id=scope_society_id,
+        subscription_id=None,
+        amount=float(addon.price_one_time or 0),
+        currency=(addon.currency or 'EUR'),
+        status='completed',
+        payment_method='manual',
+        payment_date=datetime.utcnow(),
+        description=f'Add-on: {addon.name}',
+        transaction_id=f'LOCAL_ADDON_{addon.id}_{datetime.utcnow().timestamp()}',
+        gateway='local',
+    )
+    payment.payment_metadata = json.dumps({"addon_id": addon.id, "feature_key": addon.feature_key})
+    db.session.add(payment)
+    db.session.flush()
+    db.session.add(
+        AddOnEntitlement(
+            addon_id=addon.id,
+            feature_key=addon.feature_key,
+            user_id=None if society else current_user.id,
+            society_id=scope_society_id,
+            payment_id=payment.id,
+            status='active',
+            source='local',
+            start_date=datetime.utcnow(),
+        )
+    )
+    db.session.commit()
+    log_action('buy_addon', 'AddOn', addon.id, f'feature={addon.feature_key}')
+    flash('Add-on attivato.', 'success')
+    return redirect(url_for('subscription.addons'))
 
 
 @bp.route('/cancel/<int:subscription_id>', methods=['POST'])
@@ -352,6 +520,72 @@ def admin_coupon_toggle(coupon_id):
 # ADMIN ROUTES
 # ==============================
 
+@bp.route('/admin/addons', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_addons():
+    """Admin: Manage add-ons."""
+    if request.method == 'POST':
+        slug = (request.form.get('slug') or '').strip().lower()
+        name = (request.form.get('name') or '').strip()
+        feature_key = (request.form.get('feature_key') or '').strip()
+        description = (request.form.get('description') or '').strip() or None
+        currency = (request.form.get('currency') or 'EUR').strip().upper()
+        stripe_price_one_time_id = (request.form.get('stripe_price_one_time_id') or '').strip() or None
+        display_order = int(request.form.get('display_order') or 0)
+        try:
+            price_one_time = float(request.form.get('price_one_time') or 0)
+        except Exception:
+            price_one_time = 0.0
+
+        if not slug or len(slug) < 3:
+            flash('Slug non valido.', 'danger')
+            return redirect(url_for('subscription.admin_addons'))
+        if not name:
+            flash('Nome richiesto.', 'danger')
+            return redirect(url_for('subscription.admin_addons'))
+        if not feature_key:
+            flash('Feature key richiesta.', 'danger')
+            return redirect(url_for('subscription.admin_addons'))
+
+        existing = AddOn.query.filter_by(slug=slug).first()
+        if existing:
+            flash('Slug già esistente.', 'danger')
+            return redirect(url_for('subscription.admin_addons'))
+
+        row = AddOn(
+            slug=slug,
+            name=name,
+            description=description,
+            feature_key=feature_key,
+            price_one_time=price_one_time,
+            currency=currency,
+            stripe_price_one_time_id=stripe_price_one_time_id,
+            is_active=True,
+            display_order=display_order,
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(row)
+        db.session.commit()
+        log_action('create_addon', 'AddOn', row.id, f'feature={feature_key}')
+        flash('Add-on creato.', 'success')
+        return redirect(url_for('subscription.admin_addons'))
+
+    addons = AddOn.query.order_by(AddOn.display_order.asc(), AddOn.created_at.desc()).limit(300).all()
+    return render_template('subscription/admin_addons.html', addons=addons)
+
+
+@bp.route('/admin/addons/<int:addon_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def admin_addon_toggle(addon_id):
+    addon = AddOn.query.get_or_404(addon_id)
+    addon.is_active = not bool(addon.is_active)
+    db.session.commit()
+    log_action('toggle_addon', 'AddOn', addon.id, f'active={addon.is_active}')
+    flash('Add-on aggiornato.', 'success')
+    return redirect(url_for('subscription.admin_addons'))
+
 @bp.route('/admin/plans')
 @login_required
 @admin_required
@@ -359,6 +593,24 @@ def admin_plans():
     """Admin: Manage subscription plans"""
     plans = Plan.query.order_by(Plan.display_order).all()
     return render_template('subscription/admin_plans.html', plans=plans)
+
+
+@bp.route('/admin/plans/<int:plan_id>/stripe', methods=['POST'])
+@login_required
+@admin_required
+def admin_plan_stripe(plan_id):
+    """Admin: update Stripe price ids for a plan."""
+    p = Plan.query.get_or_404(plan_id)
+    monthly = (request.form.get('stripe_price_monthly_id') or '').strip() or None
+    yearly = (request.form.get('stripe_price_yearly_id') or '').strip() or None
+    if monthly is not None:
+        p.stripe_price_monthly_id = monthly
+    if yearly is not None:
+        p.stripe_price_yearly_id = yearly
+    db.session.commit()
+    log_action('plan_stripe_update', 'Plan', p.id, f'monthly={bool(monthly)} yearly={bool(yearly)}')
+    flash('Piano aggiornato (Stripe).', 'success')
+    return redirect(url_for('subscription.admin_plans'))
 
 
 @bp.route('/admin/subscriptions')

@@ -2,7 +2,7 @@
 Admin forms
 """
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, BooleanField, TextAreaField, PasswordField
+from wtforms import StringField, SelectField, BooleanField, TextAreaField, PasswordField, IntegerField, DateTimeField
 from wtforms.validators import DataRequired, Email, Optional, Length
 from wtforms.validators import URL
 from app.models import Role
@@ -77,6 +77,36 @@ class AdsSettingsForm(FlaskForm):
     price_per_thousand_views = StringField('Prezzo per 1000 visualizzazioni (€)', validators=[DataRequired()])
     default_duration_days = StringField('Durata predefinita (giorni)', validators=[DataRequired()])
     default_views = StringField('Impression predefinite', validators=[DataRequired()])
+
+
+class AdCampaignForm(FlaskForm):
+    name = StringField('Nome campagna', validators=[DataRequired(), Length(max=200)])
+    objective = SelectField('Obiettivo', choices=[
+        ('traffic', 'Traffico'),
+        ('awareness', 'Awareness'),
+    ], validators=[Optional()])
+    society_id = StringField('Society ID (opzionale)', validators=[Optional(), Length(max=20)])
+    autopilot = BooleanField('Autopilot (ottimizza CTR)', default=True)
+    is_active = BooleanField('Attiva', default=True)
+    starts_at = DateTimeField('Inizio (UTC) YYYY-mm-dd HH:MM', format='%Y-%m-%d %H:%M', validators=[Optional()])
+    ends_at = DateTimeField('Fine (UTC) YYYY-mm-dd HH:MM', format='%Y-%m-%d %H:%M', validators=[Optional()])
+    max_impressions = IntegerField('Max impression (opzionale)', validators=[Optional()])
+    max_clicks = IntegerField('Max click (opzionale)', validators=[Optional()])
+
+
+class AdCreativeForm(FlaskForm):
+    campaign_id = IntegerField('Campaign ID', validators=[DataRequired()])
+    placement = SelectField('Placement', choices=[
+        ('feed_inline', 'Feed (inline)'),
+        ('sidebar_card', 'Sidebar (card)'),
+    ], validators=[DataRequired()])
+    headline = StringField('Headline', validators=[Optional(), Length(max=120)])
+    body = TextAreaField('Body', validators=[Optional(), Length(max=500)])
+    image_url = StringField('Image URL', validators=[Optional(), Length(max=500)])
+    link_url = StringField('Link URL', validators=[DataRequired(), Length(max=800)])
+    cta_label = StringField('CTA', validators=[Optional(), Length(max=50)])
+    weight = IntegerField('Weight (solo se autopilot off)', validators=[Optional()])
+    is_active = BooleanField('Attiva', default=True)
 
 
 class SocialSettingsAdminForm(FlaskForm):
@@ -179,9 +209,16 @@ class SmtpSettingsForm(FlaskForm):
 
 class WhatsappSettingsForm(FlaskForm):
     enabled = BooleanField('Abilita WhatsApp')
-    provider = SelectField('Provider', choices=[('webhook', 'Webhook (generico)')], validators=[Optional()])
-    api_url = StringField('Webhook URL', validators=[Optional(), Length(max=500)])
+    provider = SelectField(
+        'Provider',
+        choices=[
+            ('webhook', 'Webhook (generico)'),
+            ('meta_cloud_api', 'Meta Cloud API (WhatsApp Business)'),
+        ],
+        validators=[Optional()],
+    )
+    api_url = StringField('API URL', validators=[Optional(), Length(max=500)])
     api_token = PasswordField('Token (Bearer)', validators=[Optional(), Length(max=500)])
-    from_number = StringField('From (opzionale)', validators=[Optional(), Length(max=50)])
+    from_number = StringField('From / Phone Number ID (opzionale)', validators=[Optional(), Length(max=50)])
     test_phone = StringField('Invia test a (telefono)', validators=[Optional(), Length(max=20)])
     test_message = StringField('Messaggio test', validators=[Optional(), Length(max=500)])

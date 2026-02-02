@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Ads Self‑Serve{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Ads Self‑Serve</h1>
+    <a class="btn btn-outline-secondary" href="{{ url_for('social.feed') }}">Torna al feed</a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><strong>Crea campagna</strong></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('ads.selfserve_new') }}" class="row g-2">
+        {{ csrf_token() }}
+        <div class="col-md-4">
+          <label class="form-label">Nome</label>
+          <input class="form-control" name="name" placeholder="Sponsor XYZ" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Placement</label>
+          <select class="form-select" name="placement">
+            <option value="feed_inline">Feed (inline)</option>
+            <option value="sidebar_card">Sidebar (card)</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Budget (€)</label>
+          <input class="form-control" name="budget_eur" value="50">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Link</label>
+          <input class="form-control" name="link_url" value="/subscription/plans">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Headline</label>
+          <input class="form-control" name="headline" placeholder="Titolo">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Body</label>
+          <input class="form-control" name="body" placeholder="Testo breve">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary" type="submit">Crea</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><strong>Le mie campagne</strong></div>
+    <div class="card-body table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Budget</th>
+            <th>Speso</th>
+            <th>Impression</th>
+            <th>Click</th>
+            <th class="text-end">Ricarica</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in campaigns %}
+            <tr>
+              <td>
+                <strong>{{ c.name }}</strong>
+                <div class="text-muted small">#{{ c.id }}</div>
+              </td>
+              <td>€{{ "%.2f"|format((c.budget_cents or 0) / 100.0) }}</td>
+              <td>€{{ "%.2f"|format((c.spend_cents or 0) / 100.0) }}</td>
+              <td class="text-muted small">{{ c.impressions_count or 0 }}</td>
+              <td class="text-muted small">{{ c.clicks_count or 0 }}</td>
+              <td class="text-end">
+                <form method="post" action="{{ url_for('ads.selfserve_topup', campaign_id=c.id) }}" class="d-inline-flex gap-2">
+                  {{ csrf_token() }}
+                  <input class="form-control form-control-sm" style="width:90px" name="amount_eur" value="20">
+                  <button class="btn btn-sm btn-outline-primary" type="submit">Top‑up</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-muted">Nessuna campagna.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

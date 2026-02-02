@@ -24,6 +24,8 @@
             <th>Slug</th>
             <th>Prezzo mese</th>
             <th>Prezzo anno</th>
+            <th>Stripe price (mese)</th>
+            <th>Stripe price (anno)</th>
             <th>CRM</th>
             <th>Attivo</th>
           </tr>
@@ -35,11 +37,25 @@
               <td class="text-muted">{{ p.slug }}</td>
               <td>€{{ "%.2f"|format(p.price_monthly or 0) }}</td>
               <td>€{{ "%.2f"|format(p.price_yearly or 0) }}</td>
+              <td>
+                <form method="post" action="{{ url_for('subscription.admin_plan_stripe', plan_id=p.id) }}" class="d-flex gap-2">
+                  {{ csrf_token() }}
+                  <input class="form-control form-control-sm" name="stripe_price_monthly_id" value="{{ p.stripe_price_monthly_id or '' }}" placeholder="price_...">
+                  <button class="btn btn-sm btn-outline-primary" type="submit">Salva</button>
+                </form>
+              </td>
+              <td>
+                <form method="post" action="{{ url_for('subscription.admin_plan_stripe', plan_id=p.id) }}" class="d-flex gap-2">
+                  {{ csrf_token() }}
+                  <input class="form-control form-control-sm" name="stripe_price_yearly_id" value="{{ p.stripe_price_yearly_id or '' }}" placeholder="price_...">
+                  <button class="btn btn-sm btn-outline-primary" type="submit">Salva</button>
+                </form>
+              </td>
               <td><span class="badge bg-{{ 'success' if p.has_crm else 'secondary' }}">{{ 'on' if p.has_crm else 'off' }}</span></td>
               <td><span class="badge bg-{{ 'success' if p.is_active else 'secondary' }}">{{ 'on' if p.is_active else 'off' }}</span></td>
             </tr>
           {% else %}
-            <tr><td colspan="6" class="text-muted">Nessun piano.</td></tr>
+            <tr><td colspan="8" class="text-muted">Nessun piano.</td></tr>
           {% endfor %}
         </tbody>
       </table>

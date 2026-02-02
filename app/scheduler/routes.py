@@ -15,13 +15,12 @@ from app.models import (
     Facility,
     SocietyCalendarAttendance,
 )
-from app.utils import permission_required, check_permission
+from app.utils import permission_required, check_permission, get_active_society_id
 
 bp = Blueprint('calendar', __name__, url_prefix='/scheduler')
 
 def _scope_id():
-    s = current_user.get_primary_society()
-    return s.id if s else None
+    return get_active_society_id(current_user)
 
 def _event_scope_id(event_id: int):
     ev = SocietyCalendarEvent.query.get(event_id)
@@ -40,14 +39,13 @@ def _date_range(view_mode: str, start_date: datetime.date):
 
 def _base_query_for_user():
     q = SocietyCalendarEvent.query
+    sid = get_active_society_id(current_user)
     if check_permission(current_user, 'admin', 'access'):
-        return q
-
-    society = current_user.get_primary_society()
-    if not society:
+        # Admin sees all unless an active society scope is selected.
+        return q.filter(SocietyCalendarEvent.society_id == sid) if sid else q
+    if not sid:
         return q.filter(False)
-
-    return q.filter(SocietyCalendarEvent.society_id == society.id)
+    return q.filter(SocietyCalendarEvent.society_id == sid)
 
 
 @bp.route('/calendar')
@@ -121,15 +119,15 @@ def grid():
     else:
         end_date = start_date + timedelta(days=1)
 
-    society = current_user.get_primary_society()
-    if not society and not check_permission(current_user, 'admin', 'access'):
+    sid = get_active_society_id(current_user)
+    if not sid and not check_permission(current_user, 'admin', 'access'):
         flash('Profilo società non trovato.', 'warning')
         return redirect(url_for('calendar.index'))
 
     facility_id = request.args.get('facility_id', type=int)
     facilities = []
-    if society:
-        facilities = Facility.query.filter_by(society_id=society.id).order_by(Facility.name.asc()).all()
+    if sid:
+        facilities = Facility.query.filter_by(society_id=sid).order_by(Facility.name.asc()).all()
 
     q = _base_query_for_user()
     q = q.filter(

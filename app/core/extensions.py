@@ -2,7 +2,7 @@
 
 Use extensions from app/__init__.py as the single source of truth.
 """
-from app import db, migrate, login_manager, mail, csrf, limiter
+from app import db, migrate, login_manager, mail, csrf, limiter, oauth
 
 __all__ = [
 	'db',
@@ -11,4 +11,5 @@ __all__ = [
 	'mail',
 	'csrf',
 	'limiter',
+	'oauth',
 ]

@@ -20,6 +20,14 @@
         <span class="badge bg-dark text-uppercase">{{ tournament.status }}</span>
         <span class="chip">{{ teams|length }} squadre</span>
         <span class="chip">{{ matches|length }} partite</span>
+        {% if can_manage %}
+          <form method="post" action="{{ url_for('tournaments.publish_tournament', tournament_id=tournament.id) }}">
+            {{ csrf_token() }}
+            <button class="btn btn-sm btn-outline-light" type="submit">
+              <i class="bi bi-megaphone"></i> Pubblica torneo
+            </button>
+          </form>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -65,10 +73,22 @@
                     {{ csrf_token() }}
                     <input type="number" name="home_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol casa" required>
                     <input type="number" name="away_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol trasf" required>
+                    <div class="form-check form-check-inline ms-2">
+                      <input class="form-check-input" type="checkbox" name="publish_to_social" value="1" id="pub_{{ m.id }}" checked>
+                      <label class="form-check-label small" for="pub_{{ m.id }}">Pubblica</label>
+                    </div>
                     <button class="btn btn-sm btn-success" type="submit">Salva</button>
                   </form>
                 {% else %}
                   <div class="fw-bold fs-5">{{ m.home_score }} - {{ m.away_score }}</div>
+                  {% if can_manage and m.status == 'played' %}
+                    <form method="post" action="{{ url_for('tournaments.publish_match_result', tournament_id=tournament.id, match_id=m.id) }}">
+                      {{ csrf_token() }}
+                      <button class="btn btn-sm btn-outline-primary ms-2" type="submit">
+                        <i class="bi bi-send"></i> Pubblica risultato
+                      </button>
+                    </form>
+                  {% endif %}
                 {% endif %}
               </div>
             </div>
@@ -120,6 +140,38 @@
           {% else %}
             <div class="text-muted">Genera il tabellone per vedere la piramide.</div>
           {% endif %}
+        </div>
+      {% endif %}
+
+      {% if tournament.format == 'round_robin' and can_manage %}
+        <div class="glass-card p-3 mt-3 card-hover">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold"><i class="bi bi-calendar3"></i> Calendario automatico</span>
+          </div>
+          <form method="post" action="{{ url_for('tournaments.generate_schedule', tournament_id=tournament.id) }}" class="row g-2 align-items-end">
+            {{ csrf_token() }}
+            <div class="col-md-4">
+              <label class="form-label">Data inizio</label>
+              <input class="form-control form-control-sm" type="date" name="start_date" value="{{ tournament.start_date.strftime('%Y-%m-%d') if tournament.start_date else '' }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Intervallo (giorni)</label>
+              <input class="form-control form-control-sm" type="number" name="interval_days" value="7" min="1">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Seeding</label>
+              <select class="form-select form-select-sm" name="seeding">
+                <option value="random">Casuale</option>
+                <option value="manual">Manuale (seed)</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <button class="btn btn-sm btn-outline-primary w-100" type="submit">Genera</button>
+            </div>
+            <div class="col-12">
+              <div class="text-muted small">Genera automaticamente tutte le partite. Per tornei di società, crea anche eventi nel Calendario Società.</div>
+            </div>
+          </form>
         </div>
       {% endif %}
     </div>

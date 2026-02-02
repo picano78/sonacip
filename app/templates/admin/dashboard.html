@@ -67,6 +67,9 @@
                     <a href="{{ url_for('admin.ads_settings') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-megaphone"></i> Tariffe Inserzioni
                     </a>
+                    <a href="{{ url_for('admin.ads_manager') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-badge-ad"></i> Ads Autopilot (banner)
+                    </a>
                     <a href="{{ url_for('admin.events') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-calendar"></i> Gestione Eventi
                     </a>
@@ -111,6 +114,24 @@
                     </a>
                     <a href="{{ url_for('subscription.admin_coupons') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-ticket-perforated"></i> Coupon
+                    </a>
+                    <a href="{{ url_for('subscription.admin_addons') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-puzzle"></i> Add-on
+                    </a>
+                    <a href="{{ url_for('marketplace.admin_packages') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-shop"></i> Marketplace (pacchetti)
+                    </a>
+                    <a href="{{ url_for('admin.platform_fees') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-cash-coin"></i> Take-rate (impostazioni)
+                    </a>
+                    <a href="{{ url_for('admin.platform_transactions') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-receipt"></i> Take-rate (ledger)
+                    </a>
+                    <a href="{{ url_for('admin.enterprise_sso') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-shield-check"></i> Enterprise SSO
+                    </a>
+                    <a href="{{ url_for('admin.maintenance_runs') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-wrench-adjustable"></i> Maintenance runs
                     </a>
                     <form action="{{ url_for('admin.reset_system') }}" method="post" class="list-group-item d-flex align-items-center justify-content-between">
                         {{ csrf_token() }}

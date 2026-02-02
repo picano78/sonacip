@@ -99,10 +99,20 @@ def test_relationships():
             print("  ✗ Missing test users")
             return False
         
-        # Check athlete-society relationship
-        if athlete.athlete_society_id != society.id:
-            print("  ✗ Athlete-society relationship broken")
-            return False
+        # Check athlete-society relationship (canonical: SocietyMembership)
+        try:
+            from app.models import SocietyMembership
+            m = SocietyMembership.query.filter_by(
+                society_id=society.id, user_id=athlete.id, status='active'
+            ).first()
+            if not m:
+                print("  ✗ Athlete-society membership missing")
+                return False
+        except Exception:
+            # Backwards compatibility: accept legacy field if memberships not available
+            if getattr(athlete, "athlete_society_id", None) != society.id:
+                print("  ✗ Athlete-society relationship broken")
+                return False
         
         # Check posts relationship
         post_count = Post.query.filter_by(user_id=society.id).count()

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Marketplace{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Marketplace</h1>
+    {% if current_user.is_authenticated %}
+      <a class="btn btn-outline-primary" href="{{ url_for('marketplace.my_purchases') }}">I miei acquisti</a>
+    {% endif %}
+  </div>
+
+  <div class="row g-3">
+    {% for p in packages %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ p.name }}</h5>
+            {% if p.description %}
+              <p class="card-text">{{ p.description }}</p>
+            {% endif %}
+            <div class="mb-3">
+              <span class="badge bg-light text-dark">€{{ "%.2f"|format(p.price_one_time or 0) }} {{ p.currency or 'EUR' }}</span>
+            </div>
+            <a class="btn btn-outline-secondary" href="{{ url_for('marketplace.detail', slug=p.slug) }}">Dettagli</a>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-info mb-0">Nessun pacchetto disponibile.</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+

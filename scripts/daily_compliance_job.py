@@ -37,6 +37,25 @@ def main() -> int:
     app = create_app()
     with app.app_context():
         sent = 0
+        updated = 0
+
+        # ------------------------------------------------------------------
+        # Normalize certificate status (auto-expire)
+        # ------------------------------------------------------------------
+        try:
+            expired = (
+                MedicalCertificate.query.filter(
+                    MedicalCertificate.status == 'valid',
+                    MedicalCertificate.expires_on < today,
+                ).all()
+            )
+            for c in expired:
+                c.status = 'expired'
+                updated += 1
+            if updated:
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # ------------------------------------------------------------------
         # Medical certificate expiry reminders
@@ -110,7 +129,7 @@ def main() -> int:
             db.session.commit()
             sent += 1
 
-        print(f"compliance_reminders_sent={sent}")
+        print(f"compliance_status_updated={updated} compliance_reminders_sent={sent}")
         return 0
 
 

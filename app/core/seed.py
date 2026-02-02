@@ -22,6 +22,8 @@ def seed_defaults(app) -> dict:
     from app import db
     from app.models import (
         AdsSetting,
+        AdCampaign,
+        AdCreative,
         AppearanceSetting,
         CustomizationKV,
         DashboardTemplate,
@@ -32,8 +34,10 @@ def seed_defaults(app) -> dict:
         SiteCustomization,
         SocialSetting,
         SmtpSetting,
+        EnterpriseSSOSetting,
         AutomationRule,
         WhatsappSetting,
+        WhatsappTemplate,
         StorageSetting,
         User,
     )
@@ -102,6 +106,7 @@ def seed_defaults(app) -> dict:
             ("crm:access", "crm", "access", "Accedere al CRM"),
             ("crm:manage", "crm", "manage", "Gestire CRM"),
             ("tasks:manage", "tasks", "manage", "Gestire task e planner"),
+            ("analytics:access", "analytics", "access", "Accedere alle analytics"),
             ("society:manage", "society", "manage", "Gestire società"),
             ("society:manage_staff", "society", "manage_staff", "Gestire staff/membri società"),
             ("users:edit", "users", "edit", "Gestire utenti"),
@@ -164,6 +169,7 @@ def seed_defaults(app) -> dict:
                 "crm:access",
                 "crm:manage",
                 "tasks:manage",
+                "analytics:access",
                 "society:manage",
                 "society:manage_staff",
                 "users:edit",
@@ -185,6 +191,7 @@ def seed_defaults(app) -> dict:
                 "crm:access",
                 "crm:manage",
                 "tasks:manage",
+                "analytics:access",
                 "society:manage",
                 "society:manage_staff",
                 "users:edit",
@@ -231,6 +238,58 @@ def seed_defaults(app) -> dict:
         db.session.commit()
 
         # ---------------------------------------------------------------------
+        # Add-ons (feature-based upsells) - idempotent
+        # ---------------------------------------------------------------------
+        try:
+            from app.models import AddOn
+
+            default_addons = [
+                {
+                    "slug": "whatsapp-pro",
+                    "name": "WhatsApp Pro",
+                    "description": "Invio WhatsApp avanzato (template/opt-in/provider).",
+                    "feature_key": "whatsapp_pro",
+                    "price_one_time": 49.0,
+                    "currency": "EUR",
+                    "display_order": 10,
+                },
+                {
+                    "slug": "ads-self-serve",
+                    "name": "Ads Self‑Serve",
+                    "description": "Campagne sponsor gestibili dagli inserzionisti con report e budget.",
+                    "feature_key": "ads_selfserve",
+                    "price_one_time": 79.0,
+                    "currency": "EUR",
+                    "display_order": 20,
+                },
+                {
+                    "slug": "analytics-pro",
+                    "name": "Analytics Pro",
+                    "description": "Analytics manageriali, KPI e suggerimenti automatici.",
+                    "feature_key": "analytics_pro",
+                    "price_one_time": 99.0,
+                    "currency": "EUR",
+                    "display_order": 30,
+                },
+                {
+                    "slug": "enterprise-pack",
+                    "name": "Enterprise Pack",
+                    "description": "SSO, audit avanzato, SLA, compliance enterprise.",
+                    "feature_key": "enterprise_pack",
+                    "price_one_time": 199.0,
+                    "currency": "EUR",
+                    "display_order": 40,
+                },
+            ]
+            for a in default_addons:
+                row = AddOn.query.filter_by(slug=a["slug"]).first()
+                if not row:
+                    db.session.add(AddOn(**a))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # ---------------------------------------------------------------------
         # Global settings singletons
         # ---------------------------------------------------------------------
         if not AppearanceSetting.query.filter_by(scope="global").first():
@@ -251,13 +310,87 @@ def seed_defaults(app) -> dict:
         if not SiteCustomization.query.first():
             db.session.add(SiteCustomization())
             summary["settings_created"] += 1
+        try:
+            from app.models import PlatformFeeSetting
+            if not PlatformFeeSetting.query.first():
+                db.session.add(PlatformFeeSetting(take_rate_percent=5, min_fee_cents=0, currency="EUR"))
+        except Exception:
+            pass
         if not SmtpSetting.query.first():
             db.session.add(SmtpSetting(enabled=False))
             summary["smtp_settings_created"] += 1
+        if not EnterpriseSSOSetting.query.first():
+            db.session.add(EnterpriseSSOSetting(enabled=False, scopes='openid email profile'))
         if not WhatsappSetting.query.first():
             db.session.add(WhatsappSetting(enabled=False, provider="webhook"))
             summary["whatsapp_settings_created"] += 1
         db.session.commit()
+
+        # ---------------------------------------------------------------------
+        # WhatsApp templates (optional, for WhatsApp Pro)
+        # ---------------------------------------------------------------------
+        try:
+            if not WhatsappTemplate.query.first():
+                db.session.add(
+                    WhatsappTemplate(
+                        key="fee_due",
+                        provider_template_name="sonacip_fee_due",
+                        language_code="it",
+                        category="utility",
+                        body_preview="Ciao {{name}}, la tua quota scade il {{due_on}}.",
+                        is_active=True,
+                        created_at=datetime.utcnow(),
+                    )
+                )
+                db.session.add(
+                    WhatsappTemplate(
+                        key="medical_certificate_expiring",
+                        provider_template_name="sonacip_medical_certificate_expiring",
+                        language_code="it",
+                        category="utility",
+                        body_preview="Promemoria: certificato in scadenza il {{expires_on}}.",
+                        is_active=True,
+                        created_at=datetime.utcnow(),
+                    )
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        # ---------------------------------------------------------------------
+        # Ads autopilot: default "house" campaign (idempotent)
+        # ---------------------------------------------------------------------
+        try:
+            if not AdCampaign.query.first():
+                camp = AdCampaign(
+                    name="SONACIP - Promo Piani",
+                    objective="traffic",
+                    society_id=None,
+                    is_active=True,
+                    autopilot=True,
+                    created_by=None,
+                    created_at=datetime.utcnow(),
+                )
+                db.session.add(camp)
+                db.session.flush()
+                db.session.add(
+                    AdCreative(
+                        campaign_id=camp.id,
+                        placement="feed_inline",
+                        headline="Sblocca funzionalità avanzate",
+                        body="Passa a un piano superiore per CRM completo, automazioni e molto altro.",
+                        image_url=None,
+                        link_url="/subscription/plans",
+                        cta_label="Vedi piani",
+                        is_active=True,
+                        weight=100,
+                        created_by=None,
+                        created_at=datetime.utcnow(),
+                    )
+                )
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # ---------------------------------------------------------------------
         # Default automation rules (super admin can edit)

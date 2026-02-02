@@ -1,7 +1,7 @@
 """
 Main routes
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import current_user, login_required
 from app import db
 from app.utils import check_permission
@@ -32,8 +32,21 @@ def contact():
 
 @bp.route('/healthz')
 def healthz():
-    """Lightweight health check for uptime monitoring"""
-    return {'status': 'ok'}, 200
+    """Health check for uptime monitoring (DB + basic app checks)."""
+    from sqlalchemy import text
+    from datetime import datetime
+    try:
+        db.session.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        db_ok = False
+    status = "ok" if db_ok else "degraded"
+    code = 200 if db_ok else 500
+    return {
+        "status": status,
+        "db": "ok" if db_ok else "error",
+        "ts": datetime.utcnow().isoformat() + "Z",
+    }, code
 
 
 @bp.route('/dashboard')
@@ -167,3 +180,25 @@ def reset_dashboard():
     db.session.commit()
     flash('Cruscotto ripristinato al template.', 'success')
     return redirect(url_for('main.dashboard'))
+
+
+@bp.route('/scope/society', methods=['POST'])
+@login_required
+def set_society_scope():
+    """
+    Set active society scope in session.
+    Used to switch context when a user has multiple memberships.
+    """
+    society_id = request.form.get('society_id', type=int)
+    if not society_id:
+        session.pop('active_society_id', None)
+        flash('Contesto società ripristinato.', 'success')
+        return redirect(request.referrer or url_for('main.dashboard'))
+
+    if not current_user.can_access_society(society_id) and not check_permission(current_user, 'admin', 'access'):
+        flash('Non puoi selezionare questa società.', 'danger')
+        return redirect(request.referrer or url_for('main.dashboard'))
+
+    session['active_society_id'] = int(society_id)
+    flash('Contesto società aggiornato.', 'success')
+    return redirect(request.referrer or url_for('main.dashboard'))

@@ -1,0 +1,29 @@
+<div class="card mb-3 border-0 shadow-sm" data-ad>
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="badge bg-warning text-dark">Sponsorizzato</span>
+      <small class="text-muted">{{ ad.placement }}</small>
+    </div>
+
+    {% if ad.image_url %}
+      <img src="{{ ad.image_url }}" class="img-fluid rounded mb-2" alt="Ad" loading="lazy" decoding="async">
+    {% endif %}
+
+    {% if ad.headline %}
+      <div class="fw-semibold">{{ ad.headline }}</div>
+    {% endif %}
+    {% if ad.body %}
+      <div class="text-muted small mb-2">{{ ad.body }}</div>
+    {% endif %}
+
+    <a class="btn btn-sm btn-primary"
+       href="{{ url_for('ads.click', token=ad_token) }}"
+       rel="nofollow sponsored noopener">
+      {{ ad.cta_label or 'Scopri di più' }}
+    </a>
+
+    <span class="d-none"
+          data-ad-impression-url="{{ url_for('ads.impression', token=ad_token) }}"></span>
+  </div>
+</div>
+

@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 from flask import current_app
 from sqlalchemy import or_, and_, func, desc
 from app import db
+from app.cache import get_cache
 from app.admin.utils import admin_required
 from app.admin.forms import (
     AdsSettingsForm,
@@ -21,6 +22,8 @@ from app.admin.forms import (
     StorageSettingsForm,
     UserEditForm,
     UserSearchForm,
+    AdCampaignForm,
+    AdCreativeForm,
 )
 from app.models import (
     AdsSetting,
@@ -31,17 +34,31 @@ from app.models import (
     CustomizationKV,
     DashboardTemplate,
     Event,
+    EnterpriseSSOSetting,
     Notification,
+    MaintenanceRun,
     PageCustomization,
     Post,
+    PlatformFeeSetting,
+    PlatformTransaction,
     PrivacySetting,
     SiteCustomization,
     SocialSetting,
     Society,
+    SocietyHealthSnapshot,
     StorageSetting,
     SmtpSetting,
     WhatsappSetting,
+    WhatsappTemplate,
+    WhatsappMessageLog,
     User,
+    Payment,
+    Subscription,
+    AddOnEntitlement,
+    MarketplacePurchase,
+    AdCampaign,
+    AdCreative,
+    AdEvent,
 )
 from datetime import datetime, timedelta
 import os
@@ -358,6 +375,146 @@ def whatsapp_settings():
         return redirect(url_for('admin.whatsapp_settings'))
 
     return render_template('admin/whatsapp_settings.html', form=form, settings=settings)
+
+
+@bp.route('/whatsapp/templates', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def whatsapp_templates():
+    """WhatsApp templates registry (super admin)."""
+    if request.method == 'POST':
+        key = (request.form.get('key') or '').strip()
+        provider_name = (request.form.get('provider_template_name') or '').strip()
+        language_code = (request.form.get('language_code') or 'it').strip()
+        category = (request.form.get('category') or 'utility').strip()
+        body_preview = (request.form.get('body_preview') or '').strip() or None
+        if not key or len(key) < 3:
+            flash('Key non valida.', 'danger')
+            return redirect(url_for('admin.whatsapp_templates'))
+        if not provider_name:
+            flash('Nome template provider richiesto.', 'danger')
+            return redirect(url_for('admin.whatsapp_templates'))
+        if WhatsappTemplate.query.filter_by(key=key).first():
+            flash('Key già esistente.', 'danger')
+            return redirect(url_for('admin.whatsapp_templates'))
+        t = WhatsappTemplate(
+            key=key,
+            provider_template_name=provider_name,
+            language_code=language_code,
+            category=category,
+            body_preview=body_preview,
+            is_active=True,
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(t)
+        db.session.commit()
+        log_action('create_whatsapp_template', 'WhatsappTemplate', t.id, f'key={key}')
+        flash('Template creato.', 'success')
+        return redirect(url_for('admin.whatsapp_templates'))
+
+    templates = WhatsappTemplate.query.order_by(WhatsappTemplate.created_at.desc()).limit(300).all()
+    recent_logs = WhatsappMessageLog.query.order_by(WhatsappMessageLog.created_at.desc()).limit(50).all()
+    return render_template('admin/whatsapp_templates.html', templates=templates, recent_logs=recent_logs)
+
+
+@bp.route('/whatsapp/templates/<int:template_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def whatsapp_template_toggle(template_id: int):
+    t = WhatsappTemplate.query.get_or_404(template_id)
+    t.is_active = not bool(t.is_active)
+    db.session.commit()
+    log_action('toggle_whatsapp_template', 'WhatsappTemplate', t.id, f'active={t.is_active}')
+    flash('Template aggiornato.', 'success')
+    return redirect(url_for('admin.whatsapp_templates'))
+
+
+@bp.route('/platform/fees', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def platform_fees():
+    """Configure platform take-rate settings."""
+    settings = PlatformFeeSetting.query.first()
+    if not settings:
+        settings = PlatformFeeSetting(take_rate_percent=5, min_fee_cents=0, currency='EUR', updated_at=datetime.utcnow(), updated_by=current_user.id)
+        db.session.add(settings)
+        db.session.commit()
+
+    if request.method == 'POST':
+        try:
+            pct = int(request.form.get('take_rate_percent') or 5)
+        except Exception:
+            pct = 5
+        try:
+            min_fee_cents = int(request.form.get('min_fee_cents') or 0)
+        except Exception:
+            min_fee_cents = 0
+        currency = (request.form.get('currency') or 'EUR').strip().upper()
+
+        settings.take_rate_percent = max(0, min(100, pct))
+        settings.min_fee_cents = max(0, min_fee_cents)
+        settings.currency = currency or 'EUR'
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        log_action('update_platform_fees', 'PlatformFeeSetting', settings.id, f'pct={settings.take_rate_percent} min={settings.min_fee_cents}')
+        flash('Impostazioni aggiornate.', 'success')
+        return redirect(url_for('admin.platform_fees'))
+
+    return render_template('admin/platform_fees.html', settings=settings)
+
+
+@bp.route('/platform/transactions')
+@login_required
+@admin_required
+def platform_transactions():
+    """View platform take-rate ledger."""
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    pagination = PlatformTransaction.query.order_by(PlatformTransaction.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    items = pagination.items
+
+    total_platform = db.session.query(func.sum(PlatformTransaction.platform_fee_amount)).scalar() or 0
+    total_gross = db.session.query(func.sum(PlatformTransaction.gross_amount)).scalar() or 0
+
+    stats = {"total_gross": float(total_gross), "total_platform": float(total_platform)}
+    return render_template('admin/platform_transactions.html', transactions=items, pagination=pagination, stats=stats)
+
+
+@bp.route('/enterprise/sso', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def enterprise_sso():
+    """Enterprise SSO (OIDC) configuration."""
+    sso = EnterpriseSSOSetting.query.first()
+    if not sso:
+        sso = EnterpriseSSOSetting(enabled=False, scopes='openid email profile', updated_at=datetime.utcnow(), updated_by=current_user.id)
+        db.session.add(sso)
+        db.session.commit()
+
+    if request.method == 'POST':
+        sso.enabled = bool(request.form.get('enabled'))
+        sso.issuer_url = (request.form.get('issuer_url') or '').strip() or None
+        sso.client_id = (request.form.get('client_id') or '').strip() or None
+        sso.client_secret = (request.form.get('client_secret') or '').strip() or None
+        sso.scopes = (request.form.get('scopes') or 'openid email profile').strip()
+        sso.updated_by = current_user.id
+        sso.updated_at = datetime.utcnow()
+        db.session.commit()
+        log_action('update_enterprise_sso', 'EnterpriseSSOSetting', sso.id, f'enabled={sso.enabled}')
+        flash('SSO aggiornato.', 'success')
+        return redirect(url_for('admin.enterprise_sso'))
+
+    return render_template('admin/enterprise_sso.html', sso=sso)
+
+
+@bp.route('/maintenance')
+@login_required
+@admin_required
+def maintenance_runs():
+    """View recent scheduled maintenance job runs."""
+    runs = MaintenanceRun.query.order_by(MaintenanceRun.started_at.desc()).limit(100).all()
+    return render_template('admin/maintenance_runs.html', runs=runs)
 
 
 @bp.route('/pages')
@@ -753,6 +910,99 @@ def ads_settings():
     return render_template('admin/ads_settings.html', form=form, settings=settings)
 
 
+@bp.route('/ads', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def ads_manager():
+    """Facebook-like banner manager (autopilot)."""
+    campaign_form = AdCampaignForm()
+    creative_form = AdCreativeForm()
+
+    # Create campaign
+    if request.method == 'POST' and request.form.get('_action') == 'create_campaign':
+        if campaign_form.validate_on_submit():
+            society_id = None
+            raw_sid = (campaign_form.society_id.data or '').strip()
+            if raw_sid:
+                try:
+                    society_id = int(raw_sid)
+                except Exception:
+                    society_id = None
+
+            c = AdCampaign(
+                name=campaign_form.name.data,
+                objective=(campaign_form.objective.data or 'traffic'),
+                society_id=society_id,
+                autopilot=bool(campaign_form.autopilot.data),
+                is_active=bool(campaign_form.is_active.data),
+                starts_at=campaign_form.starts_at.data,
+                ends_at=campaign_form.ends_at.data,
+                max_impressions=campaign_form.max_impressions.data,
+                max_clicks=campaign_form.max_clicks.data,
+                created_by=current_user.id,
+                created_at=datetime.utcnow(),
+            )
+            db.session.add(c)
+            db.session.commit()
+            log_action('ad_campaign_create', 'AdCampaign', c.id, c.name)
+            flash('Campagna creata.', 'success')
+            return redirect(url_for('admin.ads_manager'))
+        flash('Errore nel form campagna.', 'danger')
+
+    # Create creative
+    if request.method == 'POST' and request.form.get('_action') == 'create_creative':
+        if creative_form.validate_on_submit():
+            camp = AdCampaign.query.get(int(creative_form.campaign_id.data))
+            if not camp:
+                flash('Campaign ID non valido.', 'danger')
+                return redirect(url_for('admin.ads_manager'))
+            cr = AdCreative(
+                campaign_id=camp.id,
+                placement=creative_form.placement.data,
+                headline=(creative_form.headline.data or '').strip() or None,
+                body=(creative_form.body.data or '').strip() or None,
+                image_url=(creative_form.image_url.data or '').strip() or None,
+                link_url=(creative_form.link_url.data or '').strip(),
+                cta_label=(creative_form.cta_label.data or '').strip() or 'Scopri di più',
+                weight=int(creative_form.weight.data or 100),
+                is_active=bool(creative_form.is_active.data),
+                created_by=current_user.id,
+                created_at=datetime.utcnow(),
+            )
+            db.session.add(cr)
+            db.session.commit()
+            log_action('ad_creative_create', 'AdCreative', cr.id, f'campaign={camp.id}')
+            flash('Creatività creata.', 'success')
+            return redirect(url_for('admin.ads_manager'))
+        flash('Errore nel form creatività.', 'danger')
+
+    # Lists + basic stats
+    campaigns = AdCampaign.query.order_by(AdCampaign.created_at.desc()).all()
+    creatives = AdCreative.query.order_by(AdCreative.created_at.desc()).limit(200).all()
+
+    def _ctr(clicks: int | None, imps: int | None) -> float:
+        i = float(imps or 0)
+        c = float(clicks or 0)
+        return round((c / i) * 100.0, 2) if i > 0 else 0.0
+
+    campaign_stats = {c.id: {"ctr": _ctr(c.clicks_count, c.impressions_count)} for c in campaigns}
+    creative_stats = {c.id: {"ctr": _ctr(c.clicks_count, c.impressions_count)} for c in creatives}
+
+    # Recent events for debugging
+    recent_events = AdEvent.query.order_by(AdEvent.created_at.desc()).limit(50).all()
+
+    return render_template(
+        'admin/ads_manager.html',
+        campaigns=campaigns,
+        creatives=creatives,
+        campaign_form=campaign_form,
+        creative_form=creative_form,
+        campaign_stats=campaign_stats,
+        creative_stats=creative_stats,
+        recent_events=recent_events,
+    )
+
+
 @bp.route('/search')
 @login_required
 @admin_required
@@ -804,6 +1054,18 @@ def stats():
     """Detailed statistics page"""
     days = 30
     start_date = datetime.utcnow() - timedelta(days=days)
+    now = datetime.utcnow()
+
+    # Cache heavy stats briefly (admin page can be expensive on large DBs)
+    cache = get_cache()
+    cache_key = f"admin:stats:days={days}"
+    cached = None
+    try:
+        cached = cache.get(cache_key)
+    except Exception:
+        cached = None
+    if isinstance(cached, dict) and cached.get("ok"):
+        return render_template('admin/analytics.html', **cached["payload"])
 
     # 1. Signup Data (Daily for chart)
     signup_map = {}
@@ -918,14 +1180,72 @@ def stats():
     except Exception as e:
         print(f"Error fetching societies: {e}")
     
-    return render_template('admin/analytics.html',
-                         days=days,
-                         signup_data=signup_data,
-                         role_data=role_data,
-                         growth_stats=growth_stats,
-                         activity_trend=activity_trend,
-                         top_posters=top_posters,
-                         top_societies=top_societies)
+    # 6. Business metrics (revenue, add-ons, marketplace, take-rate, ads, retention)
+    business = {}
+    try:
+        revenue_30d = (
+            db.session.query(func.sum(Payment.amount))
+            .filter(Payment.status == 'completed', Payment.created_at >= start_date)
+            .scalar()
+            or 0
+        )
+        subs_active = Subscription.query.filter_by(status='active').count()
+        subs_past_due = Subscription.query.filter_by(status='past_due').count()
+        take_rate_30d = (
+            db.session.query(func.sum(PlatformTransaction.platform_fee_amount))
+            .filter(PlatformTransaction.created_at >= start_date)
+            .scalar()
+            or 0
+        )
+        marketplace_sales_30d = MarketplacePurchase.query.filter(MarketplacePurchase.status == 'completed', MarketplacePurchase.created_at >= start_date).count()
+        addons_30d = AddOnEntitlement.query.filter(AddOnEntitlement.created_at >= start_date, AddOnEntitlement.status == 'active').count()
+        ads_selfserve_budget = (
+            db.session.query(func.sum(AdCampaign.budget_cents))
+            .filter(AdCampaign.is_self_serve == True)  # noqa: E712
+            .scalar()
+            or 0
+        )
+        ads_selfserve_spend = (
+            db.session.query(func.sum(AdCampaign.spend_cents))
+            .filter(AdCampaign.is_self_serve == True)  # noqa: E712
+            .scalar()
+            or 0
+        )
+        retention_avg = (
+            db.session.query(func.avg(SocietyHealthSnapshot.score))
+            .filter(SocietyHealthSnapshot.created_at >= start_date)
+            .scalar()
+        )
+        business = {
+            "revenue_30d": float(revenue_30d),
+            "subs_active": int(subs_active),
+            "subs_past_due": int(subs_past_due),
+            "take_rate_30d": float(take_rate_30d),
+            "marketplace_sales_30d": int(marketplace_sales_30d),
+            "addons_30d": int(addons_30d),
+            "ads_selfserve_budget_eur": round(float(ads_selfserve_budget or 0) / 100.0, 2),
+            "ads_selfserve_spend_eur": round(float(ads_selfserve_spend or 0) / 100.0, 2),
+            "retention_avg_score": round(float(retention_avg or 0), 1) if retention_avg is not None else None,
+        }
+    except Exception as e:
+        print(f"Error fetching business stats: {e}")
+        business = {}
+
+    payload = {
+        "days": days,
+        "signup_data": signup_data,
+        "role_data": role_data,
+        "growth_stats": growth_stats,
+        "activity_trend": activity_trend,
+        "top_posters": top_posters,
+        "top_societies": top_societies,
+        "business": business,
+    }
+    try:
+        cache.set(cache_key, {"ok": True, "payload": payload}, ttl=60)
+    except Exception:
+        pass
+    return render_template('admin/analytics.html', **payload)
 
 
 @bp.route('/user/<int:user_id>/ban', methods=['POST'])

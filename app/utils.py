@@ -2,8 +2,45 @@
 Common utilities and decorators for the application
 """
 from functools import wraps
-from flask import flash, redirect, url_for, abort, current_app
+from flask import flash, redirect, url_for, abort, current_app, request, session, g
 from flask_login import current_user
+from datetime import datetime
+
+
+def rate_limit(key: str, limit: int = 10, window_seconds: int = 60):
+    """
+    Lightweight rate limiter using the app cache (memory/redis).
+    Designed to avoid adding new dependencies.
+
+    Args:
+        key: logical bucket key (e.g. 'social:post', 'auth:login')
+        limit: max requests in the window
+        window_seconds: rolling window size in seconds (bucketed by time slice)
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            try:
+                from app.cache import get_cache
+                cache = get_cache()
+                now = int(datetime.utcnow().timestamp())
+                bucket = now // max(1, int(window_seconds))
+                actor = current_user.id if getattr(current_user, "is_authenticated", False) else "anon"
+                ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown").split(",")[0].strip()
+                cache_key = f"rl:{key}:{actor}:{ip}:{bucket}"
+                val = cache.get(cache_key) or {"count": 0}
+                val["count"] = int(val.get("count", 0)) + 1
+                cache.set(cache_key, val, ttl=window_seconds + 5)
+                if val["count"] > int(limit):
+                    if current_app:
+                        current_app.logger.warning(f"Rate limit exceeded key={key} actor={actor} ip={ip}")
+                    abort(429)
+            except Exception:
+                # If cache is unavailable, do not block the request.
+                pass
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
 
 
 def check_permission(user, resource, action, society_id=None):
@@ -91,7 +128,60 @@ def check_permission(user, resource, action, society_id=None):
 def can(resource, action, society_id=None, user=None):
     """Lightweight helper used by routes and templates to resolve permissions."""
     actor = user or current_user
-    return check_permission(actor, resource, action, society_id)
+    # If no explicit scope is provided, try to infer it for society-scoped resources.
+    inferred_scope = society_id
+    if inferred_scope is None and actor and getattr(actor, "is_authenticated", False):
+        SOCIETY_SCOPED_RESOURCES = {"crm", "calendar", "tournaments", "tasks", "events", "society"}
+        if resource in SOCIETY_SCOPED_RESOURCES:
+            try:
+                inferred_scope = get_active_society_id(actor)
+            except Exception:
+                inferred_scope = None
+    return check_permission(actor, resource, action, inferred_scope)
+
+
+def get_active_society_id(user=None) -> int | None:
+    """
+    Return the currently selected society scope id for the session, if valid.
+    Falls back to user's primary society.
+    """
+    actor = user or current_user
+    if not actor or not getattr(actor, "is_authenticated", False):
+        return None
+
+    # Per-request cache
+    try:
+        cached = getattr(g, "_active_society_id", None)
+        if cached is not None:
+            return cached
+    except Exception:
+        pass
+
+    raw = session.get("active_society_id")
+    try:
+        sid = int(raw) if raw is not None else None
+    except Exception:
+        sid = None
+
+    # Admin can scope to any society id.
+    try:
+        if sid and actor.is_admin():
+            g._active_society_id = sid
+            return sid
+    except Exception:
+        pass
+
+    if sid and actor.can_access_society(sid):
+        g._active_society_id = sid
+        return sid
+
+    try:
+        scope = actor.get_primary_society()
+        resolved = scope.id if scope else None
+        g._active_society_id = resolved
+        return resolved
+    except Exception:
+        return None
 
 
 def enforce_permission(resource, action, society_id=None, user=None):
@@ -192,18 +282,10 @@ def get_user_society(user):
     Get the society associated with a user
     Returns User object or None
     """
-    from app.models import User
-    
-    if user.is_society():
-        return user
-    
-    if user.is_staff() and user.society_id:
-        return User.query.get(user.society_id)
-    
-    if user.is_athlete() and user.athlete_society_id:
-        return User.query.get(user.athlete_society_id)
-    
-    return None
+    try:
+        return user.get_primary_society()
+    except Exception:
+        return None
 
 
 def permission_required(resource, action, society_id_param=None, society_id_func=None):

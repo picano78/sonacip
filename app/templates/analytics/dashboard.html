@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><i class="bi bi-graph-up"></i> Analytics</h1>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{{ url_for('analytics.social_analytics') }}">Social</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('analytics.crm_analytics') }}">CRM</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('analytics.task_analytics') }}">Task</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted small">Utenti</div>
+          <div class="h4 mb-0">{{ user_stats.total }}</div>
+          <div class="text-muted small">nuovi: {{ user_stats.new }} — attivi: {{ user_stats.active }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted small">CRM</div>
+          <div class="h4 mb-0">{{ crm_stats.total_opportunities }}</div>
+          <div class="text-muted small">win rate: {{ crm_stats.win_rate }}%</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="text-muted small">Finance</div>
+          <div class="h4 mb-0">€{{ "%.2f"|format(financial_stats.revenue or 0) }}</div>
+          <div class="text-muted small">periodo: {{ days }} giorni</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="text-muted small">Nota</div>
+        <div>Questa pagina usa analytics aggregate (senza tracking invasivo lato client).</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

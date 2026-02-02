@@ -13,7 +13,7 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFError, CSRFProtect
-from werkzeug.exceptions import BadRequest, TooManyRequests
+from werkzeug.exceptions import BadRequest, Forbidden, InternalServerError, NotFound, TooManyRequests
 from werkzeug.middleware.proxy_fix import ProxyFix
 from authlib.integrations.flask_client import OAuth
 
@@ -112,11 +112,15 @@ def _ensure_secret_key(app: Flask) -> None:
         app.config["SECRET_KEY"] = env_secret
         return
 
-    def _try_secret_dir(dir_path: str | None) -> str | None:
+    def _try_secret_dir(dir_path: str | None, *, create_dir: bool) -> str | None:
         if not dir_path:
             return None
         try:
-            os.makedirs(dir_path, exist_ok=True)
+            if create_dir:
+                os.makedirs(dir_path, exist_ok=True)
+            else:
+                if not os.path.isdir(dir_path):
+                    return None
         except Exception:
             return None
 
@@ -148,14 +152,16 @@ def _ensure_secret_key(app: Flask) -> None:
     # Try multiple persistent locations (ordered).
     # instance_path may be read-only under some systemd deployments.
     candidates = [
-        app.instance_path,
-        app.config.get("LOGS_FOLDER"),
-        app.config.get("BACKUP_FOLDER"),
-        os.path.expanduser("~/.sonacip"),
+        # Best default for Flask apps (may be writable in systemd deployments)
+        (app.instance_path, True),
+        # Existing persistent dirs (do not auto-create them at runtime)
+        (app.config.get("LOGS_FOLDER"), False),
+        (app.config.get("BACKUP_FOLDER"), False),
+        (os.path.expanduser("~/.sonacip"), True),
     ]
 
-    for d in candidates:
-        val = _try_secret_dir(d)
+    for d, create_dir in candidates:
+        val = _try_secret_dir(d, create_dir=create_dir)
         if val:
             app.config["SECRET_KEY"] = val
             os.environ["SECRET_KEY"] = val
@@ -284,6 +290,52 @@ def create_app(config_name: str | None = None) -> Flask:
             "<p><a href='/'>Torna alla home</a></p>"
             "</body></html>",
             400,
+        )
+
+    @app.errorhandler(Forbidden)
+    def handle_forbidden(err: Forbidden):
+        if _wants_json():
+            return {"error": "forbidden"}, 403
+        return (
+            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            "<title>Accesso negato</title></head><body>"
+            "<h1>Accesso negato</h1>"
+            "<p>Non hai i permessi per accedere a questa risorsa.</p>"
+            "<p><a href='/'>Torna alla home</a></p>"
+            "</body></html>",
+            403,
+        )
+
+    @app.errorhandler(NotFound)
+    def handle_not_found(err: NotFound):
+        if _wants_json():
+            return {"error": "not_found"}, 404
+        return (
+            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            "<title>Pagina non trovata</title></head><body>"
+            "<h1>Pagina non trovata</h1>"
+            "<p>La pagina richiesta non esiste.</p>"
+            "<p><a href='/'>Torna alla home</a></p>"
+            "</body></html>",
+            404,
+        )
+
+    @app.errorhandler(InternalServerError)
+    def handle_internal_server_error(err: InternalServerError):
+        # Keep it generic: avoid leaking details in production.
+        if _wants_json():
+            return {"error": "internal_server_error"}, 500
+        return (
+            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            "<title>Errore</title></head><body>"
+            "<h1>Si è verificato un errore</h1>"
+            "<p>Riprova tra qualche istante.</p>"
+            "<p><a href='/'>Torna alla home</a></p>"
+            "</body></html>",
+            500,
         )
 
     @login_manager.user_loader

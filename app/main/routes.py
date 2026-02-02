@@ -18,6 +18,17 @@ def index():
     return render_template('main/index.html')
 
 
+@bp.route('/login')
+def login_redirect():
+    """
+    Compatibility route.
+
+    Some deployments (or old links) point to `/login`, while the auth blueprint
+    uses `/auth/login`. Keep this stable to avoid 404/500 at the edge (nginx rewrites).
+    """
+    return redirect(url_for('auth.login'))
+
+
 @bp.route('/about')
 def about():
     """About page"""

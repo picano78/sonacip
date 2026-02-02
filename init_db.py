@@ -124,6 +124,17 @@ def init_db():
             print(f"  ✓ Roles already exist ({Role.query.count()} roles)")
         
         db.session.commit()
+        # Seed deterministic defaults required for a fully working installation
+        # (permissions, plan 'free', dashboard templates, navbar config, etc.).
+        try:
+            from app.core.seed import seed_defaults
+            summary = seed_defaults(app)
+            print("\nSeeding defaults summary:")
+            for k, v in (summary or {}).items():
+                print(f"  - {k}: {v}")
+        except Exception as exc:
+            print(f"\n! Warning: default seeding failed: {exc}")
+
         print("\n✓ Database initialization complete!")
         return True
 

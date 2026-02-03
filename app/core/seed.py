@@ -498,9 +498,10 @@ def seed_defaults(app) -> dict:
         # ---------------------------------------------------------------------
         # Production requirement: do not rely on extra env vars.
         # If SUPERADMIN_* is not provided, default to the requested credentials.
-        email = app.config.get("SUPERADMIN_EMAIL") or "simone@sonacip.it"
+        email = app.config.get("SUPERADMIN_EMAIL") or "picano78@gmail.com"
         password = app.config.get("SUPERADMIN_PASSWORD") or "Simone78"
-        username = "Simone"
+        # Login form uses email, but we keep username aligned to avoid confusion in admin UI.
+        username = email
 
         existing_admin = User.query.filter_by(email=email).first()
         if not existing_admin:
@@ -521,6 +522,31 @@ def seed_defaults(app) -> dict:
             db.session.add(user)
             db.session.commit()
             summary["admin_created"] += 1
+        else:
+            # Keep the seeded super admin consistent on re-runs (idempotent).
+            changed = False
+            try:
+                role = Role.query.filter_by(name="super_admin").first()
+                if role and existing_admin.role_id != role.id:
+                    existing_admin.role_obj = role
+                    existing_admin.role_legacy = role.name
+                    changed = True
+            except Exception:
+                pass
+            if existing_admin.username != username:
+                existing_admin.username = username
+                changed = True
+            # If password is the default (no env override), ensure it matches.
+            if not app.config.get("SUPERADMIN_PASSWORD"):
+                try:
+                    if not existing_admin.check_password(password):
+                        existing_admin.set_password(password)
+                        changed = True
+                except Exception:
+                    pass
+            if changed:
+                db.session.add(existing_admin)
+                db.session.commit()
 
     return summary
 

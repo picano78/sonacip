@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib
 import os
 import secrets
+import sqlite3
 
 from flask import Flask, flash, redirect, request, session, url_for
 from flask_login import LoginManager
@@ -13,6 +14,8 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFError, CSRFProtect
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 from werkzeug.exceptions import BadRequest, Forbidden, InternalServerError, NotFound, TooManyRequests
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -29,6 +32,24 @@ csrf = CSRFProtect()
 # Production-safe: rate limiting should never crash critical endpoints (e.g. /auth/login)
 limiter = Limiter(key_func=get_remote_address, swallow_errors=True)
 oauth = OAuth()
+
+# Global SQLAlchemy hook: enforce safe pragmas on SQLite connections.
+# This must be registered without touching `db.engine` (which requires app context).
+@event.listens_for(Engine, "connect")
+def _set_sqlite_pragmas(dbapi_connection, _connection_record):
+    try:
+        if not isinstance(dbapi_connection, sqlite3.Connection):
+            return
+        cur = dbapi_connection.cursor()
+        # Enable WAL for better concurrent reads/writes under gunicorn.
+        cur.execute("PRAGMA journal_mode=WAL;")
+        # Reduce fsync overhead while staying safe enough for web workloads.
+        cur.execute("PRAGMA synchronous=NORMAL;")
+        # Enforce FK constraints.
+        cur.execute("PRAGMA foreign_keys=ON;")
+        cur.close()
+    except Exception:
+        return
 
 # Explicit core module list (ordered, stable)
 CORE_MODULES = [
@@ -292,7 +313,8 @@ def _normalize_sqlite_db(app: Flask) -> None:
     # SQLite engine options: reduce lock errors under concurrency.
     opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
     connect_args = dict(opts.get("connect_args") or {})
-    connect_args.setdefault("timeout", int(app.config.get("SQLITE_TIMEOUT", 30)))
+    # NOTE: this is seconds for sqlite3.connect timeout
+    connect_args.setdefault("timeout", int(app.config.get("SQLITE_TIMEOUT", 60)))
     connect_args.setdefault("check_same_thread", False)
     opts["connect_args"] = connect_args
     opts.setdefault("poolclass", NullPool)

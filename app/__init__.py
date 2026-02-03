@@ -13,6 +13,7 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFError, CSRFProtect
+from sqlalchemy.pool import NullPool
 from werkzeug.exceptions import BadRequest, Forbidden, InternalServerError, NotFound, TooManyRequests
 from werkzeug.middleware.proxy_fix import ProxyFix
 from authlib.integrations.flask_client import OAuth
@@ -192,6 +193,112 @@ def _is_safe_referrer(app: Flask, ref: str | None) -> bool:
         return False
 
 
+def _normalize_sqlite_db(app: Flask) -> None:
+    """
+    Production-hardening for SQLite under gunicorn/systemd:
+    - normalize relative sqlite paths to absolute
+    - ensure DB path points to a writable location
+    - add connect timeout + NullPool to reduce 'database is locked'
+    """
+    uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
+    if not uri.startswith("sqlite:"):
+        return
+
+    # Extract path (best-effort) from sqlite URL.
+    db_path = None
+    if uri.startswith("sqlite:////"):
+        db_path = "/" + uri.split("sqlite:////", 1)[1]
+    elif uri.startswith("sqlite:///"):
+        db_path = uri.split("sqlite:///", 1)[1]
+
+    base_dir = app.config.get("BASE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+
+    def _abs(p: str) -> str:
+        if not p:
+            return p
+        if os.path.isabs(p):
+            return p
+        return os.path.abspath(os.path.join(str(base_dir), p))
+
+    if db_path:
+        db_path = _abs(db_path)
+
+    # Candidate DB files (keep existing DB if present).
+    existing_candidates = []
+    if db_path:
+        existing_candidates.append(db_path)
+    existing_candidates.append(os.path.join(str(base_dir), "sonacip.db"))
+
+    chosen = None
+    for p in existing_candidates:
+        try:
+            if p and os.path.exists(p):
+                chosen = p
+                break
+        except Exception:
+            continue
+
+    if chosen:
+        # If existing DB is not writable by the process, attempt to copy it to a writable dir.
+        try:
+            if not os.access(chosen, os.W_OK):
+                # Prefer uploads dir (usually writable) then instance path then home.
+                candidates = [
+                    app.config.get("UPLOAD_FOLDER"),
+                    app.instance_path,
+                    os.path.expanduser("~/.sonacip"),
+                ]
+                target_dir = None
+                for d in candidates:
+                    if not d:
+                        continue
+                    try:
+                        os.makedirs(d, exist_ok=True)
+                        if os.access(d, os.W_OK):
+                            target_dir = d
+                            break
+                    except Exception:
+                        continue
+                if target_dir:
+                    import shutil
+                    target = os.path.join(target_dir, "sonacip.db")
+                    if not os.path.exists(target):
+                        shutil.copy2(chosen, target)
+                    chosen = target
+        except Exception:
+            pass
+    else:
+        # No DB file found: choose a writable location for new installs.
+        candidates = [
+            app.config.get("UPLOAD_FOLDER"),
+            app.instance_path,
+            os.path.expanduser("~/.sonacip"),
+            "/tmp",
+        ]
+        for d in candidates:
+            if not d:
+                continue
+            try:
+                os.makedirs(d, exist_ok=True)
+                if os.access(d, os.W_OK):
+                    chosen = os.path.join(d, "sonacip.db")
+                    break
+            except Exception:
+                continue
+
+    if chosen:
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{chosen}"
+
+    # SQLite engine options: reduce lock errors under concurrency.
+    opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
+    connect_args = dict(opts.get("connect_args") or {})
+    connect_args.setdefault("timeout", int(app.config.get("SQLITE_TIMEOUT", 30)))
+    connect_args.setdefault("check_same_thread", False)
+    opts["connect_args"] = connect_args
+    opts.setdefault("poolclass", NullPool)
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
+
+
 def create_app(config_name: str | None = None) -> Flask:
     """Create and configure the Flask application."""
     _load_dotenv_if_present()
@@ -207,6 +314,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app.config.from_object(config_class)
 
     _ensure_secret_key(app)
+    _normalize_sqlite_db(app)
 
     if hasattr(config_class, 'validate_config'):
         config_class.validate_config()

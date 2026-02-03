@@ -5,6 +5,7 @@ import importlib
 import os
 import secrets
 import sqlite3
+import time
 
 from flask import Flask, flash, redirect, request, session, url_for
 from flask_login import LoginManager
@@ -321,6 +322,71 @@ def _normalize_sqlite_db(app: Flask) -> None:
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
 
 
+def _auto_upgrade_db(app: Flask) -> None:
+    """
+    Ensure DB schema is upgraded without manual commands.
+
+    This is critical for SQLite deployments where an old DB schema would otherwise
+    crash login/registration with OperationalError (missing tables/columns).
+    Uses a file lock to avoid concurrent upgrades across gunicorn workers.
+    """
+    try:
+        uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
+        if not uri.startswith("sqlite:"):
+            return
+        if app.config.get("TESTING"):
+            return
+
+        # Only auto-upgrade in production to avoid slowing dev.
+        env = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "").lower()
+        if env and env not in ("production", "prod"):
+            return
+
+        # Determine db file path
+        db_path = None
+        if uri.startswith("sqlite:////"):
+            db_path = "/" + uri.split("sqlite:////", 1)[1]
+        elif uri.startswith("sqlite:///"):
+            db_path = uri.split("sqlite:///", 1)[1]
+        if not db_path:
+            return
+
+        lock_path = os.path.join(os.path.dirname(db_path), ".sonacip_alembic_upgrade.lock")
+        os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+
+        import fcntl
+        from flask_migrate import upgrade as migrate_upgrade
+
+        with open(lock_path, "w", encoding="utf-8") as lockf:
+            # Wait briefly for another worker to finish upgrades
+            start = time.time()
+            while True:
+                try:
+                    fcntl.flock(lockf.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if time.time() - start > 30:
+                        return
+                    time.sleep(0.2)
+
+            try:
+                # Run migrations using Flask-Migrate (alembic env uses current_app)
+                with app.app_context():
+                    migrate_dir = app.config.get("MIGRATIONS_DIR") or os.path.join(
+                        app.config.get("BASE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
+                        "migrations",
+                    )
+                    migrate_upgrade(directory=migrate_dir)
+            except Exception:
+                app.logger.exception("Auto-upgrade DB failed")
+                return
+    except Exception:
+        try:
+            app.logger.exception("Auto-upgrade DB wrapper failed")
+        except Exception:
+            pass
+
+
 def create_app(config_name: str | None = None) -> Flask:
     """Create and configure the Flask application."""
     _load_dotenv_if_present()
@@ -360,6 +426,9 @@ def create_app(config_name: str | None = None) -> Flask:
     csrf.init_app(app)
     limiter.init_app(app)
     oauth.init_app(app)
+
+    # Keep schema aligned automatically (production SQLite).
+    _auto_upgrade_db(app)
 
     login_manager.login_view = 'auth.login'
 

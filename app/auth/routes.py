@@ -4,7 +4,13 @@ Authentication routes
 from flask import Blueprint, current_app, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
 from app import db, limiter, oauth
-from app.auth.forms import LoginForm, RegistrationForm, SocietyRegistrationForm
+from app.auth.forms import (
+    LoginForm,
+    RegistrationForm,
+    SocietyRegistrationForm,
+    ResetPasswordRequestForm,
+    ResetPasswordForm,
+)
 from app.models import User, AuditLog, Subscription, Plan, Dashboard, DashboardTemplate, Society, Role, EnterpriseSSOSetting
 from datetime import datetime
 import json
@@ -33,6 +39,107 @@ def _safe_commit(context: str) -> bool:
             pass
         return False
 
+
+def _reset_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    return URLSafeTimedSerializer(current_app.config.get("SECRET_KEY"))
+
+
+def _generate_reset_token(user_id: int) -> str:
+    return _reset_serializer().dumps({"user_id": int(user_id)}, salt="password-reset")
+
+
+def _verify_reset_token(token: str, max_age_seconds: int = 3600) -> int | None:
+    try:
+        data = _reset_serializer().loads(token, salt="password-reset", max_age=max_age_seconds)
+        uid = int((data or {}).get("user_id"))
+        return uid
+    except Exception:
+        return None
+
+
+@bp.route("/reset-password", methods=["GET", "POST"])
+def reset_password_request():
+    """Request a password reset link."""
+    if current_user.is_authenticated:
+        return redirect(url_for("social.feed"))
+
+    form = ResetPasswordRequestForm()
+    try:
+        valid = form.validate_on_submit()
+    except Exception:
+        current_app.logger.exception("Reset password request validation failed")
+        flash("Errore temporaneo. Riprova tra qualche istante.", "danger")
+        return render_template("auth/reset_password_request.html", form=form)
+
+    if valid:
+        # Always respond with the same message for privacy.
+        try:
+            user = User.query.filter_by(email=form.email.data).first()
+        except Exception:
+            current_app.logger.exception("User lookup failed during reset request")
+            user = None
+
+        if user:
+            try:
+                from app.notifications.utils import send_email
+
+                token = _generate_reset_token(user.id)
+                link = url_for("auth.reset_password", token=token, _external=True)
+                subject = "Recupero password SONACIP"
+                body = (
+                    "Hai richiesto il recupero password.\n\n"
+                    f"Apri questo link per impostare una nuova password:\n{link}\n\n"
+                    "Se non hai richiesto tu questa operazione, ignora questa email."
+                )
+                send_email(user.email, subject, body)
+            except Exception:
+                current_app.logger.exception("Failed to send reset password email")
+
+        flash("Se l'email esiste, riceverai un link per reimpostare la password.", "info")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/reset_password_request.html", form=form)
+
+
+@bp.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token: str):
+    """Reset password using a time-limited token."""
+    if current_user.is_authenticated:
+        return redirect(url_for("social.feed"))
+
+    user_id = _verify_reset_token(token)
+    if not user_id:
+        flash("Link non valido o scaduto. Richiedi di nuovo il recupero password.", "warning")
+        return redirect(url_for("auth.reset_password_request"))
+
+    form = ResetPasswordForm()
+    try:
+        valid = form.validate_on_submit()
+    except Exception:
+        current_app.logger.exception("Reset password validation failed")
+        flash("Errore temporaneo. Riprova tra qualche istante.", "danger")
+        return render_template("auth/reset_password.html", form=form)
+
+    if valid:
+        try:
+            user = User.query.get(int(user_id))
+        except Exception:
+            current_app.logger.exception("User load failed during reset")
+            flash("Servizio temporaneamente non disponibile. Riprova tra qualche istante.", "danger")
+            return redirect(url_for("auth.reset_password_request"))
+
+        if not user:
+            flash("Utente non trovato. Richiedi di nuovo il recupero password.", "warning")
+            return redirect(url_for("auth.reset_password_request"))
+
+        user.set_password(form.password.data)
+        db.session.add(user)
+        _safe_commit("auth.reset_password:set_password")
+        flash("Password aggiornata. Ora puoi effettuare il login.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/reset_password.html", form=form)
 
 def _enterprise_oidc_client():
     sso = EnterpriseSSOSetting.query.first()

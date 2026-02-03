@@ -14,6 +14,20 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Ricordami')
 
 
+class ResetPasswordRequestForm(FlaskForm):
+    """Request password reset via email."""
+    email = StringField('Email', validators=[DataRequired(), Email()])
+
+
+class ResetPasswordForm(FlaskForm):
+    """Set a new password using a reset token."""
+    password = PasswordField('Nuova Password', validators=[DataRequired(), Length(min=6)])
+    password2 = PasswordField(
+        'Conferma Password',
+        validators=[DataRequired(), EqualTo('password', message='Le password devono coincidere')]
+    )
+
+
 class RegistrationForm(FlaskForm):
     """Registration form for individuals (Appassionato only)."""
     email = StringField('Email', validators=[DataRequired(), Email()])

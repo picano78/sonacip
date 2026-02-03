@@ -62,8 +62,20 @@ def login():
         return redirect(url_for('social.feed'))
     
     form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+    try:
+        valid = form.validate_on_submit()
+    except Exception:
+        current_app.logger.exception("Login form validation failed")
+        flash('Errore temporaneo durante il login. Riprova tra qualche istante.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    if valid:
+        try:
+            user = User.query.filter_by(email=form.email.data).first()
+        except Exception:
+            current_app.logger.exception("User lookup failed during login")
+            flash('Servizio temporaneamente non disponibile. Riprova tra qualche istante.', 'danger')
+            return redirect(url_for('auth.login'))
         
         if user is None or not user.check_password(form.password.data):
             flash('Email o password non validi', 'danger')
@@ -216,9 +228,21 @@ def register():
         return redirect(url_for('social.feed'))
     
     form = RegistrationForm()
-    if form.validate_on_submit():
+    try:
+        valid = form.validate_on_submit()
+    except Exception:
+        current_app.logger.exception("Registration form validation failed")
+        flash('Errore temporaneo durante la registrazione. Riprova tra qualche istante.', 'danger')
+        return render_template('auth/register.html', form=form)
+
+    if valid:
         role_name = 'appassionato'
-        role_obj = Role.query.filter_by(name=role_name).first()
+        try:
+            role_obj = Role.query.filter_by(name=role_name).first()
+        except Exception:
+            current_app.logger.exception("Role lookup failed during registration")
+            flash('Sistema non disponibile al momento. Riprova più tardi.', 'danger')
+            return render_template('auth/register.html', form=form)
         if not role_obj:
             flash('Sistema non inizializzato: ruolo appassionato mancante.', 'danger')
             return redirect(url_for('auth.register'))
@@ -331,9 +355,21 @@ def register_society():
         return redirect(url_for('social.feed'))
 
     form = SocietyRegistrationForm()
-    if form.validate_on_submit():
+    try:
+        valid = form.validate_on_submit()
+    except Exception:
+        current_app.logger.exception("Society registration form validation failed")
+        flash('Errore temporaneo durante la registrazione. Riprova tra qualche istante.', 'danger')
+        return render_template('auth/register_society.html', form=form)
+
+    if valid:
         role_name = 'societa'
-        role_obj = Role.query.filter_by(name=role_name).first()
+        try:
+            role_obj = Role.query.filter_by(name=role_name).first()
+        except Exception:
+            current_app.logger.exception("Role lookup failed during society registration")
+            flash('Sistema non disponibile al momento. Riprova più tardi.', 'danger')
+            return render_template('auth/register_society.html', form=form)
         if not role_obj:
             flash('Sistema non inizializzato: ruolo societa mancante.', 'danger')
             return redirect(url_for('auth.register_society'))

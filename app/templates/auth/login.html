@@ -14,11 +14,11 @@
                         {{ form.hidden_tag() }}
                         
                         <div class="mb-3">
-                            {{ form.email.label(class="form-label") }}
-                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
-                            {% if form.email.errors %}
+                            {{ form.identifier.label(class="form-label") }}
+                            {{ form.identifier(class="form-control" + (" is-invalid" if form.identifier.errors else "")) }}
+                            {% if form.identifier.errors %}
                                 <div class="invalid-feedback">
-                                    {{ form.email.errors[0] }}
+                                    {{ form.identifier.errors[0] }}
                                 </div>
                             {% endif %}
                         </div>

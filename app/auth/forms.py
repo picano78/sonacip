@@ -9,7 +9,7 @@ from app.models import User, Role
 
 class LoginForm(FlaskForm):
     """Login form"""
-    email = StringField('Email', validators=[DataRequired(), Email()])
+    identifier = StringField('Email o Username', validators=[DataRequired(), Length(min=3, max=120)])
     password = PasswordField('Password', validators=[DataRequired()])
     remember_me = BooleanField('Ricordami')
 

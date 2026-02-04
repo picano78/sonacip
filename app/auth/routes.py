@@ -3,6 +3,7 @@ Authentication routes
 """
 from flask import Blueprint, current_app, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, current_user
+from sqlalchemy import func, or_
 from app import db, limiter, oauth
 from app.auth.forms import (
     LoginForm,
@@ -177,15 +178,22 @@ def login():
         return redirect(url_for('auth.login'))
 
     if valid:
+        identifier = (form.identifier.data or "").strip()
+        identifier_lower = identifier.lower()
         try:
-            user = User.query.filter_by(email=form.email.data).first()
+            user = User.query.filter(
+                or_(
+                    func.lower(User.email) == identifier_lower,
+                    func.lower(User.username) == identifier_lower,
+                )
+            ).first()
         except Exception:
             current_app.logger.exception("User lookup failed during login")
             flash('Servizio temporaneamente non disponibile. Riprova tra qualche istante.', 'danger')
             return redirect(url_for('auth.login'))
         
         if user is None or not user.check_password(form.password.data):
-            flash('Email o password non validi', 'danger')
+            flash('Credenziali non valide', 'danger')
             return redirect(url_for('auth.login'))
         
         if not user.is_active:

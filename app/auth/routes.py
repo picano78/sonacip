@@ -328,7 +328,7 @@ def sso_callback():
 
 
 @bp.route('/register', methods=['GET', 'POST'])
-@limiter.limit("3 per hour")
+@limiter.limit("3 per hour", methods=["POST"])
 def register():
     """Registration page for individuals (Appassionato only)."""
     if current_user.is_authenticated:
@@ -455,7 +455,7 @@ def register():
 
 
 @bp.route('/register/society', methods=['GET', 'POST'])
-@limiter.limit("2 per hour")
+@limiter.limit("2 per hour", methods=["POST"])
 def register_society():
     """Registration page for societies (CRM-style)."""
     if current_user.is_authenticated:

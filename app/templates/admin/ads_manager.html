@@ -1,222 +1,533 @@
 {% extends "base.html" %}
-{% block title %}Ads Autopilot{% endblock %}
-{% block content %}
-<div class="container my-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h4 mb-0"><i class="bi bi-badge-ad"></i> Ads Autopilot</h1>
-    <div class="d-flex gap-2">
-      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Admin</a>
-      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.ads_settings') }}">Tariffe (promo post)</a>
-    </div>
-  </div>
+{% block title %}Gestione Pubblicità{% endblock %}
 
-  <div class="row g-3">
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-header"><strong>Crea campagna</strong></div>
-        <div class="card-body">
-          <form method="post">
-            {{ campaign_form.hidden_tag() }}
-            <input type="hidden" name="_action" value="create_campaign">
-            <div class="mb-2">
-              {{ campaign_form.name.label(class="form-label") }}
-              {{ campaign_form.name(class="form-control") }}
-            </div>
-            <div class="row g-2">
-              <div class="col-md-6">
-                {{ campaign_form.objective.label(class="form-label") }}
-                {{ campaign_form.objective(class="form-select") }}
-              </div>
-              <div class="col-md-6">
-                {{ campaign_form.society_id.label(class="form-label") }}
-                {{ campaign_form.society_id(class="form-control", placeholder="vuoto = globale") }}
-              </div>
-            </div>
-            <div class="row g-2 mt-1">
-              <div class="col-md-6">
-                {{ campaign_form.starts_at.label(class="form-label") }}
-                {{ campaign_form.starts_at(class="form-control", placeholder="2026-02-01 10:00") }}
-              </div>
-              <div class="col-md-6">
-                {{ campaign_form.ends_at.label(class="form-label") }}
-                {{ campaign_form.ends_at(class="form-control", placeholder="2026-03-01 10:00") }}
-              </div>
-            </div>
-            <div class="row g-2 mt-1">
-              <div class="col-md-6">
-                {{ campaign_form.max_impressions.label(class="form-label") }}
-                {{ campaign_form.max_impressions(class="form-control") }}
-              </div>
-              <div class="col-md-6">
-                {{ campaign_form.max_clicks.label(class="form-label") }}
-                {{ campaign_form.max_clicks(class="form-control") }}
-              </div>
-            </div>
-            <div class="mt-2 d-flex gap-3">
-              <div class="form-check">
-                {{ campaign_form.autopilot(class="form-check-input") }}
-                {{ campaign_form.autopilot.label(class="form-check-label") }}
-              </div>
-              <div class="form-check">
-                {{ campaign_form.is_active(class="form-check-input") }}
-                {{ campaign_form.is_active.label(class="form-check-label") }}
-              </div>
-            </div>
-            <button class="btn btn-primary mt-3" type="submit">Crea campagna</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-header"><strong>Crea creatività</strong></div>
-        <div class="card-body">
-          <form method="post">
-            {{ creative_form.hidden_tag() }}
-            <input type="hidden" name="_action" value="create_creative">
-            <div class="row g-2">
-              <div class="col-md-4">
-                {{ creative_form.campaign_id.label(class="form-label") }}
-                {{ creative_form.campaign_id(class="form-control") }}
-              </div>
-              <div class="col-md-8">
-                {{ creative_form.placement.label(class="form-label") }}
-                {{ creative_form.placement(class="form-select") }}
-              </div>
-            </div>
-            <div class="mt-2">
-              {{ creative_form.headline.label(class="form-label") }}
-              {{ creative_form.headline(class="form-control") }}
-            </div>
-            <div class="mt-2">
-              {{ creative_form.body.label(class="form-label") }}
-              {{ creative_form.body(class="form-control", rows="2") }}
-            </div>
-            <div class="mt-2">
-              {{ creative_form.image_url.label(class="form-label") }}
-              {{ creative_form.image_url(class="form-control", placeholder="https://...") }}
-            </div>
-            <div class="mt-2">
-              {{ creative_form.link_url.label(class="form-label") }}
-              {{ creative_form.link_url(class="form-control", placeholder="https://... o /subscription/plans") }}
-            </div>
-            <div class="row g-2 mt-1">
-              <div class="col-md-6">
-                {{ creative_form.cta_label.label(class="form-label") }}
-                {{ creative_form.cta_label(class="form-control", placeholder="Scopri di più") }}
-              </div>
-              <div class="col-md-3">
-                {{ creative_form.weight.label(class="form-label") }}
-                {{ creative_form.weight(class="form-control", placeholder="100") }}
-              </div>
-              <div class="col-md-3 d-flex align-items-end">
-                <div class="form-check">
-                  {{ creative_form.is_active(class="form-check-input") }}
-                  {{ creative_form.is_active.label(class="form-check-label") }}
-                </div>
-              </div>
-            </div>
-            <button class="btn btn-primary mt-3" type="submit">Crea creatività</button>
-          </form>
-          <div class="small text-muted mt-2">
-            Autopilot sceglie automaticamente le creatività con CTR migliore (Thompson sampling) per placement.
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="row g-3 mt-1">
-    <div class="col-lg-7">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Campagne</strong>
-          <span class="text-muted small">{{ campaigns|length }}</span>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm mb-0 align-middle">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Scope</th>
-                <th>Autopilot</th>
-                <th>Impr.</th>
-                <th>Click</th>
-                <th>CTR</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for c in campaigns %}
-                <tr>
-                  <td class="text-muted small">{{ c.id }}</td>
-                  <td>{{ c.name }}</td>
-                  <td class="text-muted small">{{ c.society_id or 'global' }}</td>
-                  <td>{% if c.autopilot %}<span class="badge bg-success">ON</span>{% else %}<span class="badge bg-secondary">OFF</span>{% endif %}</td>
-                  <td>{{ c.impressions_count or 0 }}</td>
-                  <td>{{ c.clicks_count or 0 }}</td>
-                  <td>{{ campaign_stats.get(c.id, {}).get('ctr', 0) }}%</td>
-                </tr>
-              {% else %}
-                <tr><td colspan="7" class="text-muted">Nessuna campagna.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-    <div class="col-lg-5">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Creatività</strong>
-          <span class="text-muted small">{{ creatives|length }}</span>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm mb-0 align-middle">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Camp</th>
-                <th>Placement</th>
-                <th>CTR</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for cr in creatives %}
-                <tr>
-                  <td class="text-muted small">{{ cr.id }}</td>
-                  <td class="text-muted small">{{ cr.campaign_id }}</td>
-                  <td class="text-muted small">{{ cr.placement }}</td>
-                  <td>{{ creative_stats.get(cr.id, {}).get('ctr', 0) }}%</td>
-                </tr>
-              {% else %}
-                <tr><td colspan="4" class="text-muted">Nessuna creatività.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card mt-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Eventi recenti</strong>
-          <span class="text-muted small">{{ recent_events|length }}</span>
-        </div>
-        <div class="list-group list-group-flush">
-          {% for e in recent_events %}
-            <div class="list-group-item small">
-              <span class="badge bg-{{ 'primary' if e.kind == 'impression' else 'success' }}">{{ e.kind }}</span>
-              creative={{ e.creative_id }} camp={{ e.campaign_id }} ({{ e.placement }})
-              <div class="text-muted">{{ e.created_at.strftime('%d/%m/%Y %H:%M:%S') if e.created_at else '' }}</div>
-            </div>
-          {% else %}
-            <div class="list-group-item text-muted">Nessun evento.</div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+{% block extra_css %}
+<style>
+.ads-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.create-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+.create-card h5 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e4e6eb;
+}
+.objective-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+.objective-option:hover {
+    border-color: #1877f2;
+}
+.objective-option.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.objective-option i {
+    font-size: 2rem;
+    color: #1877f2;
+    margin-bottom: 8px;
+}
+.placement-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+.placement-chip:hover {
+    border-color: #1877f2;
+}
+.placement-chip.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+.campaign-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+.campaign-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.campaign-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+.campaign-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+.campaign-scope {
+    font-size: 0.8rem;
+    color: #65676b;
+}
+.campaign-stats {
+    display: flex;
+    gap: 20px;
+}
+.stat-item {
+    text-align: center;
+}
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1c1e21;
+}
+.stat-label {
+    font-size: 0.75rem;
+    color: #65676b;
+}
+.creative-mini {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+.creative-mini-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #e4e6eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 1.2rem;
+    color: #65676b;
+}
+.creative-mini-info {
+    flex: 1;
+}
+.creative-mini-headline {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+.creative-mini-placement {
+    font-size: 0.75rem;
+    color: #65676b;
+}
+.creative-mini-ctr {
+    font-weight: 600;
+    color: #1877f2;
+}
+.event-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f2f5;
+}
+.event-item:last-child {
+    border-bottom: none;
+}
+.event-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 12px;
+}
+.event-badge.impression {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+.event-badge.click {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.event-info {
+    flex: 1;
+    font-size: 0.85rem;
+}
+.event-time {
+    font-size: 0.75rem;
+    color: #65676b;
+}
+.preview-ad {
+    background: white;
+    border: 1px solid #e4e6eb;
+    border-radius: 10px;
+    overflow: hidden;
+    max-width: 320px;
+    margin: 20px auto;
+}
+.preview-ad-image {
+    height: 160px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+}
+.preview-ad-content {
+    padding: 12px;
+}
+.preview-ad-headline {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.preview-ad-body {
+    font-size: 0.85rem;
+    color: #65676b;
+    margin-bottom: 12px;
+}
+.preview-ad-cta {
+    background: #1877f2;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 500;
+}
+</style>
 {% endblock %}
 
+{% block content %}
+<div class="container my-4">
+    <div class="ads-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-megaphone-fill"></i> Gestione Pubblicità</h1>
+                <p class="mb-0 opacity-75">Crea e gestisci campagne pubblicitarie con Autopilot</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin.ads_settings') }}" class="btn btn-light btn-sm me-2">
+                    <i class="bi bi-currency-euro"></i> Tariffe
+                </a>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> Torna
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="create-card">
+                <h5><i class="bi bi-flag text-primary"></i> Nuova Campagna</h5>
+                
+                <form method="post">
+                    {{ campaign_form.hidden_tag() }}
+                    <input type="hidden" name="_action" value="create_campaign">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nome Campagna</label>
+                        {{ campaign_form.name(class="form-control form-control-lg", placeholder="Es: Promo Estate 2026") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Obiettivo</label>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="objective-option" onclick="selectObjective('awareness')">
+                                    <i class="bi bi-eye"></i>
+                                    <strong>Awareness</strong>
+                                    <small class="text-muted">Visibilità</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="objective-option selected" onclick="selectObjective('traffic')">
+                                    <i class="bi bi-cursor"></i>
+                                    <strong>Traffico</strong>
+                                    <small class="text-muted">Click</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="objective-option" onclick="selectObjective('conversion')">
+                                    <i class="bi bi-cart-check"></i>
+                                    <strong>Conversione</strong>
+                                    <small class="text-muted">Azioni</small>
+                                </div>
+                            </div>
+                        </div>
+                        {{ campaign_form.objective(type='hidden', id='objective') }}
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Data Inizio</label>
+                            {{ campaign_form.starts_at(class="form-control", type="datetime-local") }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Data Fine</label>
+                            {{ campaign_form.ends_at(class="form-control", type="datetime-local") }}
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Max Impressions</label>
+                            {{ campaign_form.max_impressions(class="form-control", placeholder="1000") }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Max Click</label>
+                            {{ campaign_form.max_clicks(class="form-control", placeholder="100") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Società (opzionale)</label>
+                        {{ campaign_form.society_id(class="form-control", placeholder="Lascia vuoto per campagna globale") }}
+                    </div>
+                    
+                    <div class="toggle-row">
+                        <div>
+                            <div class="fw-semibold">Autopilot</div>
+                            <small class="text-muted">Ottimizza automaticamente le creatività</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ campaign_form.autopilot(class="form-check-input", style="width:48px;height:24px") }}
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-row">
+                        <div>
+                            <div class="fw-semibold">Campagna Attiva</div>
+                            <small class="text-muted">Inizia a mostrare gli annunci</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ campaign_form.is_active(class="form-check-input", style="width:48px;height:24px") }}
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
+                        <i class="bi bi-plus-lg"></i> Crea Campagna
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="create-card">
+                <h5><i class="bi bi-image text-primary"></i> Nuova Creatività</h5>
+                
+                <form method="post">
+                    {{ creative_form.hidden_tag() }}
+                    <input type="hidden" name="_action" value="create_creative">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Campagna ID</label>
+                            {{ creative_form.campaign_id(class="form-control") }}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Placement</label>
+                            {{ creative_form.placement(class="form-select") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Titolo</label>
+                        {{ creative_form.headline(class="form-control", placeholder="Titolo accattivante", id="headlineInput") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descrizione</label>
+                        {{ creative_form.body(class="form-control", rows="2", placeholder="Descrizione breve dell'offerta", id="bodyInput") }}
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">URL Immagine</label>
+                            {{ creative_form.image_url(class="form-control", placeholder="https://...") }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">URL Destinazione</label>
+                            {{ creative_form.link_url(class="form-control", placeholder="/subscription/plans") }}
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Testo Pulsante</label>
+                            {{ creative_form.cta_label(class="form-control", placeholder="Scopri di più", id="ctaInput") }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Peso</label>
+                            {{ creative_form.weight(class="form-control", placeholder="100") }}
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <div class="form-check">
+                                {{ creative_form.is_active(class="form-check-input", style="width:20px;height:20px") }}
+                                <label class="form-check-label ms-2">Attiva</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-ad">
+                        <div class="preview-ad-image">
+                            <i class="bi bi-image"></i>
+                        </div>
+                        <div class="preview-ad-content">
+                            <div class="preview-ad-headline" id="previewHeadline">Titolo annuncio</div>
+                            <div class="preview-ad-body" id="previewBody">Descrizione dell'annuncio...</div>
+                            <div class="preview-ad-cta" id="previewCta">Scopri di più</div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-plus-lg"></i> Crea Creatività
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-7">
+            <div class="create-card">
+                <h5><i class="bi bi-collection text-primary"></i> Campagne Attive <span class="badge bg-primary ms-2">{{ campaigns|length }}</span></h5>
+                
+                {% for c in campaigns %}
+                <div class="campaign-card">
+                    <div class="campaign-header">
+                        <div>
+                            <div class="campaign-name">{{ c.name }}</div>
+                            <div class="campaign-scope">
+                                {{ 'Globale' if not c.society_id else 'Società #' + c.society_id|string }}
+                                {% if c.autopilot %}
+                                <span class="badge bg-success ms-2">Autopilot</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="badge {{ 'bg-success' if c.is_active else 'bg-secondary' }}">
+                            {{ 'Attiva' if c.is_active else 'Inattiva' }}
+                        </span>
+                    </div>
+                    <div class="campaign-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ c.impressions_count or 0 }}</div>
+                            <div class="stat-label">Impressions</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ c.clicks_count or 0 }}</div>
+                            <div class="stat-label">Click</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ campaign_stats.get(c.id, {}).get('ctr', 0) }}%</div>
+                            <div class="stat-label">CTR</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-flag" style="font-size: 2rem;"></i>
+                    <p class="mt-2 mb-0">Nessuna campagna creata</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="col-lg-5">
+            <div class="create-card">
+                <h5><i class="bi bi-brush text-primary"></i> Creatività <span class="badge bg-primary ms-2">{{ creatives|length }}</span></h5>
+                
+                {% for cr in creatives %}
+                <div class="creative-mini">
+                    <div class="creative-mini-icon">
+                        <i class="bi bi-image"></i>
+                    </div>
+                    <div class="creative-mini-info">
+                        <div class="creative-mini-headline">{{ cr.headline or 'Senza titolo' }}</div>
+                        <div class="creative-mini-placement">{{ cr.placement }} | Camp #{{ cr.campaign_id }}</div>
+                    </div>
+                    <div class="creative-mini-ctr">{{ creative_stats.get(cr.id, {}).get('ctr', 0) }}%</div>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-image" style="font-size: 2rem;"></i>
+                    <p class="mt-2 mb-0">Nessuna creatività</p>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="create-card">
+                <h5><i class="bi bi-activity text-primary"></i> Eventi Recenti</h5>
+                
+                {% for e in recent_events %}
+                <div class="event-item">
+                    <span class="event-badge {{ e.kind }}">{{ e.kind }}</span>
+                    <div class="event-info">Creative #{{ e.creative_id }} - {{ e.placement }}</div>
+                    <div class="event-time">{{ e.created_at.strftime('%H:%M') if e.created_at else '' }}</div>
+                </div>
+                {% else %}
+                <div class="text-center py-3 text-muted">
+                    <small>Nessun evento recente</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectObjective(objective) {
+    document.getElementById('objective').value = objective;
+    document.querySelectorAll('.objective-option').forEach(opt => opt.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const headlineInput = document.getElementById('headlineInput');
+    const bodyInput = document.getElementById('bodyInput');
+    const ctaInput = document.getElementById('ctaInput');
+    
+    if (headlineInput) {
+        headlineInput.addEventListener('input', function() {
+            document.getElementById('previewHeadline').textContent = this.value || 'Titolo annuncio';
+        });
+    }
+    if (bodyInput) {
+        bodyInput.addEventListener('input', function() {
+            document.getElementById('previewBody').textContent = this.value || 'Descrizione dell\'annuncio...';
+        });
+    }
+    if (ctaInput) {
+        ctaInput.addEventListener('input', function() {
+            document.getElementById('previewCta').textContent = this.value || 'Scopri di più';
+        });
+    }
+});
+</script>
+{% endblock %}

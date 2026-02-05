@@ -1,142 +1,364 @@
 {% extends "base.html" %}
 {% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.stat-label {
+    color: #65676b;
+    font-size: 0.9rem;
+}
+.menu-section {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+}
+.menu-section-title {
+    font-weight: 600;
+    color: #1877f2;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e4e6eb;
+}
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+.menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 12px;
+    border-radius: 10px;
+    background: #f0f2f5;
+    text-decoration: none;
+    color: #1c1e21;
+    transition: all 0.2s;
+    text-align: center;
+}
+.menu-item:hover {
+    background: #e4e6eb;
+    color: #1877f2;
+    transform: scale(1.02);
+}
+.menu-item i {
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+    color: #1877f2;
+}
+.menu-item span {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.recent-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.recent-card-header {
+    padding: 16px;
+    border-bottom: 1px solid #e4e6eb;
+    font-weight: 600;
+}
+.user-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+}
+.user-item:hover {
+    background: #f0f2f5;
+}
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1877f2, #42a5f5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    margin-right: 12px;
+}
+.user-info {
+    flex: 1;
+}
+.user-name {
+    font-weight: 600;
+    color: #1c1e21;
+}
+.user-role {
+    font-size: 0.85rem;
+    color: #65676b;
+}
+.user-time {
+    font-size: 0.8rem;
+    color: #65676b;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container my-4">
-    <h1 class="mb-4"><i class="bi bi-speedometer2"></i> Admin Dashboard</h1>
-    <div class="row g-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h3>{{ stats.total_users }}</h3>
-                    <p class="mb-0">Utenti Totali</p>
+<div class="container-fluid px-4 my-4">
+    <div class="admin-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-1"><i class="bi bi-speedometer2"></i> Pannello Super Admin</h1>
+                <p class="mb-0 opacity-75">Gestisci la piattaforma in modo semplice e visivo</p>
+            </div>
+            <div class="d-none d-md-block">
+                <span class="badge bg-white text-primary fs-6">SONACIP</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-primary-subtle text-primary me-3">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.total_users }}</div>
+                        <div class="stat-label">Utenti</div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h3>{{ stats.total_societies }}</h3>
-                    <p class="mb-0">Società</p>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-success-subtle text-success me-3">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.total_societies }}</div>
+                        <div class="stat-label">Società</div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h3>{{ stats.total_athletes }}</h3>
-                    <p class="mb-0">Atleti</p>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-info-subtle text-info me-3">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.total_athletes }}</div>
+                        <div class="stat-label">Atleti</div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark">
-                <div class="card-body">
-                    <h3>{{ stats.total_posts }}</h3>
-                    <p class="mb-0">Post</p>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-warning-subtle text-warning me-3">
+                        <i class="bi bi-file-post"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ stats.total_posts }}</div>
+                        <div class="stat-label">Post</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header"><h5>Utenti Recenti</h5></div>
-                <div class="list-group list-group-flush">
-                    {% for user in recent_users %}
-                        <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="list-group-item list-group-item-action">
-                            <strong>{{ user.get_full_name() }}</strong> - {{ user.role }}
-                            <small class="text-muted float-end">{{ user.created_at|timeago }}</small>
-                        </a>
-                    {% endfor %}
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="menu-section">
+                <div class="menu-section-title"><i class="bi bi-palette me-2"></i>Aspetto e Personalizzazione</div>
+                <div class="menu-grid">
+                    <a href="{{ url_for('admin.appearance_settings') }}" class="menu-item">
+                        <i class="bi bi-palette2"></i>
+                        <span>Tema Colori</span>
+                    </a>
+                    <a href="{{ url_for('admin.site_customization') }}" class="menu-item">
+                        <i class="bi bi-brush"></i>
+                        <span>Brand & Logo</span>
+                    </a>
+                    <a href="{{ url_for('admin.navigation') }}" class="menu-item">
+                        <i class="bi bi-list"></i>
+                        <span>Menu Sidebar</span>
+                    </a>
+                    <a href="{{ url_for('admin.dashboard_templates') }}" class="menu-item">
+                        <i class="bi bi-grid-1x2"></i>
+                        <span>Widget Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('admin.pages') }}" class="menu-item">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Pagine Statiche</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title"><i class="bi bi-people me-2"></i>Utenti e Contenuti</div>
+                <div class="menu-grid">
+                    <a href="{{ url_for('admin.users') }}" class="menu-item">
+                        <i class="bi bi-people-fill"></i>
+                        <span>Gestione Utenti</span>
+                    </a>
+                    <a href="{{ url_for('admin.posts') }}" class="menu-item">
+                        <i class="bi bi-file-post"></i>
+                        <span>Post & Feed</span>
+                    </a>
+                    <a href="{{ url_for('admin.events') }}" class="menu-item">
+                        <i class="bi bi-calendar-event"></i>
+                        <span>Eventi</span>
+                    </a>
+                    <a href="{{ url_for('admin.social_settings') }}" class="menu-item">
+                        <i class="bi bi-chat-heart"></i>
+                        <span>Social Settings</span>
+                    </a>
+                    <a href="{{ url_for('admin.moderation') }}" class="menu-item">
+                        <i class="bi bi-shield-check"></i>
+                        <span>Moderazione</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title"><i class="bi bi-credit-card me-2"></i>Pagamenti e Business</div>
+                <div class="menu-grid">
+                    <a href="{{ url_for('subscription.admin_payments') }}" class="menu-item">
+                        <i class="bi bi-credit-card-2-front"></i>
+                        <span>Pagamenti</span>
+                    </a>
+                    <a href="{{ url_for('subscription.admin_plans') }}" class="menu-item">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Piani Abbonamento</span>
+                    </a>
+                    <a href="{{ url_for('subscription.admin_coupons') }}" class="menu-item">
+                        <i class="bi bi-ticket-perforated"></i>
+                        <span>Coupon</span>
+                    </a>
+                    <a href="{{ url_for('admin.platform_fees') }}" class="menu-item">
+                        <i class="bi bi-cash-coin"></i>
+                        <span>Commissioni</span>
+                    </a>
+                    <a href="{{ url_for('admin.platform_transactions') }}" class="menu-item">
+                        <i class="bi bi-receipt"></i>
+                        <span>Transazioni</span>
+                    </a>
+                    <a href="{{ url_for('admin.ads_manager') }}" class="menu-item">
+                        <i class="bi bi-megaphone"></i>
+                        <span>Pubblicità</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title"><i class="bi bi-gear me-2"></i>Impostazioni Sistema</div>
+                <div class="menu-grid">
+                    <a href="{{ url_for('admin.smtp_settings') }}" class="menu-item">
+                        <i class="bi bi-envelope"></i>
+                        <span>Email SMTP</span>
+                    </a>
+                    <a href="{{ url_for('admin.whatsapp_settings') }}" class="menu-item">
+                        <i class="bi bi-whatsapp"></i>
+                        <span>WhatsApp</span>
+                    </a>
+                    <a href="{{ url_for('admin.storage_settings') }}" class="menu-item">
+                        <i class="bi bi-cloud-upload"></i>
+                        <span>Storage</span>
+                    </a>
+                    <a href="{{ url_for('admin.privacy_settings') }}" class="menu-item">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>Privacy & Cookie</span>
+                    </a>
+                    <a href="{{ url_for('admin.enterprise_sso') }}" class="menu-item">
+                        <i class="bi bi-key"></i>
+                        <span>SSO Enterprise</span>
+                    </a>
+                    <a href="{{ url_for('backup.index') }}" class="menu-item">
+                        <i class="bi bi-database"></i>
+                        <span>Backup</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title"><i class="bi bi-graph-up me-2"></i>Analytics e Monitoring</div>
+                <div class="menu-grid">
+                    <a href="{{ url_for('admin.stats') }}" class="menu-item">
+                        <i class="bi bi-bar-chart-fill"></i>
+                        <span>Statistiche</span>
+                    </a>
+                    <a href="{{ url_for('admin.logs') }}" class="menu-item">
+                        <i class="bi bi-file-text"></i>
+                        <span>Log Audit</span>
+                    </a>
+                    <a href="{{ url_for('admin.maintenance_runs') }}" class="menu-item">
+                        <i class="bi bi-wrench"></i>
+                        <span>Manutenzione</span>
+                    </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header"><h5>Menu Rapido</h5></div>
-                <div class="list-group list-group-flush">
-                    <a href="{{ url_for('admin.stats') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-graph-up"></i> Analytics
-                    </a>
-                    <a href="{{ url_for('admin.users') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-people"></i> Gestione Utenti
-                    </a>
-                    <a href="{{ url_for('admin.posts') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-file-post"></i> Gestione Post
-                    </a>
-                    <a href="{{ url_for('admin.ads_settings') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-megaphone"></i> Tariffe Inserzioni
-                    </a>
-                    <a href="{{ url_for('admin.ads_manager') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-badge-ad"></i> Ads Autopilot (banner)
-                    </a>
-                    <a href="{{ url_for('admin.events') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-calendar"></i> Gestione Eventi
-                    </a>
-                    <a href="{{ url_for('admin.privacy_settings') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-shield-lock"></i> Privacy e Cookie
-                    </a>
-                    <a href="{{ url_for('backup.index') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-database"></i> Backup
-                    </a>
-                    <a href="{{ url_for('admin.logs') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-file-text"></i> Log Audit
-                    </a>
-                    <a href="{{ url_for('subscription.admin_payments') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-credit-card"></i> Gestione Pagamenti
-                    </a>
-                    <a href="{{ url_for('admin.moderation') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-shield-check"></i> Moderazione
-                    </a>
-                    <a href="{{ url_for('admin.appearance_settings') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-palette"></i> Tema piattaforma
-                    </a>
-                    <a href="{{ url_for('admin.site_customization') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-brush"></i> Personalizzazione sito
-                    </a>
-                    <a href="{{ url_for('admin.navigation') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-list"></i> Navbar
-                    </a>
-                    <a href="{{ url_for('admin.pages') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-file-earmark-text"></i> Pagine
-                    </a>
-                    <a href="{{ url_for('admin.dashboard_templates') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-grid-1x2"></i> Template cruscotti
-                    </a>
-                    <a href="{{ url_for('admin.smtp_settings') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-envelope"></i> SMTP
-                    </a>
-                    <a href="{{ url_for('admin.whatsapp_settings') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-chat-dots"></i> WhatsApp
-                    </a>
-                    <a href="{{ url_for('subscription.admin_plans') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-box-seam"></i> Piani (Subscription)
-                    </a>
-                    <a href="{{ url_for('subscription.admin_coupons') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-ticket-perforated"></i> Coupon
-                    </a>
-                    <a href="{{ url_for('subscription.admin_addons') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-puzzle"></i> Add-on
-                    </a>
-                    <a href="{{ url_for('marketplace.admin_packages') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-shop"></i> Marketplace (pacchetti)
-                    </a>
-                    <a href="{{ url_for('admin.platform_fees') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-cash-coin"></i> Take-rate (impostazioni)
-                    </a>
-                    <a href="{{ url_for('admin.platform_transactions') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-receipt"></i> Take-rate (ledger)
-                    </a>
-                    <a href="{{ url_for('admin.enterprise_sso') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-shield-check"></i> Enterprise SSO
-                    </a>
-                    <a href="{{ url_for('admin.maintenance_runs') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-wrench-adjustable"></i> Maintenance runs
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action disabled">
-                        <i class="bi bi-arrow-repeat"></i> Reset/Restart (Non disponibile)
-                    </a>
+
+        <div class="col-lg-4">
+            <div class="recent-card">
+                <div class="recent-card-header">
+                    <i class="bi bi-clock-history me-2"></i>Utenti Recenti
                 </div>
+                {% for user in recent_users %}
+                <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="user-item">
+                    <div class="user-avatar">
+                        {{ user.first_name[0] if user.first_name else 'U' }}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ user.get_full_name() }}</div>
+                        <div class="user-role">{{ user.role }}</div>
+                    </div>
+                    <div class="user-time">{{ user.created_at|timeago }}</div>
+                </a>
+                {% else %}
+                <div class="p-4 text-center text-muted">Nessun utente recente</div>
+                {% endfor %}
             </div>
         </div>
     </div>

@@ -1,62 +1,315 @@
 {% extends 'base.html' %}
 {% block title %}Storage Media{% endblock %}
+
+{% block extra_css %}
+<style>
+.storage-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.setting-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+}
+.storage-option {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+}
+.storage-option:hover {
+    border-color: #1877f2;
+}
+.storage-option.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.storage-option input {
+    margin-right: 16px;
+    width: 20px;
+    height: 20px;
+}
+.storage-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-right: 16px;
+}
+.storage-info {
+    flex: 1;
+}
+.storage-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.storage-desc {
+    font-size: 0.85rem;
+    color: #65676b;
+}
+.format-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+.format-card:hover {
+    border-color: #1877f2;
+}
+.format-card.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.format-card i {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    color: #1877f2;
+}
+.quality-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    -webkit-appearance: none;
+    background: linear-gradient(to right, #dc3545 0%, #ffc107 50%, #28a745 100%);
+}
+.quality-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #1877f2;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.limit-input {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+.limit-input i {
+    font-size: 1.5rem;
+    color: #1877f2;
+}
+.limit-input input {
+    width: 100px;
+    text-align: center;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-    <div class="section-hero mb-4 d-flex justify-content-between align-items-center">
-        <div>
-            <div class="pill mb-2"><i class="bi bi-hdd"></i> Storage</div>
-            <h1 class="h4 mb-0">Percorso salvataggi media</h1>
-            <p class="text-muted mb-0">Imposta dove salvare foto e video e con quale formato compresso.</p>
+    <div class="storage-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-cloud-upload"></i> Storage e Media</h1>
+                <p class="mb-0 opacity-75">Configura dove e come salvare foto e video</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Torna
+            </a>
         </div>
     </div>
-    <div class="glass-card p-4 card-hover">
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            <div class="row g-3">
-                <div class="col-md-4">
-                    {{ form.storage_backend.label(class='form-label') }}
-                    {{ form.storage_backend(class='form-select') }}
-                </div>
-                <div class="col-md-8">
-                    {{ form.base_path.label(class='form-label') }}
-                    {{ form.base_path(class='form-control') }}
-                    <div class="form-text">Percorso assoluto per gli upload. Verrà creato se non esiste.</div>
-                </div>
-                <div class="col-md-4">
-                    {{ form.preferred_image_format.label(class='form-label') }}
-                    {{ form.preferred_image_format(class='form-select') }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.image_quality.label(class='form-label') }}
-                    {{ form.image_quality(class='form-control', placeholder='75') }}
-                    <div class="form-text">Numero da 1 a 100. Valore più basso = file più leggero.</div>
-                </div>
-                <div class="col-md-4">
-                    {{ form.preferred_video_format.label(class='form-label') }}
-                    {{ form.preferred_video_format(class='form-control', placeholder='mp4') }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.video_bitrate.label(class='form-label') }}
-                    {{ form.video_bitrate(class='form-control', placeholder='1200000') }}
-                    <div class="form-text">Bitrate massimo (bps) per ricompressione video.</div>
-                </div>
-                <div class="col-md-4">
-                    {{ form.video_max_width.label(class='form-label') }}
-                    {{ form.video_max_width(class='form-control', placeholder='1280') }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.max_image_mb.label(class='form-label') }}
-                    {{ form.max_image_mb(class='form-control', placeholder='8') }}
-                </div>
-                <div class="col-md-4">
-                    {{ form.max_video_mb.label(class='form-label') }}
-                    {{ form.max_video_mb(class='form-control', placeholder='64') }}
+
+    <form method="POST" id="storageForm">
+        {{ form.hidden_tag() }}
+        
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-hdd text-primary"></i> Backend Storage</h5>
+                    
+                    <label class="storage-option" onclick="selectStorage('local')">
+                        <input type="radio" name="storage_choice" value="local" 
+                               {{ 'checked' if not form.storage_backend.data or form.storage_backend.data == 'local' }}>
+                        <div class="storage-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-hdd-fill"></i>
+                        </div>
+                        <div class="storage-info">
+                            <div class="storage-name">Locale</div>
+                            <div class="storage-desc">Salva i file sul server</div>
+                        </div>
+                    </label>
+                    
+                    <label class="storage-option" onclick="selectStorage('s3')">
+                        <input type="radio" name="storage_choice" value="s3"
+                               {{ 'checked' if form.storage_backend.data == 's3' }}>
+                        <div class="storage-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-cloud-fill"></i>
+                        </div>
+                        <div class="storage-info">
+                            <div class="storage-name">Amazon S3</div>
+                            <div class="storage-desc">Cloud storage scalabile</div>
+                        </div>
+                    </label>
+                    
+                    <label class="storage-option" onclick="selectStorage('gcs')">
+                        <input type="radio" name="storage_choice" value="gcs"
+                               {{ 'checked' if form.storage_backend.data == 'gcs' }}>
+                        <div class="storage-icon bg-info-subtle text-info">
+                            <i class="bi bi-google"></i>
+                        </div>
+                        <div class="storage-info">
+                            <div class="storage-name">Google Cloud</div>
+                            <div class="storage-desc">Google Cloud Storage</div>
+                        </div>
+                    </label>
+                    
+                    {{ form.storage_backend(type='hidden', id='storage_backend') }}
+                    
+                    <div class="mt-3">
+                        <label class="form-label fw-semibold">Percorso Base</label>
+                        {{ form.base_path(class='form-control', placeholder='/var/uploads') }}
+                        <small class="text-muted">Dove salvare i file sul server</small>
+                    </div>
                 </div>
             </div>
-            <div class="mt-4 d-flex justify-content-end">
-                <button type="submit" class="btn btn-dark"><i class="bi bi-save"></i> Salva</button>
+            
+            <div class="col-lg-6">
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-image text-primary"></i> Formato Immagini</h5>
+                    
+                    <div class="row g-2 mb-4">
+                        <div class="col-4">
+                            <div class="format-card" onclick="selectImageFormat('webp')">
+                                <i class="bi bi-filetype-png"></i>
+                                <strong>WebP</strong>
+                                <small class="text-muted">Consigliato</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="format-card" onclick="selectImageFormat('jpeg')">
+                                <i class="bi bi-filetype-jpg"></i>
+                                <strong>JPEG</strong>
+                                <small class="text-muted">Compatibile</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="format-card" onclick="selectImageFormat('png')">
+                                <i class="bi bi-filetype-png"></i>
+                                <strong>PNG</strong>
+                                <small class="text-muted">Alta qualità</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {{ form.preferred_image_format(type='hidden', id='preferred_image_format') }}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Qualità Immagini: <span id="qualityValue">{{ form.image_quality.data or 75 }}</span>%</label>
+                        <input type="range" class="quality-slider" id="qualitySlider" 
+                               min="10" max="100" value="{{ form.image_quality.data or 75 }}"
+                               oninput="updateQuality(this.value)">
+                        {{ form.image_quality(type='hidden', id='image_quality') }}
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">Più leggero</small>
+                            <small class="text-muted">Migliore qualità</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-camera-video text-primary"></i> Video Settings</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Formato Video</label>
+                            {{ form.preferred_video_format(class='form-select') }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Larghezza Max (px)</label>
+                            {{ form.video_max_width(class='form-control', placeholder='1280') }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Bitrate Video (bps)</label>
+                            {{ form.video_bitrate(class='form-control', placeholder='1200000') }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-speedometer2 text-primary"></i> Limiti Upload</h5>
+                    
+                    <div class="limit-input">
+                        <i class="bi bi-image"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Max dimensione immagine</div>
+                        </div>
+                        {{ form.max_image_mb(class='form-control', style='width:80px') }}
+                        <span>MB</span>
+                    </div>
+                    
+                    <div class="limit-input">
+                        <i class="bi bi-camera-video"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Max dimensione video</div>
+                        </div>
+                        {{ form.max_video_mb(class='form-control', style='width:80px') }}
+                        <span>MB</span>
+                    </div>
+                </div>
             </div>
-        </form>
-    </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-check-lg"></i> Salva Impostazioni
+            </button>
+        </div>
+    </form>
 </div>
+
+<script>
+function selectStorage(value) {
+    document.getElementById('storage_backend').value = value;
+    document.querySelectorAll('.storage-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.querySelector('input').value === value);
+    });
+}
+
+function selectImageFormat(format) {
+    document.getElementById('preferred_image_format').value = format;
+    document.querySelectorAll('.format-card').forEach((card, i) => {
+        const formats = ['webp', 'jpeg', 'png'];
+        card.classList.toggle('selected', formats[i] === format);
+    });
+}
+
+function updateQuality(value) {
+    document.getElementById('qualityValue').textContent = value;
+    document.getElementById('image_quality').value = value;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const currentStorage = document.getElementById('storage_backend').value || 'local';
+    selectStorage(currentStorage);
+    
+    const currentFormat = document.getElementById('preferred_image_format').value || 'webp';
+    selectImageFormat(currentFormat);
+});
+</script>
 {% endblock %}

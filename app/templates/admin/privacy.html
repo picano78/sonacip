@@ -1,41 +1,249 @@
 {% extends "base.html" %}
-{% block title %}Impostazioni Privacy{% endblock %}
+{% block title %}Privacy e Cookie{% endblock %}
+
+{% block extra_css %}
+<style>
+.privacy-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.setting-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+}
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+.preview-banner {
+    background: #333;
+    color: white;
+    padding: 16px 20px;
+    border-radius: 0 0 12px 12px;
+    position: relative;
+}
+.preview-banner-content {
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+.preview-banner-buttons {
+    display: flex;
+    gap: 12px;
+}
+.preview-banner-buttons button {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+}
+.btn-accept {
+    background: #1877f2;
+    color: white;
+}
+.btn-settings {
+    background: transparent;
+    color: white;
+    border: 1px solid white !important;
+}
+.browser-mockup {
+    background: #f0f0f0;
+    border-radius: 12px 12px 0 0;
+    padding: 8px 12px;
+}
+.browser-dots {
+    display: flex;
+    gap: 6px;
+}
+.browser-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+.browser-dot.red { background: #ff5f57; }
+.browser-dot.yellow { background: #febc2e; }
+.browser-dot.green { background: #28c840; }
+.link-card {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid #e4e6eb;
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+.link-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-right: 16px;
+}
+.link-input {
+    flex: 1;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h2 class="mb-3">Banner Privacy e Cookie</h2>
-                    <p class="text-muted">Configura il messaggio mostrato agli utenti e i link alle informative. Solo il super admin può modificare queste impostazioni.</p>
-                    <form method="POST">
-                        {{ form.hidden_tag() }}
-                        <div class="form-check form-switch mb-3">
-                            {{ form.banner_enabled(class="form-check-input", id="bannerEnabled") }}
-                            <label class="form-check-label" for="bannerEnabled">Mostra banner privacy/cookie</label>
-                        </div>
-                        <div class="mb-3">
-                            {{ form.consent_message.label(class="form-label") }}
-                            {{ form.consent_message(class="form-control", rows="4") }}
-                            <small class="text-muted">Testo mostrato nel popup di consenso.</small>
-                        </div>
-                        <div class="mb-3">
-                            {{ form.privacy_url.label(class="form-label") }}
-                            {{ form.privacy_url(class="form-control", placeholder="https://...") }}
-                            <small class="text-muted">Link alla privacy policy</small>
-                        </div>
-                        <div class="mb-3">
-                            {{ form.cookie_url.label(class="form-label") }}
-                            {{ form.cookie_url(class="form-control", placeholder="https://...") }}
-                            <small class="text-muted">Link alla cookie policy</small>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Salva impostazioni</button>
-                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Annulla</a>
-                        <p class="text-muted mt-3 small">Ultimo aggiornamento: {{ settings.updated_at|datetime_format if settings.updated_at else 'Mai' }}</p>
-                    </form>
-                </div>
+    <div class="privacy-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-shield-lock"></i> Privacy e Cookie</h1>
+                <p class="mb-0 opacity-75">Configura il banner GDPR e i link alle policy</p>
             </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Torna
+            </a>
         </div>
     </div>
+
+    <form method="POST" id="privacyForm">
+        {{ form.hidden_tag() }}
+        
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-toggle-on text-primary"></i> Impostazioni Banner</h5>
+                    
+                    <div class="toggle-switch">
+                        <div>
+                            <div class="fw-semibold">Mostra Banner Cookie</div>
+                            <div class="text-muted small">Visualizza il popup di consenso ai nuovi visitatori</div>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.banner_enabled(class='form-check-input', style='width:48px;height:24px', id='bannerEnabled') }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-chat-left-text text-primary"></i> Messaggio di Consenso</h5>
+                    
+                    <div class="mb-3">
+                        <div class="btn-group mb-2" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertTemplate('standard')">
+                                Standard
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertTemplate('minimal')">
+                                Minimalista
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertTemplate('detailed')">
+                                Dettagliato
+                            </button>
+                        </div>
+                        {{ form.consent_message(class='form-control', rows='4', id='consentMessage', placeholder='Questo sito utilizza cookie per migliorare la tua esperienza...') }}
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-link-45deg text-primary"></i> Link alle Policy</h5>
+                    
+                    <div class="link-card">
+                        <div class="link-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-file-earmark-lock"></i>
+                        </div>
+                        <div class="link-input">
+                            <label class="form-label fw-semibold mb-1">Privacy Policy</label>
+                            {{ form.privacy_url(class='form-control', placeholder='https://tuosito.it/privacy') }}
+                        </div>
+                    </div>
+                    
+                    <div class="link-card">
+                        <div class="link-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-cookie"></i>
+                        </div>
+                        <div class="link-input">
+                            <label class="form-label fw-semibold mb-1">Cookie Policy</label>
+                            {{ form.cookie_url(class='form-control', placeholder='https://tuosito.it/cookie') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-5">
+                <div class="setting-card p-0 overflow-hidden">
+                    <h6 class="p-3 pb-0"><i class="bi bi-eye"></i> Anteprima Banner</h6>
+                    
+                    <div class="browser-mockup">
+                        <div class="browser-dots">
+                            <div class="browser-dot red"></div>
+                            <div class="browser-dot yellow"></div>
+                            <div class="browser-dot green"></div>
+                        </div>
+                    </div>
+                    <div style="background: #eee; height: 120px; display: flex; align-items: center; justify-content: center;">
+                        <span class="text-muted">Contenuto sito web</span>
+                    </div>
+                    <div class="preview-banner">
+                        <div class="preview-banner-content" id="bannerPreview">
+                            Questo sito utilizza cookie per migliorare la tua esperienza di navigazione.
+                        </div>
+                        <div class="preview-banner-buttons">
+                            <button type="button" class="btn-accept">Accetta tutti</button>
+                            <button type="button" class="btn-settings">Impostazioni</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <h6><i class="bi bi-info-circle me-2"></i>GDPR Compliance</h6>
+                    <ul class="text-muted small mb-0">
+                        <li>Il banner è obbligatorio per siti UE</li>
+                        <li>Deve permettere scelta granulare</li>
+                        <li>Conserva log dei consensi</li>
+                    </ul>
+                </div>
+                
+                {% if settings.updated_at %}
+                <div class="text-muted small text-end">
+                    <i class="bi bi-clock me-1"></i>Ultimo aggiornamento: {{ settings.updated_at|datetime_format }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-check-lg"></i> Salva Impostazioni
+            </button>
+        </div>
+    </form>
 </div>
+
+<script>
+function insertTemplate(type) {
+    const templates = {
+        standard: 'Questo sito utilizza cookie per migliorare la tua esperienza di navigazione. Continuando accetti l\'uso dei cookie.',
+        minimal: 'Utilizziamo cookie. Accetti?',
+        detailed: 'Questo sito web utilizza cookie tecnici necessari al funzionamento e cookie di profilazione, propri e di terze parti, per inviarti pubblicità in linea con le tue preferenze. Cliccando su "Accetta tutti" acconsenti all\'uso di tutti i cookie. Puoi gestire le tue preferenze cliccando su "Impostazioni".'
+    };
+    document.getElementById('consentMessage').value = templates[type];
+    updatePreview();
+}
+
+function updatePreview() {
+    const message = document.getElementById('consentMessage').value;
+    document.getElementById('bannerPreview').textContent = message || 'Testo del banner...';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('consentMessage').addEventListener('input', updatePreview);
+    updatePreview();
+});
+</script>
 {% endblock %}

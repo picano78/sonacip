@@ -67,6 +67,7 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-05: Renamed duplicate function names in __init__.py
 - 2026-02-05: Added clickable avatar for profile image upload
 - 2026-02-05: Redesigned messaging system with WhatsApp-style chat interface
+- 2026-02-05: Enhanced internal messaging with WhatsApp green theme, emoji picker, search, and read receipts
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

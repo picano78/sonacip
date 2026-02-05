@@ -3,6 +3,13 @@
 
 {% block extra_css %}
 <style>
+:root {
+    --wa-green: #25D366;
+    --wa-green-dark: #128C7E;
+    --wa-green-light: #DCF8C6;
+    --wa-blue: #34B7F1;
+    --wa-gray: #ECE5DD;
+}
 .chat-container {
     display: flex;
     height: calc(100vh - 120px);
@@ -10,19 +17,20 @@
     background: var(--bs-body-bg);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
 }
 .conversations-list {
-    width: 320px;
-    min-width: 280px;
+    width: 350px;
+    min-width: 300px;
     border-right: 1px solid var(--bs-border-color);
     display: flex;
     flex-direction: column;
     background: var(--bs-tertiary-bg);
 }
 .conversations-header {
-    padding: 16px;
-    border-bottom: 1px solid var(--bs-border-color);
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--wa-green-dark), var(--wa-green));
+    color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -30,6 +38,34 @@
 .conversations-header h5 {
     margin: 0;
     font-weight: 600;
+    color: white;
+}
+.conversations-header .btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+}
+.conversations-header .btn:hover {
+    background: rgba(255,255,255,0.3);
+    color: white;
+}
+.search-box {
+    padding: 10px 16px;
+    background: var(--bs-body-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.search-box input {
+    border-radius: 20px;
+    padding-left: 36px;
+    background: var(--bs-tertiary-bg);
+    border: none;
+}
+.search-box .search-icon {
+    position: absolute;
+    left: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--bs-secondary-color);
 }
 .conversation-items {
     flex: 1;
@@ -139,50 +175,93 @@
 }
 .message-sent {
     align-self: flex-end;
-    background: var(--bs-primary);
-    color: white;
+    background: var(--wa-green-light);
+    color: #303030;
     border-bottom-right-radius: 4px;
 }
 .message-received {
     align-self: flex-start;
-    background: var(--bs-tertiary-bg);
+    background: white;
+    color: #303030;
     border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+.message-sent .message-time {
+    color: #667781;
+}
+.message-sent .bi-check2, .message-sent .bi-check2-all {
+    color: var(--wa-blue);
 }
 .message-time {
     font-size: 0.7rem;
-    opacity: 0.7;
     margin-top: 4px;
     text-align: right;
 }
-.message-sent .message-time {
-    color: rgba(255,255,255,0.8);
-}
 .chat-input-area {
-    padding: 16px;
+    padding: 12px 16px;
     border-top: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg);
+    background: var(--wa-gray);
 }
 .chat-input-form {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     align-items: flex-end;
+}
+.emoji-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--bs-secondary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.emoji-btn:hover {
+    color: var(--wa-green-dark);
 }
 .chat-input {
     flex: 1;
     border-radius: 24px;
-    padding: 12px 20px;
-    border: 1px solid var(--bs-border-color);
+    padding: 10px 20px;
+    border: none;
     resize: none;
     max-height: 120px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.chat-input:focus {
+    outline: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
 }
 .chat-send-btn {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    background: var(--wa-green);
+    border: none;
+    color: white;
+    transition: background 0.2s;
+}
+.chat-send-btn:hover {
+    background: var(--wa-green-dark);
+    color: white;
+}
+.online-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--wa-green);
+    display: inline-block;
+    margin-left: 6px;
 }
 .empty-chat {
     flex: 1;
@@ -217,10 +296,14 @@
     <div class="chat-container">
         <div class="conversations-list">
             <div class="conversations-header">
-                <h5><i class="bi bi-chat-dots"></i> Chat</h5>
-                <a href="{{ url_for('messages.new_chat') }}" class="btn btn-primary btn-sm" title="Nuova chat">
+                <h5><i class="bi bi-chat-dots-fill"></i> Messaggi</h5>
+                <a href="{{ url_for('messages.new_chat') }}" class="btn btn-sm" title="Nuova chat">
                     <i class="bi bi-plus-lg"></i>
                 </a>
+            </div>
+            <div class="search-box position-relative">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" class="form-control" id="searchConversations" placeholder="Cerca conversazione...">
             </div>
             <div class="conversation-items">
                 {% for conv in conversations %}
@@ -297,11 +380,34 @@
             <div class="chat-input-area">
                 <form action="{{ url_for('messages.send_message', user_id=chat_user.id) }}" method="POST" class="chat-input-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <textarea name="body" class="form-control chat-input" placeholder="Scrivi un messaggio..." rows="1" required></textarea>
-                    <button type="submit" class="btn btn-primary chat-send-btn">
+                    <button type="button" class="emoji-btn" id="emojiBtn" title="Emoji">
+                        <i class="bi bi-emoji-smile"></i>
+                    </button>
+                    <textarea name="body" class="form-control chat-input" id="messageInput" placeholder="Scrivi un messaggio..." rows="1" required></textarea>
+                    <button type="submit" class="chat-send-btn">
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </form>
+                <div class="emoji-picker" id="emojiPicker" style="display:none; position:absolute; bottom:70px; left:16px; background:white; padding:10px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); z-index:100;">
+                    <div style="display:grid; grid-template-columns:repeat(8,1fr); gap:4px; font-size:1.4rem;">
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">😊</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">😂</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">❤️</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">👍</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🎉</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🔥</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">⚽</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🏆</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">💪</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🏃</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🎯</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">✅</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">👋</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🙏</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">💯</span>
+                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🤝</span>
+                    </div>
+                </div>
             </div>
             {% else %}
             <div class="empty-chat">
@@ -336,6 +442,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 this.closest('form').submit();
             }
+        });
+    }
+    
+    // Emoji picker
+    const emojiBtn = document.getElementById('emojiBtn');
+    const emojiPicker = document.getElementById('emojiPicker');
+    const messageInput = document.getElementById('messageInput');
+    
+    if (emojiBtn && emojiPicker) {
+        emojiBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        document.querySelectorAll('.emoji-item').forEach(item => {
+            item.addEventListener('click', function() {
+                if (messageInput) {
+                    messageInput.value += this.textContent;
+                    messageInput.focus();
+                }
+                emojiPicker.style.display = 'none';
+            });
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+                emojiPicker.style.display = 'none';
+            }
+        });
+    }
+    
+    // Search conversations
+    const searchInput = document.getElementById('searchConversations');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                const name = item.querySelector('.conversation-name').textContent.toLowerCase();
+                item.style.display = name.includes(query) ? 'flex' : 'none';
+            });
         });
     }
 });

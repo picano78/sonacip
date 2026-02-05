@@ -547,6 +547,29 @@ def edit_profile():
     return render_template('social/edit_profile.html', form=form)
 
 
+@bp.route('/profile/avatar', methods=['POST'])
+@login_required
+def upload_avatar():
+    """Upload avatar image directly from profile page"""
+    if 'avatar' not in request.files:
+        flash('Nessun file selezionato.', 'warning')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    
+    file = request.files['avatar']
+    if file.filename == '':
+        flash('Nessun file selezionato.', 'warning')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    
+    if file:
+        avatar_file = save_picture(file, folder='avatars', size=(300, 300))
+        current_user.avatar = avatar_file
+        current_user.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('Immagine profilo aggiornata!', 'success')
+    
+    return redirect(url_for('social.profile', user_id=current_user.id))
+
+
 @bp.route('/follow/<int:user_id>', methods=['POST'])
 @login_required
 def follow(user_id):

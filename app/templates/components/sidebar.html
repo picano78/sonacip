@@ -27,6 +27,12 @@
                     <span class="sidebar-text">Calendario</span>
                 </a>
             </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('social.feed') }}" class="sidebar-link" data-tooltip="Social">
+                    <i class="bi bi-people-fill"></i>
+                    <span class="sidebar-text">Social</span>
+                </a>
+            </li>
             {% if nav_links %}
                 {% for l in nav_links %}
                     {% set endpoint = l.endpoint if l.endpoint is defined else l.get('endpoint') %}

@@ -2,7 +2,7 @@
 Backup routes
 Create, restore, manage backups
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.backup.utils import (
@@ -230,6 +230,80 @@ def delete(backup_id):
         flash(message, 'success')
     else:
         flash(f'Errore: {message}', 'danger')
+    
+    return redirect(url_for('backup.index'))
+
+
+@bp.route('/upload-restore', methods=['POST'])
+@login_required
+@admin_required
+def upload_restore():
+    """Upload and restore from backup file"""
+    import os
+    import tempfile
+    from werkzeug.utils import secure_filename
+    
+    if 'backup_file' not in request.files:
+        flash('Nessun file selezionato.', 'danger')
+        return redirect(url_for('backup.index'))
+    
+    file = request.files['backup_file']
+    if file.filename == '':
+        flash('Nessun file selezionato.', 'danger')
+        return redirect(url_for('backup.index'))
+    
+    if not file.filename.endswith('.zip'):
+        flash('Il file deve essere un archivio ZIP.', 'danger')
+        return redirect(url_for('backup.index'))
+    
+    try:
+        filename = secure_filename(file.filename)
+        backup_dir = current_app.config.get('BACKUP_FOLDER') or os.path.join(current_app.root_path, '..', 'backups')
+        
+        if not os.path.isdir(backup_dir):
+            os.makedirs(backup_dir, exist_ok=True)
+        
+        filepath = os.path.join(backup_dir, filename)
+        file.save(filepath)
+        
+        file_size = os.path.getsize(filepath)
+        from app.backup.utils import calculate_checksum
+        checksum = calculate_checksum(filepath)
+        
+        backup = Backup(
+            filename=filename,
+            filepath=filepath,
+            size=file_size,
+            backup_type='uploaded',
+            checksum=checksum,
+            created_by=current_user.id,
+            notes='Caricato manualmente per ripristino',
+            is_valid=True
+        )
+        db.session.add(backup)
+        db.session.commit()
+        
+        success, message = restore_backup(backup.id)
+        
+        if success:
+            log = AuditLog(
+                user_id=current_user.id,
+                action='upload_restore_backup',
+                entity_type='Backup',
+                entity_id=backup.id,
+                details=f'Uploaded and restored backup: {filename}',
+                ip_address=request.remote_addr
+            )
+            db.session.add(log)
+            db.session.commit()
+            
+            flash(f'Backup caricato e ripristinato con successo: {filename}', 'success')
+            flash('ATTENZIONE: Il database è stato ripristinato. Ricarica la pagina.', 'warning')
+        else:
+            flash(f'Errore durante il ripristino: {message}', 'danger')
+    
+    except Exception as e:
+        flash(f'Errore durante il caricamento: {str(e)}', 'danger')
     
     return redirect(url_for('backup.index'))
 

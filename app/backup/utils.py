@@ -123,10 +123,15 @@ def run_scheduled_backup_if_due(now=None):
         return False
 
     if settings.last_run_at:
+        time_diff = now - settings.last_run_at
         delta_days = (now.date() - settings.last_run_at.date()).days
-        if settings.frequency == 'daily' and delta_days < 1:
+        
+        if settings.frequency == 'hourly':
+            if time_diff.total_seconds() < 3600:
+                return False
+        elif settings.frequency == 'daily' and delta_days < 1:
             return False
-        if settings.frequency == 'weekly' and delta_days < 7:
+        elif settings.frequency == 'weekly' and delta_days < 7:
             return False
 
     backup = create_backup(

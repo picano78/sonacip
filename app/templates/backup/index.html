@@ -1,134 +1,738 @@
 {% extends "base.html" %}
-{% block title %}Backup - Admin{% endblock %}
+{% block title %}{{ t('backup_management') }} - Admin{% endblock %}
 {% block content %}
-<div class="container my-4">
-    <h1 class="mb-4"><i class="bi bi-database"></i> Gestione Backup</h1>
-    <div class="row g-4">
-        <div class="col-lg-6">
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Crea Nuovo Backup</h5>
-            <form method="POST" action="{{ url_for('backup.create') }}">
-                <div class="row">
-                    <div class="col-md-4">
-                        <select name="backup_type" class="form-select">
-                            <option value="full">Backup Completo</option>
-                            <option value="database">Solo Database</option>
-                            <option value="uploads">Solo File Caricati</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" name="notes" class="form-control" placeholder="Note (opzionale)">
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-download"></i> Crea Backup
-                        </button>
-                    </div>
+<style>
+:root {
+    --fb-blue: #1877f2;
+    --fb-blue-dark: #166fe5;
+    --success-green: #42b72a;
+    --warning-orange: #f5a623;
+    --danger-red: #fa3e3e;
+}
+
+.backup-hero {
+    background: linear-gradient(135deg, var(--fb-blue) 0%, #4267B2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(24, 119, 242, 0.3);
+}
+
+.backup-hero h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.backup-hero .stats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.backup-hero .stat-item {
+    text-align: center;
+}
+
+.backup-hero .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.backup-hero .stat-label {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.backup-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.backup-card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.backup-card-header i {
+    font-size: 1.5rem;
+    color: var(--fb-blue);
+}
+
+.backup-card-header h5 {
+    margin: 0;
+    font-weight: 600;
+    color: #1c1e21;
+}
+
+.backup-card-body {
+    padding: 1.5rem;
+}
+
+.backup-type-selector {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.backup-type-option {
+    flex: 1;
+    padding: 1.25rem;
+    border: 2px solid #e4e6eb;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.backup-type-option:hover {
+    border-color: var(--fb-blue);
+    background: #f0f7ff;
+}
+
+.backup-type-option.selected {
+    border-color: var(--fb-blue);
+    background: #e7f3ff;
+}
+
+.backup-type-option i {
+    font-size: 2rem;
+    color: var(--fb-blue);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.backup-type-option .label {
+    font-weight: 600;
+    color: #1c1e21;
+}
+
+.backup-type-option .desc {
+    font-size: 0.8rem;
+    color: #65676b;
+    margin-top: 0.25rem;
+}
+
+.schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.schedule-option {
+    padding: 1rem;
+    border: 2px solid #e4e6eb;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.schedule-option:hover {
+    border-color: var(--fb-blue);
+}
+
+.schedule-option.selected {
+    border-color: var(--fb-blue);
+    background: #e7f3ff;
+}
+
+.schedule-option i {
+    font-size: 1.5rem;
+    color: var(--fb-blue);
+    margin-bottom: 0.5rem;
+}
+
+.upload-zone {
+    border: 3px dashed #e4e6eb;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fafbfc;
+}
+
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--fb-blue);
+    background: #e7f3ff;
+}
+
+.upload-zone i {
+    font-size: 4rem;
+    color: var(--fb-blue);
+    margin-bottom: 1rem;
+}
+
+.upload-zone h4 {
+    color: #1c1e21;
+    margin-bottom: 0.5rem;
+}
+
+.upload-zone p {
+    color: #65676b;
+    margin-bottom: 1rem;
+}
+
+.backup-list-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f0f2f5;
+    transition: background 0.2s;
+}
+
+.backup-list-item:hover {
+    background: #f7f8fa;
+}
+
+.backup-list-item:last-child {
+    border-bottom: none;
+}
+
+.backup-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.5rem;
+}
+
+.backup-icon.full { background: #e7f3ff; color: var(--fb-blue); }
+.backup-icon.database { background: #e8f5e9; color: var(--success-green); }
+.backup-icon.uploads { background: #fff3e0; color: var(--warning-orange); }
+
+.backup-info {
+    flex: 1;
+}
+
+.backup-info .name {
+    font-weight: 600;
+    color: #1c1e21;
+    margin-bottom: 0.25rem;
+}
+
+.backup-info .meta {
+    font-size: 0.85rem;
+    color: #65676b;
+}
+
+.backup-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.backup-actions .btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 56px;
+    height: 30px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: #ccc;
+    border-radius: 30px;
+    transition: 0.3s;
+}
+
+.toggle-slider:before {
+    content: "";
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+input:checked + .toggle-slider {
+    background: var(--success-green);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.time-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f0f2f5;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.time-picker:focus-within {
+    border-color: var(--fb-blue);
+    background: white;
+}
+
+.time-picker input {
+    border: none;
+    background: transparent;
+    width: 60px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.time-picker input:focus {
+    outline: none;
+}
+
+.retention-slider {
+    width: 100%;
+    appearance: none;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(to right, var(--fb-blue) 0%, var(--fb-blue) 50%, #e4e6eb 50%, #e4e6eb 100%);
+}
+
+.retention-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--fb-blue);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.btn-fb {
+    background: var(--fb-blue);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-fb:hover {
+    background: var(--fb-blue-dark);
+    color: white;
+}
+
+.btn-success-fb {
+    background: var(--success-green);
+    color: white;
+    border: none;
+}
+
+.btn-success-fb:hover {
+    background: #36a420;
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #65676b;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #e4e6eb;
+    margin-bottom: 1rem;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.backup-progress {
+    display: none;
+    padding: 1.5rem;
+    background: #e7f3ff;
+    border-radius: 10px;
+    margin-top: 1rem;
+}
+
+.backup-progress.active {
+    display: block;
+}
+
+.backup-progress .spinner {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+</style>
+
+<div class="container-fluid px-4 py-4">
+    <div class="backup-hero">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1><i class="bi bi-cloud-arrow-up-fill me-2"></i>{{ t('backup_management') }}</h1>
+                <p class="mb-0 opacity-75">{{ t('backup_description') }}</p>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value">{{ backups|length }}</div>
+                    <div class="stat-label">{{ t('total_backups') }}</div>
                 </div>
-            </form>
-            <div class="mt-3">
-                <form method="POST" action="{{ url_for('backup.run_now') }}">
-                    <input type="hidden" name="backup_type" value="{{ settings.backup_type }}">
-                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-lightning"></i> Esegui ora</button>
-                    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('backup.auto_check') }}">Verifica schedulazione</a>
-                </form>
+                <div class="stat-item">
+                    <div class="stat-value">{{ total_size }}</div>
+                    <div class="stat-label">{{ t('total_size') }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">
+                        {% if settings.auto_enabled %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-warning"></i>{% endif %}
+                    </div>
+                    <div class="stat-label">{{ t('auto_backup') }}</div>
+                </div>
             </div>
         </div>
     </div>
-        </div>
+
+    <div class="row">
         <div class="col-lg-6">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Backup Automatici</h5>
+            <div class="backup-card">
+                <div class="backup-card-header">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <h5>{{ t('create_new_backup') }}</h5>
+                </div>
+                <div class="backup-card-body">
+                    <form method="POST" action="{{ url_for('backup.create') }}" id="createBackupForm">
+                        <input type="hidden" name="backup_type" id="selectedBackupType" value="full">
+                        
+                        <label class="form-label fw-semibold mb-3">{{ t('select_backup_type') }}</label>
+                        <div class="backup-type-selector">
+                            <div class="backup-type-option selected" data-type="full">
+                                <i class="bi bi-archive-fill"></i>
+                                <div class="label">{{ t('full_backup') }}</div>
+                                <div class="desc">{{ t('full_backup_desc') }}</div>
+                            </div>
+                            <div class="backup-type-option" data-type="database">
+                                <i class="bi bi-database-fill"></i>
+                                <div class="label">{{ t('database_only') }}</div>
+                                <div class="desc">{{ t('database_only_desc') }}</div>
+                            </div>
+                            <div class="backup-type-option" data-type="uploads">
+                                <i class="bi bi-folder-fill"></i>
+                                <div class="label">{{ t('files_only') }}</div>
+                                <div class="desc">{{ t('files_only_desc') }}</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">{{ t('notes') }} ({{ t('optional') }})</label>
+                            <input type="text" name="notes" class="form-control" placeholder="{{ t('backup_notes_placeholder') }}">
+                        </div>
+
+                        <button type="submit" class="btn btn-fb w-100">
+                            <i class="bi bi-cloud-arrow-up me-2"></i>{{ t('create_backup_now') }}
+                        </button>
+                    </form>
+
+                    <div class="backup-progress" id="backupProgress">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner me-3">
+                                <i class="bi bi-arrow-repeat" style="font-size: 1.5rem; color: var(--fb-blue);"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">{{ t('creating_backup') }}...</div>
+                                <div class="small text-muted">{{ t('please_wait') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="backup-card">
+                <div class="backup-card-header">
+                    <i class="bi bi-upload"></i>
+                    <h5>{{ t('restore_from_file') }}</h5>
+                </div>
+                <div class="backup-card-body">
+                    <form method="POST" action="{{ url_for('backup.upload_restore') }}" enctype="multipart/form-data" id="uploadForm">
+                        <div class="upload-zone" id="uploadZone">
+                            <i class="bi bi-cloud-upload"></i>
+                            <h4>{{ t('drag_drop_backup') }}</h4>
+                            <p>{{ t('or_click_to_select') }}</p>
+                            <input type="file" name="backup_file" id="backupFileInput" accept=".zip" class="d-none">
+                            <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('backupFileInput').click()">
+                                <i class="bi bi-folder2-open me-2"></i>{{ t('select_file') }}
+                            </button>
+                        </div>
+                        <div id="selectedFile" class="mt-3 d-none">
+                            <div class="d-flex align-items-center p-3 bg-light rounded">
+                                <i class="bi bi-file-earmark-zip fs-3 text-primary me-3"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold" id="fileName"></div>
+                                    <div class="small text-muted" id="fileSize"></div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success-fb w-100 mt-3" id="restoreBtn" disabled>
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>{{ t('restore_backup') }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="backup-card">
+                <div class="backup-card-header">
+                    <i class="bi bi-clock-history"></i>
+                    <h5>{{ t('scheduled_backups') }}</h5>
+                </div>
+                <div class="backup-card-body">
                     <form method="POST" action="{{ url_for('backup.save_settings') }}">
-                        <div class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" id="auto_enabled" name="auto_enabled" {% if settings.auto_enabled %}checked{% endif %}>
-                            <label class="form-check-label" for="auto_enabled">Abilita backup automatici</label>
+                        <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
+                            <div>
+                                <div class="fw-semibold">{{ t('enable_auto_backup') }}</div>
+                                <div class="small text-muted">{{ t('auto_backup_desc') }}</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="auto_enabled" {% if settings.auto_enabled %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
                         </div>
-                        <div class="row g-3">
+
+                        <label class="form-label fw-semibold mb-3">{{ t('frequency') }}</label>
+                        <div class="schedule-grid mb-4">
+                            <div class="schedule-option {% if settings.frequency == 'hourly' %}selected{% endif %}" data-freq="hourly">
+                                <i class="bi bi-hourglass-split"></i>
+                                <div class="fw-semibold">{{ t('hourly') }}</div>
+                                <div class="small text-muted">{{ t('every_hour') }}</div>
+                            </div>
+                            <div class="schedule-option {% if settings.frequency == 'daily' or not settings.frequency %}selected{% endif %}" data-freq="daily">
+                                <i class="bi bi-sun"></i>
+                                <div class="fw-semibold">{{ t('daily') }}</div>
+                                <div class="small text-muted">{{ t('once_a_day') }}</div>
+                            </div>
+                            <div class="schedule-option {% if settings.frequency == 'weekly' %}selected{% endif %}" data-freq="weekly">
+                                <i class="bi bi-calendar-week"></i>
+                                <div class="fw-semibold">{{ t('weekly') }}</div>
+                                <div class="small text-muted">{{ t('once_a_week') }}</div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="frequency" id="frequencyInput" value="{{ settings.frequency or 'daily' }}">
+
+                        <div class="row mb-4">
                             <div class="col-md-6">
-                                <label class="form-label">Frequenza</label>
-                                <select name="frequency" class="form-select" aria-label="Frequenza">
-                                    <option value="daily" {% if settings.frequency == 'daily' %}selected{% endif %}>Giornaliero</option>
-                                    <option value="weekly" {% if settings.frequency == 'weekly' %}selected{% endif %}>Settimanale</option>
-                                </select>
+                                <label class="form-label fw-semibold">{{ t('execution_time') }} (UTC)</label>
+                                <div class="time-picker">
+                                    <i class="bi bi-clock text-primary"></i>
+                                    <input type="number" name="run_hour_utc" min="0" max="23" value="{{ settings.run_hour_utc or 2 }}">
+                                    <span>:00</span>
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Ora esecuzione (UTC)</label>
-                                <input type="number" min="0" max="23" name="run_hour_utc" class="form-control" value="{{ settings.run_hour_utc or 2 }}">
-                            </div>
-                        </div>
-                        <div class="row g-3 mt-2">
-                            <div class="col-md-6">
-                                <label class="form-label">Tipo di backup</label>
+                                <label class="form-label fw-semibold">{{ t('backup_type') }}</label>
                                 <select name="backup_type" class="form-select">
-                                    <option value="full" {% if settings.backup_type == 'full' %}selected{% endif %}>Completo</option>
-                                    <option value="database" {% if settings.backup_type == 'database' %}selected{% endif %}>Solo DB</option>
-                                    <option value="uploads" {% if settings.backup_type == 'uploads' %}selected{% endif %}>Solo Upload</option>
+                                    <option value="full" {% if settings.backup_type == 'full' %}selected{% endif %}>{{ t('full_backup') }}</option>
+                                    <option value="database" {% if settings.backup_type == 'database' %}selected{% endif %}>{{ t('database_only') }}</option>
+                                    <option value="uploads" {% if settings.backup_type == 'uploads' %}selected{% endif %}>{{ t('files_only') }}</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Retention (giorni)</label>
-                                <input type="number" min="1" name="retention_days" class="form-control" value="{{ settings.retention_days or 30 }}">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold d-flex justify-content-between">
+                                <span>{{ t('retention_period') }}</span>
+                                <span class="text-primary" id="retentionValue">{{ settings.retention_days or 30 }} {{ t('days') }}</span>
+                            </label>
+                            <input type="range" name="retention_days" class="retention-slider" min="1" max="90" value="{{ settings.retention_days or 30 }}" id="retentionSlider">
+                            <div class="d-flex justify-content-between small text-muted mt-1">
+                                <span>1 {{ t('day') }}</span>
+                                <span>90 {{ t('days') }}</span>
                             </div>
                         </div>
-                        <p class="small text-muted mt-2">Ultimo backup automatico: {{ settings.last_run_at|datetime_format if settings.last_run_at else 'mai' }}</p>
-                        <button type="submit" class="btn btn-primary">Salva impostazioni</button>
+
+                        {% if settings.last_run_at %}
+                        <div class="alert alert-info d-flex align-items-center mb-4">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <span>{{ t('last_auto_backup') }}: <strong>{{ settings.last_run_at|datetime_format }}</strong></span>
+                        </div>
+                        {% endif %}
+
+                        <button type="submit" class="btn btn-fb w-100">
+                            <i class="bi bi-check-lg me-2"></i>{{ t('save_settings') }}
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Backup Esistenti</h5>
-            <span class="badge bg-info">Totale: {{ total_size }}</span>
+
+    <div class="backup-card">
+        <div class="backup-card-header">
+            <i class="bi bi-archive"></i>
+            <h5>{{ t('existing_backups') }}</h5>
+            <span class="ms-auto badge bg-primary">{{ backups|length }} backup</span>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Nome File</th>
-                        <th>Tipo</th>
-                        <th>Storage</th>
-                        <th>Dimensione</th>
-                        <th>Checksum</th>
-                        <th>Data</th>
-                        <th>Azioni</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for backup in backups %}
-                        <tr>
-                            <td>{{ backup.filename }}</td>
-                            <td><span class="badge bg-secondary">{{ backup.backup_type }}</span></td>
-                            <td><span class="badge bg-{{ 'success' if backup.storage_location == 'remote' else 'info' }}">{{ backup.storage_location or 'local' }}</span></td>
-                            <td>{{ (backup.size / 1024 / 1024)|round(2) }} MB</td>
-                            <td class="small text-muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">{{ backup.checksum or '—' }}</td>
-                            <td>{{ backup.created_at|datetime_format }}</td>
-                            <td>
-                                <a href="{{ url_for('backup.download', backup_id=backup.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-download"></i>
-                                </a>
-                                <form method="POST" action="{{ url_for('backup.restore', backup_id=backup.id) }}" class="d-inline" 
-                                      onsubmit="return confirm('Sicuro di voler ripristinare questo backup?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </button>
-                                </form>
-                                <form method="POST" action="{{ url_for('backup.delete', backup_id=backup.id) }}" class="d-inline"
-                                      onsubmit="return confirm('Sicuro di voler eliminare questo backup?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        {% if backups %}
+        <div class="backup-list">
+            {% for backup in backups %}
+            <div class="backup-list-item">
+                <div class="backup-icon {{ backup.backup_type }}">
+                    {% if backup.backup_type == 'full' %}
+                        <i class="bi bi-archive-fill"></i>
+                    {% elif backup.backup_type == 'database' %}
+                        <i class="bi bi-database-fill"></i>
+                    {% else %}
+                        <i class="bi bi-folder-fill"></i>
+                    {% endif %}
+                </div>
+                <div class="backup-info">
+                    <div class="name">{{ backup.filename }}</div>
+                    <div class="meta">
+                        <span class="badge bg-{{ 'primary' if backup.backup_type == 'full' else 'success' if backup.backup_type == 'database' else 'warning' }} me-2">
+                            {{ backup.backup_type|upper }}
+                        </span>
+                        <i class="bi bi-hdd me-1"></i>{{ (backup.size / 1024 / 1024)|round(2) }} MB
+                        <span class="mx-2">•</span>
+                        <i class="bi bi-calendar me-1"></i>{{ backup.created_at|datetime_format }}
+                        {% if backup.notes %}
+                        <span class="mx-2">•</span>
+                        <i class="bi bi-chat-left-text me-1"></i>{{ backup.notes }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="backup-actions">
+                    <a href="{{ url_for('backup.download', backup_id=backup.id) }}" class="btn btn-outline-primary" title="{{ t('download') }}">
+                        <i class="bi bi-download"></i>
+                    </a>
+                    <form method="POST" action="{{ url_for('backup.restore', backup_id=backup.id) }}" class="d-inline" 
+                          onsubmit="return confirm('{{ t('confirm_restore') }}');">
+                        <button type="submit" class="btn btn-outline-success" title="{{ t('restore') }}">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('backup.validate', backup_id=backup.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-outline-info" title="{{ t('validate') }}">
+                            <i class="bi bi-check2-circle"></i>
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('backup.delete', backup_id=backup.id) }}" class="d-inline"
+                          onsubmit="return confirm('{{ t('confirm_delete') }}');">
+                        <button type="submit" class="btn btn-outline-danger" title="{{ t('delete') }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-cloud-slash"></i>
+            <h5>{{ t('no_backups') }}</h5>
+            <p>{{ t('create_first_backup') }}</p>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.backup-type-option').forEach(opt => {
+        opt.addEventListener('click', function() {
+            document.querySelectorAll('.backup-type-option').forEach(o => o.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('selectedBackupType').value = this.dataset.type;
+        });
+    });
+
+    document.querySelectorAll('.schedule-option').forEach(opt => {
+        opt.addEventListener('click', function() {
+            document.querySelectorAll('.schedule-option').forEach(o => o.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('frequencyInput').value = this.dataset.freq;
+        });
+    });
+
+    const retentionSlider = document.getElementById('retentionSlider');
+    const retentionValue = document.getElementById('retentionValue');
+    if (retentionSlider) {
+        retentionSlider.addEventListener('input', function() {
+            retentionValue.textContent = this.value + ' {{ t("days") }}';
+            const pct = (this.value - 1) / 89 * 100;
+            this.style.background = `linear-gradient(to right, var(--fb-blue) ${pct}%, #e4e6eb ${pct}%)`;
+        });
+        const pct = (retentionSlider.value - 1) / 89 * 100;
+        retentionSlider.style.background = `linear-gradient(to right, var(--fb-blue) ${pct}%, #e4e6eb ${pct}%)`;
+    }
+
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('backupFileInput');
+    const selectedFile = document.getElementById('selectedFile');
+    const restoreBtn = document.getElementById('restoreBtn');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        uploadZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
+    });
+
+    uploadZone.addEventListener('dragenter', () => uploadZone.classList.add('dragover'));
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', function(e) {
+        uploadZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            fileInput.files = files;
+            showFile(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length) showFile(this.files[0]);
+    });
+
+    function showFile(file) {
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        selectedFile.classList.remove('d-none');
+        restoreBtn.disabled = false;
+    }
+
+    window.clearFile = function() {
+        fileInput.value = '';
+        selectedFile.classList.add('d-none');
+        restoreBtn.disabled = true;
+    };
+
+    document.getElementById('createBackupForm').addEventListener('submit', function() {
+        document.getElementById('backupProgress').classList.add('active');
+    });
+});
+</script>
 {% endblock %}

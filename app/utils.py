@@ -401,15 +401,14 @@ def log_action(action, entity_type=None, entity_id=None, details=None, society_i
     from flask import request
     
     if current_user.is_authenticated:
-        log = AuditLog(
-            user_id=current_user.id,
-            society_id=society_id,
-            action=action,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            details=details,
-            ip_address=request.remote_addr if request else None
-        )
+        log = AuditLog()
+        log.user_id = current_user.id
+        log.society_id = society_id
+        log.action = action
+        log.entity_type = entity_type
+        log.entity_id = entity_id
+        log.details = details
+        log.ip_address = request.remote_addr if request else None
         db.session.add(log)
         try:
             db.session.commit()

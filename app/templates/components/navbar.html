@@ -76,18 +76,18 @@
                                 </a>
                             </li>
                         {% endif %}
-                        {% if can('calendar', 'view') %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('calendar.grid') }}">
-                                    <i class="bi bi-calendar-check"></i> Planner
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('calendar.index') }}">
-                                    <i class="bi bi-calendar3-range"></i> Calendario Società
-                                </a>
-                            </li>
-                        {% endif %}
+                        
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('calendar.grid') }}">
+                                <i class="bi bi-calendar-check"></i> Planner
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('calendar.index') }}">
+                                <i class="bi bi-calendar3-range"></i> Calendario Società
+                            </a>
+                        </li>
+
                         {% if can('crm', 'access') %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('crm.index') }}">

@@ -352,6 +352,39 @@ def safe_get_or_404(model, entity_id, error_message=None):
     return entity
 
 
+def timeago(date):
+    """
+    Jinja2 filter to return a 'time ago' string.
+    """
+    if not date:
+        return ""
+    
+    now = datetime.utcnow()
+    diff = now - date
+    
+    seconds = diff.total_seconds()
+    if seconds < 0:
+        return "proprio ora"
+    
+    if seconds < 60:
+        return f"{int(seconds)} secondi fa"
+    if seconds < 3600:
+        minutes = int(seconds // 60)
+        return f"{minutes} {'minuto' if minutes == 1 else 'minuti'} fa"
+    if seconds < 86400:
+        hours = int(seconds // 3600)
+        return f"{hours} {'ora' if hours == 1 else 'ore'} fa"
+    if seconds < 2592000:
+        days = int(seconds // 86400)
+        return f"{days} {'giorno' if days == 1 else 'giorni'} fa"
+    if seconds < 31536000:
+        months = int(seconds // 2592000)
+        return f"{months} {'mese' if months == 1 else 'mesi'} fa"
+    
+    years = int(seconds // 31536000)
+    return f"{years} {'anno' if years == 1 else 'anni'} fa"
+
+
 def log_action(action, entity_type=None, entity_id=None, details=None, society_id=None):
     """
     Log an action to the audit log

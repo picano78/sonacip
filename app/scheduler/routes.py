@@ -109,13 +109,20 @@ def grid():
     except ValueError:
         start_date = datetime.utcnow().date()
 
-    if view not in ('day', 'week'):
+    if view not in ('day', 'week', 'month'):
         view = 'week'
 
-    # Normalize start_date to Monday for week view
+    # Normalize start_date based on view
     if view == 'week':
         start_date = start_date - timedelta(days=start_date.weekday())
         end_date = start_date + timedelta(days=7)
+    elif view == 'month':
+        start_date = start_date.replace(day=1)
+        # Calculate end of month
+        if start_date.month == 12:
+            end_date = start_date.replace(year=start_date.year + 1, month=1)
+        else:
+            end_date = start_date.replace(month=start_date.month + 1)
     else:
         end_date = start_date + timedelta(days=1)
 

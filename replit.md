@@ -65,6 +65,8 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-05: Added clickable calendar cells to create events directly from the Planner grid
 - 2026-02-05: Fixed AuditLog constructor usage in utils.py
 - 2026-02-05: Renamed duplicate function names in __init__.py
+- 2026-02-05: Added clickable avatar for profile image upload
+- 2026-02-05: Redesigned messaging system with WhatsApp-style chat interface
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

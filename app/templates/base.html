@@ -47,9 +47,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body data-theme="light">
-    <!-- Navbar -->
-    {% include 'components/navbar.html' %}
+<body data-theme="light" {% if current_user.is_authenticated %}class="has-sidebar"{% endif %}>
     
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -64,6 +62,9 @@
             </div>
         {% endif %}
     {% endwith %}
+    
+    <!-- Sidebar Navigation -->
+    {% include 'components/sidebar.html' %}
     
     <!-- Main Content -->
     <main>

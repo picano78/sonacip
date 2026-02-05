@@ -1,0 +1,190 @@
+<aside class="sidebar" id="mainSidebar">
+    <div class="sidebar-brand">
+        <a href="{{ url_for('main.index') }}" class="sidebar-brand-link">
+            <i class="bi {{ (site.navbar_brand_icon if site and site.navbar_brand_icon else 'bi-trophy-fill') }}"></i>
+            <span class="sidebar-brand-text">{{ (site.navbar_brand_text if site and site.navbar_brand_text else 'SONACIP') }}</span>
+        </a>
+    </div>
+    
+    {% if current_user.is_authenticated %}
+    <nav class="sidebar-nav">
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <a href="{{ url_for('main.dashboard') }}" class="sidebar-link" data-tooltip="Cruscotto">
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="sidebar-text">Cruscotto</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner">
+                    <i class="bi bi-calendar-check"></i>
+                    <span class="sidebar-text">Planner</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('calendar.index') }}" class="sidebar-link" data-tooltip="Calendario Società">
+                    <i class="bi bi-calendar3-range"></i>
+                    <span class="sidebar-text">Calendario</span>
+                </a>
+            </li>
+            {% if nav_links %}
+                {% for l in nav_links %}
+                    {% set endpoint = l.endpoint if l.endpoint is defined else l.get('endpoint') %}
+                    {% set label = l.label if l.label is defined else l.get('label') %}
+                    {% if endpoint and label and endpoint not in ['calendar.grid', 'calendar.index'] %}
+                        {% set icon = l.icon if l.icon is defined else l.get('icon') %}
+                        {% set res = l.resource if l.resource is defined else l.get('resource') %}
+                        {% set act = l.action if l.action is defined else l.get('action') %}
+                        {% if not res or not act or can(res, act) %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for(endpoint) }}" class="sidebar-link" data-tooltip="{{ label }}">
+                                    {% if icon %}<i class="bi {{ icon }}"></i>{% else %}<i class="bi bi-link-45deg"></i>{% endif %}
+                                    <span class="sidebar-text">{{ label }}</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                {% if can('social', 'comment') %}
+                    <li class="sidebar-item">
+                        <a href="{{ url_for('social.feed') }}" class="sidebar-link" data-tooltip="Home">
+                            <i class="bi bi-house-fill"></i>
+                            <span class="sidebar-text">Home</span>
+                        </a>
+                    </li>
+                {% endif %}
+                <li class="sidebar-item">
+                    <a href="{{ url_for('social.explore') }}" class="sidebar-link" data-tooltip="Esplora">
+                        <i class="bi bi-compass"></i>
+                        <span class="sidebar-text">Esplora</span>
+                    </a>
+                </li>
+                {% if can('events', 'view') %}
+                    <li class="sidebar-item">
+                        <a href="{{ url_for('events.index') }}" class="sidebar-link" data-tooltip="Eventi">
+                            <i class="bi bi-calendar-event"></i>
+                            <span class="sidebar-text">Eventi</span>
+                        </a>
+                    </li>
+                {% endif %}
+                {% if can('tournaments', 'view') %}
+                    <li class="sidebar-item">
+                        <a href="{{ url_for('tournaments.list_tournaments') }}" class="sidebar-link" data-tooltip="Tornei">
+                            <i class="bi bi-trophy"></i>
+                            <span class="sidebar-text">Tornei</span>
+                        </a>
+                    </li>
+                {% endif %}
+                <li class="sidebar-item">
+                    <a href="{{ url_for('marketplace.index') }}" class="sidebar-link" data-tooltip="Marketplace">
+                        <i class="bi bi-shop"></i>
+                        <span class="sidebar-text">Marketplace</span>
+                    </a>
+                </li>
+                {% if can('crm', 'access') %}
+                    <li class="sidebar-item">
+                        <a href="{{ url_for('crm.index') }}" class="sidebar-link" data-tooltip="CRM">
+                            <i class="bi bi-briefcase"></i>
+                            <span class="sidebar-text">CRM</span>
+                        </a>
+                    </li>
+                {% endif %}
+                {% if can('analytics', 'access') %}
+                    <li class="sidebar-item">
+                        <a href="{{ url_for('analytics.dashboard') }}" class="sidebar-link" data-tooltip="Analytics">
+                            <i class="bi bi-graph-up"></i>
+                            <span class="sidebar-text">Analytics</span>
+                        </a>
+                    </li>
+                {% endif %}
+                {% if can('admin', 'access') %}
+                    <li class="sidebar-item">
+                        <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link" data-tooltip="Admin">
+                            <i class="bi bi-gear-fill"></i>
+                            <span class="sidebar-text">Admin</span>
+                        </a>
+                    </li>
+                {% endif %}
+            {% endif %}
+        </ul>
+        
+        <div class="sidebar-divider"></div>
+        
+        <ul class="sidebar-menu sidebar-menu-bottom">
+            <li class="sidebar-item">
+                <a href="{{ url_for('social.search') }}" class="sidebar-link" data-tooltip="Cerca">
+                    <i class="bi bi-search"></i>
+                    <span class="sidebar-text">Cerca</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('notifications.index') }}" class="sidebar-link position-relative" data-tooltip="Notifiche">
+                    <i class="bi bi-bell-fill"></i>
+                    <span class="sidebar-text">Notifiche</span>
+                    {% set unread_count = get_unread_notifications_count() %}
+                    {% if unread_count > 0 %}
+                        <span class="sidebar-badge">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('messages.inbox') }}" class="sidebar-link position-relative" data-tooltip="Messaggi">
+                    <i class="bi bi-envelope"></i>
+                    <span class="sidebar-text">Messaggi</span>
+                    {% set unread_msgs = get_unread_messages_count() %}
+                    {% if unread_msgs > 0 %}
+                        <span class="sidebar-badge">{{ unread_msgs }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link sidebar-btn" type="button" data-theme-toggle data-tooltip="Tema">
+                    <i class="bi bi-moon"></i>
+                    <span class="sidebar-text">Tema</span>
+                </button>
+            </li>
+            <li class="sidebar-item sidebar-user">
+                <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="sidebar-link" data-tooltip="{{ current_user.get_full_name() }}">
+                    {% if current_user.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + current_user.avatar) }}" 
+                             alt="Avatar" class="sidebar-avatar">
+                    {% else %}
+                        <i class="bi bi-person-circle"></i>
+                    {% endif %}
+                    <span class="sidebar-text">{{ current_user.get_full_name() }}</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-link" data-tooltip="Logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="sidebar-text">Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% else %}
+    <nav class="sidebar-nav">
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <a href="{{ url_for('auth.login') }}" class="sidebar-link" data-tooltip="Login">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span class="sidebar-text">Login</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('auth.register') }}" class="sidebar-link" data-tooltip="Registrati">
+                    <i class="bi bi-person-plus"></i>
+                    <span class="sidebar-text">Registrati</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</aside>
+
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu">
+    <i class="bi bi-list"></i>
+</button>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>

@@ -259,6 +259,26 @@ def create():
     scope = current_user.get_primary_society()
     scope_id = scope.id if scope else None
 
+    # Pre-fill date/time from URL params (when clicking on calendar grid)
+    if request.method == 'GET':
+        date_param = request.args.get('date')
+        hour_param = request.args.get('hour')
+        if date_param:
+            try:
+                prefill_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+                form.start_date.data = prefill_date
+                form.end_date.data = prefill_date
+            except ValueError:
+                pass
+        if hour_param:
+            try:
+                prefill_hour = int(hour_param)
+                from datetime import time as dt_time
+                form.start_time.data = dt_time(prefill_hour, 0)
+                form.end_time.data = dt_time(min(prefill_hour + 1, 23), 0)
+            except (ValueError, TypeError):
+                pass
+
     if form.validate_on_submit():
         if scope_id and not check_permission(current_user, 'admin', 'access') and form.society_id.data != scope_id:
             flash('Non puoi creare eventi per una società diversa.', 'danger')

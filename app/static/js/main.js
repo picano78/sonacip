@@ -218,22 +218,105 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Theme toggle (light/dark)
-    const themeToggle = document.querySelector('[data-theme-toggle]');
+    const themeToggles = document.querySelectorAll('[data-theme-toggle]');
     const rootBody = document.body;
     const savedTheme = localStorage.getItem('sonacipTheme');
     if (savedTheme) {
         rootBody.setAttribute('data-theme', savedTheme);
     }
-    if (themeToggle) {
-        const applyTheme = (mode) => {
-            rootBody.setAttribute('data-theme', mode);
-            localStorage.setItem('sonacipTheme', mode);
-            themeToggle.innerHTML = mode === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
-        };
+    
+    const applyTheme = (mode) => {
+        rootBody.setAttribute('data-theme', mode);
+        localStorage.setItem('sonacipTheme', mode);
+        themeToggles.forEach(btn => {
+            btn.innerHTML = mode === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
+        });
+    };
+    
+    if (themeToggles.length > 0) {
         applyTheme(rootBody.getAttribute('data-theme') || 'light');
-        themeToggle.addEventListener('click', () => {
-            const next = rootBody.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-            applyTheme(next);
+        themeToggles.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const next = rootBody.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                applyTheme(next);
+            });
         });
     }
+
+    // Sidebar toggle for mobile
+    const sidebar = document.getElementById('mainSidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    
+    if (sidebar && sidebarToggle && sidebarOverlay) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('active');
+        });
+        
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('active');
+        });
+        
+        // Close sidebar on nav link click (mobile)
+        sidebar.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    sidebar.classList.remove('open');
+                    sidebarOverlay.classList.remove('active');
+                }
+            });
+        });
+    }
+
+    // Sidebar collapse toggle for desktop (double-click on brand)
+    const sidebarBrand = document.querySelector('.sidebar-brand');
+    if (sidebarBrand && sidebar) {
+        sidebarBrand.addEventListener('dblclick', () => {
+            if (window.innerWidth >= 768) {
+                sidebar.classList.toggle('collapsed');
+                document.body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+            }
+        });
+        
+        // Restore collapsed state
+        if (localStorage.getItem('sidebarCollapsed') === 'true' && window.innerWidth >= 992) {
+            sidebar.classList.add('collapsed');
+            document.body.classList.add('sidebar-collapsed');
+        }
+    }
+
+    // Calendar grid: clickable cells for creating events
+    const calendarCells = document.querySelectorAll('.calendar-cell-clickable');
+    const calendarCreateUrl = document.querySelector('[data-calendar-create-url]');
+    const baseCreateUrl = calendarCreateUrl ? calendarCreateUrl.dataset.calendarCreateUrl : '/scheduler/calendar/new';
+    
+    calendarCells.forEach(cell => {
+        const handleCellClick = (e) => {
+            // Don't trigger if clicking on an existing event link
+            if (e.target.closest('a')) return;
+            
+            const date = cell.dataset.date;
+            const hour = cell.dataset.hour;
+            if (date) {
+                let url = baseCreateUrl + '?date=' + date;
+                if (hour) {
+                    url += '&hour=' + hour;
+                }
+                window.location.href = url;
+            }
+        };
+        
+        cell.addEventListener('click', handleCellClick);
+        
+        // Keyboard accessibility
+        cell.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleCellClick(e);
+            }
+        });
+    });
 });

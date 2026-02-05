@@ -59,6 +59,15 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 
 ## Recent Changes
 - 2026-02-05: Initial import and Replit environment setup
+- 2026-02-05: Fixed navbar "Planner" visibility - added to database config and template
+- 2026-02-05: Implemented Planner calendar views (day, week, month) with Google Calendar style
+- 2026-02-05: Redesigned navigation as sidebar with icons and tooltips (responsive for PC/tablet/mobile)
+- 2026-02-05: Added clickable calendar cells to create events directly from the Planner grid
+- 2026-02-05: Fixed AuditLog constructor usage in utils.py
+- 2026-02-05: Renamed duplicate function names in __init__.py
 
 ## User Preferences
-(None documented yet)
+- Menu should be a sidebar overlay with icons (not dropdown)
+- Icons should show descriptions on hover
+- UI must be responsive for PC, tablet, and mobile
+- Planner should allow clicking on calendar to add/edit events

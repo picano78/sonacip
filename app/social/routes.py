@@ -477,6 +477,10 @@ def profile(user_id):
     """View user/society profile"""
     user = User.query.get_or_404(user_id)
     
+    if user.is_super_admin() and current_user.id != user.id:
+        flash('Questo profilo non è disponibile.', 'warning')
+        return redirect(url_for('social.feed'))
+    
     # Get user's posts
     page = request.args.get('page', 1, type=int)
     per_page = 20
@@ -713,8 +717,12 @@ def search():
             )
         ).filter_by(is_active=True)
     else:
-        # Show all active users
         users_query = User.query.filter_by(is_active=True)
+    
+    from app.models import Role
+    super_admin_role = Role.query.filter_by(name='super_admin').first()
+    if super_admin_role and not current_user.is_super_admin():
+        users_query = users_query.filter(User.role_id != super_admin_role.id)
     
     pagination = users_query.order_by(User.created_at.desc()).paginate(
         page=page, per_page=per_page, error_out=False
@@ -1554,9 +1562,11 @@ def connections_list(user_id):
     connected_users = []
     for conn in connections:
         if conn.requester_id == user.id:
-            connected_users.append(User.query.get(conn.addressee_id))
+            connected_user = User.query.get(conn.addressee_id)
         else:
-            connected_users.append(User.query.get(conn.requester_id))
+            connected_user = User.query.get(conn.requester_id)
+        if connected_user and not (connected_user.is_super_admin() and not current_user.is_super_admin()):
+            connected_users.append(connected_user)
     
     return render_template('social/connections.html', user=user, connections=connected_users)
 

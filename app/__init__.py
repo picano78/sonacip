@@ -641,6 +641,15 @@ def create_app(config_name: str | None = None) -> Flask:
             def get_unread_messages_count():
                 return 0
 
+        # Translation function
+        from app.translations import t
+        user_lang = 'it'
+        if current_user and current_user.is_authenticated:
+            user_lang = getattr(current_user, 'language', 'it') or 'it'
+        
+        def translate(key):
+            return t(key, user_lang)
+
         return {
             'can': can_fn,
             'appearance': appearance,
@@ -653,6 +662,8 @@ def create_app(config_name: str | None = None) -> Flask:
             'active_society_id': active_society_id,
             'get_unread_notifications_count': _get_unread_notifications_count,
             'get_unread_messages_count': _get_unread_messages_count,
+            't': translate,
+            'user_lang': user_lang,
         }
 
     @app.after_request

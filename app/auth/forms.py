@@ -46,6 +46,10 @@ class RegistrationForm(FlaskForm):
     first_name = StringField('Nome', validators=[DataRequired()])
     last_name = StringField('Cognome', validators=[DataRequired()])
     phone = StringField('Telefono', validators=[Optional()])
+    language = SelectField('Lingua / Language', choices=[
+        ('it', 'Italiano'),
+        ('en', 'English')
+    ], default='it')
     
     def validate_email(self, email):
         user = User.query.filter_by(email=email.data).first()
@@ -93,6 +97,10 @@ class SocietyRegistrationForm(FlaskForm):
     province = StringField('Provincia', validators=[DataRequired(), Length(max=2)])
     postal_code = StringField('CAP', validators=[DataRequired()])
     website = StringField('Sito Web', validators=[Optional()])
+    language = SelectField('Lingua / Language', choices=[
+        ('it', 'Italiano'),
+        ('en', 'English')
+    ], default='it')
     
     def validate_email(self, email):
         user = User.query.filter_by(email=email.data).first()

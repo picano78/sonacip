@@ -524,6 +524,7 @@ def edit_profile():
         current_user.last_name = form.last_name.data
         current_user.phone = form.phone.data
         current_user.bio = form.bio.data
+        current_user.language = form.language.data
         
         if current_user.is_society():
             current_user.website = form.website.data

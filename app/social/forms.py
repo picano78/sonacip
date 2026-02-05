@@ -3,7 +3,7 @@ Social forms
 """
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import TextAreaField, StringField, BooleanField, IntegerField
+from wtforms import TextAreaField, StringField, BooleanField, IntegerField, SelectField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 
 
@@ -34,6 +34,10 @@ class ProfileEditForm(FlaskForm):
     phone = StringField('Telefono', validators=[Optional()])
     bio = TextAreaField('Bio', validators=[Optional(), Length(max=500)])
     website = StringField('Sito Web', validators=[Optional()])
+    language = SelectField('Lingua / Language', choices=[
+        ('it', 'Italiano'),
+        ('en', 'English')
+    ], default='it')
     avatar = FileField('Avatar', validators=[
         FileAllowed(['jpg', 'jpeg', 'png'], 'Solo immagini!')
     ])

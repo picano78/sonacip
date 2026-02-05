@@ -133,6 +133,9 @@ class User(UserMixin, db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Language preference
+    language = db.Column(db.String(5), default='it')  # 'it' or 'en'
+    
     # Relationships
     role_obj = db.relationship('Role', foreign_keys=[role_id])
     permission_overrides = db.relationship('UserPermissionOverride', backref='user', lazy='dynamic', cascade='all, delete-orphan')

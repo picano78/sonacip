@@ -38,7 +38,7 @@
                             <td>{{ log.created_at|datetime_format }}</td>
                             <td>{{ log.user.username if log.user else 'Sistema' }}</td>
                             <td><span class="badge bg-secondary">{{ log.action }}</span></td>
-                            <td>{{ log.details[:50] }}{{ '...' if log.details and log.details|length > 50 }}</td>
+                            <td>{{ (log.details or '')[:50] }}{{ '...' if log.details and log.details|length > 50 }}</td>
                             <td>{{ log.ip_address }}</td>
                         </tr>
                     {% endfor %}

@@ -18,14 +18,24 @@
                             <i class="bi bi-speedometer2"></i> Cruscotto
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('calendar.grid') }}">
+                            <i class="bi bi-calendar-check"></i> Planner
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('calendar.index') }}">
+                            <i class="bi bi-calendar3-range"></i> Calendario Società
+                        </a>
+                    </li>
                     {% if nav_links %}
                         {% for l in nav_links %}
                             {% set endpoint = l.endpoint if l.endpoint is defined else l.get('endpoint') %}
                             {% set label = l.label if l.label is defined else l.get('label') %}
-                            {% set icon = l.icon if l.icon is defined else l.get('icon') %}
-                            {% set res = l.resource if l.resource is defined else l.get('resource') %}
-                            {% set act = l.action if l.action is defined else l.get('action') %}
-                            {% if endpoint and label %}
+                            {% if endpoint and label and endpoint not in ['calendar.grid', 'calendar.index'] %}
+                                {% set icon = l.icon if l.icon is defined else l.get('icon') %}
+                                {% set res = l.resource if l.resource is defined else l.get('resource') %}
+                                {% set act = l.action if l.action is defined else l.get('action') %}
                                 {% if res and act and not can(res, act) %}
                                     {# skip #}
                                 {% else %}

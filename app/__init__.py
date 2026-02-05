@@ -326,65 +326,86 @@ def _auto_upgrade_db(app: Flask) -> None:
     """
     Ensure DB schema is upgraded without manual commands.
 
-    This is critical for SQLite deployments where an old DB schema would otherwise
+    This is critical for deployments where an old DB schema would otherwise
     crash login/registration with OperationalError (missing tables/columns).
-    Uses a file lock to avoid concurrent upgrades across gunicorn workers.
+    Works with both SQLite and PostgreSQL databases.
+    Uses a file lock (SQLite) or advisory approach to avoid concurrent upgrades.
     """
-    try:
-        uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
-        if not uri.startswith("sqlite:"):
-            return
-        if app.config.get("TESTING"):
-            return
+    if app.config.get("TESTING"):
+        return
 
-        # Only auto-upgrade in production to avoid slowing dev.
-        env = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "").lower()
-        if env and env not in ("production", "prod"):
-            return
+    uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
+    is_sqlite = uri.startswith("sqlite:")
 
-        # Determine db file path
-        db_path = None
-        if uri.startswith("sqlite:////"):
-            db_path = "/" + uri.split("sqlite:////", 1)[1]
-        elif uri.startswith("sqlite:///"):
-            db_path = uri.split("sqlite:///", 1)[1]
-        if not db_path:
-            return
+    base_dir = app.config.get("BASE_DIR") or os.path.abspath(
+        os.path.join(os.path.dirname(__file__), os.pardir)
+    )
+    migrate_dir = app.config.get("MIGRATIONS_DIR") or os.path.join(base_dir, "migrations")
 
-        lock_path = os.path.join(os.path.dirname(db_path), ".sonacip_alembic_upgrade.lock")
-        os.makedirs(os.path.dirname(lock_path), exist_ok=True)
-
-        import fcntl
-        from flask_migrate import upgrade as migrate_upgrade
-
-        with open(lock_path, "w", encoding="utf-8") as lockf:
-            # Wait briefly for another worker to finish upgrades
-            start = time.time()
-            while True:
-                try:
-                    fcntl.flock(lockf.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    break
-                except BlockingIOError:
-                    if time.time() - start > 30:
-                        return
-                    time.sleep(0.2)
-
+    def _try_alembic_upgrade():
+        try:
+            from flask_migrate import upgrade as migrate_upgrade
+            with app.app_context():
+                migrate_upgrade(directory=migrate_dir)
+            return True
+        except Exception:
             try:
-                # Run migrations using Flask-Migrate (alembic env uses current_app)
-                with app.app_context():
-                    migrate_dir = app.config.get("MIGRATIONS_DIR") or os.path.join(
-                        app.config.get("BASE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)),
-                        "migrations",
-                    )
-                    migrate_upgrade(directory=migrate_dir)
+                app.logger.exception("Alembic upgrade failed, falling back to create_all")
             except Exception:
-                app.logger.exception("Auto-upgrade DB failed")
-                return
+                pass
+            return False
+
+    def _fallback_create_all():
+        try:
+            with app.app_context():
+                from app import models as _models  # noqa: F401
+                db.create_all()
+        except Exception:
+            try:
+                app.logger.exception("db.create_all fallback also failed")
+            except Exception:
+                pass
+
+    try:
+        if is_sqlite:
+            db_path = None
+            if uri.startswith("sqlite:////"):
+                db_path = "/" + uri.split("sqlite:////", 1)[1]
+            elif uri.startswith("sqlite:///"):
+                db_path = uri.split("sqlite:///", 1)[1]
+
+            if db_path:
+                lock_dir = os.path.dirname(db_path) or base_dir
+                lock_path = os.path.join(lock_dir, ".sonacip_alembic_upgrade.lock")
+                os.makedirs(lock_dir, exist_ok=True)
+
+                import fcntl
+                with open(lock_path, "w", encoding="utf-8") as lockf:
+                    start = time.time()
+                    while True:
+                        try:
+                            fcntl.flock(lockf.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                            break
+                        except BlockingIOError:
+                            if time.time() - start > 30:
+                                _fallback_create_all()
+                                return
+                            time.sleep(0.2)
+
+                    if not _try_alembic_upgrade():
+                        _fallback_create_all()
+            else:
+                if not _try_alembic_upgrade():
+                    _fallback_create_all()
+        else:
+            if not _try_alembic_upgrade():
+                _fallback_create_all()
     except Exception:
         try:
             app.logger.exception("Auto-upgrade DB wrapper failed")
         except Exception:
             pass
+        _fallback_create_all()
 
 
 def create_app(config_name: str | None = None) -> Flask:

@@ -66,8 +66,8 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-05: Fixed AuditLog constructor usage in utils.py
 - 2026-02-05: Renamed duplicate function names in __init__.py
 - 2026-02-05: Added clickable avatar for profile image upload
-- 2026-02-05: Redesigned messaging system with WhatsApp-style chat interface
-- 2026-02-05: Enhanced internal messaging with WhatsApp green theme, emoji picker, search, and read receipts
+- 2026-02-05: Redesigned messaging system "Messaggi" with chat interface
+- 2026-02-05: Enhanced internal messaging with Facebook blue theme (#1877f2), emoji picker, search, and read receipts
 - 2026-02-05: Added language selection in profile edit page (Italian/English)
 - 2026-02-05: Enhanced backup system with graphical UI, file upload/restore, hourly scheduling
 - 2026-02-05: Implemented LinkedIn-style profiles with Career, Education, Skills sections
@@ -76,6 +76,9 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-05: Created Education model with school, degree, field of study, years
 - 2026-02-05: Created Skill model with endorsements system
 - 2026-02-05: Added profile sections: Experience, Education, Skills, Connections, Contact Info
+- 2026-02-05: Fixed VPS login error - auto-upgrade now works for all databases (SQLite + PostgreSQL)
+- 2026-02-05: Created migration for LinkedIn profile tables (career, education, skill, connection, profile_section)
+- 2026-02-05: Added db.create_all() fallback for safer deployments when migrations fail
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

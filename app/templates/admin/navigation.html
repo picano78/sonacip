@@ -1,25 +1,368 @@
 {% extends 'base.html' %}
-{% block title %}Navbar{% endblock %}
-{% block content %}
-<div class="container my-4">
-  <h1 class="h4 mb-3">Navbar (Super Admin)</h1>
-  <div class="card">
-    <div class="card-body">
-      <p class="text-muted">
-        JSON array di link. Campi supportati: <code>label</code>, <code>endpoint</code>, <code>icon</code>, <code>resource</code>, <code>action</code>.
-        Se <code>resource/action</code> sono presenti, il link appare solo se l’utente ha quel permesso.
-      </p>
-      <form method="post">
-        {{ form.hidden_tag() }}
-        <div class="mb-3">
-          {{ form.links_json.label(class='form-label') }}
-          {{ form.links_json(class='form-control', rows=16) }}
-        </div>
-        <button class="btn btn-primary" type="submit">Salva</button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Torna al pannello</a>
-      </form>
-    </div>
-  </div>
-</div>
+{% block title %}Gestione Menu{% endblock %}
+
+{% block extra_css %}
+<style>
+.nav-item-card {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.nav-item-card:hover {
+    border-color: var(--bs-primary);
+}
+.nav-item-handle {
+    cursor: grab;
+    color: var(--bs-secondary-color);
+}
+.nav-item-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--bs-primary-bg-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--bs-primary);
+    cursor: pointer;
+    border: 2px dashed transparent;
+    transition: all 0.2s;
+}
+.nav-item-icon:hover {
+    border-color: var(--bs-primary);
+}
+.nav-item-info {
+    flex: 1;
+}
+.nav-item-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.nav-item-endpoint {
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color);
+    font-family: monospace;
+}
+.nav-item-actions {
+    display: flex;
+    gap: 8px;
+}
+.icon-picker-modal .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+}
+.icon-picker-modal .icon-option {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+.icon-picker-modal .icon-option:hover {
+    background: var(--bs-primary-bg-subtle);
+    border-color: var(--bs-primary);
+}
+.icon-picker-modal .icon-option.selected {
+    background: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+.add-item-btn {
+    border: 2px dashed var(--bs-border-color);
+    background: transparent;
+    padding: 16px;
+    border-radius: 8px;
+    width: 100%;
+    color: var(--bs-secondary-color);
+    transition: all 0.2s;
+}
+.add-item-btn:hover {
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+}
+</style>
 {% endblock %}
 
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0"><i class="bi bi-list"></i> Gestione Menu Sidebar</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Torna al pannello
+        </a>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>Voci del Menu</strong>
+            <small class="text-muted ms-2">Clicca sull'icona per cambiarla</small>
+        </div>
+        <div class="card-body">
+            <div id="navItemsList"></div>
+            <button type="button" class="add-item-btn" onclick="addNavItem()">
+                <i class="bi bi-plus-lg"></i> Aggiungi voce menu
+            </button>
+        </div>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" onclick="saveNavigation()">
+            <i class="bi bi-check-lg"></i> Salva Menu
+        </button>
+        <button type="button" class="btn btn-outline-secondary" onclick="resetToDefault()">
+            <i class="bi bi-arrow-counterclockwise"></i> Ripristina Default
+        </button>
+    </div>
+    
+    <form id="navForm" method="post" style="display: none;">
+        {{ form.hidden_tag() }}
+        {{ form.links_json(id='linksJsonInput') }}
+    </form>
+</div>
+
+<div class="modal fade" id="iconPickerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content icon-picker-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">Scegli Icona</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="form-control mb-3" id="iconSearch" placeholder="Cerca icona...">
+                <div class="icon-grid" id="iconGrid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifica Voce Menu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editItemIndex">
+                <div class="mb-3">
+                    <label class="form-label">Nome</label>
+                    <input type="text" class="form-control" id="editItemLabel" placeholder="es. Home">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Endpoint (route Flask)</label>
+                    <input type="text" class="form-control" id="editItemEndpoint" placeholder="es. social.feed">
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Risorsa (opzionale)</label>
+                            <input type="text" class="form-control" id="editItemResource" placeholder="es. social">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Azione (opzionale)</label>
+                            <input type="text" class="form-control" id="editItemAction" placeholder="es. view">
+                        </div>
+                    </div>
+                </div>
+                <small class="text-muted">Risorsa/Azione: se compilati, la voce appare solo per utenti con quel permesso.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditItem()">Salva</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const availableIcons = [
+    'bi-house-fill', 'bi-house', 'bi-speedometer2', 'bi-grid', 'bi-grid-fill',
+    'bi-calendar', 'bi-calendar-check', 'bi-calendar-event', 'bi-calendar3', 'bi-calendar3-range',
+    'bi-people', 'bi-people-fill', 'bi-person', 'bi-person-fill', 'bi-person-plus',
+    'bi-chat', 'bi-chat-dots', 'bi-chat-fill', 'bi-envelope', 'bi-envelope-fill',
+    'bi-bell', 'bi-bell-fill', 'bi-gear', 'bi-gear-fill', 'bi-sliders',
+    'bi-trophy', 'bi-trophy-fill', 'bi-star', 'bi-star-fill', 'bi-heart', 'bi-heart-fill',
+    'bi-compass', 'bi-compass-fill', 'bi-map', 'bi-geo-alt', 'bi-geo-alt-fill',
+    'bi-briefcase', 'bi-briefcase-fill', 'bi-building', 'bi-shop', 'bi-cart', 'bi-cart-fill',
+    'bi-graph-up', 'bi-bar-chart', 'bi-pie-chart', 'bi-clipboard-data',
+    'bi-file-text', 'bi-file-earmark', 'bi-folder', 'bi-folder-fill',
+    'bi-camera', 'bi-camera-fill', 'bi-image', 'bi-images',
+    'bi-music-note', 'bi-play-circle', 'bi-film',
+    'bi-lightning', 'bi-lightning-fill', 'bi-bolt', 'bi-fire',
+    'bi-shield', 'bi-shield-check', 'bi-lock', 'bi-unlock',
+    'bi-tools', 'bi-wrench', 'bi-hammer', 'bi-screwdriver',
+    'bi-phone', 'bi-telephone', 'bi-headset', 'bi-mic',
+    'bi-globe', 'bi-link', 'bi-link-45deg', 'bi-share',
+    'bi-bookmark', 'bi-bookmark-fill', 'bi-tag', 'bi-tags',
+    'bi-megaphone', 'bi-megaphone-fill', 'bi-newspaper',
+    'bi-cash', 'bi-credit-card', 'bi-wallet', 'bi-currency-euro',
+    'bi-clock', 'bi-clock-fill', 'bi-alarm', 'bi-stopwatch',
+    'bi-check-circle', 'bi-check-circle-fill', 'bi-x-circle', 'bi-exclamation-triangle',
+    'bi-info-circle', 'bi-question-circle', 'bi-patch-question',
+    'bi-box', 'bi-archive', 'bi-trash', 'bi-pencil', 'bi-pencil-square',
+    'bi-eye', 'bi-eye-fill', 'bi-search', 'bi-zoom-in',
+    'bi-plus-circle', 'bi-dash-circle', 'bi-plus-lg', 'bi-dash-lg',
+    'bi-arrow-up', 'bi-arrow-down', 'bi-arrow-left', 'bi-arrow-right',
+    'bi-chevron-up', 'bi-chevron-down', 'bi-chevron-left', 'bi-chevron-right',
+    'bi-list', 'bi-list-ul', 'bi-list-ol', 'bi-three-dots',
+    'bi-sun', 'bi-moon', 'bi-cloud', 'bi-cloud-fill',
+    'bi-droplet', 'bi-snow', 'bi-umbrella', 'bi-wind'
+];
+
+let navItems = [];
+let currentEditingIconIndex = null;
+
+try {
+    navItems = JSON.parse(document.getElementById('linksJsonInput').value || '[]');
+} catch(e) {
+    navItems = [];
+}
+
+function renderNavItems() {
+    const container = document.getElementById('navItemsList');
+    container.innerHTML = '';
+    
+    navItems.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'nav-item-card';
+        div.innerHTML = `
+            <div class="nav-item-handle"><i class="bi bi-grip-vertical"></i></div>
+            <div class="nav-item-icon" onclick="openIconPicker(${index})" title="Cambia icona">
+                <i class="bi ${item.icon || 'bi-link-45deg'}"></i>
+            </div>
+            <div class="nav-item-info">
+                <div class="nav-item-label">${item.label || 'Senza nome'}</div>
+                <div class="nav-item-endpoint">${item.endpoint || ''}</div>
+            </div>
+            <div class="nav-item-actions">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editItem(${index})" title="Modifica">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})" title="Rimuovi">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function openIconPicker(index) {
+    currentEditingIconIndex = index;
+    const currentIcon = navItems[index].icon || '';
+    
+    const grid = document.getElementById('iconGrid');
+    grid.innerHTML = '';
+    
+    availableIcons.forEach(icon => {
+        const div = document.createElement('div');
+        div.className = 'icon-option' + (icon === currentIcon ? ' selected' : '');
+        div.innerHTML = `<i class="bi ${icon}"></i>`;
+        div.title = icon.replace('bi-', '');
+        div.onclick = () => selectIcon(icon);
+        grid.appendChild(div);
+    });
+    
+    new bootstrap.Modal(document.getElementById('iconPickerModal')).show();
+}
+
+function selectIcon(icon) {
+    if (currentEditingIconIndex !== null) {
+        navItems[currentEditingIconIndex].icon = icon;
+        renderNavItems();
+    }
+    bootstrap.Modal.getInstance(document.getElementById('iconPickerModal')).hide();
+}
+
+function addNavItem() {
+    navItems.push({
+        label: 'Nuova voce',
+        endpoint: '',
+        icon: 'bi-link-45deg',
+        resource: '',
+        action: ''
+    });
+    renderNavItems();
+    editItem(navItems.length - 1);
+}
+
+function editItem(index) {
+    document.getElementById('editItemIndex').value = index;
+    document.getElementById('editItemLabel').value = navItems[index].label || '';
+    document.getElementById('editItemEndpoint').value = navItems[index].endpoint || '';
+    document.getElementById('editItemResource').value = navItems[index].resource || '';
+    document.getElementById('editItemAction').value = navItems[index].action || '';
+    new bootstrap.Modal(document.getElementById('editItemModal')).show();
+}
+
+function saveEditItem() {
+    const index = parseInt(document.getElementById('editItemIndex').value);
+    navItems[index].label = document.getElementById('editItemLabel').value;
+    navItems[index].endpoint = document.getElementById('editItemEndpoint').value;
+    navItems[index].resource = document.getElementById('editItemResource').value || undefined;
+    navItems[index].action = document.getElementById('editItemAction').value || undefined;
+    
+    if (!navItems[index].resource) delete navItems[index].resource;
+    if (!navItems[index].action) delete navItems[index].action;
+    
+    renderNavItems();
+    bootstrap.Modal.getInstance(document.getElementById('editItemModal')).hide();
+}
+
+function removeItem(index) {
+    if (confirm('Rimuovere questa voce dal menu?')) {
+        navItems.splice(index, 1);
+        renderNavItems();
+    }
+}
+
+function saveNavigation() {
+    document.getElementById('linksJsonInput').value = JSON.stringify(navItems);
+    document.getElementById('navForm').submit();
+}
+
+function resetToDefault() {
+    if (confirm('Ripristinare il menu ai valori predefiniti?')) {
+        navItems = [
+            {label: "Cruscotto", endpoint: "main.dashboard", icon: "bi-speedometer2"},
+            {label: "Planner", endpoint: "calendar.grid", icon: "bi-calendar-check"},
+            {label: "Calendario", endpoint: "calendar.index", icon: "bi-calendar3-range"},
+            {label: "Social", endpoint: "social.feed", icon: "bi-people-fill"},
+            {label: "Eventi", endpoint: "events.index", icon: "bi-calendar-event", resource: "events", action: "view"},
+            {label: "Tornei", endpoint: "tournaments.list_tournaments", icon: "bi-trophy", resource: "tournaments", action: "view"},
+            {label: "CRM", endpoint: "crm.index", icon: "bi-briefcase", resource: "crm", action: "access"},
+            {label: "Admin", endpoint: "admin.dashboard", icon: "bi-gear-fill", resource: "admin", action: "access"}
+        ];
+        renderNavItems();
+    }
+}
+
+document.getElementById('iconSearch').addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase();
+    const options = document.querySelectorAll('.icon-option');
+    options.forEach(opt => {
+        const iconName = opt.querySelector('i').className.toLowerCase();
+        opt.style.display = iconName.includes(query) ? '' : 'none';
+    });
+});
+
+renderNavItems();
+</script>
+{% endblock %}

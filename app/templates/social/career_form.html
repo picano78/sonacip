@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{{ t('profile_add_experience') if not career else t('common_edit') + ' ' + t('profile_experience') }}{% endblock %}
+{% block content %}
+<style>
+.form-card {
+    max-width: 700px;
+    margin: 2rem auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.form-header {
+    background: linear-gradient(135deg, #0a66c2 0%, #0077b5 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+}
+
+.form-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.form-body {
+    padding: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: rgba(0,0,0,0.9);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #dce0e5;
+    padding: 0.75rem 1rem;
+}
+
+.form-control:focus {
+    border-color: #0a66c2;
+    box-shadow: 0 0 0 3px rgba(10,102,194,0.15);
+}
+
+.btn-linkedin {
+    background: #0a66c2;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 24px;
+    font-weight: 600;
+}
+
+.btn-linkedin:hover {
+    background: #004182;
+    color: white;
+}
+
+.form-check-input:checked {
+    background-color: #0a66c2;
+    border-color: #0a66c2;
+}
+</style>
+
+<div class="container py-4">
+    <div class="form-card">
+        <div class="form-header">
+            <h1><i class="bi bi-briefcase me-2"></i>{{ t('profile_add_experience') if not career else t('common_edit') + ' ' + t('profile_experience') }}</h1>
+        </div>
+        <div class="form-body">
+            <form method="POST">
+                <div class="form-group">
+                    <label class="form-label">{{ t('career_title') }} *</label>
+                    <input type="text" name="title" class="form-control" value="{{ career.title if career else '' }}" required placeholder="{{ t('career_title_placeholder') }}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ t('career_company') }} *</label>
+                    <input type="text" name="company" class="form-control" value="{{ career.company if career else '' }}" required placeholder="{{ t('career_company_placeholder') }}">
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">{{ t('career_employment_type') }}</label>
+                            <select name="employment_type" class="form-select">
+                                <option value="">{{ t('common_select') }}</option>
+                                <option value="full_time" {{ 'selected' if career and career.employment_type == 'full_time' }}>{{ t('career_full_time') }}</option>
+                                <option value="part_time" {{ 'selected' if career and career.employment_type == 'part_time' }}>{{ t('career_part_time') }}</option>
+                                <option value="contract" {{ 'selected' if career and career.employment_type == 'contract' }}>{{ t('career_contract') }}</option>
+                                <option value="internship" {{ 'selected' if career and career.employment_type == 'internship' }}>{{ t('career_internship') }}</option>
+                                <option value="volunteer" {{ 'selected' if career and career.employment_type == 'volunteer' }}>{{ t('career_volunteer') }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">{{ t('career_location') }}</label>
+                            <input type="text" name="location" class="form-control" value="{{ career.location if career else '' }}" placeholder="{{ t('career_location_placeholder') }}">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="is_current" id="is_current" {{ 'checked' if career and career.is_current }}>
+                    <label class="form-check-label" for="is_current">{{ t('career_current_position') }}</label>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">{{ t('career_start_date') }} *</label>
+                            <input type="date" name="start_date" class="form-control" value="{{ career.start_date.strftime('%Y-%m-%d') if career and career.start_date else '' }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group" id="endDateGroup">
+                            <label class="form-label">{{ t('career_end_date') }}</label>
+                            <input type="date" name="end_date" class="form-control" value="{{ career.end_date.strftime('%Y-%m-%d') if career and career.end_date else '' }}">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ t('career_description') }}</label>
+                    <textarea name="description" class="form-control" rows="4" placeholder="{{ t('career_description_placeholder') }}">{{ career.description if career else '' }}</textarea>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-linkedin">
+                        <i class="bi bi-check-lg me-2"></i>{{ t('common_save') }}
+                    </button>
+                    <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="btn btn-outline-secondary">{{ t('common_cancel') }}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('is_current').addEventListener('change', function() {
+    document.getElementById('endDateGroup').style.display = this.checked ? 'none' : 'block';
+});
+if (document.getElementById('is_current').checked) {
+    document.getElementById('endDateGroup').style.display = 'none';
+}
+</script>
+{% endblock %}

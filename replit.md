@@ -68,9 +68,19 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-05: Added clickable avatar for profile image upload
 - 2026-02-05: Redesigned messaging system with WhatsApp-style chat interface
 - 2026-02-05: Enhanced internal messaging with WhatsApp green theme, emoji picker, search, and read receipts
+- 2026-02-05: Added language selection in profile edit page (Italian/English)
+- 2026-02-05: Enhanced backup system with graphical UI, file upload/restore, hourly scheduling
+- 2026-02-05: Implemented LinkedIn-style profiles with Career, Education, Skills sections
+- 2026-02-05: Added Connection system (LinkedIn-style friend requests with accept/reject)
+- 2026-02-05: Created Career model with title, company, location, employment type, dates, description
+- 2026-02-05: Created Education model with school, degree, field of study, years
+- 2026-02-05: Created Skill model with endorsements system
+- 2026-02-05: Added profile sections: Experience, Education, Skills, Connections, Contact Info
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)
 - Icons should show descriptions on hover
 - UI must be responsive for PC, tablet, and mobile
 - Planner should allow clicking on calendar to add/edit events
+- Profiles should be LinkedIn-style with career sections
+- Friendships should work like LinkedIn connections (request/accept)

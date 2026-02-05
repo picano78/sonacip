@@ -2744,6 +2744,146 @@ class Goal(db.Model):
         return f'<Goal {self.title}>'
 
 
+class Career(db.Model):
+    """
+    LinkedIn-style career/experience entries for user profiles
+    """
+    __tablename__ = 'career'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    title = db.Column(db.String(200), nullable=False)
+    company = db.Column(db.String(200), nullable=False)
+    company_logo = db.Column(db.String(255))
+    location = db.Column(db.String(200))
+    employment_type = db.Column(db.String(50))  # full_time, part_time, contract, internship
+    
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date)
+    is_current = db.Column(db.Boolean, default=False)
+    
+    description = db.Column(db.Text)
+    skills = db.Column(db.Text)  # comma-separated skills
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('careers', lazy='dynamic', order_by='Career.start_date.desc()'))
+    
+    def __repr__(self):
+        return f'<Career {self.title} at {self.company}>'
+
+
+class Education(db.Model):
+    """
+    LinkedIn-style education entries for user profiles
+    """
+    __tablename__ = 'education'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    school = db.Column(db.String(200), nullable=False)
+    school_logo = db.Column(db.String(255))
+    degree = db.Column(db.String(200))
+    field_of_study = db.Column(db.String(200))
+    
+    start_year = db.Column(db.Integer)
+    end_year = db.Column(db.Integer)
+    
+    grade = db.Column(db.String(50))
+    activities = db.Column(db.Text)
+    description = db.Column(db.Text)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('educations', lazy='dynamic', order_by='Education.start_year.desc()'))
+    
+    def __repr__(self):
+        return f'<Education {self.degree} at {self.school}>'
+
+
+class Skill(db.Model):
+    """
+    LinkedIn-style skills with endorsements
+    """
+    __tablename__ = 'skill'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50))  # sport, coaching, management, technical
+    endorsement_count = db.Column(db.Integer, default=0)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('skills', lazy='dynamic', order_by='Skill.endorsement_count.desc()'))
+    
+    def __repr__(self):
+        return f'<Skill {self.name}>'
+
+
+class SkillEndorsement(db.Model):
+    """
+    Endorsements for skills
+    """
+    __tablename__ = 'skill_endorsement'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    skill_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=False)
+    endorsed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    skill = db.relationship('Skill', backref=db.backref('endorsements', lazy='dynamic'))
+    endorsed_by = db.relationship('User', backref=db.backref('given_endorsements', lazy='dynamic'))
+
+
+class Connection(db.Model):
+    """
+    LinkedIn-style connections (mutual friendships)
+    """
+    __tablename__ = 'connection'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    requester_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    addressee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected, blocked
+    message = db.Column(db.Text)  # optional connection request message
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    requester = db.relationship('User', foreign_keys=[requester_id], backref=db.backref('sent_connections', lazy='dynamic'))
+    addressee = db.relationship('User', foreign_keys=[addressee_id], backref=db.backref('received_connections', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<Connection {self.requester_id} -> {self.addressee_id} ({self.status})>'
+
+
+class ProfileSection(db.Model):
+    """
+    Admin-configurable profile sections
+    """
+    __tablename__ = 'profile_section'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    name_en = db.Column(db.String(100))
+    icon = db.Column(db.String(50))
+    is_enabled = db.Column(db.Boolean, default=True)
+    is_required = db.Column(db.Boolean, default=False)
+    order = db.Column(db.Integer, default=0)
+    
+    section_type = db.Column(db.String(50))  # career, education, skills, about, contact
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class ModerationRule(db.Model):
     """
     Automatic moderation rules for social content

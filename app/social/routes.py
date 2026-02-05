@@ -32,6 +32,11 @@ from app.models import (
     Opportunity,
     Permission,
     SocietyRolePermission,
+    Career,
+    Education,
+    Skill,
+    SkillEndorsement,
+    Connection,
 )
 from app.cache import get_cache
 from app.utils import permission_required, check_permission, get_active_society_id
@@ -503,6 +508,31 @@ def profile(user_id):
         except Exception:
             whatsapp_opted_in = None
     
+    careers = Career.query.filter_by(user_id=user.id).order_by(Career.start_date.desc()).all()
+    educations = Education.query.filter_by(user_id=user.id).order_by(Education.start_year.desc()).all()
+    user_skills = Skill.query.filter_by(user_id=user.id).order_by(Skill.endorsement_count.desc()).all()
+    
+    connections_count = Connection.query.filter(
+        ((Connection.requester_id == user.id) | (Connection.addressee_id == user.id)),
+        Connection.status == 'accepted'
+    ).count()
+    
+    connection_status = None
+    if current_user.is_authenticated and current_user.id != user.id:
+        conn = Connection.query.filter(
+            ((Connection.requester_id == current_user.id) & (Connection.addressee_id == user.id)) |
+            ((Connection.requester_id == user.id) & (Connection.addressee_id == current_user.id))
+        ).first()
+        if conn:
+            if conn.status == 'accepted':
+                connection_status = 'connected'
+            elif conn.status == 'pending':
+                connection_status = 'pending_sent' if conn.requester_id == current_user.id else 'pending_received'
+    
+    pending_connections = []
+    if current_user.is_authenticated and current_user.id == user.id:
+        pending_connections = Connection.query.filter_by(addressee_id=user.id, status='pending').all()
+    
     return render_template('social/profile.html',
                          user=user,
                          posts=posts,
@@ -510,7 +540,13 @@ def profile(user_id):
                          stats=stats,
                          is_following=is_following,
                          whatsapp_opted_in=whatsapp_opted_in,
-                         active_society_id=active_sid)
+                         active_society_id=active_sid,
+                         careers=careers,
+                         educations=educations,
+                         user_skills=user_skills,
+                         connections_count=connections_count,
+                         connection_status=connection_status,
+                         pending_connections=pending_connections)
 
 
 @bp.route('/profile/edit', methods=['GET', 'POST'])
@@ -1263,3 +1299,273 @@ def explore():
     return render_template('social/explore.html',
                          societies=societies,
                          recent_posts=recent_posts)
+
+
+@bp.route('/career/add', methods=['GET', 'POST'])
+@login_required
+def add_career():
+    """Add career experience"""
+    if request.method == 'POST':
+        career = Career(
+            user_id=current_user.id,
+            title=request.form.get('title'),
+            company=request.form.get('company'),
+            location=request.form.get('location'),
+            employment_type=request.form.get('employment_type'),
+            start_date=datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date(),
+            end_date=datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date() if request.form.get('end_date') else None,
+            is_current=bool(request.form.get('is_current')),
+            description=request.form.get('description')
+        )
+        db.session.add(career)
+        db.session.commit()
+        flash('Esperienza aggiunta con successo!', 'success')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    return render_template('social/career_form.html', career=None)
+
+
+@bp.route('/career/<int:career_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_career(career_id):
+    """Edit career experience"""
+    career = Career.query.get_or_404(career_id)
+    if career.user_id != current_user.id:
+        flash('Non autorizzato.', 'danger')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    
+    if request.method == 'POST':
+        career.title = request.form.get('title')
+        career.company = request.form.get('company')
+        career.location = request.form.get('location')
+        career.employment_type = request.form.get('employment_type')
+        career.start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
+        career.end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date() if request.form.get('end_date') else None
+        career.is_current = bool(request.form.get('is_current'))
+        career.description = request.form.get('description')
+        db.session.commit()
+        flash('Esperienza aggiornata!', 'success')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    return render_template('social/career_form.html', career=career)
+
+
+@bp.route('/career/<int:career_id>/delete', methods=['POST'])
+@login_required
+def delete_career(career_id):
+    """Delete career experience"""
+    career = Career.query.get_or_404(career_id)
+    if career.user_id != current_user.id:
+        flash('Non autorizzato.', 'danger')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    
+    db.session.delete(career)
+    db.session.commit()
+    flash('Esperienza eliminata.', 'success')
+    return redirect(url_for('social.profile', user_id=current_user.id))
+
+
+@bp.route('/education/add', methods=['GET', 'POST'])
+@login_required
+def add_education():
+    """Add education"""
+    if request.method == 'POST':
+        edu = Education(
+            user_id=current_user.id,
+            school=request.form.get('school'),
+            degree=request.form.get('degree'),
+            field_of_study=request.form.get('field_of_study'),
+            start_year=int(request.form.get('start_year')) if request.form.get('start_year') else None,
+            end_year=int(request.form.get('end_year')) if request.form.get('end_year') else None,
+            description=request.form.get('description')
+        )
+        db.session.add(edu)
+        db.session.commit()
+        flash('Formazione aggiunta con successo!', 'success')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    return render_template('social/education_form.html', education=None)
+
+
+@bp.route('/education/<int:education_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_education(education_id):
+    """Edit education"""
+    edu = Education.query.get_or_404(education_id)
+    if edu.user_id != current_user.id:
+        flash('Non autorizzato.', 'danger')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    
+    if request.method == 'POST':
+        edu.school = request.form.get('school')
+        edu.degree = request.form.get('degree')
+        edu.field_of_study = request.form.get('field_of_study')
+        edu.start_year = int(request.form.get('start_year')) if request.form.get('start_year') else None
+        edu.end_year = int(request.form.get('end_year')) if request.form.get('end_year') else None
+        edu.description = request.form.get('description')
+        db.session.commit()
+        flash('Formazione aggiornata!', 'success')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    return render_template('social/education_form.html', education=edu)
+
+
+@bp.route('/education/<int:education_id>/delete', methods=['POST'])
+@login_required
+def delete_education(education_id):
+    """Delete education"""
+    edu = Education.query.get_or_404(education_id)
+    if edu.user_id != current_user.id:
+        flash('Non autorizzato.', 'danger')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    
+    db.session.delete(edu)
+    db.session.commit()
+    flash('Formazione eliminata.', 'success')
+    return redirect(url_for('social.profile', user_id=current_user.id))
+
+
+@bp.route('/skill/add', methods=['GET', 'POST'])
+@login_required
+def add_skill():
+    """Add skill"""
+    if request.method == 'POST':
+        skill = Skill(
+            user_id=current_user.id,
+            name=request.form.get('name'),
+            category=request.form.get('category')
+        )
+        db.session.add(skill)
+        db.session.commit()
+        flash('Competenza aggiunta!', 'success')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    return render_template('social/skill_form.html')
+
+
+@bp.route('/skill/<int:skill_id>/endorse', methods=['POST'])
+@login_required
+def endorse_skill(skill_id):
+    """Endorse a skill"""
+    skill = Skill.query.get_or_404(skill_id)
+    if skill.user_id == current_user.id:
+        flash('Non puoi confermare le tue competenze.', 'warning')
+        return redirect(url_for('social.profile', user_id=skill.user_id))
+    
+    existing = SkillEndorsement.query.filter_by(skill_id=skill_id, endorsed_by_id=current_user.id).first()
+    if existing:
+        flash('Hai già confermato questa competenza.', 'info')
+        return redirect(url_for('social.profile', user_id=skill.user_id))
+    
+    endorsement = SkillEndorsement(skill_id=skill_id, endorsed_by_id=current_user.id)
+    skill.endorsement_count += 1
+    db.session.add(endorsement)
+    db.session.commit()
+    flash('Competenza confermata!', 'success')
+    return redirect(url_for('social.profile', user_id=skill.user_id))
+
+
+@bp.route('/connection/send/<int:user_id>', methods=['POST'])
+@login_required
+def send_connection(user_id):
+    """Send connection request"""
+    if user_id == current_user.id:
+        flash('Non puoi collegarti a te stesso.', 'warning')
+        return redirect(url_for('social.profile', user_id=user_id))
+    
+    existing = Connection.query.filter(
+        ((Connection.requester_id == current_user.id) & (Connection.addressee_id == user_id)) |
+        ((Connection.requester_id == user_id) & (Connection.addressee_id == current_user.id))
+    ).first()
+    
+    if existing:
+        flash('Richiesta di collegamento già esistente.', 'info')
+        return redirect(url_for('social.profile', user_id=user_id))
+    
+    conn = Connection(
+        requester_id=current_user.id,
+        addressee_id=user_id,
+        status='pending'
+    )
+    db.session.add(conn)
+    
+    notif = Notification(
+        user_id=user_id,
+        type='connection_request',
+        title='Nuova richiesta di collegamento',
+        message=f'{current_user.get_full_name()} vuole collegarsi con te',
+        link=url_for('social.profile', user_id=current_user.id)
+    )
+    db.session.add(notif)
+    db.session.commit()
+    
+    flash('Richiesta di collegamento inviata!', 'success')
+    return redirect(url_for('social.profile', user_id=user_id))
+
+
+@bp.route('/connection/accept/<int:user_id>', methods=['POST'])
+@login_required
+def accept_connection(user_id):
+    """Accept connection request"""
+    conn = Connection.query.filter_by(requester_id=user_id, addressee_id=current_user.id, status='pending').first()
+    if not conn:
+        flash('Richiesta non trovata.', 'warning')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    
+    conn.status = 'accepted'
+    conn.updated_at = datetime.utcnow()
+    
+    notif = Notification(
+        user_id=user_id,
+        type='connection_accepted',
+        title='Collegamento accettato',
+        message=f'{current_user.get_full_name()} ha accettato la tua richiesta di collegamento',
+        link=url_for('social.profile', user_id=current_user.id)
+    )
+    db.session.add(notif)
+    db.session.commit()
+    
+    flash('Collegamento accettato!', 'success')
+    return redirect(url_for('social.profile', user_id=current_user.id))
+
+
+@bp.route('/connection/reject/<int:user_id>', methods=['POST'])
+@login_required
+def reject_connection(user_id):
+    """Reject connection request"""
+    conn = Connection.query.filter_by(requester_id=user_id, addressee_id=current_user.id, status='pending').first()
+    if not conn:
+        flash('Richiesta non trovata.', 'warning')
+        return redirect(url_for('social.profile', user_id=current_user.id))
+    
+    conn.status = 'rejected'
+    conn.updated_at = datetime.utcnow()
+    db.session.commit()
+    
+    flash('Richiesta ignorata.', 'info')
+    return redirect(url_for('social.profile', user_id=current_user.id))
+
+
+@bp.route('/connections/<int:user_id>')
+@login_required
+def connections_list(user_id):
+    """View user's connections"""
+    user = User.query.get_or_404(user_id)
+    connections = Connection.query.filter(
+        ((Connection.requester_id == user.id) | (Connection.addressee_id == user.id)),
+        Connection.status == 'accepted'
+    ).all()
+    
+    connected_users = []
+    for conn in connections:
+        if conn.requester_id == user.id:
+            connected_users.append(User.query.get(conn.addressee_id))
+        else:
+            connected_users.append(User.query.get(conn.requester_id))
+    
+    return render_template('social/connections.html', user=user, connections=connected_users)
+
+
+@bp.route('/user/<int:user_id>/posts')
+@login_required
+def user_posts(user_id):
+    """View all posts from a user"""
+    user = User.query.get_or_404(user_id)
+    page = request.args.get('page', 1, type=int)
+    posts = Post.query.filter_by(user_id=user.id).order_by(Post.created_at.desc()).paginate(page=page, per_page=20)
+    return render_template('social/user_posts.html', user=user, posts=posts.items, pagination=posts)

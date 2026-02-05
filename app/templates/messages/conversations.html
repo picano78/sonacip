@@ -4,11 +4,11 @@
 {% block extra_css %}
 <style>
 :root {
-    --wa-green: #25D366;
-    --wa-green-dark: #128C7E;
-    --wa-green-light: #DCF8C6;
-    --wa-blue: #34B7F1;
-    --wa-gray: #ECE5DD;
+    --msg-primary: #1877f2;
+    --msg-primary-dark: #166fe5;
+    --msg-primary-light: #e7f3ff;
+    --msg-accent: #0084ff;
+    --msg-gray: #f0f2f5;
 }
 .chat-container {
     display: flex;
@@ -29,7 +29,7 @@
 }
 .conversations-header {
     padding: 16px 20px;
-    background: linear-gradient(135deg, var(--wa-green-dark), var(--wa-green));
+    background: linear-gradient(135deg, var(--msg-primary-dark), var(--msg-primary));
     color: white;
     display: flex;
     justify-content: space-between;
@@ -175,7 +175,7 @@
 }
 .message-sent {
     align-self: flex-end;
-    background: var(--wa-green-light);
+    background: var(--msg-primary-light);
     color: #303030;
     border-bottom-right-radius: 4px;
 }
@@ -190,7 +190,7 @@
     color: #667781;
 }
 .message-sent .bi-check2, .message-sent .bi-check2-all {
-    color: var(--wa-blue);
+    color: var(--msg-accent);
 }
 .message-time {
     font-size: 0.7rem;
@@ -200,7 +200,7 @@
 .chat-input-area {
     padding: 12px 16px;
     border-top: 1px solid var(--bs-border-color);
-    background: var(--wa-gray);
+    background: var(--msg-gray);
 }
 .chat-input-form {
     display: flex;
@@ -222,7 +222,7 @@
     transition: color 0.2s;
 }
 .emoji-btn:hover {
-    color: var(--wa-green-dark);
+    color: var(--msg-primary-dark);
 }
 .chat-input {
     flex: 1;
@@ -246,20 +246,20 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    background: var(--wa-green);
+    background: var(--msg-primary);
     border: none;
     color: white;
     transition: background 0.2s;
 }
 .chat-send-btn:hover {
-    background: var(--wa-green-dark);
+    background: var(--msg-primary-dark);
     color: white;
 }
 .online-status {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--wa-green);
+    background: #31a24c;
     display: inline-block;
     margin-left: 6px;
 }

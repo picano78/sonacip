@@ -1,67 +1,270 @@
 {% extends 'base.html' %}
 {% block title %}Template Cruscotti{% endblock %}
-{% block content %}
-<div class="container my-4">
-  <h1 class="h4 mb-3">Template Cruscotti (Super Admin)</h1>
 
-  <div class="row g-4">
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-header"><strong>Salva template</strong></div>
-        <div class="card-body">
-          <form method="post">
-            {{ form.hidden_tag() }}
-            <div class="row g-3">
-              <div class="col-md-6">
-                {{ form.role_name.label(class='form-label') }}
-                {{ form.role_name(class='form-select') }}
-              </div>
-              <div class="col-md-6">
-                {{ form.layout.label(class='form-label') }}
-                {{ form.layout(class='form-select') }}
-              </div>
-              <div class="col-12">
-                {{ form.name.label(class='form-label') }}
-                {{ form.name(class='form-control') }}
-              </div>
-              <div class="col-12">
-                {{ form.widgets.label(class='form-label') }}
-                {{ form.widgets(class='form-control', rows=10, placeholder='[{\"type\":\"stats\"}]') }}
-                <div class="form-text">Deve essere un JSON array. Esempio: <code>[{"type":"stats"},{"type":"upcoming_events"}]</code></div>
-              </div>
-            </div>
-            <div class="mt-3">
-              <button class="btn btn-primary" type="submit">Salva</button>
-              <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Torna al pannello</a>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-6">
-      <div class="card">
-        <div class="card-header"><strong>Template esistenti</strong></div>
-        <div class="card-body">
-          {% if templates %}
-            <div class="list-group">
-              {% for t in templates %}
-                <div class="list-group-item">
-                  <div class="d-flex justify-content-between">
-                    <div class="fw-semibold">{{ t.role_name or 'Default (tutti)' }}</div>
-                    <span class="badge bg-secondary">{{ t.layout }}</span>
-                  </div>
-                  <div class="small text-muted">{{ t.name }}</div>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="alert alert-info mb-0">Nessun template configurato.</div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+{% block extra_css %}
+<style>
+.widget-option {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.widget-option:hover {
+    border-color: var(--bs-primary);
+    background: var(--bs-primary-bg-subtle);
+}
+.widget-option.selected {
+    border-color: var(--bs-primary);
+    background: var(--bs-primary-bg-subtle);
+}
+.widget-option input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+.widget-option-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--bs-secondary-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 1.2rem;
+}
+.widget-option-info {
+    flex: 1;
+}
+.widget-option-name {
+    font-weight: 600;
+}
+.widget-option-desc {
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+}
+.template-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+.template-card:hover {
+    border-color: var(--bs-primary);
+}
+</style>
 {% endblock %}
 
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0"><i class="bi bi-grid-1x2"></i> Template Cruscotti</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Torna al pannello
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">
+                    <strong>Configura Template</strong>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="templateForm">
+                        {{ form.hidden_tag() }}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                {{ form.role_name.label(class='form-label') }}
+                                {{ form.role_name(class='form-select') }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.layout.label(class='form-label') }}
+                                {{ form.layout(class='form-select') }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.name.label(class='form-label') }}
+                                {{ form.name(class='form-control') }}
+                            </div>
+                        </div>
+                        
+                        <h6 class="mb-3"><i class="bi bi-grid-3x3-gap"></i> Seleziona Widget da mostrare</h6>
+                        
+                        <div id="widgetsList">
+                            <label class="widget-option" data-widget="stats">
+                                <input type="checkbox" name="widget_stats" value="stats">
+                                <div class="widget-option-icon"><i class="bi bi-graph-up"></i></div>
+                                <div class="widget-option-info">
+                                    <div class="widget-option-name">Statistiche</div>
+                                    <div class="widget-option-desc">Mostra contatori e statistiche generali</div>
+                                </div>
+                            </label>
+                            
+                            <label class="widget-option" data-widget="quick_links">
+                                <input type="checkbox" name="widget_quick_links" value="quick_links">
+                                <div class="widget-option-icon"><i class="bi bi-link-45deg"></i></div>
+                                <div class="widget-option-info">
+                                    <div class="widget-option-name">Link Rapidi</div>
+                                    <div class="widget-option-desc">Accesso veloce alle funzioni principali</div>
+                                </div>
+                            </label>
+                            
+                            <label class="widget-option" data-widget="recent_notifications">
+                                <input type="checkbox" name="widget_notifications" value="recent_notifications">
+                                <div class="widget-option-icon"><i class="bi bi-bell"></i></div>
+                                <div class="widget-option-info">
+                                    <div class="widget-option-name">Notifiche Recenti</div>
+                                    <div class="widget-option-desc">Ultime notifiche e avvisi</div>
+                                </div>
+                            </label>
+                            
+                            <label class="widget-option" data-widget="upcoming_events">
+                                <input type="checkbox" name="widget_events" value="upcoming_events">
+                                <div class="widget-option-icon"><i class="bi bi-calendar-event"></i></div>
+                                <div class="widget-option-info">
+                                    <div class="widget-option-name">Prossimi Eventi</div>
+                                    <div class="widget-option-desc">Eventi in programma</div>
+                                </div>
+                            </label>
+                            
+                            <label class="widget-option" data-widget="recent_posts">
+                                <input type="checkbox" name="widget_posts" value="recent_posts">
+                                <div class="widget-option-icon"><i class="bi bi-file-text"></i></div>
+                                <div class="widget-option-info">
+                                    <div class="widget-option-name">Post Recenti</div>
+                                    <div class="widget-option-desc">Ultimi post pubblicati</div>
+                                </div>
+                            </label>
+                            
+                            <label class="widget-option" data-widget="calendar">
+                                <input type="checkbox" name="widget_calendar" value="calendar">
+                                <div class="widget-option-icon"><i class="bi bi-calendar3"></i></div>
+                                <div class="widget-option-info">
+                                    <div class="widget-option-name">Mini Calendario</div>
+                                    <div class="widget-option-desc">Calendario compatto del mese</div>
+                                </div>
+                            </label>
+                            
+                            <label class="widget-option" data-widget="members">
+                                <input type="checkbox" name="widget_members" value="members">
+                                <div class="widget-option-icon"><i class="bi bi-people"></i></div>
+                                <div class="widget-option-info">
+                                    <div class="widget-option-name">Membri</div>
+                                    <div class="widget-option-desc">Elenco membri attivi</div>
+                                </div>
+                            </label>
+                            
+                            <label class="widget-option" data-widget="weather">
+                                <input type="checkbox" name="widget_weather" value="weather">
+                                <div class="widget-option-icon"><i class="bi bi-cloud-sun"></i></div>
+                                <div class="widget-option-info">
+                                    <div class="widget-option-name">Meteo</div>
+                                    <div class="widget-option-desc">Previsioni meteo locali</div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <input type="hidden" name="widgets" id="widgetsJsonInput" value="{{ form.widgets.data or '[]' }}">
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary" onclick="prepareSubmit()">
+                                <i class="bi bi-check-lg"></i> Salva Template
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header">
+                    <strong>Template Esistenti</strong>
+                </div>
+                <div class="card-body">
+                    {% if templates %}
+                        {% for t in templates %}
+                        <div class="template-card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-semibold">{{ t.name or 'Senza nome' }}</div>
+                                    <small class="text-muted">Ruolo: {{ t.role_name or 'Tutti' }}</small>
+                                </div>
+                                <span class="badge bg-secondary">{{ t.layout }}</span>
+                            </div>
+                            {% set widget_list = (t.widgets | fromjson) if t.widgets else [] %}
+                            {% if widget_list %}
+                            <div class="mt-2">
+                                {% for w in widget_list %}
+                                <span class="badge bg-primary-subtle text-primary me-1">{{ w.type }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted text-center py-4">
+                            <i class="bi bi-grid-1x2" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">Nessun template configurato</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const widgetsInput = document.getElementById('widgetsJsonInput');
+    let selectedWidgets = [];
+    
+    try {
+        const parsed = JSON.parse(widgetsInput.value || '[]');
+        selectedWidgets = parsed.map(w => w.type);
+    } catch(e) {
+        selectedWidgets = [];
+    }
+    
+    document.querySelectorAll('.widget-option').forEach(option => {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        const widgetType = option.dataset.widget;
+        
+        if (selectedWidgets.includes(widgetType)) {
+            checkbox.checked = true;
+            option.classList.add('selected');
+        }
+        
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                option.classList.add('selected');
+            } else {
+                option.classList.remove('selected');
+            }
+            updateWidgetsJson();
+        });
+    });
+    
+    function updateWidgetsJson() {
+        const widgets = [];
+        document.querySelectorAll('.widget-option input:checked').forEach(cb => {
+            widgets.push({type: cb.value});
+        });
+        widgetsInput.value = JSON.stringify(widgets);
+    }
+});
+
+function prepareSubmit() {
+    const widgets = [];
+    document.querySelectorAll('.widget-option input:checked').forEach(cb => {
+        widgets.push({type: cb.value});
+    });
+    document.getElementById('widgetsJsonInput').value = JSON.stringify(widgets);
+}
+</script>
+{% endblock %}

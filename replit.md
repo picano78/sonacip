@@ -1,0 +1,64 @@
+# SONACIP - Sports Society Management Platform
+
+## Overview
+SONACIP is a comprehensive Italian-language platform for managing sports societies, athletes, and enthusiasts. It provides features for user management, events, social networking, messaging, and more.
+
+## Project Architecture
+
+### Tech Stack
+- **Backend**: Python 3.11, Flask 3.0.0
+- **Database**: SQLite (default), PostgreSQL (optional via DATABASE_URL)
+- **ORM**: SQLAlchemy 2.0 with Flask-SQLAlchemy and Flask-Migrate
+- **Authentication**: Flask-Login with bcrypt password hashing
+- **Forms**: Flask-WTF with WTForms
+- **Rate Limiting**: Flask-Limiter
+- **OAuth**: Authlib
+- **Payments**: Stripe integration ready
+
+### Directory Structure
+```
+/
+├── app/                    # Main application package
+│   ├── __init__.py        # App factory and extensions
+│   ├── models.py          # SQLAlchemy models
+│   ├── core/              # Core configuration and bootstrap
+│   ├── auth/              # Authentication routes and forms
+│   ├── admin/             # Admin panel
+│   ├── main/              # Main routes
+│   ├── events/            # Event management
+│   ├── social/            # Social networking features
+│   ├── messages/          # Messaging system
+│   ├── notifications/     # Notification system
+│   ├── crm/               # CRM functionality
+│   ├── ads/               # Advertisement management
+│   ├── analytics/         # Analytics dashboard
+│   ├── backup/            # Backup utilities
+│   ├── marketplace/       # Marketplace features
+│   ├── scheduler/         # Task scheduling
+│   ├── subscription/      # Subscription management
+│   └── tournaments/       # Tournament management
+├── migrations/            # Alembic database migrations
+├── uploads/               # User uploaded files
+├── backups/               # Database backups
+├── logs/                  # Application logs
+├── run.py                 # Application entry point
+├── config.py              # Configuration shim
+└── requirements.txt       # Python dependencies
+```
+
+### Key Configuration
+- Application runs on port 5000
+- Database defaults to SQLite (sonacip.db) unless DATABASE_URL is set
+- SECRET_KEY auto-generated and persisted if not provided
+- Session lifetime: 7 days
+- Max upload size: 16MB
+
+### Running the Application
+- Development: `python -c "from run import app; app.run(host='0.0.0.0', port=5000, debug=False)"`
+- Production: `gunicorn --bind=0.0.0.0:5000 --reuse-port --workers=2 run:app`
+
+## Recent Changes
+- 2026-02-05: Initial import and Replit environment setup
+
+## User Preferences
+(None documented yet)

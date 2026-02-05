@@ -385,6 +385,13 @@ def timeago(date):
     return f"{years} {'anno' if years == 1 else 'anni'} fa"
 
 
+def datetime_format(value, format='%d/%m/%Y %H:%M'):
+    """Format a date/time object to string."""
+    if value is None:
+        return ""
+    return value.strftime(format)
+
+
 def log_action(action, entity_type=None, entity_id=None, details=None, society_id=None):
     """
     Log an action to the audit log

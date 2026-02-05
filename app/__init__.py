@@ -545,8 +545,9 @@ def create_app(config_name: str | None = None) -> Flask:
         except Exception:
             return None
 
-    from app.utils import timeago
+    from app.utils import timeago, datetime_format
     app.template_filter('timeago')(timeago)
+    app.template_filter('datetime_format')(datetime_format)
 
     from app.core.bootstrap import discover_and_register_modules
     _register_blueprints(app)

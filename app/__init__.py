@@ -593,12 +593,12 @@ def create_app(config_name: str | None = None) -> Flask:
             nav_row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='navbar.links').first()
             nav_links = nav_row.get_value(default=None) if nav_row else None
 
-            def get_unread_notifications_count():
+            def _get_unread_notifications_count():
                 if not current_user.is_authenticated:
                     return 0
                 return Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
 
-            def get_unread_messages_count():
+            def _get_unread_messages_count():
                 if not current_user.is_authenticated:
                     return 0
                 return Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
@@ -651,8 +651,8 @@ def create_app(config_name: str | None = None) -> Flask:
             'society_scopes': society_scopes,
             'active_society': active_society,
             'active_society_id': active_society_id,
-            'get_unread_notifications_count': get_unread_notifications_count,
-            'get_unread_messages_count': get_unread_messages_count,
+            'get_unread_notifications_count': _get_unread_notifications_count,
+            'get_unread_messages_count': _get_unread_messages_count,
         }
 
     @app.after_request

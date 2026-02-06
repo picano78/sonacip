@@ -462,7 +462,11 @@
     <p>{{ page.hero_subtitle if page and page.hero_subtitle else 'La piattaforma completa per la gestione delle società sportive, atleti e appassionati di sport in Italia.' }}</p>
     
     <div class="cta-buttons">
-      <a href="{{ url_for('auth.register') }}" class="btn-facebook">
+      <a href="{{ url_for('auth.login') }}" class="btn-facebook">
+        <i class="bi bi-box-arrow-in-right"></i>
+        Accedi
+      </a>
+      <a href="{{ url_for('auth.register') }}" class="btn-facebook-outline">
         <i class="bi bi-person-plus"></i>
         Registrati come Appassionato
       </a>

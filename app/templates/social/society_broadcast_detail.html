@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}Comunicazione: {{ broadcast.subject }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.bd-header {
+    background: linear-gradient(135deg, #1877f2 0%, #0a4da3 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.bd-content {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+.bd-stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+.bd-stat {
+    flex: 1;
+    min-width: 100px;
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.bd-stat-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1877f2;
+}
+.bd-stat-label {
+    color: #65676b;
+    font-size: 0.85rem;
+}
+.recipient-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f2f5;
+}
+.recipient-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.recipient-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #1877f2;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+.badge-read { background: #e6f4ea; color: #137333; }
+.badge-unread { background: #e4e6eb; color: #65676b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="bd-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-envelope-open-fill me-2"></i>{{ broadcast.subject }}</h1>
+                <p class="mb-0 opacity-75">
+                    {{ society.legal_name }} &middot;
+                    Inviata il {{ broadcast.sent_at.strftime('%d/%m/%Y alle %H:%M') if broadcast.sent_at else 'N/D' }}
+                    {% if broadcast.target_roles %}
+                    &middot; Filtro: {{ broadcast.target_roles }}
+                    {% else %}
+                    &middot; Tutti i membri
+                    {% endif %}
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('social.society_broadcasts') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> Elenco
+                </a>
+                <form method="POST" action="{{ url_for('social.society_broadcast_delete', broadcast_id=broadcast.id) }}" class="d-inline"
+                      onsubmit="return confirm('Eliminare questa comunicazione?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="bd-stats">
+        <div class="bd-stat">
+            <div class="bd-stat-value">{{ broadcast.total_recipients }}</div>
+            <div class="bd-stat-label">Destinatari</div>
+        </div>
+        <div class="bd-stat">
+            <div class="bd-stat-value">{{ read_count }}</div>
+            <div class="bd-stat-label">Letti</div>
+        </div>
+        <div class="bd-stat">
+            <div class="bd-stat-value">
+                {% if broadcast.total_recipients > 0 %}
+                {{ "%.0f"|format(read_count / broadcast.total_recipients * 100) }}%
+                {% else %}0%{% endif %}
+            </div>
+            <div class="bd-stat-label">Tasso di lettura</div>
+        </div>
+    </div>
+
+    <div class="bd-content">
+        <h5 class="fw-bold mb-3"><i class="bi bi-chat-text me-2"></i>Contenuto del messaggio</h5>
+        <div style="white-space: pre-wrap; color: #333; line-height: 1.6;">{{ broadcast.body }}</div>
+    </div>
+
+    <div class="bd-content">
+        <h5 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Destinatari ({{ broadcast.total_recipients }})</h5>
+        {% for rec in recipients_page.items %}
+            {% set user = rec[1] if rec|length > 1 else rec.user %}
+            {% set br = rec[0] if rec|length > 1 else rec %}
+            <div class="recipient-row">
+                {% if user.avatar %}
+                <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}" class="recipient-avatar" alt="">
+                {% else %}
+                <div class="recipient-avatar-placeholder">
+                    {{ user.first_name[0] if user.first_name else user.username[0] }}
+                </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">{{ user.get_full_name() }}</div>
+                    <div class="small text-muted">{{ user.email }}</div>
+                </div>
+                <div>
+                    {% if br.message and br.message.is_read %}
+                    <span class="badge badge-read px-2 py-1"><i class="bi bi-check2-all me-1"></i>Letto</span>
+                    {% else %}
+                    <span class="badge badge-unread px-2 py-1">Non letto</span>
+                    {% endif %}
+                    {% if br.email_sent %}
+                    <span class="badge bg-info-subtle text-info px-2 py-1 ms-1"><i class="bi bi-envelope-check"></i></span>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+
+        {% if recipients_page.pages > 1 %}
+        <nav class="mt-3 d-flex justify-content-center">
+            <ul class="pagination pagination-sm">
+                {% if recipients_page.has_prev %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('social.society_broadcast_detail', broadcast_id=broadcast.id, page=recipients_page.prev_num) }}"><i class="bi bi-chevron-left"></i></a></li>
+                {% endif %}
+                {% for p in recipients_page.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {{ 'active' if p == recipients_page.page }}"><a class="page-link" href="{{ url_for('social.society_broadcast_detail', broadcast_id=broadcast.id, page=p) }}">{{ p }}</a></li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if recipients_page.has_next %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('social.society_broadcast_detail', broadcast_id=broadcast.id, page=recipients_page.next_num) }}"><i class="bi bi-chevron-right"></i></a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

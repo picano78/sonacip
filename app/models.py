@@ -3078,3 +3078,56 @@ class PlatformPaymentSetting(db.Model):
 
     def __repr__(self):
         return f'<PlatformPaymentSetting method={self.payout_method}>'
+
+
+class BroadcastMessage(db.Model):
+    __tablename__ = 'broadcast_message'
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
+    scope_type = db.Column(db.String(20), nullable=False, default='global')
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=True, index=True)
+
+    subject = db.Column(db.String(300), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+
+    target_roles = db.Column(db.Text)
+    send_email = db.Column(db.Boolean, default=False)
+
+    status = db.Column(db.String(20), nullable=False, default='draft')
+    total_recipients = db.Column(db.Integer, default=0)
+    total_read = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    sent_at = db.Column(db.DateTime)
+
+    sender = db.relationship('User', foreign_keys=[sender_id])
+    society = db.relationship('Society', foreign_keys=[society_id])
+    recipients = db.relationship('BroadcastRecipient', backref='broadcast', lazy='dynamic', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<BroadcastMessage {self.id} "{self.subject}" scope={self.scope_type}>'
+
+
+class BroadcastRecipient(db.Model):
+    __tablename__ = 'broadcast_recipient'
+
+    id = db.Column(db.Integer, primary_key=True)
+    broadcast_id = db.Column(db.Integer, db.ForeignKey('broadcast_message.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
+
+    delivery_status = db.Column(db.String(20), default='pending')
+    email_sent = db.Column(db.Boolean, default=False)
+    sent_at = db.Column(db.DateTime)
+
+    user = db.relationship('User', foreign_keys=[user_id])
+    message = db.relationship('Message', foreign_keys=[message_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('broadcast_id', 'user_id', name='uq_broadcast_recipient'),
+    )
+
+    def __repr__(self):
+        return f'<BroadcastRecipient broadcast={self.broadcast_id} user={self.user_id}>'

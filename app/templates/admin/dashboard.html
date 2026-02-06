@@ -310,6 +310,16 @@
             </div>
 
             <div class="menu-section">
+                <div class="menu-section-title"><i class="bi bi-megaphone me-2"></i>Comunicazione</div>
+                <div class="menu-grid">
+                    <a href="{{ url_for('admin.broadcasts') }}" class="menu-item" style="border: 2px solid #1877f2;">
+                        <i class="bi bi-megaphone-fill" style="color: #1877f2;"></i>
+                        <span>Newsletter</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="menu-section">
                 <div class="menu-section-title"><i class="bi bi-gear me-2"></i>Impostazioni Sistema</div>
                 <div class="menu-grid">
                     <a href="{{ url_for('admin.smtp_settings') }}" class="menu-item">

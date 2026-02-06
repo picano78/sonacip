@@ -67,6 +67,10 @@ from app.models import (
     ListingPromotion,
     PromotionTier,
     MarketplaceListing,
+    BroadcastMessage,
+    BroadcastRecipient,
+    Message,
+    Role,
 )
 from datetime import datetime, timedelta
 import os
@@ -613,6 +617,170 @@ def promotion_tiers():
     total_promo_revenue = db.session.query(func.coalesce(func.sum(ListingPromotion.amount_paid), 0)).filter(ListingPromotion.status == 'active').scalar() or 0
     return render_template('admin/promotion_tiers.html', tiers=tiers,
                            active_promos=active_promos, total_promo_revenue=float(total_promo_revenue))
+
+
+@bp.route('/broadcasts')
+@login_required
+@admin_required
+def broadcasts():
+    page = request.args.get('page', 1, type=int)
+    status_filter = request.args.get('status', '')
+    query = BroadcastMessage.query.filter_by(scope_type='global')
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    pagination = query.order_by(BroadcastMessage.created_at.desc()).paginate(page=page, per_page=20, error_out=False)
+    broadcasts_list = pagination.items
+    total = BroadcastMessage.query.filter_by(scope_type='global').count()
+    total_sent = BroadcastMessage.query.filter_by(scope_type='global', status='sent').count()
+    return render_template('admin/broadcasts.html', broadcasts=broadcasts_list, pagination=pagination,
+                           total=total, total_sent=total_sent, status_filter=status_filter)
+
+
+@bp.route('/broadcasts/compose', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def broadcast_compose():
+    roles = Role.query.filter_by(is_active=True).order_by(Role.level.desc()).all()
+
+    if request.method == 'POST':
+        subject = (request.form.get('subject') or '').strip()
+        body = (request.form.get('body') or '').strip()
+        selected_roles = request.form.getlist('target_roles')
+        send_email = bool(request.form.get('send_email'))
+
+        if not subject or not body:
+            flash('Oggetto e messaggio sono obbligatori.', 'danger')
+            return render_template('admin/broadcast_compose.html', roles=roles,
+                                   subject=subject, body=body, selected_roles=selected_roles)
+
+        broadcast = BroadcastMessage(
+            sender_id=current_user.id,
+            scope_type='global',
+            subject=subject,
+            body=body,
+            target_roles=','.join(selected_roles) if selected_roles else None,
+            send_email=send_email,
+            status='draft',
+        )
+        db.session.add(broadcast)
+        db.session.flush()
+
+        users_query = User.query.filter_by(is_active=True, is_banned=False).filter(User.id != current_user.id)
+        if selected_roles:
+            role_objs = Role.query.filter(Role.name.in_(selected_roles)).all()
+            role_ids = [r.id for r in role_objs]
+            if role_ids:
+                users_query = users_query.filter(User.role_id.in_(role_ids))
+
+        target_users = users_query.all()
+        count = 0
+        for u in target_users:
+            msg = Message(
+                sender_id=current_user.id,
+                recipient_id=u.id,
+                subject=f"[Newsletter] {subject}",
+                body=body,
+                is_read=False,
+            )
+            db.session.add(msg)
+            db.session.flush()
+            recipient = BroadcastRecipient(
+                broadcast_id=broadcast.id,
+                user_id=u.id,
+                message_id=msg.id,
+                delivery_status='sent',
+                sent_at=datetime.utcnow(),
+            )
+            db.session.add(recipient)
+            count += 1
+
+        broadcast.total_recipients = count
+        broadcast.status = 'sent'
+        broadcast.sent_at = datetime.utcnow()
+        db.session.commit()
+
+        if send_email:
+            _send_broadcast_emails(broadcast, target_users)
+
+        log_action('send_broadcast', 'BroadcastMessage', broadcast.id, f'recipients={count} roles={selected_roles}')
+        flash(f'Newsletter inviata a {count} utenti.', 'success')
+        return redirect(url_for('admin.broadcast_detail', broadcast_id=broadcast.id))
+
+    return render_template('admin/broadcast_compose.html', roles=roles,
+                           subject='', body='', selected_roles=[])
+
+
+@bp.route('/broadcasts/<int:broadcast_id>')
+@login_required
+@admin_required
+def broadcast_detail(broadcast_id):
+    broadcast = BroadcastMessage.query.get_or_404(broadcast_id)
+    page = request.args.get('page', 1, type=int)
+    recipients_page = broadcast.recipients.join(User, BroadcastRecipient.user_id == User.id)\
+        .add_entity(User).paginate(page=page, per_page=50, error_out=False)
+
+    read_count = BroadcastRecipient.query.filter_by(broadcast_id=broadcast.id)\
+        .join(Message, BroadcastRecipient.message_id == Message.id)\
+        .filter(Message.is_read == True).count()
+
+    return render_template('admin/broadcast_detail.html', broadcast=broadcast,
+                           recipients_page=recipients_page, read_count=read_count)
+
+
+@bp.route('/broadcasts/<int:broadcast_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def broadcast_delete(broadcast_id):
+    broadcast = BroadcastMessage.query.get_or_404(broadcast_id)
+    db.session.delete(broadcast)
+    db.session.commit()
+    flash('Newsletter eliminata.', 'success')
+    return redirect(url_for('admin.broadcasts'))
+
+
+def _send_broadcast_emails(broadcast, users):
+    try:
+        smtp = SmtpSetting.query.first()
+        if not smtp or not smtp.enabled:
+            return
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        server = smtplib.SMTP(smtp.host, smtp.port)
+        if smtp.use_tls:
+            server.starttls()
+        if smtp.username and smtp.password:
+            server.login(smtp.username, smtp.password)
+        for u in users:
+            if not u.email:
+                continue
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f"[SONACIP] {broadcast.subject}"
+            msg['From'] = smtp.default_sender or 'noreply@sonacip.it'
+            msg['To'] = u.email
+            text_body = broadcast.body
+            html_body = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+            <div style="background:#1877f2;color:#fff;padding:20px;border-radius:8px 8px 0 0;">
+                <h2 style="margin:0;">SONACIP</h2>
+            </div>
+            <div style="padding:20px;background:#fff;border:1px solid #ddd;border-radius:0 0 8px 8px;">
+                <h3>{broadcast.subject}</h3>
+                <div style="white-space:pre-wrap;">{broadcast.body}</div>
+            </div>
+            </div>"""
+            msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
+            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+            try:
+                server.sendmail(msg['From'], [u.email], msg.as_string())
+                rec = BroadcastRecipient.query.filter_by(broadcast_id=broadcast.id, user_id=u.id).first()
+                if rec:
+                    rec.email_sent = True
+            except Exception:
+                pass
+        server.quit()
+        db.session.commit()
+    except Exception:
+        pass
 
 
 @bp.route('/enterprise/sso', methods=['GET', 'POST'])

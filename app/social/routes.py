@@ -37,6 +37,10 @@ from app.models import (
     Skill,
     SkillEndorsement,
     Connection,
+    BroadcastMessage,
+    BroadcastRecipient,
+    Message,
+    SmtpSetting,
 )
 from app.cache import get_cache
 from app.utils import permission_required, check_permission, get_active_society_id
@@ -1668,3 +1672,203 @@ def user_posts(user_id):
     page = request.args.get('page', 1, type=int)
     posts = Post.query.filter_by(user_id=user.id).order_by(Post.created_at.desc()).paginate(page=page, per_page=20)
     return render_template('social/user_posts.html', user=user, posts=posts.items, pagination=posts)
+
+
+@bp.route('/society/broadcasts')
+@login_required
+def society_broadcasts():
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    page = request.args.get('page', 1, type=int)
+    pagination = BroadcastMessage.query.filter_by(scope_type='society', society_id=society.id)\
+        .order_by(BroadcastMessage.created_at.desc())\
+        .paginate(page=page, per_page=20, error_out=False)
+    total = BroadcastMessage.query.filter_by(scope_type='society', society_id=society.id).count()
+    total_sent = BroadcastMessage.query.filter_by(scope_type='society', society_id=society.id, status='sent').count()
+
+    member_count = SocietyMembership.query.filter_by(society_id=society.id, status='active').count()
+
+    return render_template('social/society_broadcasts.html', broadcasts=pagination.items,
+                           pagination=pagination, society=society,
+                           total=total, total_sent=total_sent, member_count=member_count)
+
+
+@bp.route('/society/broadcasts/compose', methods=['GET', 'POST'])
+@login_required
+def society_broadcast_compose():
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    membership_roles = ['atleta', 'coach', 'staff', 'dirigente', 'appassionato']
+
+    if request.method == 'POST':
+        subject = (request.form.get('subject') or '').strip()
+        body = (request.form.get('body') or '').strip()
+        selected_roles = request.form.getlist('target_roles')
+        send_email = bool(request.form.get('send_email'))
+
+        if not subject or not body:
+            flash('Oggetto e messaggio sono obbligatori.', 'danger')
+            return render_template('social/society_broadcast_compose.html',
+                                   society=society, membership_roles=membership_roles,
+                                   subject=subject, body=body, selected_roles=selected_roles)
+
+        broadcast = BroadcastMessage(
+            sender_id=current_user.id,
+            scope_type='society',
+            society_id=society.id,
+            subject=subject,
+            body=body,
+            target_roles=','.join(selected_roles) if selected_roles else None,
+            send_email=send_email,
+            status='draft',
+        )
+        db.session.add(broadcast)
+        db.session.flush()
+
+        members_query = SocietyMembership.query.filter_by(society_id=society.id, status='active')
+        if selected_roles:
+            members_query = members_query.filter(SocietyMembership.role_name.in_(selected_roles))
+        memberships = members_query.all()
+
+        count = 0
+        target_users = []
+        for m in memberships:
+            if m.user_id == current_user.id:
+                continue
+            user = User.query.get(m.user_id)
+            if not user or not user.is_active or user.is_banned:
+                continue
+            msg = Message(
+                sender_id=current_user.id,
+                recipient_id=user.id,
+                subject=f"[{society.legal_name}] {subject}",
+                body=body,
+                is_read=False,
+            )
+            db.session.add(msg)
+            db.session.flush()
+            recipient = BroadcastRecipient(
+                broadcast_id=broadcast.id,
+                user_id=user.id,
+                message_id=msg.id,
+                delivery_status='sent',
+                sent_at=datetime.utcnow(),
+            )
+            db.session.add(recipient)
+            target_users.append(user)
+            count += 1
+
+        broadcast.total_recipients = count
+        broadcast.status = 'sent'
+        broadcast.sent_at = datetime.utcnow()
+        db.session.commit()
+
+        if send_email:
+            _send_society_broadcast_emails(broadcast, target_users, society)
+
+        log_action('send_society_broadcast', 'BroadcastMessage', broadcast.id,
+                   f'society={society.id} recipients={count} roles={selected_roles}',
+                   society_id=society.id)
+        flash(f'Comunicazione inviata a {count} membri.', 'success')
+        return redirect(url_for('social.society_broadcast_detail', broadcast_id=broadcast.id))
+
+    return render_template('social/society_broadcast_compose.html',
+                           society=society, membership_roles=membership_roles,
+                           subject='', body='', selected_roles=[])
+
+
+@bp.route('/society/broadcasts/<int:broadcast_id>')
+@login_required
+def society_broadcast_detail(broadcast_id):
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    broadcast = BroadcastMessage.query.filter_by(id=broadcast_id, society_id=society.id).first_or_404()
+    page = request.args.get('page', 1, type=int)
+    recipients_page = broadcast.recipients.join(User, BroadcastRecipient.user_id == User.id)\
+        .add_entity(User).paginate(page=page, per_page=50, error_out=False)
+
+    read_count = BroadcastRecipient.query.filter_by(broadcast_id=broadcast.id)\
+        .join(Message, BroadcastRecipient.message_id == Message.id)\
+        .filter(Message.is_read == True).count()
+
+    return render_template('social/society_broadcast_detail.html', broadcast=broadcast,
+                           society=society, recipients_page=recipients_page, read_count=read_count)
+
+
+@bp.route('/society/broadcasts/<int:broadcast_id>/delete', methods=['POST'])
+@login_required
+def society_broadcast_delete(broadcast_id):
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        return redirect(url_for('social.feed'))
+    broadcast = BroadcastMessage.query.filter_by(id=broadcast_id, society_id=society.id).first_or_404()
+    db.session.delete(broadcast)
+    db.session.commit()
+    flash('Comunicazione eliminata.', 'success')
+    return redirect(url_for('social.society_broadcasts'))
+
+
+def _send_society_broadcast_emails(broadcast, users, society):
+    try:
+        smtp = SmtpSetting.query.first()
+        if not smtp or not smtp.enabled:
+            return
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        server = smtplib.SMTP(smtp.host, smtp.port)
+        if smtp.use_tls:
+            server.starttls()
+        if smtp.username and smtp.password:
+            server.login(smtp.username, smtp.password)
+        for u in users:
+            if not u.email:
+                continue
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f"[{society.legal_name}] {broadcast.subject}"
+            msg['From'] = smtp.default_sender or 'noreply@sonacip.it'
+            msg['To'] = u.email
+            text_body = broadcast.body
+            html_body = f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+            <div style="background:#1877f2;color:#fff;padding:20px;border-radius:8px 8px 0 0;">
+                <h2 style="margin:0;">{society.legal_name}</h2>
+            </div>
+            <div style="padding:20px;background:#fff;border:1px solid #ddd;border-radius:0 0 8px 8px;">
+                <h3>{broadcast.subject}</h3>
+                <div style="white-space:pre-wrap;">{broadcast.body}</div>
+            </div>
+            </div>"""
+            msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
+            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+            try:
+                server.sendmail(msg['From'], [u.email], msg.as_string())
+                rec = BroadcastRecipient.query.filter_by(broadcast_id=broadcast.id, user_id=u.id).first()
+                if rec:
+                    rec.email_sent = True
+            except Exception:
+                pass
+        server.quit()
+        db.session.commit()
+    except Exception:
+        pass

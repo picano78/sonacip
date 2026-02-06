@@ -103,6 +103,16 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-06: Stripe checkout integration for listing promotions with webhook-driven activation
 - 2026-02-06: Default promotion tiers auto-seed: €2.99/7d, €4.99/14d, €7.99/30d
 - 2026-02-06: Admin dashboard links to Payment Settings and Promotion Tiers in Payments & Business section
+- 2026-02-06: Created BroadcastMessage model (newsletter/broadcast with scope_type, target_roles, send_email)
+- 2026-02-06: Created BroadcastRecipient model (per-recipient tracking with delivery status, email sent flag)
+- 2026-02-06: Super Admin Newsletter system: compose, send to all users filtered by role, delivery tracking
+- 2026-02-06: Newsletter detail page with read/unread statistics, recipient list, email delivery status
+- 2026-02-06: Society broadcast system: society admins can message all their members filtered by role
+- 2026-02-06: Society broadcast roles filter: atleta, coach, staff, dirigente, appassionato
+- 2026-02-06: Internal delivery via Message model + optional SMTP email delivery
+- 2026-02-06: Message preview feature before sending
+- 2026-02-06: Admin dashboard "Comunicazione" section with Newsletter link
+- 2026-02-06: Society dashboard "Comunicazioni ai Membri" card with compose and history buttons
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

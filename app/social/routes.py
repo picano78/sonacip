@@ -489,7 +489,7 @@ def profile(user_id):
     """View user/society profile"""
     user = User.query.get_or_404(user_id)
     
-    if user.is_super_admin() and current_user.id != user.id:
+    if user.is_admin() and current_user.id != user.id:
         flash('Questo profilo non è disponibile.', 'warning')
         return redirect(url_for('social.feed'))
     
@@ -725,7 +725,7 @@ def search():
     
     from app.models import Role
     super_admin_role = Role.query.filter_by(name='super_admin').first()
-    if super_admin_role and not current_user.is_super_admin():
+    if super_admin_role and not current_user.is_admin():
         users_query = users_query.filter(User.role_id != super_admin_role.id)
     
     pagination = users_query.order_by(User.created_at.desc()).paginate(
@@ -1602,7 +1602,7 @@ def connections_list(user_id):
             connected_user = User.query.get(conn.addressee_id)
         else:
             connected_user = User.query.get(conn.requester_id)
-        if connected_user and not (connected_user.is_super_admin() and not current_user.is_super_admin()):
+        if connected_user and not (connected_user.is_admin() and not current_user.is_admin()):
             connected_users.append(connected_user)
     
     return render_template('social/connections.html', user=user, connections=connected_users)

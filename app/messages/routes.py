@@ -14,19 +14,6 @@ bp = Blueprint('messages', __name__, url_prefix='/messages')
 
 def get_conversations():
     """Get all conversations for current user with last message and unread count"""
-    subquery = db.session.query(
-        func.case(
-            (Message.sender_id == current_user.id, Message.recipient_id),
-            else_=Message.sender_id
-        ).label('other_user_id'),
-        func.max(Message.created_at).label('last_msg_time')
-    ).filter(
-        or_(
-            Message.sender_id == current_user.id,
-            Message.recipient_id == current_user.id
-        )
-    ).group_by('other_user_id').subquery()
-    
     conversations = []
     user_ids_seen = set()
     

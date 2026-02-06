@@ -424,11 +424,13 @@
     <h1>{{ page.hero_title if page and page.hero_title else 'Benvenuto su SONACIP' }}</h1>
     <p>{{ page.hero_subtitle if page and page.hero_subtitle else 'La piattaforma completa per la gestione delle società sportive, atleti e appassionati di sport in Italia.' }}</p>
     
-    <div class="cta-buttons">
-      <a href="{{ url_for('auth.login') }}" class="btn-facebook">
+    <div style="text-align: center; margin-bottom: 1rem;">
+      <a href="{{ url_for('auth.login') }}" class="btn-facebook-outline">
         <i class="bi bi-box-arrow-in-right"></i>
         Accedi
       </a>
+    </div>
+    <div class="cta-buttons">
       <a href="{{ url_for('auth.register') }}" class="btn-facebook-outline">
         <i class="bi bi-person-plus"></i>
         Registrati come Appassionato

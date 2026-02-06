@@ -159,7 +159,7 @@
             {% for s in societies %}
             <div class="society-export-item">
                 <div>
-                    <div class="society-name">{{ s.name }}</div>
+                    <div class="society-name">{{ s.legal_name }}</div>
                     <small class="text-muted">{{ s.email or '' }} {{ '| ' + s.city if s.city else '' }}</small>
                 </div>
                 <a href="{{ url_for('admin.export_society_detail', society_id=s.id) }}" class="export-btn-outline">

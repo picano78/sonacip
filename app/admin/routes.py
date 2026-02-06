@@ -1802,23 +1802,21 @@ def export_societies():
     writer.writerow([
         'ID', 'Nome', 'Email', 'Telefono', 'Indirizzo', 'Città',
         'Provincia', 'CAP', 'Codice Fiscale', 'P.IVA',
-        'Sport', 'Affiliazione', 'Data Creazione', 'Attiva'
+        'Sport', 'Data Creazione'
     ])
     for s in societies:
         writer.writerow([
-            s.id, s.name or '', getattr(s, 'email', '') or '',
-            getattr(s, 'phone', '') or '', getattr(s, 'address', '') or '',
-            getattr(s, 'city', '') or '', getattr(s, 'province', '') or '',
-            getattr(s, 'zip_code', '') or '', getattr(s, 'fiscal_code', '') or '',
-            getattr(s, 'vat_number', '') or '', getattr(s, 'sport', '') or '',
-            getattr(s, 'affiliation', '') or '',
-            s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else '',
-            getattr(s, 'is_active', True)
+            s.id, s.legal_name or '', s.email or '',
+            s.phone or '', s.address or '',
+            s.city or '', s.province or '',
+            s.postal_code or '', s.fiscal_code or '',
+            s.vat_number or '', s.sport_categories or '',
+            s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else ''
         ])
     resp = make_response(output.getvalue())
     resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
     resp.headers['Content-Disposition'] = f'attachment; filename=societa_sonacip_{datetime.utcnow().strftime("%Y%m%d")}.csv'
-    log_action('export_societies', 'Society', 0, f'Exported {len(societies)} societies to CSV')
+    log_action('export_societies', 'Society', 0, f'Esportate {len(societies)} società in CSV')
     return resp
 
 
@@ -1832,14 +1830,14 @@ def export_society_detail(society_id):
     output = io.StringIO()
     writer = csv.writer(output)
 
-    writer.writerow([f'=== SOCIETÀ: {society.name} ==='])
+    writer.writerow([f'=== SOCIETÀ: {society.legal_name} ==='])
     writer.writerow(['Campo', 'Valore'])
-    writer.writerow(['Nome', society.name or ''])
-    writer.writerow(['Email', getattr(society, 'email', '') or ''])
-    writer.writerow(['Telefono', getattr(society, 'phone', '') or ''])
-    writer.writerow(['Indirizzo', getattr(society, 'address', '') or ''])
-    writer.writerow(['Città', getattr(society, 'city', '') or ''])
-    writer.writerow(['Sport', getattr(society, 'sport', '') or ''])
+    writer.writerow(['Nome', society.legal_name or ''])
+    writer.writerow(['Email', society.email or ''])
+    writer.writerow(['Telefono', society.phone or ''])
+    writer.writerow(['Indirizzo', society.address or ''])
+    writer.writerow(['Città', society.city or ''])
+    writer.writerow(['Sport', society.sport_categories or ''])
     writer.writerow([])
 
     writer.writerow(['=== MEMBRI ==='])
@@ -1861,16 +1859,16 @@ def export_society_detail(society_id):
     for e in events:
         writer.writerow([
             e.id, getattr(e, 'title', '') or '',
-            e.start_time.strftime('%Y-%m-%d %H:%M') if getattr(e, 'start_time', None) else '',
-            e.end_time.strftime('%Y-%m-%d %H:%M') if getattr(e, 'end_time', None) else '',
-            getattr(e, 'location', '') or ''
+            e.start_datetime.strftime('%Y-%m-%d %H:%M') if getattr(e, 'start_datetime', None) else '',
+            e.end_datetime.strftime('%Y-%m-%d %H:%M') if getattr(e, 'end_datetime', None) else '',
+            getattr(e, 'location_text', '') or ''
         ])
 
     resp = make_response(output.getvalue())
     resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    safe_name = (society.name or 'societa').replace(' ', '_').lower()[:30]
+    safe_name = (society.legal_name or 'societa').replace(' ', '_').lower()[:30]
     resp.headers['Content-Disposition'] = f'attachment; filename={safe_name}_{datetime.utcnow().strftime("%Y%m%d")}.csv'
-    log_action('export_society_detail', 'Society', society.id, f'Exported detailed data for {society.name}')
+    log_action('export_society_detail', 'Society', society.id, f'Exported detailed data for {society.legal_name}')
     return resp
 
 
@@ -1879,7 +1877,7 @@ def export_society_detail(society_id):
 @admin_required
 def export_center():
     """Data export center for super admin."""
-    societies = Society.query.order_by(Society.name).all()
+    societies = Society.query.order_by(Society.legal_name).all()
     total_users = User.query.count()
     total_societies = Society.query.count()
     return render_template('admin/export_center.html',

@@ -129,6 +129,9 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_banned = db.Column(db.Boolean, default=False)
     is_verified = db.Column(db.Boolean, default=False)
+    email_confirmed = db.Column(db.Boolean, default=False)
+    email_confirm_token = db.Column(db.String(128), index=True)
+    email_confirm_sent_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
@@ -3131,3 +3134,23 @@ class BroadcastRecipient(db.Model):
 
     def __repr__(self):
         return f'<BroadcastRecipient broadcast={self.broadcast_id} user={self.user_id}>'
+
+
+class EmailConfirmationSetting(db.Model):
+    __tablename__ = 'email_confirmation_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, default=False)
+    token_expiry_hours = db.Column(db.Integer, default=48)
+    max_resends = db.Column(db.Integer, default=5)
+    email_subject = db.Column(db.String(255), default='Conferma il tuo indirizzo email - SONACIP')
+    email_body_template = db.Column(db.Text, default='')
+    auto_confirm_existing = db.Column(db.Boolean, default=True)
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<EmailConfirmationSetting enabled={self.enabled}>'

@@ -1,7 +1,7 @@
 """
 Authentication routes
 """
-from flask import Blueprint, current_app, render_template, redirect, url_for, flash, request
+from flask import Blueprint, current_app, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, current_user
 from sqlalchemy import func, or_
 from app import db, limiter, oauth
@@ -12,7 +12,8 @@ from app.auth.forms import (
     ResetPasswordRequestForm,
     ResetPasswordForm,
 )
-from app.models import User, AuditLog, Subscription, Plan, Dashboard, DashboardTemplate, Society, Role, EnterpriseSSOSetting
+from app.models import User, AuditLog, Subscription, Plan, Dashboard, DashboardTemplate, Society, Role, EnterpriseSSOSetting, EmailConfirmationSetting
+from app.auth.email_confirm import is_email_confirmation_required, send_confirmation_email, can_resend, verify_token, get_confirmation_settings
 from datetime import datetime
 import json
 import secrets
@@ -199,6 +200,13 @@ def login():
         if not user.is_active:
             flash('Account disabilitato. Contatta l\'amministratore.', 'warning')
             return redirect(url_for('auth.login'))
+
+        if is_email_confirmation_required() and not user.email_confirmed:
+            role_name = user.role_obj.name if user.role_obj else ''
+            if role_name != 'super_admin':
+                session['_email_confirm_uid'] = user.id
+                flash('Devi confermare il tuo indirizzo email prima di effettuare il login.', 'warning')
+                return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
         
         login_user(user, remember=form.remember_me.data)
         user.last_seen = datetime.utcnow()
@@ -457,8 +465,18 @@ def register():
             except Exception:
                 pass
         
-        flash('Registrazione completata! Effettua il login.', 'success')
-        return redirect(url_for('auth.login', next=url_for('social.feed')))
+        if is_email_confirmation_required():
+            session['_email_confirm_uid'] = user.id
+            session['_email_confirm_resends'] = 0
+            email_sent = send_confirmation_email(user)
+            if email_sent:
+                flash('Registrazione completata! Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta.', 'success')
+            else:
+                flash('Registrazione completata! Non è stato possibile inviare l\'email di conferma. Puoi richiederne una nuova.', 'warning')
+            return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
+        else:
+            flash('Registrazione completata! Effettua il login.', 'success')
+            return redirect(url_for('auth.login', next=url_for('social.feed')))
     
     return render_template('auth/register.html', form=form)
 
@@ -593,8 +611,18 @@ def register_society():
         db.session.add(log)
         db.session.commit()
 
-        flash('Registrazione società completata! Effettua il login.', 'success')
-        return redirect(url_for('auth.login', next=url_for('main.dashboard')))
+        if is_email_confirmation_required():
+            session['_email_confirm_uid'] = user.id
+            session['_email_confirm_resends'] = 0
+            email_sent = send_confirmation_email(user)
+            if email_sent:
+                flash('Registrazione società completata! Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta.', 'success')
+            else:
+                flash('Registrazione società completata! Non è stato possibile inviare l\'email di conferma. Puoi richiederne una nuova.', 'warning')
+            return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
+        else:
+            flash('Registrazione società completata! Effettua il login.', 'success')
+            return redirect(url_for('auth.login', next=url_for('main.dashboard')))
 
     return render_template('auth/register_society.html', form=form)
 
@@ -617,3 +645,76 @@ def logout():
     logout_user()
     flash('Logout effettuato con successo.', 'info')
     return redirect(url_for('social.feed'))
+
+
+@bp.route('/confirm-email/<token>')
+def confirm_email(token):
+    user, message = verify_token(token)
+    if user:
+        flash(message, 'success')
+        return redirect(url_for('auth.login'))
+    else:
+        flash(message, 'danger')
+        return redirect(url_for('auth.login'))
+
+
+def _mask_email(email):
+    if not email or '@' not in email:
+        return '***'
+    local, domain = email.rsplit('@', 1)
+    if len(local) <= 2:
+        masked_local = local[0] + '***'
+    else:
+        masked_local = local[0] + '***' + local[-1]
+    return f'{masked_local}@{domain}'
+
+
+@bp.route('/email-confirm-pending/<int:user_id>')
+def email_confirm_pending(user_id):
+    pending_uid = session.get('_email_confirm_uid')
+    if pending_uid != user_id:
+        flash('Effettua il login per continuare.', 'info')
+        return redirect(url_for('auth.login'))
+    user = User.query.get(user_id)
+    if not user:
+        flash('Effettua il login per continuare.', 'info')
+        return redirect(url_for('auth.login'))
+    if user.email_confirmed:
+        session.pop('_email_confirm_uid', None)
+        flash('Email già confermata. Puoi effettuare il login.', 'success')
+        return redirect(url_for('auth.login'))
+    masked_email = _mask_email(user.email)
+    return render_template('auth/email_confirm_pending.html', user=user, masked_email=masked_email)
+
+
+@bp.route('/resend-confirmation/<int:user_id>', methods=['POST'])
+@limiter.limit("3 per hour")
+def resend_confirmation(user_id):
+    pending_uid = session.get('_email_confirm_uid')
+    if pending_uid != user_id:
+        flash('Sessione scaduta. Effettua il login.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    user = User.query.get(user_id)
+    if not user or user.email_confirmed:
+        flash('Operazione non valida.', 'info')
+        return redirect(url_for('auth.login'))
+
+    setting = get_confirmation_settings()
+    resend_count = session.get('_email_confirm_resends', 0)
+    if resend_count >= (setting.max_resends or 5):
+        flash('Hai raggiunto il numero massimo di reinvii. Contatta il supporto.', 'warning')
+        return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
+
+    ok, msg = can_resend(user)
+    if not ok:
+        flash(msg, 'warning')
+        return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
+
+    email_sent = send_confirmation_email(user)
+    if email_sent:
+        session['_email_confirm_resends'] = resend_count + 1
+        flash('Email di conferma inviata! Controlla la tua casella di posta.', 'success')
+    else:
+        flash('Non è stato possibile inviare l\'email. Riprova più tardi.', 'danger')
+    return redirect(url_for('auth.email_confirm_pending', user_id=user.id))

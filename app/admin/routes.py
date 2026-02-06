@@ -71,6 +71,7 @@ from app.models import (
     BroadcastRecipient,
     Message,
     Role,
+    EmailConfirmationSetting,
 )
 from datetime import datetime, timedelta
 import os
@@ -1884,3 +1885,74 @@ def export_center():
                            societies=societies,
                            total_users=total_users,
                            total_societies=total_societies)
+
+
+@bp.route('/email-confirmation', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def email_confirmation_settings():
+    setting = EmailConfirmationSetting.query.first()
+    if not setting:
+        setting = EmailConfirmationSetting(enabled=False)
+        db.session.add(setting)
+        db.session.commit()
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'toggle':
+            setting.enabled = not setting.enabled
+            setting.updated_by = current_user.id
+            if setting.enabled and setting.auto_confirm_existing:
+                User.query.filter_by(email_confirmed=False).update({'email_confirmed': True})
+            db.session.commit()
+            status = 'attivata' if setting.enabled else 'disattivata'
+            if setting.enabled and setting.auto_confirm_existing:
+                flash(f'Conferma email {status}. Tutti gli utenti esistenti sono stati confermati automaticamente.', 'success')
+            else:
+                flash(f'Conferma email {status}.', 'success')
+            log_action('toggle_email_confirmation', 'EmailConfirmationSetting', setting.id,
+                       f'Email confirmation {"enabled" if setting.enabled else "disabled"}')
+
+        elif action == 'save_settings':
+            setting.token_expiry_hours = int(request.form.get('token_expiry_hours', 48))
+            setting.max_resends = int(request.form.get('max_resends', 5))
+            setting.email_subject = request.form.get('email_subject', '').strip() or 'Conferma il tuo indirizzo email - SONACIP'
+            setting.updated_by = current_user.id
+            db.session.commit()
+            flash('Impostazioni salvate.', 'success')
+            log_action('update_email_confirmation', 'EmailConfirmationSetting', setting.id, 'Updated settings')
+
+        elif action == 'confirm_all_existing':
+            count = User.query.filter_by(email_confirmed=False).update({'email_confirmed': True})
+            db.session.commit()
+            flash(f'{count} utenti confermati manualmente.', 'success')
+            log_action('confirm_all_users', 'User', 0, f'Bulk confirmed {count} users')
+
+        elif action == 'confirm_user':
+            user_id = request.form.get('user_id', type=int)
+            if user_id:
+                user = User.query.get(user_id)
+                if user:
+                    user.email_confirmed = True
+                    user.email_confirm_token = None
+                    db.session.commit()
+                    flash(f'Utente {user.email} confermato.', 'success')
+                    log_action('confirm_user_email', 'User', user.id, f'Manually confirmed {user.email}')
+
+        return redirect(url_for('admin.email_confirmation_settings'))
+
+    total_users = User.query.count()
+    confirmed_users = User.query.filter_by(email_confirmed=True).count()
+    unconfirmed_users = User.query.filter_by(email_confirmed=False).count()
+    pending_users = User.query.filter_by(email_confirmed=False).order_by(User.created_at.desc()).limit(50).all()
+    smtp = SmtpSetting.query.first()
+    smtp_configured = smtp and smtp.enabled
+
+    return render_template('admin/email_confirmation_settings.html',
+                           setting=setting,
+                           total_users=total_users,
+                           confirmed_users=confirmed_users,
+                           unconfirmed_users=unconfirmed_users,
+                           pending_users=pending_users,
+                           smtp_configured=smtp_configured)

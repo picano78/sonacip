@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+{% block title %}Conferma Email - Impostazioni{% endblock %}
+
+{% block extra_css %}
+<style>
+.ec-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.ec-header h2 { margin: 0; font-weight: 700; }
+.ec-header p { margin: 8px 0 0; opacity: 0.9; }
+.stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    text-align: center;
+}
+.stat-card .number {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.stat-card .label {
+    color: #65676b;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+.setting-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+}
+.setting-card h5 {
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: #f0f2f5;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+.toggle-row .info h6 {
+    margin: 0;
+    font-weight: 600;
+}
+.toggle-row .info p {
+    margin: 4px 0 0;
+    color: #65676b;
+    font-size: 0.85rem;
+}
+.form-switch .form-check-input {
+    width: 3em;
+    height: 1.5em;
+    cursor: pointer;
+}
+.form-switch .form-check-input:checked {
+    background-color: #1877f2;
+    border-color: #1877f2;
+}
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.status-badge.active {
+    background: #e7f3ff;
+    color: #1877f2;
+}
+.status-badge.inactive {
+    background: #f0f2f5;
+    color: #65676b;
+}
+.smtp-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.smtp-warning i {
+    color: #ffc107;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+.smtp-warning p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #856404;
+}
+.smtp-warning a {
+    color: #1877f2;
+    font-weight: 600;
+}
+.pending-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.pending-table th {
+    background: #f0f2f5;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #65676b;
+    text-align: left;
+    border-bottom: 2px solid #e4e6eb;
+}
+.pending-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e4e6eb;
+    font-size: 0.9rem;
+}
+.pending-table tr:hover td {
+    background: #f7f8fa;
+}
+.btn-confirm-user {
+    background: #42b72a;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-confirm-user:hover {
+    background: #36a420;
+    color: white;
+}
+.btn-confirm-all {
+    background: #e7f3ff;
+    color: #1877f2;
+    border: 1px solid #1877f2;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-confirm-all:hover {
+    background: #1877f2;
+    color: white;
+}
+.btn-save {
+    background: #1877f2;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-save:hover {
+    background: #1565c0;
+    color: white;
+}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #65676b;
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+.back-link:hover { color: #1877f2; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width: 960px;">
+    <a href="{{ url_for('admin.dashboard') }}" class="back-link">
+        <i class="bi bi-arrow-left"></i> Dashboard Admin
+    </a>
+
+    <div class="ec-header">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h2><i class="bi bi-envelope-check me-2"></i>Conferma Email Registrazione</h2>
+                <p>Gestisci la conferma email obbligatoria per le nuove registrazioni</p>
+            </div>
+            <span class="status-badge {{ 'active' if setting.enabled else 'inactive' }}">
+                <i class="bi bi-{{ 'check-circle-fill' if setting.enabled else 'x-circle' }}"></i>
+                {{ 'Attiva' if setting.enabled else 'Disattiva' }}
+            </span>
+        </div>
+    </div>
+
+    {% if not smtp_configured %}
+    <div class="smtp-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <div>
+            <p><strong>SMTP non configurato.</strong> Per inviare email di conferma, devi prima configurare le impostazioni SMTP.</p>
+            <a href="{{ url_for('admin.smtp_settings') }}"><i class="bi bi-gear me-1"></i>Configura SMTP</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="stat-row">
+        <div class="stat-card">
+            <div class="number" style="color: #1877f2;">{{ total_users }}</div>
+            <div class="label">Utenti Totali</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" style="color: #42b72a;">{{ confirmed_users }}</div>
+            <div class="label">Email Confermate</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" style="color: #fa3e3e;">{{ unconfirmed_users }}</div>
+            <div class="label">In Attesa</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" style="color: #f5a623;">
+                {% if total_users > 0 %}{{ (confirmed_users * 100 / total_users)|round(0)|int }}%{% else %}0%{% endif %}
+            </div>
+            <div class="label">Tasso Conferma</div>
+        </div>
+    </div>
+
+    <div class="setting-card">
+        <h5><i class="bi bi-toggle-on text-primary"></i> Attiva/Disattiva</h5>
+        <div class="toggle-row">
+            <div class="info">
+                <h6>Conferma email obbligatoria</h6>
+                <p>Quando attiva, i nuovi utenti devono confermare la propria email prima di poter effettuare il login</p>
+            </div>
+            <form method="POST" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="toggle">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" onchange="this.form.submit()"
+                           {{ 'checked' if setting.enabled else '' }}>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="setting-card">
+        <h5><i class="bi bi-sliders text-primary"></i> Impostazioni</h5>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="save_settings">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Scadenza link (ore)</label>
+                    <input type="number" class="form-control" name="token_expiry_hours"
+                           value="{{ setting.token_expiry_hours or 48 }}" min="1" max="168">
+                    <div class="form-text">Dopo quante ore il link di conferma scade</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Max reinvii per utente</label>
+                    <input type="number" class="form-control" name="max_resends"
+                           value="{{ setting.max_resends or 5 }}" min="1" max="20">
+                    <div class="form-text">Numero massimo di email di conferma per utente</div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Oggetto email</label>
+                    <input type="text" class="form-control" name="email_subject"
+                           value="{{ setting.email_subject or 'Conferma il tuo indirizzo email - SONACIP' }}"
+                           maxlength="255">
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn-save">
+                        <i class="bi bi-check-lg me-1"></i> Salva Impostazioni
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="setting-card">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="mb-0"><i class="bi bi-people text-primary"></i> Utenti in Attesa di Conferma</h5>
+            {% if unconfirmed_users > 0 %}
+            <form method="POST" style="margin: 0;" onsubmit="return confirm('Confermare TUTTI gli utenti in attesa? Questa azione non può essere annullata.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="confirm_all_existing">
+                <button type="submit" class="btn-confirm-all">
+                    <i class="bi bi-check-all me-1"></i> Conferma Tutti ({{ unconfirmed_users }})
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        {% if pending_users %}
+        <div class="table-responsive">
+            <table class="pending-table">
+                <thead>
+                    <tr>
+                        <th>Utente</th>
+                        <th>Email</th>
+                        <th>Registrato il</th>
+                        <th>Ultima email</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in pending_users %}
+                    <tr>
+                        <td>
+                            <strong>{{ u.first_name or '' }} {{ u.last_name or '' }}</strong>
+                            <br><small class="text-muted">@{{ u.username }}</small>
+                        </td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.created_at.strftime('%d/%m/%Y %H:%M') if u.created_at else '-' }}</td>
+                        <td>{{ u.email_confirm_sent_at.strftime('%d/%m/%Y %H:%M') if u.email_confirm_sent_at else 'Mai' }}</td>
+                        <td>
+                            <form method="POST" style="margin: 0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="action" value="confirm_user">
+                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                <button type="submit" class="btn-confirm-user" title="Conferma manualmente">
+                                    <i class="bi bi-check-lg"></i> Conferma
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-check-circle" style="font-size: 2rem; color: #42b72a;"></i>
+            <p class="mt-2 mb-0">Tutti gli utenti hanno confermato la propria email</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

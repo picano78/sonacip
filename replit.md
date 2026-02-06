@@ -127,6 +127,17 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-06: Added Assistenza and Guida links in sidebar for logged-in users
 - 2026-02-06: Enhanced client-side UX: confirm dialogs, form submit protection, custom tooltips
 - 2026-02-06: Fixed Centro Export error (Society.name → Society.legal_name)
+- 2026-02-06: Added mandatory email confirmation system for new registrations
+- 2026-02-06: User model: email_confirmed, email_confirm_token, email_confirm_sent_at fields
+- 2026-02-06: EmailConfirmationSetting model for super admin toggle (enabled, token_expiry_hours, max_resends, email_subject)
+- 2026-02-06: Email confirmation utility (app/auth/email_confirm.py): token generation, SMTP sending, resend logic, token verification
+- 2026-02-06: Registration routes (individual + society) send confirmation email when feature enabled
+- 2026-02-06: Login blocks unconfirmed users (super_admin always bypasses)
+- 2026-02-06: Session-secured pending/resend pages (no user enumeration, masked email display)
+- 2026-02-06: Beautiful confirmation pending page with resend button, rate limiting, max resends enforcement
+- 2026-02-06: Admin panel: Conferma Email settings page with toggle, statistics, per-user/bulk confirm, settings customization
+- 2026-02-06: Auto-confirm existing users when enabling feature (via auto_confirm_existing setting)
+- 2026-02-06: Admin dashboard link: "Conferma Email" in Impostazioni Sistema section
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

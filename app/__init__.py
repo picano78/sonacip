@@ -447,6 +447,13 @@ def create_app(config_name: str | None = None) -> Flask:
 
     app.config.setdefault('RATELIMIT_STORAGE_URI', 'memory://')
 
+    uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
+    if uri.startswith("postgresql") or uri.startswith("postgres"):
+        pg_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
+        pg_opts.setdefault("pool_pre_ping", True)
+        pg_opts.setdefault("pool_recycle", 300)
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = pg_opts
+
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)

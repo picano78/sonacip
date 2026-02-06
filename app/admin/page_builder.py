@@ -37,6 +37,8 @@ SECTION_FIELD_SCHEMA: dict[str, list[dict]] = {
         {'key': 'btn1_url', 'label': 'Pulsante 1 – Link', 'input': 'text'},
         {'key': 'btn2_text', 'label': 'Pulsante 2 – Testo', 'input': 'text'},
         {'key': 'btn2_url', 'label': 'Pulsante 2 – Link', 'input': 'text'},
+        {'key': 'btn3_text', 'label': 'Pulsante 3 – Testo', 'input': 'text'},
+        {'key': 'btn3_url', 'label': 'Pulsante 3 – Link', 'input': 'text'},
     ],
     'features_grid': [
         {'key': 'title', 'label': 'Titolo Sezione', 'input': 'text'},
@@ -82,6 +84,7 @@ _r('main.index', label='Homepage', sections=[
         'subtitle': 'La piattaforma completa per la gestione delle società sportive, atleti e appassionati di sport in Italia.',
         'btn1_text': 'Accedi', 'btn1_url': '/auth/login',
         'btn2_text': 'Registrati come Appassionato', 'btn2_url': '/auth/register',
+        'btn3_text': 'Registra Società', 'btn3_url': '/auth/register-society',
     }),
     _sec('features', 'features_grid', 'Funzionalità Principali', {
         'title': 'Funzionalità Principali',

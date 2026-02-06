@@ -174,6 +174,7 @@ def login():
     try:
         valid = form.validate_on_submit()
     except Exception:
+        db.session.rollback()
         current_app.logger.exception("Login form validation failed")
         flash('Errore temporaneo durante il login. Riprova tra qualche istante.', 'danger')
         return redirect(url_for('auth.login'))
@@ -189,6 +190,7 @@ def login():
                 )
             ).first()
         except Exception:
+            db.session.rollback()
             current_app.logger.exception("User lookup failed during login")
             flash('Servizio temporaneamente non disponibile. Riprova tra qualche istante.', 'danger')
             return redirect(url_for('auth.login'))
@@ -360,6 +362,7 @@ def register():
     try:
         valid = form.validate_on_submit()
     except Exception:
+        db.session.rollback()
         current_app.logger.exception("Registration form validation failed")
         flash('Errore temporaneo durante la registrazione. Riprova tra qualche istante.', 'danger')
         return render_template('auth/register.html', form=form)
@@ -369,6 +372,7 @@ def register():
         try:
             role_obj = Role.query.filter_by(name=role_name).first()
         except Exception:
+            db.session.rollback()
             current_app.logger.exception("Role lookup failed during registration")
             flash('Sistema non disponibile al momento. Riprova più tardi.', 'danger')
             return render_template('auth/register.html', form=form)
@@ -498,6 +502,7 @@ def register_society():
     try:
         valid = form.validate_on_submit()
     except Exception:
+        db.session.rollback()
         current_app.logger.exception("Society registration form validation failed")
         flash('Errore temporaneo durante la registrazione. Riprova tra qualche istante.', 'danger')
         return render_template('auth/register_society.html', form=form)
@@ -507,6 +512,7 @@ def register_society():
         try:
             role_obj = Role.query.filter_by(name=role_name).first()
         except Exception:
+            db.session.rollback()
             current_app.logger.exception("Role lookup failed during society registration")
             flash('Sistema non disponibile al momento. Riprova più tardi.', 'danger')
             return render_template('auth/register_society.html', form=form)

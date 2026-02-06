@@ -5,7 +5,7 @@
   <div class="hero-content">
     <h1>{{ c.get('title', '') }}</h1>
     {% if c.get('subtitle') %}<p>{{ c.get('subtitle', '') }}</p>{% endif %}
-    {% if c.get('btn1_text') or c.get('btn2_text') %}
+    {% if c.get('btn1_text') or c.get('btn2_text') or c.get('btn3_text') %}
     <div class="cta-buttons">
       {% if c.get('btn1_text') %}
       <a href="{{ c.get('btn1_url', '#') }}" class="btn-facebook">
@@ -15,6 +15,15 @@
       {% if c.get('btn2_text') %}
       <a href="{{ c.get('btn2_url', '#') }}" class="btn-facebook-outline">
         {{ c.get('btn2_text') }}
+      </a>
+      {% endif %}
+      {% if c.get('btn3_text') %}
+      <a href="{{ c.get('btn3_url', '/auth/register-society') }}" class="btn-facebook-outline">
+        <i class="bi bi-building"></i> {{ c.get('btn3_text') }}
+      </a>
+      {% else %}
+      <a href="/auth/register-society" class="btn-facebook-outline">
+        <i class="bi bi-building"></i> Registra Società
       </a>
       {% endif %}
     </div>

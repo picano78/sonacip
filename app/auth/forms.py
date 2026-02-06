@@ -52,19 +52,24 @@ class RegistrationForm(FlaskForm):
     ], default='it')
     
     def validate_email(self, email):
-        user = User.query.filter_by(email=email.data).first()
+        try:
+            user = User.query.filter_by(email=email.data).first()
+        except Exception:
+            raise ValidationError('Impossibile verificare l\'email al momento. Riprova.')
         if user:
             raise ValidationError('Email già registrata. Usa un\'altra email.')
     
     def validate_username(self, username):
-        user = User.query.filter_by(username=username.data).first()
+        try:
+            user = User.query.filter_by(username=username.data).first()
+        except Exception:
+            raise ValidationError('Impossibile verificare l\'username al momento. Riprova.')
         if user:
             raise ValidationError('Username già in uso. Scegline un altro.')
 
 
 class SocietyRegistrationForm(FlaskForm):
     """Registration form for sports societies"""
-    # Account credentials
     email = StringField('Email', validators=[DataRequired(), Email()])
     username = StringField('Username', validators=[
         DataRequired(),
@@ -79,7 +84,6 @@ class SocietyRegistrationForm(FlaskForm):
         EqualTo('password', message='Le password devono coincidere')
     ])
     
-    # Society information
     company_name = StringField('Nome Società', validators=[DataRequired()])
     company_type = SelectField('Tipo Società', choices=[
         ('ASD', 'Associazione Sportiva Dilettantistica (ASD)'),
@@ -90,7 +94,6 @@ class SocietyRegistrationForm(FlaskForm):
     fiscal_code = StringField('Codice Fiscale', validators=[DataRequired()])
     vat_number = StringField('Partita IVA', validators=[Optional()])
     
-    # Contact info
     phone = StringField('Telefono', validators=[DataRequired()])
     address = StringField('Indirizzo', validators=[DataRequired()])
     city = StringField('Città', validators=[DataRequired()])
@@ -103,11 +106,17 @@ class SocietyRegistrationForm(FlaskForm):
     ], default='it')
     
     def validate_email(self, email):
-        user = User.query.filter_by(email=email.data).first()
+        try:
+            user = User.query.filter_by(email=email.data).first()
+        except Exception:
+            raise ValidationError('Impossibile verificare l\'email al momento. Riprova.')
         if user:
             raise ValidationError('Email già registrata. Usa un\'altra email.')
     
     def validate_username(self, username):
-        user = User.query.filter_by(username=username.data).first()
+        try:
+            user = User.query.filter_by(username=username.data).first()
+        except Exception:
+            raise ValidationError('Impossibile verificare l\'username al momento. Riprova.')
         if user:
             raise ValidationError('Username già in uso. Scegline un altro.')

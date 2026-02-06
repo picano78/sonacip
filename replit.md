@@ -80,6 +80,12 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-05: Created migration for LinkedIn profile tables (career, education, skill, connection, profile_section)
 - 2026-02-05: Added db.create_all() fallback for safer deployments when migrations fail
 
+- 2026-02-06: Added PlatformFeature model for super admin control of premium/free features
+- 2026-02-06: Created graphical Feature Control panel with toggle switches for all 24 site features
+- 2026-02-06: Updated has_feature() to check PlatformFeature settings (free features bypass subscription)
+- 2026-02-06: Added Feature Control section to admin dashboard with highlighted link
+- 2026-02-06: Features organized by category: Social, Media, Business, Organizzazione, Comunicazione, Supporto, Sicurezza
+
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)
 - Icons should show descriptions on hover

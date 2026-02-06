@@ -292,6 +292,16 @@
             </div>
 
             <div class="menu-section">
+                <div class="menu-section-title"><i class="bi bi-sliders me-2"></i>Controllo Funzionalità</div>
+                <div class="menu-grid">
+                    <a href="{{ url_for('admin.feature_control') }}" class="menu-item" style="background:linear-gradient(135deg,#fef7e0,#fff3cd);border:2px solid #f5a623;">
+                        <i class="bi bi-sliders" style="color:#f5a623;"></i>
+                        <span>Premium / Free</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="menu-section">
                 <div class="menu-section-title"><i class="bi bi-gear me-2"></i>Impostazioni Sistema</div>
                 <div class="menu-grid">
                     <a href="{{ url_for('admin.smtp_settings') }}" class="menu-item">

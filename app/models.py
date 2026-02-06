@@ -350,10 +350,22 @@ class User(UserMixin, db.Model):
     
     def has_feature(self, feature_name):
         """
-        Check if user has access to a specific feature based on their plan
+        Check if user has access to a specific feature based on their plan.
+        Super admin controls which features are premium vs free via PlatformFeature.
         """
         if self.is_admin():
             return True
+
+        try:
+            from app.models import PlatformFeature
+            pf = PlatformFeature.query.filter_by(key=feature_name).first()
+            if pf:
+                if not pf.is_enabled:
+                    return False
+                if not pf.is_premium:
+                    return True
+        except Exception:
+            pass
 
         # 1) Plan-based features (if a subscription exists)
         subscription = self.get_active_subscription()
@@ -2910,3 +2922,22 @@ class ModerationRule(db.Model):
     
     def __repr__(self):
         return f'<ModerationRule {self.name}>'
+
+
+class PlatformFeature(db.Model):
+    __tablename__ = 'platform_feature'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text)
+    category = db.Column(db.String(80), default='general')
+    icon = db.Column(db.String(60), default='bi-gear')
+    is_premium = db.Column(db.Boolean, default=False)
+    is_enabled = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    def __repr__(self):
+        return f'<PlatformFeature {self.key} premium={self.is_premium}>'

@@ -62,6 +62,7 @@ from app.models import (
     AdCampaign,
     AdCreative,
     AdEvent,
+    PlatformFeature,
 )
 from datetime import datetime, timedelta
 import os
@@ -1345,6 +1346,123 @@ def delete_moderation_rule(rule_id):
     flash('Regola di moderazione eliminata.', 'success')
     log_action('delete_moderation_rule', 'ModerationRule', rule.id, f'Deleted rule: {rule.name}')
     return redirect(url_for('admin.moderation'))
+
+
+DEFAULT_PLATFORM_FEATURES = [
+    {'key': 'social_feed', 'name': 'Social Feed', 'description': 'Bacheca social con post, like e commenti', 'category': 'Social', 'icon': 'bi-newspaper', 'is_premium': False, 'display_order': 1},
+    {'key': 'messaging', 'name': 'Messaggi Interni', 'description': 'Sistema di messaggistica interna tra utenti', 'category': 'Social', 'icon': 'bi-chat-dots-fill', 'is_premium': False, 'display_order': 2},
+    {'key': 'connections', 'name': 'Connessioni', 'description': 'Sistema di connessioni tipo LinkedIn', 'category': 'Social', 'icon': 'bi-people-fill', 'is_premium': False, 'display_order': 3},
+    {'key': 'photos', 'name': 'Pubblicazione Foto', 'description': 'Upload e condivisione foto nei post', 'category': 'Media', 'icon': 'bi-image', 'is_premium': False, 'display_order': 4},
+    {'key': 'videos', 'name': 'Pubblicazione Video', 'description': 'Upload e condivisione video nei post', 'category': 'Media', 'icon': 'bi-camera-video-fill', 'is_premium': True, 'display_order': 5},
+    {'key': 'crm', 'name': 'CRM', 'description': 'Gestione contatti, opportunità e pipeline commerciale', 'category': 'Business', 'icon': 'bi-kanban', 'is_premium': False, 'display_order': 6},
+    {'key': 'advanced_stats', 'name': 'Statistiche Avanzate', 'description': 'Dashboard analytics con metriche dettagliate', 'category': 'Business', 'icon': 'bi-graph-up-arrow', 'is_premium': True, 'display_order': 7},
+    {'key': 'api_access', 'name': 'Accesso API', 'description': 'Integrazione via API REST per sviluppatori', 'category': 'Business', 'icon': 'bi-code-slash', 'is_premium': True, 'display_order': 8},
+    {'key': 'white_label', 'name': 'White Label', 'description': 'Personalizzazione completa del brand (logo, colori, dominio)', 'category': 'Business', 'icon': 'bi-palette-fill', 'is_premium': True, 'display_order': 9},
+    {'key': 'priority_support', 'name': 'Supporto Prioritario', 'description': 'Assistenza dedicata con tempi di risposta rapidi', 'category': 'Supporto', 'icon': 'bi-headset', 'is_premium': True, 'display_order': 10},
+    {'key': 'events', 'name': 'Gestione Eventi', 'description': 'Creazione e gestione eventi sportivi, convocazioni', 'category': 'Organizzazione', 'icon': 'bi-calendar-event', 'is_premium': False, 'display_order': 11},
+    {'key': 'planner', 'name': 'Planner Calendario', 'description': 'Calendario avanzato con viste giorno/settimana/mese', 'category': 'Organizzazione', 'icon': 'bi-calendar3', 'is_premium': False, 'display_order': 12},
+    {'key': 'tournaments', 'name': 'Tornei', 'description': 'Gestione tornei con tabelloni, gironi e classifiche', 'category': 'Organizzazione', 'icon': 'bi-trophy-fill', 'is_premium': True, 'display_order': 13},
+    {'key': 'tasks', 'name': 'Task e Progetti', 'description': 'Gestione attività con Kanban, timeline e scadenze', 'category': 'Organizzazione', 'icon': 'bi-list-task', 'is_premium': True, 'display_order': 14},
+    {'key': 'marketplace', 'name': 'Marketplace', 'description': 'Acquisto e vendita di template e risorse', 'category': 'Business', 'icon': 'bi-shop', 'is_premium': True, 'display_order': 15},
+    {'key': 'automation', 'name': 'Automazioni', 'description': 'Workflow automatizzati basati su trigger e condizioni', 'category': 'Business', 'icon': 'bi-lightning-fill', 'is_premium': True, 'display_order': 16},
+    {'key': 'ads_selfserve', 'name': 'Inserzioni Self-Service', 'description': 'Creazione e gestione campagne pubblicitarie', 'category': 'Business', 'icon': 'bi-megaphone-fill', 'is_premium': True, 'display_order': 17},
+    {'key': 'backup', 'name': 'Backup & Ripristino', 'description': 'Backup automatici e ripristino dati', 'category': 'Sicurezza', 'icon': 'bi-cloud-arrow-up-fill', 'is_premium': False, 'display_order': 18},
+    {'key': 'whatsapp_pro', 'name': 'WhatsApp Pro', 'description': 'Invio messaggi e notifiche WhatsApp automatizzati', 'category': 'Comunicazione', 'icon': 'bi-whatsapp', 'is_premium': True, 'display_order': 19},
+    {'key': 'enterprise_pack', 'name': 'Enterprise Pack', 'description': 'SSO, audit avanzato, export illimitati e funzionalità enterprise', 'category': 'Sicurezza', 'icon': 'bi-shield-lock-fill', 'is_premium': True, 'display_order': 20},
+    {'key': 'analytics_pro', 'name': 'Analytics Pro', 'description': 'Business intelligence e report personalizzati', 'category': 'Business', 'icon': 'bi-bar-chart-line-fill', 'is_premium': True, 'display_order': 21},
+    {'key': 'notifications', 'name': 'Notifiche', 'description': 'Sistema di notifiche push, email e in-app', 'category': 'Comunicazione', 'icon': 'bi-bell-fill', 'is_premium': False, 'display_order': 22},
+    {'key': 'profile_linkedin', 'name': 'Profilo LinkedIn-Style', 'description': 'Profili avanzati con carriera, educazione e competenze', 'category': 'Social', 'icon': 'bi-person-badge-fill', 'is_premium': False, 'display_order': 23},
+    {'key': 'data_export', 'name': 'Esportazione Dati', 'description': 'Download dati della propria società in CSV', 'category': 'Business', 'icon': 'bi-download', 'is_premium': False, 'display_order': 24},
+]
+
+
+def _seed_platform_features():
+    for fdef in DEFAULT_PLATFORM_FEATURES:
+        existing = PlatformFeature.query.filter_by(key=fdef['key']).first()
+        if not existing:
+            pf = PlatformFeature(
+                key=fdef['key'],
+                name=fdef['name'],
+                description=fdef['description'],
+                category=fdef['category'],
+                icon=fdef['icon'],
+                is_premium=fdef['is_premium'],
+                is_enabled=True,
+                display_order=fdef['display_order'],
+            )
+            db.session.add(pf)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+@bp.route('/feature-control')
+@login_required
+@admin_required
+def feature_control():
+    _seed_platform_features()
+    features = PlatformFeature.query.order_by(PlatformFeature.display_order).all()
+    categories = {}
+    for f in features:
+        cat = f.category or 'Altro'
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(f)
+    return render_template('admin/feature_control.html', categories=categories, features=features)
+
+
+@bp.route('/feature-control/update', methods=['POST'])
+@login_required
+@admin_required
+def feature_control_update():
+    features = PlatformFeature.query.all()
+    for f in features:
+        premium_key = f'premium_{f.id}'
+        enabled_key = f'enabled_{f.id}'
+        f.is_premium = premium_key in request.form
+        f.is_enabled = enabled_key in request.form
+        f.updated_by = current_user.id
+        f.updated_at = datetime.utcnow()
+    db.session.commit()
+    log_action('update_feature_control', 'PlatformFeature', 0, 'Updated premium/free feature settings')
+    flash('Configurazione funzionalità aggiornata con successo!', 'success')
+    return redirect(url_for('admin.feature_control'))
+
+
+@bp.route('/feature-control/toggle/<int:feature_id>', methods=['POST'])
+@login_required
+@admin_required
+def feature_toggle(feature_id):
+    f = PlatformFeature.query.get_or_404(feature_id)
+    action = request.form.get('action', 'toggle_premium')
+    if action == 'toggle_premium':
+        f.is_premium = not f.is_premium
+    elif action == 'toggle_enabled':
+        f.is_enabled = not f.is_enabled
+    f.updated_by = current_user.id
+    f.updated_at = datetime.utcnow()
+    db.session.commit()
+    status = 'Premium' if f.is_premium else 'Free'
+    log_action('toggle_feature', 'PlatformFeature', f.id, f'{f.name} -> {status}')
+    return jsonify({'success': True, 'is_premium': f.is_premium, 'is_enabled': f.is_enabled})
+
+
+@bp.route('/feature-control/reset', methods=['POST'])
+@login_required
+@admin_required
+def feature_control_reset():
+    for fdef in DEFAULT_PLATFORM_FEATURES:
+        pf = PlatformFeature.query.filter_by(key=fdef['key']).first()
+        if pf:
+            pf.is_premium = fdef['is_premium']
+            pf.is_enabled = True
+            pf.updated_by = current_user.id
+            pf.updated_at = datetime.utcnow()
+    db.session.commit()
+    log_action('reset_feature_control', 'PlatformFeature', 0, 'Reset features to default')
+    flash('Funzionalità ripristinate ai valori predefiniti.', 'success')
+    return redirect(url_for('admin.feature_control'))
 
 
 @bp.route('/export/users')

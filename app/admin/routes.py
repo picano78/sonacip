@@ -1,7 +1,10 @@
 """
 Admin routes
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+import csv
+import io
+
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, Response, make_response
 from flask_login import login_required, current_user
 from flask import current_app
 from sqlalchemy import or_, and_, func, desc
@@ -148,6 +151,8 @@ def social_settings():
         settings.allow_likes = bool(form.allow_likes.data)
         settings.allow_comments = bool(form.allow_comments.data)
         settings.allow_shares = bool(form.allow_shares.data)
+        settings.allow_photos = bool(form.allow_photos.data)
+        settings.allow_videos = bool(form.allow_videos.data)
         settings.boost_official = bool(form.boost_official.data)
         settings.mute_user_posts = bool(form.mute_user_posts.data)
         if form.max_posts_per_day.data:
@@ -1340,3 +1345,130 @@ def delete_moderation_rule(rule_id):
     flash('Regola di moderazione eliminata.', 'success')
     log_action('delete_moderation_rule', 'ModerationRule', rule.id, f'Deleted rule: {rule.name}')
     return redirect(url_for('admin.moderation'))
+
+
+@bp.route('/export/users')
+@login_required
+@admin_required
+def export_users():
+    """Export all users as CSV."""
+    users = User.query.order_by(User.created_at.desc()).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'ID', 'Username', 'Email', 'Nome', 'Cognome', 'Telefono',
+        'Ruolo', 'Attivo', 'Verificato', 'Bannato', 'Lingua',
+        'Data Registrazione', 'Ultimo Accesso', 'Società ID'
+    ])
+    for u in users:
+        writer.writerow([
+            u.id, u.username, u.email,
+            u.first_name or '', u.last_name or '', u.phone or '',
+            u.role, u.is_active, u.is_verified, u.is_banned,
+            getattr(u, 'language', 'it'),
+            u.created_at.strftime('%Y-%m-%d %H:%M') if u.created_at else '',
+            u.last_seen.strftime('%Y-%m-%d %H:%M') if u.last_seen else '',
+            u.society_id or ''
+        ])
+    resp = make_response(output.getvalue())
+    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    resp.headers['Content-Disposition'] = f'attachment; filename=utenti_sonacip_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    log_action('export_users', 'User', 0, f'Exported {len(users)} users to CSV')
+    return resp
+
+
+@bp.route('/export/societies')
+@login_required
+@admin_required
+def export_societies():
+    """Export all societies as CSV."""
+    societies = Society.query.order_by(Society.created_at.desc()).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'ID', 'Nome', 'Email', 'Telefono', 'Indirizzo', 'Città',
+        'Provincia', 'CAP', 'Codice Fiscale', 'P.IVA',
+        'Sport', 'Affiliazione', 'Data Creazione', 'Attiva'
+    ])
+    for s in societies:
+        writer.writerow([
+            s.id, s.name or '', getattr(s, 'email', '') or '',
+            getattr(s, 'phone', '') or '', getattr(s, 'address', '') or '',
+            getattr(s, 'city', '') or '', getattr(s, 'province', '') or '',
+            getattr(s, 'zip_code', '') or '', getattr(s, 'fiscal_code', '') or '',
+            getattr(s, 'vat_number', '') or '', getattr(s, 'sport', '') or '',
+            getattr(s, 'affiliation', '') or '',
+            s.created_at.strftime('%Y-%m-%d %H:%M') if s.created_at else '',
+            getattr(s, 'is_active', True)
+        ])
+    resp = make_response(output.getvalue())
+    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    resp.headers['Content-Disposition'] = f'attachment; filename=societa_sonacip_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    log_action('export_societies', 'Society', 0, f'Exported {len(societies)} societies to CSV')
+    return resp
+
+
+@bp.route('/export/society/<int:society_id>')
+@login_required
+@admin_required
+def export_society_detail(society_id):
+    """Export detailed data for a specific society (members, events, etc)."""
+    from app.models import SocietyMembership, SocietyCalendarEvent
+    society = Society.query.get_or_404(society_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([f'=== SOCIETÀ: {society.name} ==='])
+    writer.writerow(['Campo', 'Valore'])
+    writer.writerow(['Nome', society.name or ''])
+    writer.writerow(['Email', getattr(society, 'email', '') or ''])
+    writer.writerow(['Telefono', getattr(society, 'phone', '') or ''])
+    writer.writerow(['Indirizzo', getattr(society, 'address', '') or ''])
+    writer.writerow(['Città', getattr(society, 'city', '') or ''])
+    writer.writerow(['Sport', getattr(society, 'sport', '') or ''])
+    writer.writerow([])
+
+    writer.writerow(['=== MEMBRI ==='])
+    writer.writerow(['ID Utente', 'Nome', 'Email', 'Ruolo', 'Data Iscrizione'])
+    members = SocietyMembership.query.filter_by(society_id=society_id).all()
+    for m in members:
+        user = User.query.get(m.user_id)
+        if user:
+            writer.writerow([
+                user.id, user.get_full_name(), user.email,
+                getattr(m, 'role', '') or '',
+                m.created_at.strftime('%Y-%m-%d') if m.created_at else ''
+            ])
+    writer.writerow([])
+
+    writer.writerow(['=== EVENTI ==='])
+    writer.writerow(['ID', 'Titolo', 'Data Inizio', 'Data Fine', 'Luogo'])
+    events = SocietyCalendarEvent.query.filter_by(society_id=society_id).all()
+    for e in events:
+        writer.writerow([
+            e.id, getattr(e, 'title', '') or '',
+            e.start_time.strftime('%Y-%m-%d %H:%M') if getattr(e, 'start_time', None) else '',
+            e.end_time.strftime('%Y-%m-%d %H:%M') if getattr(e, 'end_time', None) else '',
+            getattr(e, 'location', '') or ''
+        ])
+
+    resp = make_response(output.getvalue())
+    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    safe_name = (society.name or 'societa').replace(' ', '_').lower()[:30]
+    resp.headers['Content-Disposition'] = f'attachment; filename={safe_name}_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    log_action('export_society_detail', 'Society', society.id, f'Exported detailed data for {society.name}')
+    return resp
+
+
+@bp.route('/export-center')
+@login_required
+@admin_required
+def export_center():
+    """Data export center for super admin."""
+    societies = Society.query.order_by(Society.name).all()
+    total_users = User.query.count()
+    total_societies = Society.query.count()
+    return render_template('admin/export_center.html',
+                           societies=societies,
+                           total_users=total_users,
+                           total_societies=total_societies)

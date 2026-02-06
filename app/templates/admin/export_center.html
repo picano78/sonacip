@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Centro Esportazione Dati{% endblock %}
+
+{% block extra_css %}
+<style>
+.export-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.export-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 24px;
+    margin-bottom: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.export-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.export-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin-bottom: 16px;
+}
+.export-btn {
+    background: #1877f2;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.export-btn:hover {
+    background: #166fe5;
+    color: white;
+}
+.export-btn-outline {
+    background: transparent;
+    color: #1877f2;
+    border: 2px solid #1877f2;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+}
+.export-btn-outline:hover {
+    background: #1877f2;
+    color: white;
+}
+.society-export-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    transition: background 0.2s;
+}
+.society-export-item:last-child {
+    border-bottom: none;
+}
+.society-export-item:hover {
+    background: #f0f2f5;
+}
+.society-name {
+    font-weight: 600;
+    color: #1c1e21;
+}
+.stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #e7f3ff;
+    color: #1877f2;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="export-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-1"><i class="bi bi-download"></i> Centro Esportazione Dati</h1>
+                <p class="mb-0 opacity-75">Scarica i dati della piattaforma in formato CSV</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Pannello Admin
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="export-card">
+                <div class="export-icon bg-primary-subtle text-primary">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <h5 class="fw-bold">Esporta Utenti</h5>
+                <p class="text-muted mb-3">Scarica l'elenco completo di tutti gli utenti registrati con i loro dati: email, ruolo, stato, data registrazione e ultimo accesso.</p>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="stat-badge">
+                        <i class="bi bi-people"></i> {{ total_users }} utenti
+                    </span>
+                    <a href="{{ url_for('admin.export_users') }}" class="export-btn">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Scarica CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="export-card">
+                <div class="export-icon bg-success-subtle text-success">
+                    <i class="bi bi-building"></i>
+                </div>
+                <h5 class="fw-bold">Esporta Società</h5>
+                <p class="text-muted mb-3">Scarica l'elenco completo di tutte le società sportive con dati fiscali, contatti, sport praticato e stato affiliazione.</p>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="stat-badge">
+                        <i class="bi bi-building"></i> {{ total_societies }} società
+                    </span>
+                    <a href="{{ url_for('admin.export_societies') }}" class="export-btn">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Scarica CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="export-card">
+        <h5 class="fw-bold mb-3"><i class="bi bi-building me-2 text-primary"></i>Esporta Dati Singola Società</h5>
+        <p class="text-muted mb-3">Seleziona una società per scaricare il dettaglio completo: informazioni, membri, eventi.</p>
+        
+        {% if societies %}
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e4e6eb; border-radius: 8px;">
+            {% for s in societies %}
+            <div class="society-export-item">
+                <div>
+                    <div class="society-name">{{ s.name }}</div>
+                    <small class="text-muted">{{ s.email or '' }} {{ '| ' + s.city if s.city else '' }}</small>
+                </div>
+                <a href="{{ url_for('admin.export_society_detail', society_id=s.id) }}" class="export-btn-outline">
+                    <i class="bi bi-download"></i> Scarica
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-building" style="font-size: 2rem;"></i>
+            <p class="mt-2">Nessuna società registrata</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

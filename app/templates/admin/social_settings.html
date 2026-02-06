@@ -121,6 +121,33 @@
             
             <div class="col-lg-6">
                 <div class="card">
+                    <div class="card-header"><strong><i class="bi bi-image me-2"></i>Contenuti Multimediali</strong></div>
+                    <div class="card-body">
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name"><i class="bi bi-camera me-2 text-primary"></i>Consenti Foto</div>
+                                <div class="setting-desc">Gli utenti possono pubblicare immagini nei post</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.allow_photos(class='form-check-input') }}
+                            </div>
+                        </div>
+                        
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name"><i class="bi bi-camera-video me-2 text-primary"></i>Consenti Video</div>
+                                <div class="setting-desc">Gli utenti possono pubblicare video nei post</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.allow_videos(class='form-check-input') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="card">
                     <div class="card-header"><strong>Moderazione</strong></div>
                     <div class="card-body">
                         <div class="setting-row">

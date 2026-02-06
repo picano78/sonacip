@@ -1088,11 +1088,13 @@ class SocialSetting(db.Model):
     allow_likes = db.Column(db.Boolean, default=True)
     allow_comments = db.Column(db.Boolean, default=True)
     allow_shares = db.Column(db.Boolean, default=True)
+    allow_photos = db.Column(db.Boolean, default=True)
+    allow_videos = db.Column(db.Boolean, default=True)
     boost_official = db.Column(db.Boolean, default=True)
     mute_user_posts = db.Column(db.Boolean, default=False)
     max_posts_per_day = db.Column(db.Integer, default=20)
-    boosted_types = db.Column(db.Text)  # JSON list of types to prioritize (tournaments, matches)
-    muted_types = db.Column(db.Text)    # JSON list of types to suppress
+    boosted_types = db.Column(db.Text)
+    muted_types = db.Column(db.Text)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

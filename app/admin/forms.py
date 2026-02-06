@@ -114,6 +114,8 @@ class SocialSettingsAdminForm(FlaskForm):
     allow_likes = BooleanField('Abilita like')
     allow_comments = BooleanField('Abilita commenti')
     allow_shares = BooleanField('Abilita condivisioni')
+    allow_photos = BooleanField('Consenti pubblicazione foto')
+    allow_videos = BooleanField('Consenti pubblicazione video')
     boost_official = BooleanField('Dai priorità a contenuti ufficiali')
     mute_user_posts = BooleanField('Silenzia post utenti generici')
     max_posts_per_day = StringField('Max post per giorno (per ruolo)', validators=[Optional()])

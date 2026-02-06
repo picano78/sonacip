@@ -338,6 +338,24 @@
                     </a>
                 </div>
             </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title"><i class="bi bi-download me-2"></i>Esportazione Dati</div>
+                <div class="menu-grid">
+                    <a href="{{ url_for('admin.export_center') }}" class="menu-item">
+                        <i class="bi bi-file-earmark-spreadsheet"></i>
+                        <span>Centro Export</span>
+                    </a>
+                    <a href="{{ url_for('admin.export_users') }}" class="menu-item">
+                        <i class="bi bi-people-fill"></i>
+                        <span>Esporta Utenti</span>
+                    </a>
+                    <a href="{{ url_for('admin.export_societies') }}" class="menu-item">
+                        <i class="bi bi-building"></i>
+                        <span>Esporta Società</span>
+                    </a>
+                </div>
+            </div>
         </div>
 
         <div class="col-lg-4">

@@ -244,12 +244,22 @@ def create_post():
         return redirect(url_for('social.feed'))
     
     if form.validate_on_submit():
-        # Map legacy `is_public` to explicit audience rules
+        has_media_file = form.image.data and hasattr(form.image.data, 'filename') and form.image.data.filename
+        if has_media_file and settings:
+            fname = (form.image.data.filename or '').lower()
+            is_video = fname.endswith(('.mp4', '.mov', '.avi', '.webm', '.mkv'))
+            is_photo = not is_video
+            if is_photo and not getattr(settings, 'allow_photos', True):
+                flash('La pubblicazione di foto è stata disabilitata dall\'amministratore.', 'warning')
+                return redirect(url_for('social.feed'))
+            if is_video and not getattr(settings, 'allow_videos', True):
+                flash('La pubblicazione di video è stata disabilitata dall\'amministratore.', 'warning')
+                return redirect(url_for('social.feed'))
+
         audience = 'public' if form.is_public.data else 'followers'
         society_id = None
         if current_user.is_society():
             audience = 'public' if form.is_public.data else 'society'
-            # Scope posts to the Society entity, not the User id.
             try:
                 society_id = get_active_society_id(current_user)
             except Exception:
@@ -264,7 +274,6 @@ def create_post():
             post_type='official' if current_user.is_society() else 'personal',
         )
         
-        # Handle image upload
         if form.image.data:
             image_file = save_picture(form.image.data, folder='posts', size=(800, 800))
             post.image = image_file
@@ -890,6 +899,86 @@ def society_audit_export():
         ])
     out = buf.getvalue()
     return Response(out, mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename="audit_society.csv"'})
+
+
+@bp.route('/society/export-data')
+@login_required
+def society_export_data():
+    """Society admin can download their own society data as CSV."""
+    import csv as csv_mod
+    import io as io_mod
+    from flask import make_response as mk_resp
+    from app.models import SocietyMembership, SocietyCalendarEvent, Event
+
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Società non trovata.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    output = io_mod.StringIO()
+    writer = csv_mod.writer(output)
+
+    writer.writerow([f'=== DATI SOCIETÀ: {society.name} ==='])
+    writer.writerow(['Campo', 'Valore'])
+    writer.writerow(['Nome', society.name or ''])
+    writer.writerow(['Email', getattr(society, 'email', '') or ''])
+    writer.writerow(['Telefono', getattr(society, 'phone', '') or ''])
+    writer.writerow(['Indirizzo', getattr(society, 'address', '') or ''])
+    writer.writerow(['Città', getattr(society, 'city', '') or ''])
+    writer.writerow(['Sport', getattr(society, 'sport', '') or ''])
+    writer.writerow(['Codice Fiscale', getattr(society, 'fiscal_code', '') or ''])
+    writer.writerow(['P.IVA', getattr(society, 'vat_number', '') or ''])
+    writer.writerow([])
+
+    writer.writerow(['=== MEMBRI ==='])
+    writer.writerow(['ID', 'Nome', 'Email', 'Telefono', 'Ruolo Membro', 'Data Iscrizione'])
+    members = SocietyMembership.query.filter_by(society_id=society.id, status='active').all()
+    for m in members:
+        user = User.query.get(m.user_id)
+        if user:
+            writer.writerow([
+                user.id, user.get_full_name(), user.email,
+                user.phone or '', getattr(m, 'role_name', '') or '',
+                m.created_at.strftime('%Y-%m-%d') if m.created_at else ''
+            ])
+    writer.writerow([])
+
+    writer.writerow(['=== EVENTI SOCIETÀ ==='])
+    writer.writerow(['ID', 'Titolo', 'Data Inizio', 'Data Fine', 'Luogo'])
+    cal_events = SocietyCalendarEvent.query.filter_by(society_id=society.id).order_by(SocietyCalendarEvent.id.desc()).all()
+    for e in cal_events:
+        writer.writerow([
+            e.id, getattr(e, 'title', '') or '',
+            e.start_time.strftime('%Y-%m-%d %H:%M') if getattr(e, 'start_time', None) else '',
+            e.end_time.strftime('%Y-%m-%d %H:%M') if getattr(e, 'end_time', None) else '',
+            getattr(e, 'location', '') or ''
+        ])
+    writer.writerow([])
+
+    writer.writerow(['=== POST SOCIETÀ ==='])
+    writer.writerow(['ID', 'Contenuto', 'Data', 'Like', 'Commenti'])
+    posts = Post.query.filter_by(society_id=society.id).order_by(Post.created_at.desc()).limit(500).all()
+    for p in posts:
+        writer.writerow([
+            p.id,
+            (p.content or '')[:200].replace('\n', ' '),
+            p.created_at.strftime('%Y-%m-%d %H:%M') if p.created_at else '',
+            p.likes.count() if hasattr(p, 'likes') else 0,
+            p.comments.count() if hasattr(p, 'comments') else 0,
+        ])
+
+    resp = mk_resp(output.getvalue())
+    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    safe_name = (society.name or 'societa').replace(' ', '_').lower()[:30]
+    resp.headers['Content-Disposition'] = f'attachment; filename=dati_{safe_name}_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    try:
+        log_action('society_export_data', 'Society', society.id, f'Society exported own data')
+    except Exception:
+        pass
+    return resp
 
 
 @bp.route('/society/suggestions/<string:key>/dismiss', methods=['POST'])

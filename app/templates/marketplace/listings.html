@@ -57,6 +57,7 @@
     gap: 1rem;
 }
 .mp-card {
+    position: relative;
     background: var(--mp-card-bg);
     border-radius: 12px;
     overflow: hidden;
@@ -170,7 +171,12 @@
     {% if listings %}
         <div class="mp-grid">
             {% for item in listings %}
-                <a href="{{ url_for('marketplace.listing_detail', listing_id=item.id) }}" class="mp-card">
+                <a href="{{ url_for('marketplace.listing_detail', listing_id=item.id) }}" class="mp-card" style="{{ 'border: 2px solid #ff9800; box-shadow: 0 2px 12px rgba(255,152,0,0.2);' if item.is_promoted else '' }}">
+                    {% if item.is_promoted %}
+                    <div style="position:absolute; top:8px; left:8px; z-index:2; background:linear-gradient(135deg,#ff9800,#f57c00); color:#fff; padding:3px 10px; border-radius:20px; font-size:0.7rem; font-weight:700;">
+                        <i class="bi bi-star-fill me-1"></i>IN EVIDENZA
+                    </div>
+                    {% endif %}
                     {% if item.image_1 %}
                         <img src="{{ url_for('static', filename='uploads/' + item.image_1) }}" 
                              class="mp-card-img" alt="{{ item.title }}" loading="lazy">

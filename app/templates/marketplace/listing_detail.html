@@ -226,6 +226,19 @@
                         <i class="bi bi-chat-dots me-1"></i> Contatta il venditore
                     </a>
                 {% else %}
+                    {% if listing.is_promoted %}
+                    <div class="mb-2 p-2 rounded-3 text-center" style="background: linear-gradient(135deg, #ff9800, #f57c00); color: #fff;">
+                        <i class="bi bi-star-fill me-1"></i> <strong>In Evidenza</strong>
+                        {% if listing.promotion_expires_at %}
+                        <div class="small opacity-75">fino al {{ listing.promotion_expires_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                        {% endif %}
+                    </div>
+                    {% elif listing.status == 'active' %}
+                    <a href="{{ url_for('marketplace.promote_listing', listing_id=listing.id) }}" 
+                       class="btn w-100 mb-2 fw-semibold" style="background: linear-gradient(135deg, #ff9800, #f57c00); color: #fff; border: none;">
+                        <i class="bi bi-star-fill me-1"></i> Metti in Evidenza
+                    </a>
+                    {% endif %}
                     <div class="d-flex gap-2 mb-2">
                         <a href="{{ url_for('marketplace.edit_listing', listing_id=listing.id) }}" 
                            class="btn btn-outline-primary flex-fill">
@@ -240,6 +253,17 @@
                             </form>
                         {% endif %}
                     </div>
+                    {% if listing.expires_at %}
+                    <div class="small text-muted text-center mb-2">
+                        <i class="bi bi-clock me-1"></i> Scade il {{ listing.expires_at.strftime('%d/%m/%Y') }}
+                        {% if listing.status == 'expired' %}
+                        <form method="POST" action="{{ url_for('marketplace.renew_listing', listing_id=listing.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-success ms-2"><i class="bi bi-arrow-repeat"></i> Rinnova</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     <form method="POST" action="{{ url_for('marketplace.delete_listing', listing_id=listing.id) }}" 
                           onsubmit="return confirm('Sei sicuro di voler eliminare questo annuncio?')">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

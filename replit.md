@@ -90,6 +90,19 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-06: Updated has_feature() to check PlatformFeature settings (free features bypass subscription)
 - 2026-02-06: Added Feature Control section to admin dashboard with highlighted link
 - 2026-02-06: Features organized by category: Social, Media, Business, Organizzazione, Comunicazione, Supporto, Sicurezza
+- 2026-02-06: Added listing auto-expiration (60 days) with visual indicators and renew functionality
+- 2026-02-06: Built Subito.it-style promotion/boost system with tiered pricing (7/14/30 days)
+- 2026-02-06: Created PromotionTier model (configurable boost plans with name, slug, price, duration, icon, color)
+- 2026-02-06: Created ListingPromotion model (tracks active promotions with Stripe payment integration)
+- 2026-02-06: Created PlatformPaymentSetting model (super admin bank/Stripe/PayPal payout config)
+- 2026-02-06: Admin Payment Settings page: bank details, IBAN, Stripe account, PayPal, payout frequency/currency
+- 2026-02-06: Admin Promotion Tiers dashboard: create/edit/toggle/delete tiers with revenue statistics
+- 2026-02-06: Marketplace listing cards show "IN EVIDENZA" gradient badge for promoted listings
+- 2026-02-06: Listing detail page: promote button, promotion status, expiry date, renew option
+- 2026-02-06: My Listings page: expired filter tab, promotion badges, "In Evidenza" and "Rinnova" buttons
+- 2026-02-06: Stripe checkout integration for listing promotions with webhook-driven activation
+- 2026-02-06: Default promotion tiers auto-seed: €2.99/7d, €4.99/14d, €7.99/30d
+- 2026-02-06: Admin dashboard links to Payment Settings and Promotion Tiers in Payments & Business section
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

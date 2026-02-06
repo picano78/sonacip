@@ -1,13 +1,14 @@
 """
 Marketplace routes
 - User listings (annunci di vendita) – Facebook Marketplace style
+- Listing promotions (boost / in evidenza) – Subito.it style
 - Admin packages (internal marketplace for templates/workflows)
 """
 from __future__ import annotations
 
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -17,11 +18,14 @@ from PIL import Image
 from app import db
 from app.models import (
     MarketplacePackage, MarketplacePackageItem, MarketplacePurchase,
-    MarketplaceListing, Template, Payment
+    MarketplaceListing, Template, Payment,
+    PromotionTier, ListingPromotion, PlatformPaymentSetting
 )
 from app.utils import admin_required, check_permission, log_action
 from app.subscription.stripe_utils import stripe_enabled, create_marketplace_checkout_session
 from app.marketplace.utils import install_purchase
+
+LISTING_EXPIRY_DAYS = 60
 
 
 bp = Blueprint("marketplace", __name__, url_prefix="/marketplace")
@@ -55,9 +59,50 @@ def _save_listing_image(file_storage):
     return f"marketplace/{unique_name}"
 
 
+def _expire_old_listings():
+    now = datetime.utcnow()
+    expired = MarketplaceListing.query.filter(
+        MarketplaceListing.status == 'active',
+        MarketplaceListing.expires_at.isnot(None),
+        MarketplaceListing.expires_at <= now
+    ).all()
+    for listing in expired:
+        listing.status = 'expired'
+    if expired:
+        db.session.commit()
+
+    promo_expired = MarketplaceListing.query.filter(
+        MarketplaceListing.is_promoted == True,
+        MarketplaceListing.promotion_expires_at.isnot(None),
+        MarketplaceListing.promotion_expires_at <= now
+    ).all()
+    for listing in promo_expired:
+        listing.is_promoted = False
+        listing.promotion_expires_at = None
+    if promo_expired:
+        db.session.commit()
+
+
+def _seed_default_promotion_tiers():
+    if PromotionTier.query.count() == 0:
+        defaults = [
+            PromotionTier(name='In Evidenza 7 giorni', slug='evidenza_7', description='Il tuo annuncio in cima per 7 giorni',
+                          duration_days=7, price=2.99, icon='bi-star', color='#ff9800', display_order=1),
+            PromotionTier(name='In Evidenza 14 giorni', slug='evidenza_14', description='Il tuo annuncio in cima per 14 giorni',
+                          duration_days=14, price=4.99, icon='bi-star-fill', color='#f57c00', display_order=2),
+            PromotionTier(name='In Evidenza 30 giorni', slug='evidenza_30', description='Il tuo annuncio in cima per 30 giorni',
+                          duration_days=30, price=7.99, icon='bi-stars', color='#e65100', display_order=3),
+        ]
+        for t in defaults:
+            db.session.add(t)
+        db.session.commit()
+
+
 @bp.route("/")
 @login_required
 def index():
+    _expire_old_listings()
+
     category = request.args.get('category', '')
     search_q = request.args.get('q', '').strip()
     page = request.args.get('page', 1, type=int)
@@ -75,7 +120,10 @@ def index():
             )
         )
 
-    query = query.order_by(MarketplaceListing.created_at.desc())
+    query = query.order_by(
+        MarketplaceListing.is_promoted.desc(),
+        MarketplaceListing.created_at.desc()
+    )
     pagination = query.paginate(page=page, per_page=12, error_out=False)
     listings = pagination.items
 
@@ -134,6 +182,7 @@ def create_listing():
             image_2=images.get("image_2"),
             image_3=images.get("image_3"),
             image_4=images.get("image_4"),
+            expires_at=datetime.utcnow() + timedelta(days=LISTING_EXPIRY_DAYS),
         )
         db.session.add(listing)
         db.session.commit()
@@ -242,6 +291,20 @@ def mark_sold(listing_id):
     return redirect(url_for("marketplace.my_listings"))
 
 
+@bp.route("/listing/<int:listing_id>/renew", methods=["POST"])
+@login_required
+def renew_listing(listing_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    if listing.user_id != current_user.id:
+        abort(403)
+    if listing.status == 'expired':
+        listing.status = 'active'
+    listing.expires_at = datetime.utcnow() + timedelta(days=LISTING_EXPIRY_DAYS)
+    db.session.commit()
+    flash("Annuncio rinnovato per altri 60 giorni.", "success")
+    return redirect(url_for("marketplace.my_listings"))
+
+
 @bp.route("/my-listings")
 @login_required
 def my_listings():
@@ -251,6 +314,131 @@ def my_listings():
         query = query.filter_by(status=status_filter)
     listings = query.order_by(MarketplaceListing.created_at.desc()).all()
     return render_template("marketplace/my_listings.html", listings=listings, status_filter=status_filter)
+
+
+# =============================================================
+# Promotions / In Evidenza (Subito.it style)
+# =============================================================
+
+@bp.route("/listing/<int:listing_id>/promote")
+@login_required
+def promote_listing(listing_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    if listing.user_id != current_user.id:
+        abort(403)
+    if listing.status != 'active':
+        flash("Solo gli annunci attivi possono essere messi in evidenza.", "warning")
+        return redirect(url_for("marketplace.listing_detail", listing_id=listing_id))
+
+    _seed_default_promotion_tiers()
+    tiers = PromotionTier.query.filter_by(is_active=True).order_by(PromotionTier.display_order.asc()).all()
+
+    return render_template("marketplace/promote_listing.html", listing=listing, tiers=tiers)
+
+
+@bp.route("/listing/<int:listing_id>/promote/<int:tier_id>", methods=["POST"])
+@login_required
+def pay_promotion(listing_id, tier_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    if listing.user_id != current_user.id:
+        abort(403)
+    if listing.status != 'active':
+        flash("Solo gli annunci attivi possono essere messi in evidenza.", "warning")
+        return redirect(url_for("marketplace.listing_detail", listing_id=listing_id))
+
+    tier = PromotionTier.query.get_or_404(tier_id)
+    if not tier.is_active:
+        flash("Piano promozione non disponibile.", "warning")
+        return redirect(url_for("marketplace.promote_listing", listing_id=listing_id))
+
+    promotion = ListingPromotion(
+        listing_id=listing.id,
+        tier_id=tier.id,
+        user_id=current_user.id,
+        status='pending',
+        amount_paid=tier.price,
+        currency=tier.currency or 'EUR',
+        created_at=datetime.utcnow(),
+    )
+    db.session.add(promotion)
+    db.session.commit()
+
+    if stripe_enabled() and tier.stripe_price_id:
+        try:
+            from app.subscription.stripe_utils import _init_stripe
+            import stripe as stripe_lib
+            _init_stripe()
+            success_url = url_for("marketplace.promotion_success", promotion_id=promotion.id, _external=True)
+            cancel_url = url_for("marketplace.promote_listing", listing_id=listing.id, _external=True)
+            sess = stripe_lib.checkout.Session.create(
+                mode="payment",
+                line_items=[{"price": tier.stripe_price_id, "quantity": 1}],
+                success_url=success_url,
+                cancel_url=cancel_url,
+                allow_promotion_codes=False,
+                metadata={
+                    "listing_promotion_id": str(promotion.id),
+                    "listing_id": str(listing.id),
+                    "tier_id": str(tier.id),
+                    "user_id": str(current_user.id),
+                },
+            )
+            return redirect(sess.url)
+        except Exception as exc:
+            current_app.logger.warning(f"Stripe promotion checkout failed: {exc}")
+
+    _activate_promotion(promotion)
+    log_action("listing_promotion_activate", "ListingPromotion", promotion.id,
+               f"listing={listing.id} tier={tier.slug}")
+    flash(f"Annuncio messo in evidenza per {tier.duration_days} giorni!", "success")
+    return redirect(url_for("marketplace.listing_detail", listing_id=listing.id))
+
+
+@bp.route("/promotion/<int:promotion_id>/success")
+@login_required
+def promotion_success(promotion_id):
+    promotion = ListingPromotion.query.get_or_404(promotion_id)
+    if promotion.user_id != current_user.id:
+        abort(403)
+    if promotion.status == 'pending':
+        _activate_promotion(promotion)
+    flash("Pagamento completato! Il tuo annuncio è ora in evidenza.", "success")
+    return redirect(url_for("marketplace.listing_detail", listing_id=promotion.listing_id))
+
+
+def _activate_promotion(promotion):
+    now = datetime.utcnow()
+    tier = PromotionTier.query.get(promotion.tier_id)
+    duration = tier.duration_days if tier else 7
+
+    promotion.status = 'active'
+    promotion.starts_at = now
+    promotion.ends_at = now + timedelta(days=duration)
+
+    if not promotion.payment_id:
+        payment = Payment(
+            user_id=promotion.user_id,
+            amount=float(promotion.amount_paid or 0),
+            currency=(promotion.currency or 'EUR'),
+            status='completed',
+            payment_method='local',
+            payment_date=now,
+            description=f"Promozione annuncio #{promotion.listing_id}",
+            transaction_id=f"PROMO_{promotion.id}_{now.timestamp()}",
+            gateway='local',
+        )
+        db.session.add(payment)
+        db.session.flush()
+        promotion.payment_id = payment.id
+
+    listing = MarketplaceListing.query.get(promotion.listing_id)
+    if listing:
+        listing.is_promoted = True
+        listing.promotion_expires_at = promotion.ends_at
+        if listing.expires_at and listing.expires_at < promotion.ends_at:
+            listing.expires_at = promotion.ends_at + timedelta(days=7)
+
+    db.session.commit()
 
 
 # =============================================================

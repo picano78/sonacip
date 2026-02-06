@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% block title %}Piani Promozione Annunci{% endblock %}
+
+{% block extra_css %}
+<style>
+.promo-header {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.tier-row {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.2s;
+}
+.tier-row:hover {
+    transform: translateX(4px);
+}
+.tier-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+.tier-info {
+    flex: 1;
+}
+.tier-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.create-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.stats-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.stat-card {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ff9800;
+}
+.stat-label {
+    color: #65676b;
+    font-size: 0.85rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="promo-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-star-fill me-2"></i>Piani Promozione Annunci</h1>
+                <p class="mb-0 opacity-75">Gestisci i piani di promozione per gli annunci del Marketplace</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin.payment_settings') }}" class="btn btn-light btn-sm me-2">
+                    <i class="bi bi-bank"></i> Pagamenti
+                </a>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> Torna
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value">{{ tiers|length }}</div>
+            <div class="stat-label">Piani Configurati</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ active_promos }}</div>
+            <div class="stat-label">Promozioni Attive</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">€{{ "%.2f"|format(total_promo_revenue) }}</div>
+            <div class="stat-label">Entrate Promozioni</div>
+        </div>
+    </div>
+
+    <h5 class="mb-3">Piani Esistenti</h5>
+    {% for tier in tiers %}
+    <div class="tier-row">
+        <div class="tier-icon-box" style="background: {{ tier.color }}20; color: {{ tier.color }};">
+            <i class="bi {{ tier.icon }}"></i>
+        </div>
+        <div class="tier-info">
+            <strong>{{ tier.name }}</strong>
+            <div class="small text-muted">{{ tier.duration_days }} giorni &middot; €{{ "%.2f"|format(tier.price) }} &middot; {{ tier.slug }}</div>
+            {% if tier.stripe_price_id %}
+            <span class="badge bg-info-subtle text-info small">Stripe: {{ tier.stripe_price_id[:20] }}...</span>
+            {% endif %}
+        </div>
+        <div>
+            {% if tier.is_active %}
+            <span class="tier-badge bg-success-subtle text-success">Attivo</span>
+            {% else %}
+            <span class="tier-badge bg-secondary-subtle text-secondary">Disattivato</span>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="toggle">
+                <input type="hidden" name="tier_id" value="{{ tier.id }}">
+                <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if tier.is_active else 'success' }}">
+                    <i class="bi bi-{{ 'pause' if tier.is_active else 'play' }}"></i>
+                </button>
+            </form>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit_{{ tier.id }}">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <form method="POST" onsubmit="return confirm('Eliminare questo piano?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="tier_id" value="{{ tier.id }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="collapse mb-3" id="edit_{{ tier.id }}">
+        <div class="create-card">
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="tier_id" value="{{ tier.id }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Nome</label>
+                        <input type="text" name="name" class="form-control" value="{{ tier.name }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold">Durata (gg)</label>
+                        <input type="number" name="duration_days" class="form-control" value="{{ tier.duration_days }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold">Prezzo €</label>
+                        <input type="number" name="price" class="form-control" step="0.01" value="{{ tier.price }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Stripe Price ID</label>
+                        <input type="text" name="stripe_price_id" class="form-control" placeholder="price_..." value="{{ tier.stripe_price_id or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Descrizione</label>
+                        <input type="text" name="description" class="form-control" value="{{ tier.description or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold">Icona</label>
+                        <input type="text" name="icon" class="form-control" value="{{ tier.icon }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold">Colore</label>
+                        <input type="color" name="color" class="form-control form-control-color" value="{{ tier.color }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salva</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if not tiers %}
+    <div class="text-center text-muted py-5">
+        <i class="bi bi-star fs-1"></i>
+        <p class="mt-2">Nessun piano configurato. Crea il primo qui sotto.</p>
+    </div>
+    {% endif %}
+
+    <div class="create-card mt-4">
+        <h5 class="mb-3"><i class="bi bi-plus-circle me-2"></i>Crea Nuovo Piano</h5>
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="create">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Nome</label>
+                    <input type="text" name="name" class="form-control" placeholder="Es. In Evidenza 7 giorni" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Slug</label>
+                    <input type="text" name="slug" class="form-control" placeholder="evidenza_7" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Durata (gg)</label>
+                    <input type="number" name="duration_days" class="form-control" value="7" min="1" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Prezzo €</label>
+                    <input type="number" name="price" class="form-control" step="0.01" value="2.99" min="0" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Stripe Price ID</label>
+                    <input type="text" name="stripe_price_id" class="form-control" placeholder="price_... (opzionale)">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Descrizione</label>
+                    <input type="text" name="description" class="form-control" placeholder="Descrizione breve">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Icona</label>
+                    <input type="text" name="icon" class="form-control" value="bi-star">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Colore</label>
+                    <input type="color" name="color" class="form-control form-control-color" value="#ff9800">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-plus-lg me-1"></i> Crea Piano</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

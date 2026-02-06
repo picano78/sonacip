@@ -63,6 +63,10 @@ from app.models import (
     AdCreative,
     AdEvent,
     PlatformFeature,
+    PlatformPaymentSetting,
+    ListingPromotion,
+    PromotionTier,
+    MarketplaceListing,
 )
 from datetime import datetime, timedelta
 import os
@@ -485,6 +489,130 @@ def platform_transactions():
 
     stats = {"total_gross": float(total_gross), "total_platform": float(total_platform)}
     return render_template('admin/platform_transactions.html', transactions=items, pagination=pagination, stats=stats)
+
+
+@bp.route('/payment-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def payment_settings():
+    settings = PlatformPaymentSetting.query.first()
+    if not settings:
+        settings = PlatformPaymentSetting(payout_method='stripe', currency='EUR', updated_at=datetime.utcnow(), updated_by=current_user.id)
+        db.session.add(settings)
+        db.session.commit()
+
+    if request.method == 'POST':
+        settings.payout_method = (request.form.get('payout_method') or 'stripe').strip()
+        settings.stripe_enabled = bool(request.form.get('stripe_enabled'))
+        settings.stripe_account_id = (request.form.get('stripe_account_id') or '').strip() or None
+        settings.bank_account_holder = (request.form.get('bank_account_holder') or '').strip() or None
+        settings.bank_name = (request.form.get('bank_name') or '').strip() or None
+        settings.bank_iban = (request.form.get('bank_iban') or '').strip() or None
+        settings.bank_bic_swift = (request.form.get('bank_bic_swift') or '').strip() or None
+        settings.bank_country = (request.form.get('bank_country') or 'Italia').strip()
+        settings.paypal_email = (request.form.get('paypal_email') or '').strip() or None
+        settings.payout_frequency = (request.form.get('payout_frequency') or 'monthly').strip()
+        settings.currency = (request.form.get('currency') or 'EUR').strip().upper()
+        settings.notes = (request.form.get('notes') or '').strip() or None
+        try:
+            settings.min_payout_amount = float(request.form.get('min_payout_amount') or 50)
+        except (ValueError, TypeError):
+            settings.min_payout_amount = 50.0
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+        log_action('update_payment_settings', 'PlatformPaymentSetting', settings.id, f'method={settings.payout_method}')
+        flash('Impostazioni pagamento salvate.', 'success')
+        return redirect(url_for('admin.payment_settings'))
+
+    total_payments = Payment.query.filter_by(status='completed').count()
+    total_revenue = db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(Payment.status == 'completed').scalar() or 0
+    active_promotions = ListingPromotion.query.filter_by(status='active').count()
+
+    return render_template('admin/payment_settings.html', settings=settings,
+                           total_payments=total_payments, total_revenue=float(total_revenue),
+                           active_promotions=active_promotions)
+
+
+@bp.route('/promotion-tiers', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def promotion_tiers():
+    if request.method == 'POST':
+        action = request.form.get('action', '')
+        tier_id = request.form.get('tier_id')
+
+        if action == 'create':
+            name = (request.form.get('name') or '').strip()
+            slug = (request.form.get('slug') or '').strip().lower().replace(' ', '_')
+            try:
+                duration_days = int(request.form.get('duration_days') or 7)
+            except (ValueError, TypeError):
+                duration_days = 7
+            try:
+                price = float(request.form.get('price') or 0)
+            except (ValueError, TypeError):
+                price = 0.0
+            if name and slug:
+                existing = PromotionTier.query.filter_by(slug=slug).first()
+                if not existing:
+                    tier = PromotionTier(
+                        name=name, slug=slug,
+                        description=(request.form.get('description') or '').strip() or None,
+                        duration_days=duration_days, price=price,
+                        icon=request.form.get('icon') or 'bi-star',
+                        color=request.form.get('color') or '#ff9800',
+                        stripe_price_id=(request.form.get('stripe_price_id') or '').strip() or None,
+                        is_active=True,
+                        updated_by=current_user.id,
+                    )
+                    db.session.add(tier)
+                    db.session.commit()
+                    flash('Piano creato.', 'success')
+                else:
+                    flash('Slug già esistente.', 'danger')
+
+        elif action == 'toggle' and tier_id:
+            tier = PromotionTier.query.get(int(tier_id))
+            if tier:
+                tier.is_active = not tier.is_active
+                db.session.commit()
+                flash(f'Piano {"attivato" if tier.is_active else "disattivato"}.', 'success')
+
+        elif action == 'update' and tier_id:
+            tier = PromotionTier.query.get(int(tier_id))
+            if tier:
+                tier.name = (request.form.get('name') or tier.name).strip()
+                tier.description = (request.form.get('description') or '').strip() or None
+                try:
+                    tier.price = float(request.form.get('price') or tier.price)
+                except (ValueError, TypeError):
+                    pass
+                try:
+                    tier.duration_days = int(request.form.get('duration_days') or tier.duration_days)
+                except (ValueError, TypeError):
+                    pass
+                tier.stripe_price_id = (request.form.get('stripe_price_id') or '').strip() or None
+                tier.icon = request.form.get('icon') or tier.icon
+                tier.color = request.form.get('color') or tier.color
+                tier.updated_by = current_user.id
+                db.session.commit()
+                flash('Piano aggiornato.', 'success')
+
+        elif action == 'delete' and tier_id:
+            tier = PromotionTier.query.get(int(tier_id))
+            if tier:
+                db.session.delete(tier)
+                db.session.commit()
+                flash('Piano eliminato.', 'success')
+
+        return redirect(url_for('admin.promotion_tiers'))
+
+    tiers = PromotionTier.query.order_by(PromotionTier.display_order.asc()).all()
+    active_promos = ListingPromotion.query.filter_by(status='active').count()
+    total_promo_revenue = db.session.query(func.coalesce(func.sum(ListingPromotion.amount_paid), 0)).filter(ListingPromotion.status == 'active').scalar() or 0
+    return render_template('admin/promotion_tiers.html', tiers=tiers,
+                           active_promos=active_promos, total_promo_revenue=float(total_promo_revenue))
 
 
 @bp.route('/enterprise/sso', methods=['GET', 'POST'])

@@ -60,6 +60,7 @@
 .status-active { background: #e6f4ea; color: #137333; }
 .status-sold { background: #fce8e6; color: #d93025; }
 .status-paused { background: #fef7e0; color: #b06000; }
+.status-expired { background: #e8eaed; color: #5f6368; }
 .filter-tabs {
     display: flex;
     gap: 0.5rem;
@@ -118,6 +119,8 @@
            class="filter-tab {{ 'active' if status_filter == 'sold' }}">Venduti</a>
         <a href="{{ url_for('marketplace.my_listings', status='paused') }}" 
            class="filter-tab {{ 'active' if status_filter == 'paused' }}">In pausa</a>
+        <a href="{{ url_for('marketplace.my_listings', status='expired') }}" 
+           class="filter-tab {{ 'active' if status_filter == 'expired' }}">Scaduti</a>
     </div>
 
     {% if listings %}
@@ -139,12 +142,20 @@
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <a href="{{ url_for('marketplace.listing_detail', listing_id=item.id) }}" 
                                    class="my-card-title text-decoration-none text-dark">{{ item.title }}</a>
-                                <span class="status-badge status-{{ item.status }}">
-                                    {% if item.status == 'active' %}Attivo
-                                    {% elif item.status == 'sold' %}Venduto
-                                    {% elif item.status == 'paused' %}In pausa
-                                    {% else %}{{ item.status }}{% endif %}
-                                </span>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if item.is_promoted %}
+                                    <span style="background:linear-gradient(135deg,#ff9800,#f57c00); color:#fff; padding:2px 10px; border-radius:20px; font-size:0.7rem; font-weight:700;">
+                                        <i class="bi bi-star-fill me-1"></i>IN EVIDENZA
+                                    </span>
+                                    {% endif %}
+                                    <span class="status-badge status-{{ item.status }}">
+                                        {% if item.status == 'active' %}Attivo
+                                        {% elif item.status == 'sold' %}Venduto
+                                        {% elif item.status == 'paused' %}In pausa
+                                        {% elif item.status == 'expired' %}Scaduto
+                                        {% else %}{{ item.status }}{% endif %}
+                                    </span>
+                                </div>
                             </div>
                             <div class="my-card-price">
                                 {% if item.price == 0 %}Gratis{% else %}&euro;{{ "%.2f"|format(item.price) }}{% endif %}
@@ -152,13 +163,22 @@
                             <div class="my-card-meta">
                                 <i class="bi bi-eye"></i> {{ item.views_count or 0 }} visualizzazioni &middot;
                                 <i class="bi bi-clock"></i> {{ item.created_at.strftime('%d/%m/%Y') }}
+                                {% if item.expires_at %}
+                                &middot; scade {{ item.expires_at.strftime('%d/%m/%Y') }}
+                                {% endif %}
                             </div>
                         </div>
-                        <div class="d-flex gap-2 mt-2">
+                        <div class="d-flex gap-2 mt-2 flex-wrap">
                             <a href="{{ url_for('marketplace.edit_listing', listing_id=item.id) }}" 
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> Modifica
                             </a>
+                            {% if item.status == 'active' and not item.is_promoted %}
+                            <a href="{{ url_for('marketplace.promote_listing', listing_id=item.id) }}" 
+                               class="btn btn-sm" style="background:linear-gradient(135deg,#ff9800,#f57c00); color:#fff; border:none;">
+                                <i class="bi bi-star-fill"></i> In Evidenza
+                            </a>
+                            {% endif %}
                             {% if item.status == 'active' %}
                                 <form method="POST" action="{{ url_for('marketplace.mark_sold', listing_id=item.id) }}" class="d-inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -166,6 +186,14 @@
                                         <i class="bi bi-check-circle"></i> Venduto
                                     </button>
                                 </form>
+                            {% endif %}
+                            {% if item.status == 'expired' %}
+                            <form method="POST" action="{{ url_for('marketplace.renew_listing', listing_id=item.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-arrow-repeat"></i> Rinnova
+                                </button>
+                            </form>
                             {% endif %}
                             <form method="POST" action="{{ url_for('marketplace.delete_listing', listing_id=item.id) }}" class="d-inline"
                                   onsubmit="return confirm('Eliminare questo annuncio?')">

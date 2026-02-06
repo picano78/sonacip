@@ -2947,6 +2947,10 @@ class MarketplaceListing(db.Model):
     status = db.Column(db.String(20), default='active', index=True)
     views_count = db.Column(db.Integer, default=0)
 
+    expires_at = db.Column(db.DateTime, index=True)
+    is_promoted = db.Column(db.Boolean, default=False, index=True)
+    promotion_expires_at = db.Column(db.DateTime)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -2994,3 +2998,83 @@ class PlatformFeature(db.Model):
 
     def __repr__(self):
         return f'<PlatformFeature {self.key} premium={self.is_premium}>'
+
+
+class PromotionTier(db.Model):
+    __tablename__ = 'promotion_tier'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(60), unique=True, nullable=False, index=True)
+    description = db.Column(db.Text)
+    duration_days = db.Column(db.Integer, nullable=False, default=7)
+    price = db.Column(db.Float, nullable=False, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+    icon = db.Column(db.String(60), default='bi-star')
+    color = db.Column(db.String(7), default='#ff9800')
+    is_active = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+    stripe_price_id = db.Column(db.String(120))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    def __repr__(self):
+        return f'<PromotionTier {self.name} {self.duration_days}d €{self.price}>'
+
+
+class ListingPromotion(db.Model):
+    __tablename__ = 'listing_promotion'
+
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey('marketplace_listing.id'), nullable=False, index=True)
+    tier_id = db.Column(db.Integer, db.ForeignKey('promotion_tier.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'))
+
+    status = db.Column(db.String(20), default='pending', index=True)
+    starts_at = db.Column(db.DateTime)
+    ends_at = db.Column(db.DateTime)
+    amount_paid = db.Column(db.Float, default=0)
+    currency = db.Column(db.String(3), default='EUR')
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    listing = db.relationship('MarketplaceListing', backref=db.backref('promotions', lazy='dynamic'))
+    tier = db.relationship('PromotionTier')
+    user = db.relationship('User', foreign_keys=[user_id])
+    payment = db.relationship('Payment', foreign_keys=[payment_id])
+
+    def __repr__(self):
+        return f'<ListingPromotion listing={self.listing_id} status={self.status}>'
+
+
+class PlatformPaymentSetting(db.Model):
+    __tablename__ = 'platform_payment_setting'
+
+    id = db.Column(db.Integer, primary_key=True)
+    stripe_enabled = db.Column(db.Boolean, default=False)
+    stripe_account_id = db.Column(db.String(120))
+
+    bank_account_holder = db.Column(db.String(200))
+    bank_name = db.Column(db.String(200))
+    bank_iban = db.Column(db.String(60))
+    bank_bic_swift = db.Column(db.String(30))
+    bank_country = db.Column(db.String(60), default='Italia')
+
+    paypal_email = db.Column(db.String(200))
+
+    payout_method = db.Column(db.String(30), default='stripe')
+    payout_frequency = db.Column(db.String(20), default='monthly')
+    min_payout_amount = db.Column(db.Float, default=50.0)
+    currency = db.Column(db.String(3), default='EUR')
+
+    notes = db.Column(db.Text)
+
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    updater = db.relationship('User', foreign_keys=[updated_by])
+
+    def __repr__(self):
+        return f'<PlatformPaymentSetting method={self.payout_method}>'

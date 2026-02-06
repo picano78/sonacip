@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% block title %}Impostazioni Pagamento{% endblock %}
+
+{% block extra_css %}
+<style>
+.pay-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.pay-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+.pay-section h5 {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f2f5;
+}
+.method-card {
+    border: 2px solid #e4e6eb;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+}
+.method-card:hover {
+    border-color: #1877f2;
+}
+.method-card.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.method-card input[type="radio"] {
+    margin-right: 12px;
+}
+.method-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-right: 16px;
+}
+.form-label-custom {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+.form-control-custom {
+    border: 2px solid #e4e6eb;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+}
+.form-control-custom:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 3px rgba(24,119,242,0.1);
+}
+.info-card {
+    background: #f0f8ff;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border-left: 4px solid #1877f2;
+}
+.stats-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.stat-card {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1877f2;
+}
+.stat-label {
+    color: #65676b;
+    font-size: 0.85rem;
+}
+.freq-option {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+.freq-option:hover {
+    border-color: #1877f2;
+}
+.freq-option.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.freq-option input {
+    margin-right: 8px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="pay-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-bank me-2"></i>Impostazioni Pagamento</h1>
+                <p class="mb-0 opacity-75">Configura i dati bancari per ricevere i pagamenti della piattaforma</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Torna
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_payments }}</div>
+            <div class="stat-label">Pagamenti Totali</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">€{{ "%.2f"|format(total_revenue) }}</div>
+            <div class="stat-label">Entrate Totali</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ active_promotions }}</div>
+            <div class="stat-label">Promozioni Attive</div>
+        </div>
+    </div>
+
+    <form method="POST" id="paymentSettingsForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="pay-section">
+            <h5><i class="bi bi-credit-card me-2 text-primary"></i>Metodo di Ricezione Pagamenti</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="method-card d-flex align-items-center {{ 'selected' if settings.payout_method == 'stripe' or not settings.payout_method }}" onclick="selectMethod('stripe')">
+                        <input type="radio" name="payout_method" value="stripe" {{ 'checked' if settings.payout_method == 'stripe' or not settings.payout_method }}>
+                        <div class="method-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-stripe"></i>
+                        </div>
+                        <div>
+                            <strong>Stripe</strong>
+                            <div class="small text-muted">Carte di credito</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="col-md-4">
+                    <label class="method-card d-flex align-items-center {{ 'selected' if settings.payout_method == 'bank_transfer' }}" onclick="selectMethod('bank_transfer')">
+                        <input type="radio" name="payout_method" value="bank_transfer" {{ 'checked' if settings.payout_method == 'bank_transfer' }}>
+                        <div class="method-icon bg-success-subtle text-success">
+                            <i class="bi bi-bank2"></i>
+                        </div>
+                        <div>
+                            <strong>Bonifico Bancario</strong>
+                            <div class="small text-muted">IBAN / SEPA</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="col-md-4">
+                    <label class="method-card d-flex align-items-center {{ 'selected' if settings.payout_method == 'paypal' }}" onclick="selectMethod('paypal')">
+                        <input type="radio" name="payout_method" value="paypal" {{ 'checked' if settings.payout_method == 'paypal' }}>
+                        <div class="method-icon bg-info-subtle text-info">
+                            <i class="bi bi-paypal"></i>
+                        </div>
+                        <div>
+                            <strong>PayPal</strong>
+                            <div class="small text-muted">Email PayPal</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="pay-section" id="stripeSection" style="{{ 'display:none' if settings.payout_method and settings.payout_method != 'stripe' }}">
+            <h5><i class="bi bi-stripe me-2" style="color: #635bff;"></i>Configurazione Stripe</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="stripeEnabled" name="stripe_enabled" {{ 'checked' if settings.stripe_enabled }}>
+                        <label class="form-check-label" for="stripeEnabled">Stripe Attivo</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label-custom">Account Stripe ID</label>
+                    <input type="text" name="stripe_account_id" class="form-control form-control-custom" placeholder="acct_..." value="{{ settings.stripe_account_id or '' }}">
+                    <small class="text-muted">Opzionale - per Stripe Connect</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="pay-section" id="bankSection" style="{{ 'display:none' if not settings.payout_method or settings.payout_method != 'bank_transfer' }}">
+            <h5><i class="bi bi-bank2 me-2 text-success"></i>Dati Bancari</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label-custom">Intestatario Conto</label>
+                    <input type="text" name="bank_account_holder" class="form-control form-control-custom" placeholder="Nome e Cognome / Ragione Sociale" value="{{ settings.bank_account_holder or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label-custom">Nome Banca</label>
+                    <input type="text" name="bank_name" class="form-control form-control-custom" placeholder="Es. UniCredit, Intesa Sanpaolo" value="{{ settings.bank_name or '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label-custom">IBAN</label>
+                    <input type="text" name="bank_iban" class="form-control form-control-custom" placeholder="IT60 X054 2811 1010 0000 0123 456" value="{{ settings.bank_iban or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-custom">BIC / SWIFT</label>
+                    <input type="text" name="bank_bic_swift" class="form-control form-control-custom" placeholder="UNCRITM1..." value="{{ settings.bank_bic_swift or '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-custom">Paese</label>
+                    <input type="text" name="bank_country" class="form-control form-control-custom" value="{{ settings.bank_country or 'Italia' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="pay-section" id="paypalSection" style="{{ 'display:none' if not settings.payout_method or settings.payout_method != 'paypal' }}">
+            <h5><i class="bi bi-paypal me-2 text-info"></i>Configurazione PayPal</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label-custom">Email PayPal</label>
+                    <input type="email" name="paypal_email" class="form-control form-control-custom" placeholder="pagamenti@tuodominio.it" value="{{ settings.paypal_email or '' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="pay-section">
+            <h5><i class="bi bi-gear me-2 text-primary"></i>Impostazioni Payout</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label-custom mb-2">Frequenza Payout</label>
+                    <div>
+                        <label class="freq-option {{ 'selected' if settings.payout_frequency == 'weekly' }}" onclick="selectFreq('weekly')">
+                            <input type="radio" name="payout_frequency" value="weekly" {{ 'checked' if settings.payout_frequency == 'weekly' }}>
+                            Settimanale
+                        </label>
+                        <label class="freq-option {{ 'selected' if settings.payout_frequency == 'biweekly' }}" onclick="selectFreq('biweekly')">
+                            <input type="radio" name="payout_frequency" value="biweekly" {{ 'checked' if settings.payout_frequency == 'biweekly' }}>
+                            Bisettimanale
+                        </label>
+                        <label class="freq-option {{ 'selected' if settings.payout_frequency == 'monthly' or not settings.payout_frequency }}" onclick="selectFreq('monthly')">
+                            <input type="radio" name="payout_frequency" value="monthly" {{ 'checked' if settings.payout_frequency == 'monthly' or not settings.payout_frequency }}>
+                            Mensile
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-custom">Importo Minimo Payout</label>
+                    <div class="input-group">
+                        <span class="input-group-text">€</span>
+                        <input type="number" name="min_payout_amount" class="form-control form-control-custom" step="0.01" min="0" value="{{ settings.min_payout_amount or 50 }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label-custom">Valuta</label>
+                    <select name="currency" class="form-select form-control-custom">
+                        <option value="EUR" {{ 'selected' if not settings.currency or settings.currency == 'EUR' }}>EUR - Euro</option>
+                        <option value="USD" {{ 'selected' if settings.currency == 'USD' }}>USD - Dollaro</option>
+                        <option value="GBP" {{ 'selected' if settings.currency == 'GBP' }}>GBP - Sterlina</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label-custom">Note Aggiuntive</label>
+                    <textarea name="notes" class="form-control form-control-custom" rows="3" placeholder="Note interne sui pagamenti...">{{ settings.notes or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-card mb-4">
+            <div class="d-flex align-items-start gap-3">
+                <i class="bi bi-shield-check fs-4 text-primary"></i>
+                <div>
+                    <h6 class="mb-1">Dati protetti</h6>
+                    <p class="mb-0 text-muted small">I dati bancari sono salvati in modo sicuro nel database della piattaforma. Solo il super admin può visualizzarli e modificarli.</p>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-check-lg me-2"></i>Salva Impostazioni
+        </button>
+    </form>
+</div>
+
+<script>
+function selectMethod(method) {
+    document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
+    event.currentTarget.closest('.method-card').classList.add('selected');
+    document.getElementById('stripeSection').style.display = method === 'stripe' ? '' : 'none';
+    document.getElementById('bankSection').style.display = method === 'bank_transfer' ? '' : 'none';
+    document.getElementById('paypalSection').style.display = method === 'paypal' ? '' : 'none';
+}
+
+function selectFreq(freq) {
+    document.querySelectorAll('.freq-option').forEach(o => o.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+}
+</script>
+{% endblock %}

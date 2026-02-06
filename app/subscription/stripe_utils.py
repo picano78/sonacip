@@ -11,6 +11,7 @@ from app import db
 from app.models import (
     AddOn,
     AddOnEntitlement,
+    ListingPromotion,
     MarketplacePurchase,
     Payment,
     Plan,
@@ -411,6 +412,23 @@ def handle_stripe_event(event: Any) -> None:
                         created_at=datetime.utcnow(),
                     )
                 )
+            db.session.commit()
+            return
+
+        # Listing promotion flow (one-time payment)
+        if mode == "payment" and session_obj.get("metadata", {}).get("listing_promotion_id"):
+            meta = session_obj.get("metadata") or {}
+            promo_id = int(meta.get("listing_promotion_id"))
+            user_id = int(meta.get("user_id")) if str(meta.get("user_id") or "").strip() else None
+            promo = ListingPromotion.query.get(promo_id)
+            if not promo:
+                return
+            if promo.status == 'active':
+                return
+            p = _upsert_payment_from_checkout_session(session_obj, status="completed", user_id=user_id, society_id=None)
+            promo.payment_id = p.id
+            from app.marketplace.routes import _activate_promotion
+            _activate_promotion(promo)
             db.session.commit()
             return
 

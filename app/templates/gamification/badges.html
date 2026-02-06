@@ -1,46 +1,138 @@
 {% extends "base.html" %}
 {% block title %}Badge - Gamification{% endblock %}
-{% block content %}
-<div class="container my-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h4 mb-0"><i class="bi bi-award" style="color:#1877f2"></i> Badge</h1>
-      <div class="text-muted small">{{ earned_count }}/{{ total_count }} badge guadagnati</div>
-    </div>
-    <a href="{{ url_for('gamification.index') }}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i> Gamification
-    </a>
-  </div>
 
-  <div class="row g-3">
-    {% for item in badge_data %}
-    {% set b = item.badge %}
-    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-      <div class="card h-100 {% if not item.earned %}opacity-75{% endif %}" style="{% if item.earned %}border-color:{{ b.color or '#1877f2' }};border-width:2px;{% endif %}">
-        <div class="card-body text-center">
-          <div style="font-size:2.5rem;color:{% if item.earned %}{{ b.color or '#1877f2' }}{% else %}#ccc{% endif %};">
-            <i class="bi {{ b.icon or 'bi-award' }}"></i>
-          </div>
-          <h6 class="mt-2 mb-1">{{ b.name }}</h6>
-          <p class="text-muted small mb-2">{{ b.description }}</p>
-          <div class="mb-2">
-            <span class="badge bg-primary">+{{ b.points }} pt</span>
-            {% if b.category %}
-            <span class="badge bg-secondary">{{ b.category }}</span>
-            {% endif %}
-          </div>
-          {% if item.earned %}
-          <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Guadagnato!</span>
-          {% else %}
-          <div class="progress mb-1" style="height:8px;">
-            <div class="progress-bar" style="width:{{ item.progress }}%;background:{{ b.color or '#1877f2' }};" role="progressbar"></div>
-          </div>
-          <div class="text-muted small">{{ item.current }}/{{ item.required }}</div>
-          {% endif %}
+{% block extra_css %}
+<style>
+    .badges-header {
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        color: white;
+        padding: 2.5rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 16px 16px;
+    }
+    .header-progress {
+        background: rgba(255,255,255,0.2);
+        border-radius: 12px;
+        height: 12px;
+        overflow: hidden;
+        max-width: 300px;
+    }
+    .header-progress-bar {
+        background: white;
+        height: 100%;
+        border-radius: 12px;
+        transition: width 0.6s ease;
+    }
+    .badge-item-card {
+        border: none;
+        border-radius: 16px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .badge-item-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(24,119,242,0.15);
+    }
+    .badge-item-card.earned {
+        border: 2px solid;
+        background: linear-gradient(180deg, rgba(24,119,242,0.03) 0%, white 100%);
+    }
+    .badge-item-card.locked {
+        opacity: 0.7;
+        background: #fafafa;
+    }
+    .badge-item-card.locked:hover {
+        opacity: 0.85;
+    }
+    .badge-icon-wrap {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    .badge-icon-wrap.earned {
+        background: rgba(24,119,242,0.1);
+    }
+    .badge-icon-wrap.locked {
+        background: #f0f0f0;
+    }
+    .badge-progress {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    .badge-earned-tag {
+        background: linear-gradient(135deg, #198754, #28a745);
+        color: white;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="badges-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="fw-bold mb-1"><i class="bi bi-award-fill me-2"></i>Collezione Badge</h1>
+                <p class="mb-2 opacity-75">Raccogli tutti i badge partecipando attivamente alla piattaforma</p>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="header-progress flex-grow-1">
+                        {% if total_count > 0 %}
+                        <div class="header-progress-bar" style="width: {{ (earned_count / total_count * 100)|int }}%;"></div>
+                        {% else %}
+                        <div class="header-progress-bar" style="width: 0%;"></div>
+                        {% endif %}
+                    </div>
+                    <span class="fw-semibold">{{ earned_count }}/{{ total_count }} badge</span>
+                </div>
+            </div>
+            <a href="{{ url_for('gamification.index') }}" class="btn btn-outline-light">
+                <i class="bi bi-arrow-left me-1"></i> Gamification
+            </a>
         </div>
-      </div>
     </div>
-    {% endfor %}
-  </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row g-3">
+        {% for item in badge_data %}
+        {% set b = item.badge %}
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <div class="card badge-item-card h-100 {% if item.earned %}earned{% else %}locked{% endif %}" {% if item.earned %}style="border-color: {{ b.color or '#1877f2' }};"{% endif %}>
+                <div class="card-body text-center p-4">
+                    <div class="badge-icon-wrap {% if item.earned %}earned{% else %}locked{% endif %}" style="{% if item.earned %}color: {{ b.color or '#1877f2' }};{% else %}color: #ccc;{% endif %}">
+                        <i class="bi {{ b.icon or 'bi-award' }}"></i>
+                    </div>
+                    <h6 class="mt-2 mb-1 fw-bold">{{ b.name }}</h6>
+                    <p class="text-muted small mb-2">{{ b.description }}</p>
+                    <div class="mb-2 d-flex justify-content-center gap-1">
+                        <span class="badge" style="background: #1877f2; border-radius: 20px; padding: 4px 10px;">+{{ b.points }} pt</span>
+                        {% if b.category %}
+                        <span class="badge bg-secondary" style="border-radius: 20px; padding: 4px 10px;">{{ b.category }}</span>
+                        {% endif %}
+                    </div>
+                    {% if item.earned %}
+                    <span class="badge-earned-tag"><i class="bi bi-check-circle me-1"></i>Guadagnato!</span>
+                    {% else %}
+                    <div class="badge-progress mb-1">
+                        <div class="progress-bar" style="width:{{ item.progress }}%;background:{{ b.color or '#1877f2' }};height:100%;border-radius:4px;" role="progressbar"></div>
+                    </div>
+                    <div class="text-muted small fw-semibold">{{ item.current }}/{{ item.required }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

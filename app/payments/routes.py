@@ -26,9 +26,12 @@ def _init_stripe():
 
 
 def _base_url():
-    domain = os.environ.get('REPLIT_DOMAINS', '').split(',')[0].strip()
+    domain = os.environ.get('APP_DOMAIN', '').strip()
+    if not domain:
+        domain = os.environ.get('REPLIT_DOMAINS', '').split(',')[0].strip()
     if domain:
-        return f'https://{domain}'
+        scheme = 'https' if not domain.startswith('http') else ''
+        return f'{scheme}://{domain}' if scheme else domain
     return request.host_url.rstrip('/')
 
 

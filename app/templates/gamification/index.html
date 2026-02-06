@@ -1,114 +1,220 @@
 {% extends "base.html" %}
 {% block title %}Gamification - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gamification-header {
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        color: white;
+        padding: 2.5rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 16px 16px;
+    }
+    .profile-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        position: relative;
+    }
+    .profile-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    }
+    .profile-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #1877f2;
+    }
+    .profile-avatar-placeholder {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        border: 3px solid rgba(24,119,242,0.3);
+    }
+    .level-badge {
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        color: white;
+        font-size: 0.9rem;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    .progress-xl {
+        height: 24px;
+        border-radius: 12px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    .progress-xl .progress-bar {
+        border-radius: 12px;
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    .badge-card {
+        border: none;
+        border-radius: 16px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .badge-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(24,119,242,0.15);
+    }
+    .section-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .section-card .card-header {
+        background: white;
+        border-bottom: 1px solid #f0f0f0;
+        padding: 1rem 1.25rem;
+    }
+    .leaderboard-item {
+        transition: background-color 0.2s ease;
+        border: none !important;
+    }
+    .leaderboard-item:hover {
+        background-color: rgba(24,119,242,0.04);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container my-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h4 mb-0"><i class="bi bi-trophy-fill" style="color:#1877f2"></i> Gamification</h1>
-    <a href="{{ url_for('gamification.badges') }}" class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-award me-1"></i> Tutti i Badge
-    </a>
-  </div>
-
-  <div class="row g-4">
-    <div class="col-12 col-lg-8">
-      <div class="card mb-4" style="border-top: 4px solid #1877f2;">
-        <div class="card-body">
-          <div class="d-flex align-items-center mb-3">
-            {% if current_user.avatar %}
-              <img src="{{ url_for('static', filename='uploads/' + current_user.avatar) }}" alt="Avatar" class="rounded-circle me-3" style="width:64px;height:64px;object-fit:cover;">
-            {% else %}
-              <div class="rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:64px;height:64px;background:#1877f2;color:#fff;font-size:1.5rem;">
-                <i class="bi bi-person-fill"></i>
-              </div>
-            {% endif %}
-            <div class="flex-grow-1">
-              <h5 class="mb-0">{{ current_user.get_full_name() }}</h5>
-              <div class="d-flex align-items-center gap-3 mt-1">
-                <span class="badge" style="background:#1877f2;font-size:0.9rem;">Livello {{ level }}</span>
-                <span class="text-muted small">{{ points }} punti</span>
-                {% if user_points %}
-                <span class="text-muted small"><i class="bi bi-fire text-warning"></i> {{ user_points.login_streak or 0 }} giorni streak</span>
-                {% endif %}
-              </div>
+<div class="gamification-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="fw-bold mb-1"><i class="bi bi-trophy-fill me-2"></i>Gamification</h1>
+                <p class="mb-0 opacity-75">Guadagna punti, badge e scala la classifica!</p>
             </div>
-          </div>
-          <div class="mb-2 d-flex justify-content-between small text-muted">
-            <span>Livello {{ level }}</span>
-            {% if next_lvl_pts %}
-            <span>{{ points }}/{{ next_lvl_pts }} punti per Livello {{ level + 1 }}</span>
-            {% else %}
-            <span>Livello massimo raggiunto!</span>
-            {% endif %}
-          </div>
-          <div class="progress" style="height:20px;">
-            <div class="progress-bar" role="progressbar" style="width:{{ progress }}%;background:#1877f2;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">
-              {{ progress|int }}%
-            </div>
-          </div>
+            <a href="{{ url_for('gamification.badges') }}" class="btn btn-light text-primary fw-bold">
+                <i class="bi bi-award me-1"></i> Tutti i Badge
+            </a>
         </div>
-      </div>
+    </div>
+</div>
 
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong><i class="bi bi-award me-1"></i> Badge Recenti</strong>
-          <a href="{{ url_for('gamification.badges') }}" class="btn btn-sm btn-outline-primary">Tutti</a>
-        </div>
-        <div class="card-body">
-          {% if recent_badges %}
-          <div class="row g-3">
-            {% for ub, badge in recent_badges %}
-            <div class="col-6 col-md-4">
-              <div class="text-center p-3 border rounded">
-                <div style="font-size:2rem;color:{{ badge.color or '#1877f2' }}">
-                  <i class="bi {{ badge.icon or 'bi-award' }}"></i>
+<div class="container mb-5">
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div class="card profile-card mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-4">
+                        {% if current_user.avatar %}
+                            <img src="{{ url_for('static', filename='uploads/' + current_user.avatar) }}" alt="Avatar" class="profile-avatar me-3">
+                        {% else %}
+                            <div class="profile-avatar-placeholder me-3">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <h4 class="mb-1 fw-bold">{{ current_user.get_full_name() }}</h4>
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <span class="level-badge">Livello {{ level }}</span>
+                                <span class="text-muted"><i class="bi bi-star-fill text-warning me-1"></i>{{ points }} punti</span>
+                                {% if user_points %}
+                                <span class="text-muted"><i class="bi bi-fire text-warning me-1"></i>{{ user_points.login_streak or 0 }} giorni streak</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between small">
+                        <span class="fw-semibold" style="color: #1877f2;">Livello {{ level }}</span>
+                        {% if next_lvl_pts %}
+                        <span class="text-muted">{{ points }}/{{ next_lvl_pts }} punti per Livello {{ level + 1 }}</span>
+                        {% else %}
+                        <span class="text-muted fw-semibold">Livello massimo raggiunto!</span>
+                        {% endif %}
+                    </div>
+                    <div class="progress progress-xl">
+                        <div class="progress-bar" role="progressbar" style="width:{{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ progress|int }}%
+                        </div>
+                    </div>
                 </div>
-                <div class="fw-semibold small mt-1">{{ badge.name }}</div>
-                <div class="text-muted small">{{ badge.description }}</div>
-                <div class="mt-1"><span class="badge bg-success">+{{ badge.points }} pt</span></div>
-              </div>
             </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="text-center text-muted py-3">
-            <i class="bi bi-emoji-smile" style="font-size:2rem;"></i>
-            <div class="mt-2">Nessun badge ancora. Inizia a partecipare!</div>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
 
-    <div class="col-12 col-lg-4">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong><i class="bi bi-trophy me-1"></i> Classifica</strong>
-          <a href="{{ url_for('gamification.leaderboard') }}" class="btn btn-sm btn-outline-primary">Completa</a>
-        </div>
-        <div class="list-group list-group-flush">
-          {% for up, u in leaderboard %}
-          {% set rank = loop.index %}
-          <div class="list-group-item d-flex justify-content-between align-items-center {% if u.id == current_user.id %}list-group-item-primary{% endif %}">
-            <div class="d-flex align-items-center">
-              {% if rank == 1 %}
-              <i class="bi bi-trophy-fill text-warning me-2"></i>
-              {% elif rank == 2 %}
-              <i class="bi bi-trophy-fill me-2" style="color:#aaa"></i>
-              {% elif rank == 3 %}
-              <i class="bi bi-trophy-fill me-2" style="color:#cd7f32"></i>
-              {% else %}
-              <span class="me-2 fw-bold text-muted">{{ rank }}</span>
-              {% endif %}
-              <span class="small">{{ u.get_full_name() }}</span>
+            <div class="card section-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-award me-1" style="color: #1877f2;"></i> Badge Recenti</strong>
+                    <a href="{{ url_for('gamification.badges') }}" class="btn btn-sm btn-outline-primary" style="border-radius: 8px;">Tutti</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_badges %}
+                    <div class="row g-3">
+                        {% for ub, badge in recent_badges %}
+                        <div class="col-6 col-md-4">
+                            <div class="card badge-card h-100 text-center p-3">
+                                <div style="font-size:2.5rem;color:{{ badge.color or '#1877f2' }}">
+                                    <i class="bi {{ badge.icon or 'bi-award' }}"></i>
+                                </div>
+                                <div class="fw-semibold small mt-2">{{ badge.name }}</div>
+                                <div class="text-muted small">{{ badge.description }}</div>
+                                <div class="mt-2"><span class="badge" style="background: linear-gradient(135deg, #1877f2, #42a5f5); border-radius: 20px; padding: 4px 10px;">+{{ badge.points }} pt</span></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(24,119,242,0.1); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;">
+                            <i class="bi bi-emoji-smile" style="font-size:1.8rem; color: #1877f2;"></i>
+                        </div>
+                        <div class="mt-2">Nessun badge ancora. Inizia a partecipare!</div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <span class="badge" style="background:#1877f2">{{ up.total_points }} pt</span>
-          </div>
-          {% else %}
-          <div class="list-group-item text-muted small">Nessun dato disponibile.</div>
-          {% endfor %}
         </div>
-      </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card section-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-trophy me-1" style="color: #ffc107;"></i> Classifica</strong>
+                    <a href="{{ url_for('gamification.leaderboard') }}" class="btn btn-sm btn-outline-primary" style="border-radius: 8px;">Completa</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for up, u in leaderboard %}
+                    {% set rank = loop.index %}
+                    <div class="list-group-item leaderboard-item d-flex justify-content-between align-items-center {% if u.id == current_user.id %}list-group-item-primary{% endif %}" style="padding: 0.75rem 1.25rem;">
+                        <div class="d-flex align-items-center">
+                            {% if rank == 1 %}
+                            <i class="bi bi-trophy-fill text-warning me-2 fs-5"></i>
+                            {% elif rank == 2 %}
+                            <i class="bi bi-trophy-fill me-2 fs-5" style="color:#aaa"></i>
+                            {% elif rank == 3 %}
+                            <i class="bi bi-trophy-fill me-2 fs-5" style="color:#cd7f32"></i>
+                            {% else %}
+                            <span class="me-2 fw-bold text-muted" style="width: 24px; text-align: center;">{{ rank }}</span>
+                            {% endif %}
+                            <span class="small fw-semibold">{{ u.get_full_name() }}</span>
+                        </div>
+                        <span class="badge" style="background: linear-gradient(135deg, #1877f2, #42a5f5); border-radius: 20px; padding: 5px 12px;">{{ up.total_points }} pt</span>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-muted small text-center py-3">Nessun dato disponibile.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 {% endblock %}

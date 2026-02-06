@@ -1,29 +1,112 @@
 {% extends "base.html" %}
 {% block title %}Documenti - SONACIP{% endblock %}
 
-{% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h2 class="mb-0"><i class="bi bi-folder2-open" style="color: #1877f2;"></i> Documenti</h2>
-            {% if search_query is defined and search_query %}
-            <small class="text-muted">Risultati per: "{{ search_query }}"</small>
-            {% endif %}
-        </div>
-        <div class="d-flex gap-2">
-            <form method="get" action="{{ url_for('documents.search') }}" class="d-flex">
-                <input type="text" name="q" class="form-control form-control-sm me-1" placeholder="Cerca documenti..." value="{{ search_query if search_query is defined else '' }}">
-                <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
-            </form>
-            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newFolderModal">
-                <i class="bi bi-folder-plus"></i> Nuova Cartella
-            </button>
-            <button class="btn btn-sm text-white" style="background-color: #1877f2;" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                <i class="bi bi-cloud-upload"></i> Carica File
-            </button>
-        </div>
-    </div>
+{% block extra_css %}
+<style>
+    .documents-header {
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        color: white;
+        padding: 2.5rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 16px 16px;
+    }
+    .folder-card {
+        border: none;
+        border-radius: 16px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .folder-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(24,119,242,0.15);
+        background: linear-gradient(135deg, #e7f3ff 0%, #f8f9ff 100%);
+    }
+    .folder-card .folder-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 0.5rem;
+    }
+    .files-table-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .files-table-card .table th {
+        border-top: none;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        font-weight: 600;
+    }
+    .files-table-card .table td {
+        vertical-align: middle;
+    }
+    .header-search {
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 10px;
+        color: white;
+    }
+    .header-search::placeholder {
+        color: rgba(255,255,255,0.7);
+    }
+    .header-search:focus {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+        color: white;
+        box-shadow: none;
+    }
+    .section-label {
+        font-weight: 700;
+        color: #495057;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
 
+{% block content %}
+<div class="documents-header">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="fw-bold mb-1"><i class="bi bi-folder2-open me-2"></i>Documenti</h1>
+                <p class="mb-0 opacity-75">Gestisci e condividi documenti con la tua società</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <form method="get" action="{{ url_for('documents.search') }}" class="d-flex">
+                    <input type="text" name="q" class="form-control form-control-sm header-search me-1" placeholder="Cerca documenti..." value="{{ search_query if search_query is defined else '' }}">
+                    <button type="submit" class="btn btn-sm btn-outline-light"><i class="bi bi-search"></i></button>
+                </form>
+                <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#newFolderModal">
+                    <i class="bi bi-folder-plus me-1"></i> Nuova Cartella
+                </button>
+                <button class="btn btn-light text-primary fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                    <i class="bi bi-cloud-upload me-1"></i> Carica File
+                </button>
+            </div>
+        </div>
+        {% if search_query is defined and search_query %}
+        <div class="mt-2 opacity-75">
+            <small>Risultati per: "{{ search_query }}"</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="container mb-5">
     {% if breadcrumbs %}
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
@@ -40,14 +123,19 @@
     {% endif %}
 
     {% if folders %}
-    <h6 class="text-muted mb-2"><i class="bi bi-folder"></i> Cartelle</h6>
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="section-label"><i class="bi bi-folder me-1"></i>Cartelle</span>
+        <span class="badge rounded-pill" style="background: #1877f2;">{{ folders|length }}</span>
+    </div>
     <div class="row g-3 mb-4">
         {% for folder in folders %}
         <div class="col-6 col-md-3 col-lg-2">
             <a href="{{ url_for('documents.folder_view', folder_id=folder.id) }}" class="text-decoration-none">
-                <div class="card shadow-sm h-100 text-center py-3 border-0" style="transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                <div class="card folder-card h-100 text-center py-3">
                     <div class="card-body p-2">
-                        <i class="bi bi-folder-fill fs-1" style="color: #1877f2;"></i>
+                        <div class="folder-icon">
+                            <i class="bi bi-folder-fill"></i>
+                        </div>
                         <p class="small fw-bold mb-0 mt-1 text-dark text-truncate">{{ folder.name }}</p>
                         {% if folder.description %}
                         <p class="small text-muted mb-0 text-truncate">{{ folder.description }}</p>
@@ -61,8 +149,11 @@
     {% endif %}
 
     {% if documents %}
-    <h6 class="text-muted mb-2"><i class="bi bi-file-earmark"></i> File</h6>
-    <div class="card shadow-sm">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="section-label"><i class="bi bi-file-earmark me-1"></i>File</span>
+        <span class="badge rounded-pill" style="background: #1877f2;">{{ documents|length }}</span>
+    </div>
+    <div class="card files-table-card">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
@@ -78,18 +169,18 @@
                 <tbody>
                     {% for doc in documents %}
                     <tr>
-                        <td style="width: 40px;"><i class="{{ file_icon(doc.file_type) }} fs-5"></i></td>
+                        <td style="width: 40px;"><i class="{{ file_icon(doc.file_type) }} fs-5" style="color: #1877f2;"></i></td>
                         <td>
                             <a href="{{ url_for('documents.view', doc_id=doc.id) }}" class="text-decoration-none fw-bold">{{ doc.title }}</a>
                             {% if doc.is_public %}
-                                <span class="badge bg-info ms-1" style="font-size: 0.65rem;">Pubblico</span>
+                                <span class="badge bg-info ms-1" style="font-size: 0.65rem; border-radius: 20px;">Pubblico</span>
                             {% endif %}
                         </td>
                         <td class="text-muted small">{{ format_size(doc.file_size) }}</td>
                         <td class="text-muted small">{{ doc.created_at.strftime('%d/%m/%Y') if doc.created_at else '-' }}</td>
                         <td class="small">{{ doc.uploader.get_full_name() if doc.uploader else '-' }}</td>
                         <td>
-                            <a href="{{ url_for('documents.download', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary" title="Scarica">
+                            <a href="{{ url_for('documents.download', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary" title="Scarica" style="border-radius: 8px;">
                                 <i class="bi bi-download"></i>
                             </a>
                         </td>
@@ -101,11 +192,14 @@
     </div>
     {% elif not folders %}
     <div class="text-center text-muted py-5">
-        <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+        <div class="mb-3" style="width: 80px; height: 80px; border-radius: 50%; background: rgba(24,119,242,0.1); display: inline-flex; align-items: center; justify-content: center;">
+            <i class="bi bi-folder2-open" style="font-size: 36px; color: #1877f2;"></i>
+        </div>
         {% if search_query is defined and search_query %}
-            Nessun documento trovato per "{{ search_query }}".
+            <h5 class="text-muted">Nessun documento trovato per "{{ search_query }}"</h5>
         {% else %}
-            Nessun documento presente. Carica il primo file!
+            <h5 class="text-muted">Nessun documento presente</h5>
+            <p class="text-muted">Carica il primo file per iniziare!</p>
         {% endif %}
     </div>
     {% endif %}
@@ -160,7 +254,7 @@
                     <div class="mb-3">
                         <label class="form-label">File *</label>
                         <div class="border border-2 border-dashed rounded p-4 text-center position-relative" id="dropZone"
-                             style="border-style: dashed !important; cursor: pointer;">
+                             style="border-style: dashed !important; cursor: pointer; border-radius: 12px !important;">
                             <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
                             <p class="text-muted mb-0">Trascina i file qui o clicca per selezionare</p>
                             <small class="text-muted">PDF, DOC, XLS, PPT, immagini, ZIP, TXT, CSV (max 50MB)</small>

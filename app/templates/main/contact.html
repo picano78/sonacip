@@ -4,127 +4,83 @@
 
 {% block extra_css %}
 <style>
-.contact-hero {
-    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 50%, #1565c0 100%);
-    color: white;
-    padding: 60px 0;
+  :root {
+    --fb-blue: #1877f2;
+    --fb-blue-dark: #155fc7;
+    --fb-blue-light: #e7f3ff;
+    --text-dark: #050505;
+    --text-light: #65676b;
+    --surface-light: #f0f2f5;
+    --accent-gradient: linear-gradient(135deg, #1877f2 0%, #155fc7 100%);
+  }
+  .hero-section {
     position: relative;
-    overflow: hidden;
-}
-.contact-hero::before {
-    content: '';
-    position: absolute;
-    bottom: -30%;
-    left: -10%;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
-    border-radius: 50%;
-}
-.contact-card {
-    background: white;
-    border-radius: 16px;
-    padding: 32px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    transition: transform 0.3s, box-shadow 0.3s;
-    height: 100%;
-    text-align: center;
-}
-.contact-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(24,119,242,0.15);
-}
-.contact-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
+    min-height: 400px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
-    margin: 0 auto 16px;
-    background: #e7f3ff;
-    color: #1877f2;
-}
+    overflow: hidden;
+    background: var(--accent-gradient);
+  }
+  .hero-section::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+    pointer-events: none; z-index: 1;
+  }
+  .hero-content { position: relative; z-index: 2; color: white; text-align: center; padding: 2rem; max-width: 800px; }
+  .hero-content h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom: 1rem; }
+  .hero-content p { font-size: clamp(1rem, 2vw, 1.2rem); opacity: 0.95; }
+  .hero-icons { position: absolute; top: 10%; left: 5%; width: 80px; height: 80px; opacity: 0.15; }
+  .hero-icons-right { position: absolute; bottom: 10%; right: 5%; width: 100px; height: 100px; opacity: 0.1; }
+  .section-animate { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+  .section-animate.in-view { opacity: 1; transform: translateY(0); }
+  .section-padding { padding: 4rem 2rem; }
+  .section-title { color: var(--text-dark); font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 700; margin-bottom: 1rem; text-align: center; }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; }
+  .feature-card { background: white; border-radius: 12px; padding: 2rem; height: 100%; border: 1px solid #e5e7eb; transition: all 0.3s ease; text-align: center; }
+  .feature-card:hover { transform: translateY(-8px); border-color: var(--fb-blue); box-shadow: 0 12px 24px rgba(24,119,242,0.15); }
+  .feature-icon { width: 60px; height: 60px; border-radius: 12px; background: var(--fb-blue-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem; color: var(--fb-blue); }
+  .feature-card h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .feature-card p { color: var(--text-light); font-size: 0.9rem; }
+  .cta-section { background: var(--surface-light); padding: 4rem 2rem; border-radius: 16px; text-align: center; }
+  .cta-section h2 { font-weight: 700; margin-bottom: 1rem; }
+  .cta-section p { color: var(--text-light); margin-bottom: 2rem; }
+  .cta-buttons { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+  .btn-facebook { background: var(--fb-blue); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s; }
+  .btn-facebook:hover { background: var(--fb-blue-dark); color: white; transform: translateY(-2px); }
+  .btn-facebook-outline { background: white; color: var(--fb-blue); border: 2px solid var(--fb-blue); padding: 0.65rem 2rem; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s; }
+  .btn-facebook-outline:hover { background: var(--fb-blue-light); }
+  body[data-theme="dark"] .feature-card { background: #1a1a1a; border-color: #333; }
+  body[data-theme="dark"] .feature-card h3 { color: white; }
+  body[data-theme="dark"] .section-title { color: white; }
+  body[data-theme="dark"] .cta-section { background: #1a1a1a; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="contact-hero">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-7">
-                <h1 class="display-5 fw-bold mb-3">{{ page.hero_title if page and page.hero_title else 'Contatti' }}</h1>
-                <p class="lead mb-0 opacity-90">Siamo qui per aiutarti. Scegli il modo migliore per contattarci.</p>
-            </div>
-            <div class="col-lg-5 text-center d-none d-lg-block">
-                <i class="bi bi-headset" style="font-size: 7rem; opacity: 0.15;"></i>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="container my-5">
-    {% if page and page.body_html %}
-    {{ page.body_html|safe }}
-    {% else %}
-
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="contact-card">
-                <div class="contact-icon">
-                    <i class="bi bi-envelope-fill"></i>
-                </div>
-                <h5 class="fw-bold">Email</h5>
-                <p class="text-muted">Scrivici per informazioni generali o richieste commerciali.</p>
-                <a href="mailto:info@sonacip.it" class="fw-semibold text-decoration-none" style="color: #1877f2;">info@sonacip.it</a>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="contact-card">
-                <div class="contact-icon">
-                    <i class="bi bi-telephone-fill"></i>
-                </div>
-                <h5 class="fw-bold">Telefono</h5>
-                <p class="text-muted">Disponibili dal lunedì al venerdì, dalle 9:00 alle 18:00.</p>
-                <a href="tel:+39021234567" class="fw-semibold text-decoration-none" style="color: #1877f2;">+39 02 1234567</a>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="contact-card">
-                <div class="contact-icon">
-                    <i class="bi bi-geo-alt-fill"></i>
-                </div>
-                <h5 class="fw-bold">Sede</h5>
-                <p class="text-muted">Vieni a trovarci nella nostra sede operativa.</p>
-                <span class="fw-semibold" style="color: #1877f2;">Via dello Sport, 1 - Milano</span>
-            </div>
-        </div>
-    </div>
-
-    {% if current_user.is_authenticated %}
-    <div class="text-center py-5 rounded-4" style="background: linear-gradient(135deg, #e7f3ff, #f0f7ff);">
-        <i class="bi bi-chat-dots-fill mb-3" style="font-size: 3rem; color: #1877f2;"></i>
-        <h3 class="fw-bold">Hai bisogno di assistenza?</h3>
-        <p class="text-muted mb-4">Se sei un utente registrato, puoi inviare un messaggio diretto all'amministratore.</p>
-        <a href="{{ url_for('main.contact_admin') }}" class="btn btn-lg fw-semibold" style="background: #1877f2; color: white;">
-            <i class="bi bi-headset me-2"></i>Contatta l'Amministratore
-        </a>
-    </div>
-    {% else %}
-    <div class="text-center py-5 rounded-4" style="background: linear-gradient(135deg, #e7f3ff, #f0f7ff);">
-        <i class="bi bi-person-plus-fill mb-3" style="font-size: 3rem; color: #1877f2;"></i>
-        <h3 class="fw-bold">Vuoi unirti a SONACIP?</h3>
-        <p class="text-muted mb-4">Registrati per accedere a tutte le funzionalità della piattaforma.</p>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-lg me-2 fw-semibold" style="background: #1877f2; color: white;">
-            <i class="bi bi-person-plus me-1"></i> Registrati
-        </a>
-        <a href="{{ url_for('auth.login') }}" class="btn btn-lg btn-outline-secondary fw-semibold">
-            <i class="bi bi-box-arrow-in-right me-1"></i> Accedi
-        </a>
-    </div>
+{% if pb_sections %}
+  {% for sec in pb_sections %}
+    {% if sec.visible %}
+      {% include 'sections/' ~ sec.type ~ '.html' ignore missing %}
     {% endif %}
+  {% endfor %}
+{% else %}
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1>Contatti</h1>
+      <p>Siamo qui per aiutarti.</p>
+    </div>
+  </div>
+{% endif %}
 
-    {% endif %}
-</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('in-view'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.section-animate').forEach(s => observer.observe(s));
+  });
+</script>
 {% endblock %}

@@ -11,12 +11,21 @@ from app.main.forms import DashboardEditForm, ContactAdminForm
 bp = Blueprint('main', __name__, url_prefix='')
 
 
+def _page_sections(slug):
+    try:
+        from app.admin.page_builder import get_page_config
+        return get_page_config(slug)
+    except Exception:
+        return []
+
+
 @bp.route('/')
 def index():
     """Homepage - redirect based on auth status"""
     if current_user.is_authenticated:
         return redirect(url_for('social.feed'))
-    return render_template('main/index.html')
+    sections = _page_sections('main.index')
+    return render_template('main/index.html', pb_sections=sections)
 
 
 @bp.route('/login')
@@ -27,7 +36,6 @@ def login_redirect():
     Some deployments (or old links) point to `/login`, while the auth blueprint
     uses `/auth/login`. Keep this stable to avoid 404/500 at the edge (nginx rewrites).
     """
-    # Always return a proper Flask Response (302) and preserve `next` if present.
     next_page = request.args.get("next")
     if next_page:
         return redirect(url_for("auth.login", next=next_page), code=302)
@@ -37,13 +45,15 @@ def login_redirect():
 @bp.route('/about')
 def about():
     """About page"""
-    return render_template('main/about.html')
+    sections = _page_sections('main.about')
+    return render_template('main/about.html', pb_sections=sections)
 
 
 @bp.route('/contact')
 def contact():
     """Contact page"""
-    return render_template('main/contact.html')
+    sections = _page_sections('main.contact')
+    return render_template('main/contact.html', pb_sections=sections)
 
 
 @bp.route('/healthz')

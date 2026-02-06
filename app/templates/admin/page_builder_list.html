@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Configurazione Pagine{% endblock %}
+{% block extra_css %}
+<style>
+  .page-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: white;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  .page-card:hover {
+    border-color: #1877f2;
+    box-shadow: 0 4px 12px rgba(24,119,242,0.15);
+    transform: translateY(-2px);
+    color: inherit;
+  }
+  .page-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: #e7f3ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #1877f2;
+  }
+  .custom-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h4 mb-1"><i class="bi bi-palette2 me-2"></i>Configurazione Pagine</h1>
+      <p class="text-muted mb-0">Configura graficamente il contenuto di ogni pagina del sito</p>
+    </div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Cruscotto
+    </a>
+  </div>
+
+  <div class="row g-3">
+    {% for p in pages %}
+    <div class="col-md-6 col-lg-4">
+      <a href="{{ url_for('admin.page_builder', slug=p.slug) }}" class="page-card">
+        <div class="d-flex align-items-start gap-3">
+          <div class="page-icon">
+            {% if 'index' in p.slug %}<i class="bi bi-house-fill"></i>
+            {% elif 'about' in p.slug %}<i class="bi bi-info-circle-fill"></i>
+            {% elif 'contact' in p.slug %}<i class="bi bi-telephone-fill"></i>
+            {% elif 'privacy' in p.slug %}<i class="bi bi-shield-lock-fill"></i>
+            {% elif 'terms' in p.slug %}<i class="bi bi-file-earmark-text-fill"></i>
+            {% elif 'guide_user' in p.slug %}<i class="bi bi-book-fill"></i>
+            {% elif 'guide_society' in p.slug %}<i class="bi bi-building"></i>
+            {% else %}<i class="bi bi-file-earmark-fill"></i>{% endif %}
+          </div>
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <h5 class="mb-0 fw-semibold">{{ p.label }}</h5>
+              {% if p.has_custom %}
+              <span class="badge bg-primary custom-badge">Personalizzata</span>
+              {% else %}
+              <span class="badge bg-secondary custom-badge">Default</span>
+              {% endif %}
+            </div>
+            <p class="text-muted small mb-1">{{ p.slug }}</p>
+            <div class="small text-muted">
+              <i class="bi bi-layers me-1"></i>{{ p.visible_count }}/{{ p.section_count }} sezioni visibili
+            </div>
+          </div>
+          <i class="bi bi-chevron-right text-muted"></i>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

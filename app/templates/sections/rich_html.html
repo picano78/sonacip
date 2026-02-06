@@ -1,0 +1,9 @@
+{% set c = sec.content or {} %}
+<section class="section-padding section-animate">
+  <div class="container">
+    {% if c.get('title') %}<h2 class="section-title">{{ c.get('title') }}</h2>{% endif %}
+    {% if c.get('html') %}
+    <div class="rich-content">{{ c.get('html', '')|safe }}</div>
+    {% endif %}
+  </div>
+</section>

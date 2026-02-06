@@ -1,0 +1,17 @@
+{% set c = sec.content or {} %}
+<section class="section-padding section-animate">
+  <div class="container">
+    {% if c.get('title') %}<h2 class="section-title">{{ c.get('title') }}</h2>{% endif %}
+    <div class="features-grid">
+      {% for item in c.get('items', []) %}
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="bi {{ item.get('icon', 'bi-star') }}"></i>
+        </div>
+        <h3>{{ item.get('title', '') }}</h3>
+        <p>{{ item.get('text', '') }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

@@ -823,6 +823,69 @@ def edit_page():
     return render_template('admin/edit_page.html', form=form, settings=settings)
 
 
+@bp.route('/page-builder')
+@login_required
+@admin_required
+def page_builder_list():
+    """Elenco pagine configurabili graficamente."""
+    from app.admin.page_builder import PAGE_REGISTRY, get_page_config
+    page_list = []
+    for slug, info in PAGE_REGISTRY.items():
+        sections = get_page_config(slug)
+        has_custom = CustomizationKV.query.filter_by(scope='page', scope_key=slug, key='sections').first() is not None
+        page_list.append({
+            'slug': slug,
+            'label': info['label'],
+            'section_count': len(sections),
+            'visible_count': sum(1 for s in sections if s.get('visible', True)),
+            'has_custom': has_custom,
+        })
+    return render_template('admin/page_builder_list.html', pages=page_list)
+
+
+@bp.route('/page-builder/<path:slug>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def page_builder(slug):
+    """Page builder grafico per una pagina specifica."""
+    from app.admin.page_builder import PAGE_REGISTRY, get_page_config, save_page_config, SECTION_FIELD_SCHEMA
+    if slug not in PAGE_REGISTRY:
+        flash('Pagina non trovata nel registro.', 'danger')
+        return redirect(url_for('admin.page_builder_list'))
+
+    page_info = PAGE_REGISTRY[slug]
+
+    if request.method == 'POST':
+        try:
+            data = request.get_json(silent=True)
+            if data and 'sections' in data:
+                save_page_config(slug, data['sections'], current_user.id)
+                log_action('update_page_builder', 'CustomizationKV', 0, f'Updated page builder for {slug}')
+                return jsonify({'ok': True, 'message': 'Pagina salvata con successo!'})
+            return jsonify({'ok': False, 'message': 'Dati non validi.'}), 400
+        except Exception as e:
+            return jsonify({'ok': False, 'message': str(e)}), 500
+
+    sections = get_page_config(slug)
+    return render_template('admin/page_builder.html',
+                           slug=slug,
+                           page_info=page_info,
+                           sections=sections,
+                           field_schema=SECTION_FIELD_SCHEMA)
+
+
+@bp.route('/page-builder/<path:slug>/reset', methods=['POST'])
+@login_required
+@admin_required
+def page_builder_reset(slug):
+    """Ripristina configurazione di default per una pagina."""
+    from app.admin.page_builder import reset_page_config
+    reset_page_config(slug)
+    log_action('reset_page_builder', 'CustomizationKV', 0, f'Reset page builder for {slug}')
+    flash('Configurazione ripristinata ai valori predefiniti.', 'success')
+    return redirect(url_for('admin.page_builder', slug=slug))
+
+
 @bp.route('/dashboard-templates', methods=['GET', 'POST'])
 @login_required
 @admin_required

@@ -13,6 +13,14 @@ bp = Blueprint('payments', __name__, url_prefix='/payments')
 ALLOWED_STATUSES = {'pending', 'completed', 'failed'}
 
 
+@bp.before_request
+def _check_feature():
+    from app.utils import check_feature_enabled
+    if not check_feature_enabled('payments_online'):
+        flash('Questa funzionalità non è attualmente disponibile.', 'warning')
+        return redirect(url_for('main.dashboard'))
+
+
 def _init_stripe():
     stripe.api_key = os.environ.get('STRIPE_SECRET_KEY') or current_app.config.get('STRIPE_SECRET_KEY')
 

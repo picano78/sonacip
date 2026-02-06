@@ -7,6 +7,31 @@ from flask_login import current_user
 from datetime import datetime
 
 
+def check_feature_enabled(feature_key):
+    if current_user and current_user.is_authenticated and current_user.is_admin():
+        return True
+    try:
+        from app.models import PlatformFeature
+        pf = PlatformFeature.query.filter_by(key=feature_key).first()
+        if pf and not pf.is_enabled:
+            return False
+    except Exception:
+        pass
+    return True
+
+
+def feature_required(feature_key):
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            if not check_feature_enabled(feature_key):
+                flash('Questa funzionalità non è attualmente disponibile.', 'warning')
+                return redirect(url_for('main.dashboard'))
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
+
+
 def rate_limit(key: str, limit: int = 10, window_seconds: int = 60):
     """
     Lightweight rate limiter using the app cache (memory/redis).

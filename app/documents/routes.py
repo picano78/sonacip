@@ -11,6 +11,16 @@ from werkzeug.utils import secure_filename
 bp = Blueprint('documents', __name__, url_prefix='/documents')
 
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'gif', 'zip', 'txt', 'csv'}
+
+
+@bp.before_request
+def _check_feature():
+    from app.utils import check_feature_enabled
+    if not check_feature_enabled('documents'):
+        flash('Questa funzionalità non è attualmente disponibile.', 'warning')
+        return redirect(url_for('main.dashboard'))
+
+
 MAX_FILE_SIZE = 50 * 1024 * 1024
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'uploads', 'documents')
 

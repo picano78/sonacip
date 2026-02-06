@@ -15,6 +15,15 @@ bp = Blueprint('groups', __name__, url_prefix='/groups')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 
+@bp.before_request
+def _check_feature():
+    from app.utils import check_feature_enabled
+    if not check_feature_enabled('groups'):
+        from flask import flash
+        flash('Questa funzionalità non è attualmente disponibile.', 'warning')
+        return redirect(url_for('main.dashboard'))
+
+
 def save_group_picture(form_picture, subfolder='groups'):
     if not form_picture or not hasattr(form_picture, 'filename') or not form_picture.filename:
         return None

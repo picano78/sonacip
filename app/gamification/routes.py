@@ -6,6 +6,15 @@ from app.utils import check_permission
 bp = Blueprint('gamification', __name__, url_prefix='/gamification')
 
 
+@bp.before_request
+def _check_feature():
+    from app.utils import check_feature_enabled
+    if not check_feature_enabled('gamification'):
+        from flask import flash
+        flash('Questa funzionalità non è attualmente disponibile.', 'warning')
+        return redirect(url_for('main.dashboard'))
+
+
 @bp.route('/')
 @login_required
 def index():

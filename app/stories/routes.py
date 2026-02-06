@@ -12,6 +12,14 @@ bp = Blueprint('stories', __name__, url_prefix='/stories')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'webm'}
 
 
+@bp.before_request
+def _check_feature():
+    from app.utils import check_feature_enabled
+    if not check_feature_enabled('stories'):
+        flash('Questa funzionalità non è attualmente disponibile.', 'warning')
+        return redirect(url_for('main.dashboard'))
+
+
 def _allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 

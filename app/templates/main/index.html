@@ -208,43 +208,6 @@
     line-height: 1.6;
   }
 
-  /* Statistics Section */
-  .stats-section {
-    background: var(--accent-gradient);
-    color: white;
-    padding: 4rem 0;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .stats-section::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: 
-      radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(21, 95, 199, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-  }
-
-  .stat-item {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    padding: 2rem 1rem;
-  }
-
-  .stat-number {
-    font-size: clamp(2rem, 5vw, 3rem);
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-  }
-
-  .stat-label {
-    font-size: 1rem;
-    opacity: 0.95;
-    font-weight: 500;
-  }
 
   /* CTA Section */
   .cta-section {
@@ -478,37 +441,6 @@
   </div>
 </section>
 
-<!-- Statistics Section -->
-<section class="stats-section section-animate">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-3 col-sm-6">
-        <div class="stat-item">
-          <div class="stat-number">100+</div>
-          <div class="stat-label">Società Sportive</div>
-        </div>
-      </div>
-      <div class="col-md-3 col-sm-6">
-        <div class="stat-item">
-          <div class="stat-number">5K+</div>
-          <div class="stat-label">Atleti Registrati</div>
-        </div>
-      </div>
-      <div class="col-md-3 col-sm-6">
-        <div class="stat-item">
-          <div class="stat-number">10K+</div>
-          <div class="stat-label">Eventi Creati</div>
-        </div>
-      </div>
-      <div class="col-md-3 col-sm-6">
-        <div class="stat-item">
-          <div class="stat-number">24/7</div>
-          <div class="stat-label">Supporto Disponibile</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- Features Section -->
 <section class="section-padding section-animate">

@@ -110,6 +110,11 @@
         </div>
     </div>
 
+    <div class="alert alert-info d-flex align-items-start gap-2 mb-3 small" role="alert">
+        <i class="bi bi-info-circle-fill fs-6 mt-1"></i>
+        <span>Gli annunci rimangono attivi per <strong>30 giorni</strong>, dopodiché vengono cancellati automaticamente insieme alle foto.</span>
+    </div>
+
     <div class="filter-tabs">
         <a href="{{ url_for('marketplace.my_listings') }}" 
            class="filter-tab {{ 'active' if not status_filter }}">Tutti</a>
@@ -119,8 +124,7 @@
            class="filter-tab {{ 'active' if status_filter == 'sold' }}">Venduti</a>
         <a href="{{ url_for('marketplace.my_listings', status='paused') }}" 
            class="filter-tab {{ 'active' if status_filter == 'paused' }}">In pausa</a>
-        <a href="{{ url_for('marketplace.my_listings', status='expired') }}" 
-           class="filter-tab {{ 'active' if status_filter == 'expired' }}">Scaduti</a>
+        
     </div>
 
     {% if listings %}
@@ -152,7 +156,6 @@
                                         {% if item.status == 'active' %}Attivo
                                         {% elif item.status == 'sold' %}Venduto
                                         {% elif item.status == 'paused' %}In pausa
-                                        {% elif item.status == 'expired' %}Scaduto
                                         {% else %}{{ item.status }}{% endif %}
                                     </span>
                                 </div>
@@ -187,14 +190,7 @@
                                     </button>
                                 </form>
                             {% endif %}
-                            {% if item.status == 'expired' %}
-                            <form method="POST" action="{{ url_for('marketplace.renew_listing', listing_id=item.id) }}" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-arrow-repeat"></i> Rinnova
-                                </button>
-                            </form>
-                            {% endif %}
+                            
                             <form method="POST" action="{{ url_for('marketplace.delete_listing', listing_id=item.id) }}" class="d-inline"
                                   onsubmit="return confirm('Eliminare questo annuncio?')">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

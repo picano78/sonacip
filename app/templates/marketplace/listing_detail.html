@@ -254,14 +254,9 @@
                         {% endif %}
                     </div>
                     {% if listing.expires_at %}
-                    <div class="small text-muted text-center mb-2">
-                        <i class="bi bi-clock me-1"></i> Scade il {{ listing.expires_at.strftime('%d/%m/%Y') }}
-                        {% if listing.status == 'expired' %}
-                        <form method="POST" action="{{ url_for('marketplace.renew_listing', listing_id=listing.id) }}" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm btn-outline-success ms-2"><i class="bi bi-arrow-repeat"></i> Rinnova</button>
-                        </form>
-                        {% endif %}
+                    <div class="alert alert-warning py-2 px-3 mb-2 small">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <strong>Scade il {{ listing.expires_at.strftime('%d/%m/%Y') }}</strong> — dopo questa data l'annuncio e le foto verranno cancellati automaticamente.
                     </div>
                     {% endif %}
                     <form method="POST" action="{{ url_for('marketplace.delete_listing', listing_id=listing.id) }}" 

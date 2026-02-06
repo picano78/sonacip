@@ -25,7 +25,7 @@ from app.utils import admin_required, check_permission, log_action
 from app.subscription.stripe_utils import stripe_enabled, create_marketplace_checkout_session
 from app.marketplace.utils import install_purchase
 
-LISTING_EXPIRY_DAYS = 60
+LISTING_EXPIRY_DAYS = 30
 
 
 bp = Blueprint("marketplace", __name__, url_prefix="/marketplace")
@@ -51,12 +51,22 @@ def _save_listing_image(file_storage):
         img = Image.open(file_storage)
         if img.mode in ('RGBA', 'LA'):
             img = img.convert('RGB')
-        img.thumbnail((1200, 1200))
-        img.save(filepath, quality=85, optimize=True)
+        img.thumbnail((600, 600))
+        img.save(filepath, quality=50, optimize=True)
     except Exception:
         file_storage.seek(0)
         file_storage.save(filepath)
     return f"marketplace/{unique_name}"
+
+
+def _delete_listing_image(relative_path):
+    try:
+        upload_base = os.path.join(current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, '..', 'uploads')))
+        full_path = os.path.join(upload_base, relative_path)
+        if os.path.exists(full_path):
+            os.remove(full_path)
+    except Exception:
+        pass
 
 
 def _expire_old_listings():
@@ -67,7 +77,15 @@ def _expire_old_listings():
         MarketplaceListing.expires_at <= now
     ).all()
     for listing in expired:
-        listing.status = 'expired'
+        if listing.image_1:
+            _delete_listing_image(listing.image_1)
+        if listing.image_2:
+            _delete_listing_image(listing.image_2)
+        if listing.image_3:
+            _delete_listing_image(listing.image_3)
+        if listing.image_4:
+            _delete_listing_image(listing.image_4)
+        db.session.delete(listing)
     if expired:
         db.session.commit()
 
@@ -98,10 +116,14 @@ def _seed_default_promotion_tiers():
         db.session.commit()
 
 
+@bp.before_request
+def _check_expired():
+    _expire_old_listings()
+
+
 @bp.route("/")
 @login_required
 def index():
-    _expire_old_listings()
 
     category = request.args.get('category', '')
     search_q = request.args.get('q', '').strip()
@@ -187,7 +209,7 @@ def create_listing():
         db.session.add(listing)
         db.session.commit()
         log_action("marketplace_listing_create", "MarketplaceListing", listing.id, f"title={title}")
-        flash("Annuncio pubblicato!", "success")
+        flash("Annuncio pubblicato! Resterà visibile per 30 giorni, poi verrà cancellato automaticamente.", "success")
         return redirect(url_for("marketplace.listing_detail", listing_id=listing.id))
 
     categories = MarketplaceListing.CATEGORIES

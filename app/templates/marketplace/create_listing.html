@@ -79,7 +79,7 @@
     <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="create-card">
-            <h5><i class="bi bi-camera me-2"></i>Foto</h5>
+            <h5><i class="bi bi-camera me-2"></i>Foto <span class="text-muted fw-normal" style="font-size:0.8rem;">(salvate in bassa risoluzione)</span></h5>
             <div class="img-upload-area">
                 {% for i in range(1, 5) %}
                 <label class="img-upload-slot" id="slot_{{ i }}">
@@ -143,6 +143,13 @@
                 <label class="form-label fw-semibold">Descrizione</label>
                 <textarea name="description" class="form-control" rows="5" 
                           placeholder="Descrivi l'articolo: condizioni, dimensioni, motivo della vendita..."></textarea>
+            </div>
+        </div>
+
+        <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+            <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+            <div>
+                <strong>Informazione importante:</strong> Gli annunci rimangono visibili per <strong>30 giorni</strong> dalla pubblicazione, dopodiché vengono cancellati automaticamente insieme alle foto. Le immagini vengono salvate in bassa risoluzione.
             </div>
         </div>
 

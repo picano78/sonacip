@@ -182,6 +182,23 @@ def grid():
         for i in range(1, 7 - last_weekday):
             trailing_days.append(i)
 
+    if view == 'day':
+        prev_nav = start_date - timedelta(days=1)
+        next_nav = start_date + timedelta(days=1)
+        nav_title = start_date.strftime('%A %d')
+        nav_subtitle = '{} {}'.format(month_names_it[start_date.month], start_date.year)
+    elif view == 'week':
+        prev_nav = start_date - timedelta(days=7)
+        next_nav = start_date + timedelta(days=7)
+        week_end = start_date + timedelta(days=6)
+        nav_title = '{} - {}'.format(start_date.strftime('%d/%m'), week_end.strftime('%d/%m'))
+        nav_subtitle = str(start_date.year)
+    else:
+        prev_nav = prev_month
+        next_nav = next_month
+        nav_title = month_names_it[start_date.month] if view == 'month' else ''
+        nav_subtitle = str(start_date.year) if view == 'month' else ''
+
     return render_template(
         'calendar/grid.html',
         view=view,
@@ -196,6 +213,10 @@ def grid():
         month_year=start_date.year if view == 'month' else '',
         prev_month=prev_month,
         next_month=next_month,
+        prev_nav=prev_nav,
+        next_nav=next_nav,
+        nav_title=nav_title,
+        nav_subtitle=nav_subtitle,
         today=today,
         leading_days=leading_days,
         trailing_days=trailing_days,

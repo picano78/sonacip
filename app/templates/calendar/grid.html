@@ -111,32 +111,35 @@
   </div>
 
   {% else %}
-  <form class="row g-2 align-items-end mb-3" method="get">
-    <div class="col-6 col-md-3">
-      <label class="form-label">Data</label>
-      <input type="date" class="form-control" name="start" value="{{ start_date.strftime('%Y-%m-%d') }}">
+  <div class="gcal-month">
+    <div class="gcal-month-header">
+      <a href="{{ url_for('calendar.grid', view=view, start=prev_nav.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-nav-btn">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+      <div class="gcal-month-title">
+        <span class="gcal-month-name">{{ nav_title }}</span>
+        <span class="gcal-month-year">{{ nav_subtitle }}</span>
+      </div>
+      <a href="{{ url_for('calendar.grid', view=view, start=next_nav.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-nav-btn">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+      <a href="{{ url_for('calendar.grid', view=view, start=today.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-today-btn">Oggi</a>
     </div>
-    <div class="col-6 col-md-2">
-      <label class="form-label">Vista</label>
-      <select class="form-select" name="view">
-        <option value="day" {% if view=='day' %}selected{% endif %}>Giorno</option>
-        <option value="week" {% if view=='week' %}selected{% endif %}>Settimana</option>
-        <option value="month" {% if view=='month' %}selected{% endif %}>Mese</option>
-      </select>
-    </div>
-    <div class="col-8 col-md-4">
-      <label class="form-label">Risorsa</label>
-      <select class="form-select" name="facility_id">
-        <option value="">Tutte</option>
+    <div class="gcal-view-switcher">
+      <a href="{{ url_for('calendar.grid', view='day', start=start_date.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-view-btn {{ 'active' if view=='day' else '' }}">Giorno</a>
+      <a href="{{ url_for('calendar.grid', view='week', start=start_date.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-view-btn {{ 'active' if view=='week' else '' }}">Settimana</a>
+      <a href="{{ url_for('calendar.grid', view='month', start=start_date.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-view-btn {{ 'active' if view=='month' else '' }}">Mese</a>
+      {% if facilities|length > 0 %}
+      <select class="gcal-facility-select" onchange="if(this.value!==''){window.location='{{ url_for('calendar.grid', view=view, start=start_date.strftime('%Y-%m-%d')) }}&facility_id='+this.value}else{window.location='{{ url_for('calendar.grid', view=view, start=start_date.strftime('%Y-%m-%d')) }}'}">
+        <option value="">Tutte le risorse</option>
         {% for f in facilities %}
           <option value="{{ f.id }}" {{ 'selected' if facility_id == f.id else '' }}>{{ f.name }}</option>
         {% endfor %}
       </select>
+      {% endif %}
     </div>
-    <div class="col-4 col-md-3">
-      <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-funnel"></i> Filtra</button>
-    </div>
-  </form>
+  </div>
+  <div class="mt-3"></div>
 
   <div class="table-responsive">
     <table class="table table-sm table-bordered align-middle calendar-grid-table">

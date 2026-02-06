@@ -34,7 +34,7 @@
         </div>
         <div class="col-md-2">
             <label class="form-label">Vista</label>
-            <select class="form-select" name="view">
+            <select class="form-select" name="view" onchange="this.form.submit()">
                 <option value="day" {% if view=='day' %}selected{% endif %}>Giorno</option>
                 <option value="week" {% if view=='week' %}selected{% endif %}>Settimana</option>
                 <option value="month" {% if view=='month' %}selected{% endif %}>Mese</option>

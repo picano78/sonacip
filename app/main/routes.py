@@ -1,8 +1,9 @@
 """
 Main routes
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 from app import db
 from app.utils import check_permission
 from app.main.forms import DashboardEditForm, ContactAdminForm
@@ -293,3 +294,100 @@ def terms():
 def cookie_policy():
     """Cookie policy page - redirects to privacy with cookie section."""
     return redirect(url_for('main.privacy_policy') + '#cookieSection')
+
+
+@bp.route('/api/search-suggestions')
+@login_required
+def search_suggestions():
+    q = request.args.get('q', '').strip()
+    scope = request.args.get('scope', 'all')
+    if not q or len(q) < 2:
+        return jsonify([])
+
+    results = []
+    search_term = f'%{q}%'
+
+    from app.models import User, Event, MarketplaceListing, Society, Role
+
+    if scope in ('all', 'users'):
+        super_admin_role = Role.query.filter_by(name='super_admin').first()
+        users_q = User.query.filter(
+            User.is_active == True,
+            or_(
+                User.first_name.ilike(search_term),
+                User.last_name.ilike(search_term),
+                User.username.ilike(search_term),
+                User.company_name.ilike(search_term)
+            )
+        )
+        if super_admin_role and not current_user.is_admin():
+            users_q = users_q.filter(User.role_id != super_admin_role.id)
+        users = users_q.limit(8).all()
+        for u in users:
+            results.append({
+                'type': 'user',
+                'id': u.id,
+                'text': u.get_full_name(),
+                'sub': f'@{u.username}',
+                'icon': 'bi-person-fill',
+                'url': url_for('social.profile', user_id=u.id),
+                'avatar': url_for('static', filename='uploads/' + u.avatar) if u.avatar else None
+            })
+
+    if scope in ('all', 'marketplace'):
+        listings = MarketplaceListing.query.filter(
+            MarketplaceListing.status == 'active',
+            or_(
+                MarketplaceListing.title.ilike(search_term),
+                MarketplaceListing.description.ilike(search_term),
+                MarketplaceListing.location.ilike(search_term)
+            )
+        ).limit(6).all()
+        for l in listings:
+            results.append({
+                'type': 'listing',
+                'id': l.id,
+                'text': l.title,
+                'sub': f'{l.price:.2f} EUR' if l.price else 'Gratis',
+                'icon': 'bi-shop',
+                'url': url_for('marketplace.listing_detail', listing_id=l.id),
+                'avatar': None
+            })
+
+    if scope in ('all', 'events'):
+        events = Event.query.filter(
+            or_(
+                Event.title.ilike(search_term),
+                Event.description.ilike(search_term)
+            )
+        ).order_by(Event.start_date.desc()).limit(5).all()
+        for e in events:
+            results.append({
+                'type': 'event',
+                'id': e.id,
+                'text': e.title,
+                'sub': e.start_date.strftime('%d/%m/%Y') if e.start_date else '',
+                'icon': 'bi-calendar-event-fill',
+                'url': url_for('events.event_detail', event_id=e.id),
+                'avatar': None
+            })
+
+    if scope in ('all', 'societies'):
+        societies = Society.query.filter(
+            or_(
+                Society.legal_name.ilike(search_term),
+                Society.sport_type.ilike(search_term)
+            )
+        ).limit(5).all()
+        for s in societies:
+            results.append({
+                'type': 'society',
+                'id': s.id,
+                'text': s.legal_name,
+                'sub': s.sport_type or '',
+                'icon': 'bi-building',
+                'url': url_for('social.profile', user_id=s.admin_id) if s.admin_id else '#',
+                'avatar': None
+            })
+
+    return jsonify(results[:15])

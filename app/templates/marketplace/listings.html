@@ -143,10 +143,11 @@
 
     <div class="mp-search-bar">
         <form method="GET" action="{{ url_for('marketplace.index') }}" class="d-flex gap-2">
-            <div class="input-group flex-grow-1">
+            <div class="input-group flex-grow-1 position-relative">
                 <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
                 <input type="text" name="q" class="form-control border-start-0" 
-                       placeholder="Cerca nel Marketplace..." value="{{ search_q }}">
+                       placeholder="Cerca nel Marketplace..." value="{{ search_q }}"
+                       data-autocomplete="true" data-autocomplete-scope="marketplace">
             </div>
             {% if current_category %}
                 <input type="hidden" name="category" value="{{ current_category }}">

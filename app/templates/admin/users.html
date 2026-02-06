@@ -182,9 +182,9 @@
         <form method="GET" id="searchForm">
             <div class="row g-3 align-items-end">
                 <div class="col-md-5">
-                    <div class="input-group">
+                    <div class="input-group position-relative">
                         <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        {{ form.query(class="form-control border-start-0", placeholder="Cerca per nome, email...") }}
+                        {{ form.query(class="form-control border-start-0", placeholder="Cerca per nome, email...", **{"data-autocomplete": "true", "data-autocomplete-scope": "users"}) }}
                     </div>
                 </div>
                 <div class="col-md-3">

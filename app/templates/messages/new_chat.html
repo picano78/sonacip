@@ -11,9 +11,10 @@
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ url_for('messages.start_chat') }}">
-                        <div class="mb-3">
+                        <div class="mb-3 position-relative">
                             <label class="form-label">Cerca utente</label>
-                            <input type="text" name="q" class="form-control" placeholder="Nome, cognome o username..." autofocus>
+                            <input type="text" name="q" class="form-control" placeholder="Nome, cognome o username..." autofocus
+                                   data-autocomplete="true" data-autocomplete-scope="users">
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-search"></i> Cerca

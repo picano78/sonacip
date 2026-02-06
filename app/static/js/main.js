@@ -326,6 +326,133 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Search Autocomplete
+    function initSearchAutocomplete() {
+        const searchInputs = document.querySelectorAll('[data-autocomplete], input[name="q"], input[name="query"], #searchConversations');
+        searchInputs.forEach(input => {
+            if (input.dataset.acInit) return;
+            input.dataset.acInit = '1';
+            input.setAttribute('autocomplete', 'off');
+
+            const scope = input.dataset.autocompleteScope || 'all';
+            const navigateOnSelect = input.dataset.autocompleteNavigate !== 'false';
+            let dropdown = null;
+            let debounceTimer = null;
+            let selectedIdx = -1;
+            let results = [];
+
+            function createDropdown() {
+                if (dropdown) return dropdown;
+                dropdown = document.createElement('div');
+                dropdown.className = 'ac-dropdown';
+                dropdown.style.cssText = 'position:absolute;z-index:9999;background:white;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.15);max-height:360px;overflow-y:auto;display:none;min-width:280px;border:1px solid #e4e6ea;';
+                const wrapper = input.closest('.position-relative') || input.parentElement;
+                wrapper.style.position = 'relative';
+                wrapper.appendChild(dropdown);
+                return dropdown;
+            }
+
+            function renderResults(items) {
+                results = items;
+                selectedIdx = -1;
+                const dd = createDropdown();
+                if (!items.length) { dd.style.display = 'none'; return; }
+
+                const typeLabels = {user:'Utente', listing:'Annuncio', event:'Evento', society:'Societ\u00e0'};
+                const typeColors = {user:'#1877f2', listing:'#43a047', event:'#fb8c00', society:'#7c4dff'};
+
+                dd.innerHTML = items.map((item, i) => {
+                    const avatarHtml = item.avatar
+                        ? '<img src="'+item.avatar+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">'
+                        : '<div style="width:36px;height:36px;border-radius:50%;background:'+(typeColors[item.type]||'#e4e6ea')+';display:flex;align-items:center;justify-content:center;color:white;"><i class="bi '+item.icon+'"></i></div>';
+                    return '<a href="'+item.url+'" class="ac-item" data-idx="'+i+'" style="display:flex;align-items:center;gap:12px;padding:10px 14px;text-decoration:none;color:inherit;cursor:pointer;transition:background 0.15s;border-bottom:1px solid #f0f2f5;">'
+                        + avatarHtml
+                        + '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+item.text+'</div>'
+                        + '<div style="font-size:0.78rem;color:#65676b;">'+item.sub+'</div></div>'
+                        + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+(typeColors[item.type]||'#e4e6ea')+'20;color:'+(typeColors[item.type]||'#65676b')+';font-weight:600;">'+( typeLabels[item.type]||item.type)+'</span>'
+                        + '</a>';
+                }).join('');
+                dd.style.display = 'block';
+
+                dd.querySelectorAll('.ac-item').forEach(a => {
+                    a.addEventListener('mouseenter', function() {
+                        dd.querySelectorAll('.ac-item').forEach(x => x.style.background = '');
+                        this.style.background = '#f0f2f5';
+                        selectedIdx = parseInt(this.dataset.idx);
+                    });
+                    a.addEventListener('mouseleave', function() { this.style.background = ''; });
+                    if (!navigateOnSelect) {
+                        a.addEventListener('click', function(ev) {
+                            ev.preventDefault();
+                            input.value = results[parseInt(this.dataset.idx)].text;
+                            dd.style.display = 'none';
+                            const form = input.closest('form');
+                            if (form) form.submit();
+                        });
+                    }
+                });
+            }
+
+            function fetchSuggestions(q) {
+                fetch('/api/search-suggestions?q=' + encodeURIComponent(q) + '&scope=' + scope)
+                    .then(r => r.json())
+                    .then(items => renderResults(items))
+                    .catch(() => {});
+            }
+
+            input.addEventListener('input', function() {
+                const val = this.value.trim();
+                clearTimeout(debounceTimer);
+                if (val.length < 2) {
+                    if (dropdown) dropdown.style.display = 'none';
+                    return;
+                }
+                debounceTimer = setTimeout(() => fetchSuggestions(val), 250);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (!dropdown || dropdown.style.display === 'none') return;
+                const items = dropdown.querySelectorAll('.ac-item');
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIdx = Math.min(selectedIdx + 1, items.length - 1);
+                    items.forEach((x, i) => x.style.background = i === selectedIdx ? '#f0f2f5' : '');
+                    items[selectedIdx]?.scrollIntoView({block:'nearest'});
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIdx = Math.max(selectedIdx - 1, 0);
+                    items.forEach((x, i) => x.style.background = i === selectedIdx ? '#f0f2f5' : '');
+                    items[selectedIdx]?.scrollIntoView({block:'nearest'});
+                } else if (e.key === 'Enter' && selectedIdx >= 0 && selectedIdx < results.length) {
+                    e.preventDefault();
+                    if (navigateOnSelect) {
+                        window.location.href = results[selectedIdx].url;
+                    } else {
+                        input.value = results[selectedIdx].text;
+                        dropdown.style.display = 'none';
+                        const form = input.closest('form');
+                        if (form) form.submit();
+                    }
+                } else if (e.key === 'Escape') {
+                    dropdown.style.display = 'none';
+                }
+            });
+
+            input.addEventListener('focus', function() {
+                if (this.value.trim().length >= 2 && results.length) {
+                    createDropdown().style.display = 'block';
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (dropdown && !dropdown.contains(e.target) && e.target !== input) {
+                    dropdown.style.display = 'none';
+                }
+            });
+        });
+    }
+    initSearchAutocomplete();
+
     // Calendar grid: clickable cells for creating events
     const calendarCells = document.querySelectorAll('.calendar-cell-clickable');
     const calendarCreateUrl = document.querySelector('[data-calendar-create-url]');

@@ -7,8 +7,8 @@
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET">
-                <div class="input-group">
-                    {{ form.query(class="form-control form-control-lg", placeholder="Cerca per nome, username, società...") }}
+                <div class="input-group position-relative">
+                    {{ form.query(class="form-control form-control-lg", placeholder="Cerca per nome, username, società...", **{"data-autocomplete": "true", "data-autocomplete-scope": "users"}) }}
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search"></i> Cerca
                     </button>

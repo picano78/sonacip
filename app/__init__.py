@@ -671,6 +671,18 @@ def create_app(config_name: str | None = None) -> Flask:
         def translate(key):
             return t(key, user_lang)
 
+        def feature_enabled(feature_key):
+            if current_user and current_user.is_authenticated and current_user.is_admin():
+                return True
+            try:
+                from app.models import PlatformFeature
+                pf = PlatformFeature.query.filter_by(key=feature_key).first()
+                if pf and not pf.is_enabled:
+                    return False
+            except Exception:
+                pass
+            return True
+
         return {
             'can': can_fn,
             'appearance': appearance,
@@ -685,6 +697,7 @@ def create_app(config_name: str | None = None) -> Flask:
             'get_unread_messages_count': _get_unread_messages_count,
             't': translate,
             'user_lang': user_lang,
+            'feature_enabled': feature_enabled,
         }
 
     @app.after_request

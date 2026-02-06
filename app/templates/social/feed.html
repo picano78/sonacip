@@ -29,9 +29,11 @@
                     {{ form.hidden_tag() }}
                     {{ form.content(class="form-control mb-3", rows="3", placeholder="Cosa vuoi condividere?") }}
                     <div class="row g-2 align-items-center mb-2">
+                        {% if feature_enabled('photos') %}
                         <div class="col">
                             {{ form.image(class="form-control") }}
                         </div>
+                        {% endif %}
                         <div class="col-auto">
                             <div class="form-check mb-0">
                                 {{ form.is_public(class="form-check-input") }}
@@ -41,7 +43,9 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex gap-2 small text-muted">
+                            {% if feature_enabled('photos') %}
                             <span><i class="bi bi-image"></i> Media</span>
+                            {% endif %}
                             <span><i class="bi bi-geo"></i> Location</span>
                         </div>
                         <button type="submit" class="btn btn-dark">

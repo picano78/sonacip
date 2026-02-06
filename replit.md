@@ -148,6 +148,14 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-06: Month view: leading/trailing days from adjacent months shown in light gray
 - 2026-02-06: Month view: floating action button (FAB) for quick event creation
 - 2026-02-06: Month view: view switcher tabs (Giorno/Settimana/Mese) and facility filter
+- 2026-02-06: Created graphical Sidebar Menu Order admin page (/admin/menu-order) with drag-and-drop reordering
+- 2026-02-06: Menu order stored in CustomizationKV (scope=site, key=sidebar.menu_order) as JSON
+- 2026-02-06: 16 configurable menu items across main and bottom sections with visibility toggles
+- 2026-02-06: Server-side validation: only known menu IDs accepted, fixed items forced visible, missing items auto-appended
+- 2026-02-06: Sidebar template dynamically renders menu based on admin config with fallback to default order
+- 2026-02-06: Live preview panel shows sidebar state while editing
+- 2026-02-06: Reset to default button clears custom config
+- 2026-02-06: Added "Ordine Menu" link in admin dashboard Impostazioni Sistema section
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

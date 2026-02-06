@@ -614,6 +614,15 @@ def create_app(config_name: str | None = None) -> Flask:
             nav_row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='navbar.links').first()
             nav_links = nav_row.get_value(default=None) if nav_row else None
 
+            # Admin-configurable sidebar menu order
+            sidebar_menu_config = None
+            try:
+                menu_row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='sidebar.menu_order').first()
+                if menu_row:
+                    sidebar_menu_config = menu_row.get_value(default=None)
+            except Exception:
+                pass
+
             def _get_unread_notifications_count():
                 if not current_user.is_authenticated:
                     return 0
@@ -690,6 +699,7 @@ def create_app(config_name: str | None = None) -> Flask:
             'site': site,
             'page': page,
             'nav_links': nav_links,
+            'sidebar_menu_config': sidebar_menu_config,
             'society_scopes': society_scopes,
             'active_society': active_society,
             'active_society_id': active_society_id,

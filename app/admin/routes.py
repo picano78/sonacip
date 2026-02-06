@@ -71,7 +71,51 @@ from app.models import (
 )
 from datetime import datetime, timedelta
 import os
+import json
 from app.utils import log_action
+
+DEFAULT_SIDEBAR_MENU = [
+    {'id': 'dashboard', 'label': 'Cruscotto', 'icon': 'bi-speedometer2', 'endpoint': 'main.dashboard', 'feature': None, 'section': 'main', 'fixed': True},
+    {'id': 'planner', 'label': 'Planner', 'icon': 'bi-calendar-check', 'endpoint': 'calendar.grid', 'feature': 'planner', 'section': 'main'},
+    {'id': 'calendario', 'label': 'Calendario', 'icon': 'bi-calendar3-range', 'endpoint': 'calendar.index', 'feature': 'planner', 'section': 'main'},
+    {'id': 'social', 'label': 'Social', 'icon': 'bi-people-fill', 'endpoint': 'social.feed', 'feature': 'social_feed', 'section': 'main'},
+    {'id': 'esplora', 'label': 'Esplora', 'icon': 'bi-compass', 'endpoint': 'social.explore', 'feature': 'social_feed', 'section': 'main'},
+    {'id': 'eventi', 'label': 'Eventi', 'icon': 'bi-calendar-event', 'endpoint': 'events.index', 'feature': 'events', 'section': 'main', 'resource': 'events', 'action': 'view'},
+    {'id': 'tornei', 'label': 'Tornei', 'icon': 'bi-trophy', 'endpoint': 'tournaments.list_tournaments', 'feature': 'tournaments', 'section': 'main', 'resource': 'tournaments', 'action': 'view'},
+    {'id': 'marketplace', 'label': 'Marketplace', 'icon': 'bi-shop', 'endpoint': 'marketplace.index', 'feature': 'marketplace', 'section': 'main'},
+    {'id': 'crm', 'label': 'CRM', 'icon': 'bi-briefcase', 'endpoint': 'crm.index', 'feature': 'crm', 'section': 'main', 'resource': 'crm', 'action': 'access'},
+    {'id': 'analytics', 'label': 'Analytics', 'icon': 'bi-graph-up', 'endpoint': 'analytics.dashboard', 'feature': 'advanced_stats', 'section': 'main', 'resource': 'analytics', 'action': 'access'},
+    {'id': 'admin', 'label': 'Admin', 'icon': 'bi-gear-fill', 'endpoint': 'admin.dashboard', 'feature': None, 'section': 'main', 'resource': 'admin', 'action': 'access'},
+    {'id': 'cerca', 'label': 'Cerca', 'icon': 'bi-search', 'endpoint': 'social.search', 'feature': None, 'section': 'bottom'},
+    {'id': 'notifiche', 'label': 'Notifiche', 'icon': 'bi-bell-fill', 'endpoint': 'notifications.index', 'feature': 'notifications', 'section': 'bottom'},
+    {'id': 'messaggi', 'label': 'Messaggi', 'icon': 'bi-envelope', 'endpoint': 'messages.inbox', 'feature': 'messaging', 'section': 'bottom'},
+    {'id': 'assistenza', 'label': 'Assistenza', 'icon': 'bi-headset', 'endpoint': 'main.contact_admin', 'feature': None, 'section': 'bottom'},
+    {'id': 'guida', 'label': 'Guida', 'icon': 'bi-question-circle', 'endpoint': 'main.guide_user', 'feature': None, 'section': 'bottom'},
+]
+
+
+def _get_sidebar_menu_config():
+    row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='sidebar.menu_order').first()
+    if row:
+        saved = row.get_value(default=None)
+        if saved:
+            default_by_id = {item['id']: item for item in DEFAULT_SIDEBAR_MENU}
+            result = []
+            seen_ids = set()
+            for item in saved:
+                item_id = item.get('id')
+                if item_id in default_by_id:
+                    merged = dict(default_by_id[item_id])
+                    merged['visible'] = item.get('visible', True)
+                    merged['section'] = item.get('section', merged.get('section', 'main'))
+                    result.append(merged)
+                    seen_ids.add(item_id)
+            for item in DEFAULT_SIDEBAR_MENU:
+                if item['id'] not in seen_ids:
+                    item['visible'] = True
+                    result.append(item)
+            return result
+    return [dict(item, visible=True) for item in DEFAULT_SIDEBAR_MENU]
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -1954,3 +1998,80 @@ def chat_monitor_delete_message(message_id):
     return redirect(url_for('admin.chat_monitor_conversation',
                             user_a_id=min(sender_id, recipient_id),
                             user_b_id=max(sender_id, recipient_id)))
+
+
+@bp.route('/menu-order')
+@login_required
+@admin_required
+def menu_order():
+    menu_items = _get_sidebar_menu_config()
+    main_items = [i for i in menu_items if i.get('section') == 'main']
+    bottom_items = [i for i in menu_items if i.get('section') == 'bottom']
+    return render_template('admin/menu_order.html', main_items=main_items, bottom_items=bottom_items)
+
+
+@bp.route('/menu-order/save', methods=['POST'])
+@login_required
+@admin_required
+def menu_order_save():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Dati non validi'}), 400
+
+        valid_ids = {item['id'] for item in DEFAULT_SIDEBAR_MENU}
+        fixed_ids = {item['id'] for item in DEFAULT_SIDEBAR_MENU if item.get('fixed')}
+        default_sections = {item['id']: item['section'] for item in DEFAULT_SIDEBAR_MENU}
+
+        order_list = []
+        seen_ids = set()
+        for item in data.get('items', []):
+            item_id = item.get('id', '')
+            if item_id not in valid_ids or item_id in seen_ids:
+                continue
+            seen_ids.add(item_id)
+            visible = item.get('visible', True)
+            section = item.get('section', default_sections.get(item_id, 'main'))
+            if item_id in fixed_ids:
+                visible = True
+            order_list.append({
+                'id': item_id,
+                'visible': visible,
+                'section': section,
+            })
+
+        for default_item in DEFAULT_SIDEBAR_MENU:
+            if default_item['id'] not in seen_ids:
+                order_list.append({
+                    'id': default_item['id'],
+                    'visible': True,
+                    'section': default_item['section'],
+                })
+
+        row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='sidebar.menu_order').first()
+        if not row:
+            row = CustomizationKV(scope='site', scope_key=None, key='sidebar.menu_order')
+            db.session.add(row)
+        row.set_value(order_list)
+        row.updated_by = current_user.id
+        row.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        log_action('update_menu_order', 'CustomizationKV', row.id, 'Updated sidebar menu order')
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/menu-order/reset', methods=['POST'])
+@login_required
+@admin_required
+def menu_order_reset():
+    row = CustomizationKV.query.filter_by(scope='site', scope_key=None, key='sidebar.menu_order').first()
+    if row:
+        db.session.delete(row)
+        db.session.commit()
+    log_action('reset_menu_order', 'CustomizationKV', 0, 'Reset sidebar menu order to default')
+    flash('Ordine menu ripristinato ai valori predefiniti.', 'success')
+    return redirect(url_for('admin.menu_order'))

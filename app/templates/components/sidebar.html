@@ -7,8 +7,117 @@
     </div>
     
     {% if current_user.is_authenticated %}
+    {% set menu_cfg = sidebar_menu_config %}
     <nav class="sidebar-nav">
         <ul class="sidebar-menu">
+            {% if menu_cfg %}
+                {% for item in menu_cfg %}
+                    {% if item.get('section', 'main') == 'main' and item.get('visible', true) %}
+                        {% set item_id = item.get('id', '') %}
+                        {% set feature_key = None %}
+                        {% set res = None %}
+                        {% set act = None %}
+                        {% if item_id == 'dashboard' %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('main.dashboard') }}" class="sidebar-link" data-tooltip="Cruscotto" title="Cruscotto">
+                                    <i class="bi bi-speedometer2"></i>
+                                    <span class="sidebar-text">Cruscotto</span>
+                                </a>
+                            </li>
+                        {% elif item_id == 'planner' %}
+                            {% if feature_enabled('planner') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner" title="Planner">
+                                    <i class="bi bi-calendar-check"></i>
+                                    <span class="sidebar-text">Planner</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'calendario' %}
+                            {% if feature_enabled('planner') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('calendar.index') }}" class="sidebar-link" data-tooltip="Calendario Società" title="Calendario Società">
+                                    <i class="bi bi-calendar3-range"></i>
+                                    <span class="sidebar-text">Calendario</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'social' %}
+                            {% if feature_enabled('social_feed') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('social.feed') }}" class="sidebar-link" data-tooltip="Social" title="Social">
+                                    <i class="bi bi-people-fill"></i>
+                                    <span class="sidebar-text">Social</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'esplora' %}
+                            {% if feature_enabled('social_feed') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('social.explore') }}" class="sidebar-link" data-tooltip="Esplora" title="Esplora">
+                                    <i class="bi bi-compass"></i>
+                                    <span class="sidebar-text">Esplora</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'eventi' %}
+                            {% if feature_enabled('events') and can('events', 'view') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('events.index') }}" class="sidebar-link" data-tooltip="Eventi" title="Eventi">
+                                    <i class="bi bi-calendar-event"></i>
+                                    <span class="sidebar-text">Eventi</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'tornei' %}
+                            {% if feature_enabled('tournaments') and can('tournaments', 'view') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('tournaments.list_tournaments') }}" class="sidebar-link" data-tooltip="Tornei" title="Tornei">
+                                    <i class="bi bi-trophy"></i>
+                                    <span class="sidebar-text">Tornei</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'marketplace' %}
+                            {% if feature_enabled('marketplace') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('marketplace.index') }}" class="sidebar-link" data-tooltip="Marketplace" title="Marketplace">
+                                    <i class="bi bi-shop"></i>
+                                    <span class="sidebar-text">Marketplace</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'crm' %}
+                            {% if feature_enabled('crm') and can('crm', 'access') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('crm.index') }}" class="sidebar-link" data-tooltip="CRM" title="CRM">
+                                    <i class="bi bi-briefcase"></i>
+                                    <span class="sidebar-text">CRM</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'analytics' %}
+                            {% if feature_enabled('advanced_stats') and can('analytics', 'access') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('analytics.dashboard') }}" class="sidebar-link" data-tooltip="Analytics" title="Analytics">
+                                    <i class="bi bi-graph-up"></i>
+                                    <span class="sidebar-text">Analytics</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'admin' %}
+                            {% if can('admin', 'access') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link" data-tooltip="Admin" title="Admin">
+                                    <i class="bi bi-gear-fill"></i>
+                                    <span class="sidebar-text">Admin</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            {% else %}
             <li class="sidebar-item">
                 <a href="{{ url_for('main.dashboard') }}" class="sidebar-link" data-tooltip="Cruscotto" title="Cruscotto">
                     <i class="bi bi-speedometer2"></i>
@@ -121,11 +230,67 @@
                     </li>
                 {% endif %}
             {% endif %}
+            {% endif %}
         </ul>
         
         <div class="sidebar-divider"></div>
         
         <ul class="sidebar-menu sidebar-menu-bottom">
+            {% if menu_cfg %}
+                {% for item in menu_cfg %}
+                    {% if item.get('section', 'main') == 'bottom' and item.get('visible', true) %}
+                        {% set item_id = item.get('id', '') %}
+                        {% if item_id == 'cerca' %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('social.search') }}" class="sidebar-link" data-tooltip="Cerca" title="Cerca">
+                                    <i class="bi bi-search"></i>
+                                    <span class="sidebar-text">Cerca</span>
+                                </a>
+                            </li>
+                        {% elif item_id == 'notifiche' %}
+                            {% if feature_enabled('notifications') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('notifications.index') }}" class="sidebar-link position-relative" data-tooltip="Notifiche" title="Notifiche">
+                                    <i class="bi bi-bell-fill"></i>
+                                    <span class="sidebar-text">Notifiche</span>
+                                    {% set unread_count = get_unread_notifications_count() %}
+                                    {% if unread_count > 0 %}
+                                        <span class="sidebar-badge">{{ unread_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'messaggi' %}
+                            {% if feature_enabled('messaging') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('messages.inbox') }}" class="sidebar-link position-relative" data-tooltip="Messaggi" title="Messaggi">
+                                    <i class="bi bi-envelope"></i>
+                                    <span class="sidebar-text">Messaggi</span>
+                                    {% set unread_msgs = get_unread_messages_count() %}
+                                    {% if unread_msgs > 0 %}
+                                        <span class="sidebar-badge">{{ unread_msgs }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% elif item_id == 'assistenza' %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('main.contact_admin') }}" class="sidebar-link" data-tooltip="Assistenza" title="Assistenza">
+                                    <i class="bi bi-headset"></i>
+                                    <span class="sidebar-text">Assistenza</span>
+                                </a>
+                            </li>
+                        {% elif item_id == 'guida' %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('main.guide_user') }}" class="sidebar-link" data-tooltip="Guida" title="Guida">
+                                    <i class="bi bi-question-circle"></i>
+                                    <span class="sidebar-text">Guida</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            {% else %}
             <li class="sidebar-item">
                 <a href="{{ url_for('social.search') }}" class="sidebar-link" data-tooltip="Cerca" title="Cerca">
                     <i class="bi bi-search"></i>
@@ -156,6 +321,7 @@
                 </a>
             </li>
             {% endif %}
+            {% endif %}
             <li class="sidebar-item">
                 <button class="sidebar-link sidebar-btn" type="button" data-theme-toggle data-tooltip="Tema" title="Tema">
                     <i class="bi bi-moon"></i>
@@ -171,18 +337,6 @@
                         <i class="bi bi-person-circle"></i>
                     {% endif %}
                     <span class="sidebar-text">{{ current_user.get_full_name() }}</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a href="{{ url_for('main.contact_admin') }}" class="sidebar-link" data-tooltip="Assistenza" title="Assistenza">
-                    <i class="bi bi-headset"></i>
-                    <span class="sidebar-text">Assistenza</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a href="{{ url_for('main.guide_user') }}" class="sidebar-link" data-tooltip="Guida" title="Guida">
-                    <i class="bi bi-question-circle"></i>
-                    <span class="sidebar-text">Guida</span>
                 </a>
             </li>
             <li class="sidebar-item">

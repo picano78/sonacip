@@ -97,6 +97,27 @@
                 </div>
                 <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="btn btn-sm btn-dark w-100">Vedi Profilo</a>
             </div>
+            <a href="{{ url_for('marketplace.index') }}" class="text-decoration-none d-block mb-3">
+                <div class="glass-card p-3 card-hover" style="background: linear-gradient(135deg, #1877f2, #0a4da3); color: #fff; border: none;">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <div style="width:44px; height:44px; background:rgba(255,255,255,0.2); border-radius:12px; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-shop-window" style="font-size:1.4rem;"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold" style="font-size:1.05rem;">Marketplace</div>
+                            <div class="small" style="opacity:0.85;">Compra e vendi nella community</div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <span class="btn btn-sm btn-light fw-semibold" style="pointer-events:none;">
+                            <i class="bi bi-plus-lg me-1"></i> Vendi qualcosa
+                        </span>
+                        <span class="btn btn-sm btn-outline-light" style="pointer-events:none;">
+                            <i class="bi bi-search me-1"></i> Sfoglia
+                        </span>
+                    </div>
+                </div>
+            </a>
             {% if sidebar_ad and sidebar_ad_token %}
               {% set ad = sidebar_ad %}
               {% set ad_token = sidebar_ad_token %}
@@ -105,6 +126,7 @@
             <div class="glass-card p-3 card-hover">
                 <div class="fw-semibold mb-2">Azioni rapide</div>
                 <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('marketplace.index') }}"><i class="bi bi-shop-window"></i> Marketplace</a>
                     <a class="btn btn-sm btn-outline-dark" href="{{ url_for('calendar.index') }}"><i class="bi bi-calendar-event"></i> Eventi</a>
                     <a class="btn btn-sm btn-outline-dark" href="{{ url_for('tournaments.list_tournaments') }}"><i class="bi bi-trophy"></i> Tornei</a>
                     <a class="btn btn-sm btn-outline-dark" href="{{ url_for('messages.inbox') }}"><i class="bi bi-chat"></i> Messaggi</a>

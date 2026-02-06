@@ -82,6 +82,11 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 
 - 2026-02-06: Added PlatformFeature model for super admin control of premium/free features
 - 2026-02-06: Created graphical Feature Control panel with toggle switches for all 24 site features
+- 2026-02-06: Added MarketplaceListing model for user sale ads (Facebook Marketplace style)
+- 2026-02-06: Created full Marketplace with listing creation, detail, edit, search, categories, and my-listings
+- 2026-02-06: Added prominent Marketplace button in Social feed sidebar with blue gradient card
+- 2026-02-06: Marketplace features: 9 categories, 5 conditions, multi-image upload, lightbox, similar items
+- 2026-02-06: Added Marketplace quick action button in Social feed sidebar
 - 2026-02-06: Updated has_feature() to check PlatformFeature settings (free features bypass subscription)
 - 2026-02-06: Added Feature Control section to admin dashboard with highlighted link
 - 2026-02-06: Features organized by category: Social, Media, Business, Organizzazione, Comunicazione, Supporto, Sicurezza

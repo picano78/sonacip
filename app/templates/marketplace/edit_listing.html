@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Modifica Annuncio - Marketplace{% endblock %}
+{% block content %}
+<style>
+.edit-hero {
+    background: linear-gradient(135deg, #1877f2, #0a4da3);
+    color: #fff;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+.edit-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.edit-card h5 { font-weight: 700; margin-bottom: 1rem; }
+.img-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+.img-edit-slot {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    background: #f7f8fa;
+    border: 2px dashed #dadde1;
+}
+.img-edit-slot.has-image { border-style: solid; border-color: #1877f2; }
+.img-edit-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.img-edit-slot .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.img-edit-slot:hover .overlay { opacity: 1; }
+.img-edit-slot .overlay label,
+.img-edit-slot .overlay button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    font-size: 1rem;
+}
+.img-edit-slot .overlay label { background: #1877f2; color: #fff; }
+.img-edit-slot .overlay button { background: #d93025; color: #fff; }
+.img-edit-slot .empty-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    cursor: pointer;
+    color: #65676b;
+}
+.img-edit-slot .empty-slot i { font-size: 1.5rem; color: #1877f2; }
+.img-edit-slot input[type="file"] { display: none; }
+@media (max-width: 576px) {
+    .img-edit-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+
+<div class="container py-3" style="max-width: 700px;">
+    <div class="edit-hero">
+        <h1 class="h4 mb-1"><i class="bi bi-pencil-square me-2"></i>Modifica annuncio</h1>
+        <p class="mb-0 small opacity-75">{{ listing.title }}</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="edit-card">
+            <h5><i class="bi bi-camera me-2"></i>Foto</h5>
+            <div class="img-edit-grid">
+                {% for i in range(1, 5) %}
+                    {% set current_img = listing['image_' ~ i] if listing['image_' ~ i] is defined else none %}
+                    {% if i == 1 %}{% set current_img = listing.image_1 %}
+                    {% elif i == 2 %}{% set current_img = listing.image_2 %}
+                    {% elif i == 3 %}{% set current_img = listing.image_3 %}
+                    {% elif i == 4 %}{% set current_img = listing.image_4 %}
+                    {% endif %}
+                    <div class="img-edit-slot {{ 'has-image' if current_img }}">
+                        {% if current_img %}
+                            <img src="{{ url_for('static', filename='uploads/' + current_img) }}" alt="Foto {{ i }}">
+                            <div class="overlay">
+                                <label title="Sostituisci">
+                                    <i class="bi bi-camera-fill"></i>
+                                    <input type="file" name="image_{{ i }}" accept="image/*">
+                                </label>
+                                <button type="submit" name="remove_image_{{ i }}" value="1" title="Rimuovi" 
+                                        onclick="return confirm('Rimuovere questa foto?')">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </div>
+                        {% else %}
+                            <label class="empty-slot">
+                                <i class="bi bi-camera-fill"></i>
+                                <span class="small">Aggiungi</span>
+                                <input type="file" name="image_{{ i }}" accept="image/*">
+                            </label>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="edit-card">
+            <h5><i class="bi bi-tag me-2"></i>Dettagli</h5>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Titolo</label>
+                <input type="text" name="title" class="form-control form-control-lg" 
+                       value="{{ listing.title }}" required minlength="3" maxlength="200">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Prezzo</label>
+                <div class="input-group">
+                    <span class="input-group-text fw-bold">&euro;</span>
+                    <input type="number" name="price" class="form-control form-control-lg" 
+                           value="{{ listing.price }}" step="0.01" min="0" required>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Categoria</label>
+                    <select name="category" class="form-select">
+                        {% for key, label in categories %}
+                            <option value="{{ key }}" {{ 'selected' if listing.category == key }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Condizione</label>
+                    <select name="condition" class="form-select">
+                        {% for key, label in conditions %}
+                            <option value="{{ key }}" {{ 'selected' if listing.condition == key }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Luogo</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                    <input type="text" name="location" class="form-control" 
+                           value="{{ listing.location or '' }}">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Descrizione</label>
+                <textarea name="description" class="form-control" rows="5">{{ listing.description or '' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Stato annuncio</label>
+                <select name="status" class="form-select">
+                    <option value="active" {{ 'selected' if listing.status == 'active' }}>Attivo</option>
+                    <option value="paused" {{ 'selected' if listing.status == 'paused' }}>In pausa</option>
+                    <option value="sold" {{ 'selected' if listing.status == 'sold' }}>Venduto</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-between">
+            <a href="{{ url_for('marketplace.listing_detail', listing_id=listing.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Annulla
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg px-4">
+                <i class="bi bi-check-lg me-1"></i> Salva Modifiche
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

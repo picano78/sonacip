@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}Marketplace - SONACIP{% endblock %}
+{% block content %}
+<style>
+:root {
+    --mp-primary: #1877f2;
+    --mp-primary-dark: #166fe5;
+    --mp-bg: #f0f2f5;
+    --mp-card-bg: #ffffff;
+    --mp-text: #1c1e21;
+    --mp-muted: #65676b;
+    --mp-border: #dadde1;
+    --mp-green: #31a24c;
+    --mp-sold: #e4e6eb;
+}
+.mp-hero {
+    background: linear-gradient(135deg, var(--mp-primary), #0a4da3);
+    color: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+.mp-hero h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+.mp-hero p { opacity: 0.9; margin-bottom: 0; }
+.mp-search-bar {
+    background: var(--mp-card-bg);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+}
+.mp-categories {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+.mp-cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 20px;
+    background: var(--mp-card-bg);
+    color: var(--mp-text);
+    border: 1px solid var(--mp-border);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.mp-cat-chip:hover { border-color: var(--mp-primary); color: var(--mp-primary); }
+.mp-cat-chip.active { background: var(--mp-primary); color: #fff; border-color: var(--mp-primary); }
+.mp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+.mp-card {
+    background: var(--mp-card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+.mp-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: inherit; text-decoration: none; }
+.mp-card-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: #e4e6eb;
+}
+.mp-card-img-placeholder {
+    width: 100%;
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, #e4e6eb, #d8dadf);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bcc0c4;
+    font-size: 3rem;
+}
+.mp-card-body { padding: 0.75rem 1rem; }
+.mp-card-price { font-size: 1.1rem; font-weight: 700; color: var(--mp-text); margin-bottom: 0.15rem; }
+.mp-card-title { font-size: 0.9rem; color: var(--mp-muted); margin-bottom: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-card-location { font-size: 0.8rem; color: var(--mp-muted); }
+.mp-card-location i { font-size: 0.7rem; }
+.mp-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: var(--mp-card-bg);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.mp-empty i { font-size: 4rem; color: #bcc0c4; margin-bottom: 1rem; }
+.mp-fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--mp-primary);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 12px rgba(24,119,242,0.4);
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+}
+.mp-fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(24,119,242,0.5); color: #fff; }
+@media (max-width: 768px) {
+    .mp-grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+    .mp-hero { padding: 1.25rem; }
+    .mp-hero h1 { font-size: 1.35rem; }
+    .mp-fab { bottom: 5rem; right: 1rem; }
+}
+</style>
+
+<div class="container-fluid px-3 px-md-4 py-3">
+    <div class="mp-hero d-flex flex-wrap justify-content-between align-items-center">
+        <div>
+            <h1><i class="bi bi-shop-window me-2"></i>Marketplace</h1>
+            <p>Compra e vendi nella tua community sportiva</p>
+        </div>
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <a href="{{ url_for('marketplace.create_listing') }}" class="btn btn-light fw-semibold">
+                <i class="bi bi-plus-lg me-1"></i> Vendi qualcosa
+            </a>
+            <a href="{{ url_for('marketplace.my_listings') }}" class="btn btn-outline-light">
+                <i class="bi bi-box-seam me-1"></i> I miei annunci
+            </a>
+        </div>
+    </div>
+
+    <div class="mp-search-bar">
+        <form method="GET" action="{{ url_for('marketplace.index') }}" class="d-flex gap-2">
+            <div class="input-group flex-grow-1">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control border-start-0" 
+                       placeholder="Cerca nel Marketplace..." value="{{ search_q }}">
+            </div>
+            {% if current_category %}
+                <input type="hidden" name="category" value="{{ current_category }}">
+            {% endif %}
+            <button type="submit" class="btn btn-primary">Cerca</button>
+        </form>
+    </div>
+
+    <div class="mp-categories">
+        <a href="{{ url_for('marketplace.index') }}" 
+           class="mp-cat-chip {{ 'active' if not current_category }}">
+            <i class="bi bi-grid-3x3-gap"></i> Tutti
+        </a>
+        {% for key, label in categories %}
+            <a href="{{ url_for('marketplace.index', category=key) }}" 
+               class="mp-cat-chip {{ 'active' if current_category == key }}">
+                {{ label }}
+            </a>
+        {% endfor %}
+    </div>
+
+    {% if listings %}
+        <div class="mp-grid">
+            {% for item in listings %}
+                <a href="{{ url_for('marketplace.listing_detail', listing_id=item.id) }}" class="mp-card">
+                    {% if item.image_1 %}
+                        <img src="{{ url_for('static', filename='uploads/' + item.image_1) }}" 
+                             class="mp-card-img" alt="{{ item.title }}" loading="lazy">
+                    {% else %}
+                        <div class="mp-card-img-placeholder">
+                            <i class="bi bi-image"></i>
+                        </div>
+                    {% endif %}
+                    <div class="mp-card-body">
+                        <div class="mp-card-price">
+                            {% if item.price == 0 %}
+                                Gratis
+                            {% else %}
+                                &euro;{{ "%.2f"|format(item.price) }}
+                            {% endif %}
+                        </div>
+                        <div class="mp-card-title">{{ item.title }}</div>
+                        {% if item.location %}
+                            <div class="mp-card-location">
+                                <i class="bi bi-geo-alt-fill"></i> {{ item.location }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+
+        {% if pagination.pages > 1 %}
+            <nav class="mt-4 d-flex justify-content-center">
+                <ul class="pagination">
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('marketplace.index', page=pagination.prev_num, category=current_category, q=search_q) }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                <a class="page-link" href="{{ url_for('marketplace.index', page=page_num, category=current_category, q=search_q) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('marketplace.index', page=pagination.next_num, category=current_category, q=search_q) }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="mp-empty">
+            <i class="bi bi-shop-window d-block"></i>
+            <h5 class="fw-bold">Nessun annuncio trovato</h5>
+            <p class="text-muted mb-3">
+                {% if search_q or current_category %}
+                    Prova a modificare i filtri o la ricerca.
+                {% else %}
+                    Sii il primo a pubblicare un annuncio nel Marketplace!
+                {% endif %}
+            </p>
+            <a href="{{ url_for('marketplace.create_listing') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Pubblica un annuncio
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<a href="{{ url_for('marketplace.create_listing') }}" class="mp-fab d-md-none" title="Vendi qualcosa">
+    <i class="bi bi-plus-lg"></i>
+</a>
+{% endblock %}

@@ -1,16 +1,24 @@
 """
 Marketplace routes
-Sellable packages of templates/workflows.
+- User listings (annunci di vendita) – Facebook Marketplace style
+- Admin packages (internal marketplace for templates/workflows)
 """
 from __future__ import annotations
 
+import os
+import uuid
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
+from PIL import Image
 
 from app import db
-from app.models import MarketplacePackage, MarketplacePackageItem, MarketplacePurchase, Template, Payment
+from app.models import (
+    MarketplacePackage, MarketplacePackageItem, MarketplacePurchase,
+    MarketplaceListing, Template, Payment
+)
 from app.utils import admin_required, check_permission, log_action
 from app.subscription.stripe_utils import stripe_enabled, create_marketplace_checkout_session
 from app.marketplace.utils import install_purchase
@@ -18,9 +26,238 @@ from app.marketplace.utils import install_purchase
 
 bp = Blueprint("marketplace", __name__, url_prefix="/marketplace")
 
+ALLOWED_IMAGE_EXT = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+
+def _allowed_image(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXT
+
+
+def _save_listing_image(file_storage):
+    if not file_storage or not file_storage.filename:
+        return None
+    if not _allowed_image(file_storage.filename):
+        return None
+    upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, '..', 'uploads')), 'marketplace')
+    os.makedirs(upload_dir, exist_ok=True)
+    ext = file_storage.filename.rsplit('.', 1)[1].lower()
+    unique_name = f"{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(upload_dir, unique_name)
+    try:
+        img = Image.open(file_storage)
+        if img.mode in ('RGBA', 'LA'):
+            img = img.convert('RGB')
+        img.thumbnail((1200, 1200))
+        img.save(filepath, quality=85, optimize=True)
+    except Exception:
+        file_storage.seek(0)
+        file_storage.save(filepath)
+    return f"marketplace/{unique_name}"
+
 
 @bp.route("/")
+@login_required
 def index():
+    category = request.args.get('category', '')
+    search_q = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+
+    query = MarketplaceListing.query.filter_by(status='active')
+
+    if category:
+        query = query.filter_by(category=category)
+    if search_q:
+        query = query.filter(
+            db.or_(
+                MarketplaceListing.title.ilike(f'%{search_q}%'),
+                MarketplaceListing.description.ilike(f'%{search_q}%'),
+                MarketplaceListing.location.ilike(f'%{search_q}%'),
+            )
+        )
+
+    query = query.order_by(MarketplaceListing.created_at.desc())
+    pagination = query.paginate(page=page, per_page=12, error_out=False)
+    listings = pagination.items
+
+    categories = MarketplaceListing.CATEGORIES
+
+    return render_template(
+        "marketplace/listings.html",
+        listings=listings,
+        pagination=pagination,
+        categories=categories,
+        current_category=category,
+        search_q=search_q,
+    )
+
+
+@bp.route("/create", methods=["GET", "POST"])
+@login_required
+def create_listing():
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        category = request.form.get("category", "altro")
+        condition = request.form.get("condition", "usato")
+        location = (request.form.get("location") or "").strip()
+
+        try:
+            price = float(request.form.get("price") or 0)
+        except (ValueError, TypeError):
+            price = 0.0
+
+        if not title or len(title) < 3:
+            flash("Il titolo deve avere almeno 3 caratteri.", "danger")
+            return redirect(url_for("marketplace.create_listing"))
+
+        if price < 0:
+            flash("Il prezzo non può essere negativo.", "danger")
+            return redirect(url_for("marketplace.create_listing"))
+
+        images = {}
+        for i in range(1, 5):
+            f = request.files.get(f"image_{i}")
+            if f and f.filename:
+                saved = _save_listing_image(f)
+                if saved:
+                    images[f"image_{i}"] = saved
+
+        listing = MarketplaceListing(
+            user_id=current_user.id,
+            title=title,
+            description=description,
+            price=price,
+            category=category,
+            condition=condition,
+            location=location,
+            image_1=images.get("image_1"),
+            image_2=images.get("image_2"),
+            image_3=images.get("image_3"),
+            image_4=images.get("image_4"),
+        )
+        db.session.add(listing)
+        db.session.commit()
+        log_action("marketplace_listing_create", "MarketplaceListing", listing.id, f"title={title}")
+        flash("Annuncio pubblicato!", "success")
+        return redirect(url_for("marketplace.listing_detail", listing_id=listing.id))
+
+    categories = MarketplaceListing.CATEGORIES
+    conditions = MarketplaceListing.CONDITIONS
+    return render_template("marketplace/create_listing.html", categories=categories, conditions=conditions)
+
+
+@bp.route("/listing/<int:listing_id>")
+@login_required
+def listing_detail(listing_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    if listing.status != 'active' and listing.user_id != current_user.id and not getattr(current_user, 'is_super_admin', False):
+        abort(404)
+    if listing.user_id != current_user.id:
+        listing.views_count = (listing.views_count or 0) + 1
+        db.session.commit()
+
+    seller_listings = MarketplaceListing.query.filter(
+        MarketplaceListing.user_id == listing.user_id,
+        MarketplaceListing.id != listing.id,
+        MarketplaceListing.status == 'active'
+    ).order_by(MarketplaceListing.created_at.desc()).limit(4).all()
+
+    similar = MarketplaceListing.query.filter(
+        MarketplaceListing.category == listing.category,
+        MarketplaceListing.id != listing.id,
+        MarketplaceListing.status == 'active'
+    ).order_by(MarketplaceListing.created_at.desc()).limit(4).all()
+
+    return render_template(
+        "marketplace/listing_detail.html",
+        listing=listing,
+        seller_listings=seller_listings,
+        similar=similar,
+    )
+
+
+@bp.route("/listing/<int:listing_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_listing(listing_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    if listing.user_id != current_user.id and not getattr(current_user, 'is_super_admin', False):
+        abort(403)
+
+    if request.method == "POST":
+        listing.title = (request.form.get("title") or listing.title).strip()
+        listing.description = (request.form.get("description") or "").strip()
+        listing.category = request.form.get("category", listing.category)
+        listing.condition = request.form.get("condition", listing.condition)
+        listing.location = (request.form.get("location") or "").strip()
+
+        try:
+            listing.price = float(request.form.get("price") or 0)
+        except (ValueError, TypeError):
+            pass
+
+        for i in range(1, 5):
+            f = request.files.get(f"image_{i}")
+            if f and f.filename:
+                saved = _save_listing_image(f)
+                if saved:
+                    setattr(listing, f"image_{i}", saved)
+            if request.form.get(f"remove_image_{i}"):
+                setattr(listing, f"image_{i}", None)
+
+        new_status = request.form.get("status")
+        if new_status in ('active', 'sold', 'paused'):
+            listing.status = new_status
+
+        db.session.commit()
+        flash("Annuncio aggiornato.", "success")
+        return redirect(url_for("marketplace.listing_detail", listing_id=listing.id))
+
+    categories = MarketplaceListing.CATEGORIES
+    conditions = MarketplaceListing.CONDITIONS
+    return render_template("marketplace/edit_listing.html", listing=listing, categories=categories, conditions=conditions)
+
+
+@bp.route("/listing/<int:listing_id>/delete", methods=["POST"])
+@login_required
+def delete_listing(listing_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    if listing.user_id != current_user.id and not getattr(current_user, 'is_super_admin', False):
+        abort(403)
+    db.session.delete(listing)
+    db.session.commit()
+    log_action("marketplace_listing_delete", "MarketplaceListing", listing_id, f"title={listing.title}")
+    flash("Annuncio eliminato.", "success")
+    return redirect(url_for("marketplace.my_listings"))
+
+
+@bp.route("/listing/<int:listing_id>/sold", methods=["POST"])
+@login_required
+def mark_sold(listing_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    if listing.user_id != current_user.id:
+        abort(403)
+    listing.status = 'sold'
+    db.session.commit()
+    flash("Annuncio contrassegnato come venduto.", "success")
+    return redirect(url_for("marketplace.my_listings"))
+
+
+@bp.route("/my-listings")
+@login_required
+def my_listings():
+    status_filter = request.args.get('status', '')
+    query = MarketplaceListing.query.filter_by(user_id=current_user.id)
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    listings = query.order_by(MarketplaceListing.created_at.desc()).all()
+    return render_template("marketplace/my_listings.html", listings=listings, status_filter=status_filter)
+
+
+# =============================================================
+# Legacy: Admin Packages (templates/workflows marketplace)
+# =============================================================
+@bp.route("/packages")
+def packages_index():
     packages = (
         MarketplacePackage.query.filter_by(is_active=True)
         .order_by(MarketplacePackage.display_order.asc(), MarketplacePackage.created_at.desc())
@@ -29,7 +266,7 @@ def index():
     return render_template("marketplace/index.html", packages=packages)
 
 
-@bp.route("/<string:slug>")
+@bp.route("/packages/<string:slug>")
 def detail(slug: str):
     pkg = MarketplacePackage.query.filter_by(slug=slug).first_or_404()
     items = pkg.items.all()
@@ -42,9 +279,8 @@ def buy(package_id: int):
     pkg = MarketplacePackage.query.get_or_404(package_id)
     if not pkg.is_active:
         flash("Pacchetto non disponibile.", "warning")
-        return redirect(url_for("marketplace.index"))
+        return redirect(url_for("marketplace.packages_index"))
 
-    # Society-scoped purchase when operating as a society
     society = current_user.get_primary_society()
     scope_society_id = society.id if society else None
 
@@ -81,7 +317,6 @@ def buy(package_id: int):
         flash("Pacchetto aggiunto.", "success")
         return redirect(url_for("marketplace.my_purchases"))
 
-    # Stripe one-time checkout if configured and package has stripe price id
     if stripe_enabled() and pkg.stripe_price_one_time_id:
         try:
             success_url = url_for("marketplace.my_purchases", _external=True) + "?success=1"
@@ -96,7 +331,6 @@ def buy(package_id: int):
         except Exception as exc:
             flash(f"Stripe non disponibile: {exc}", "warning")
 
-    # Local fallback payment
     payment = Payment(
         user_id=current_user.id,
         society_id=scope_society_id,
@@ -151,9 +385,6 @@ def install(purchase_id: int):
     return redirect(url_for("marketplace.my_purchases"))
 
 
-# -----------------------
-# Admin management
-# -----------------------
 @bp.route("/admin", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -234,4 +465,3 @@ def admin_toggle(package_id: int):
     log_action("marketplace_package_toggle", "MarketplacePackage", pkg.id, f"active={pkg.is_active}")
     flash("Pacchetto aggiornato.", "success")
     return redirect(url_for("marketplace.admin_packages"))
-

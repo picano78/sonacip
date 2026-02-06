@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}I Miei Annunci - Marketplace{% endblock %}
+{% block content %}
+<style>
+.my-hero {
+    background: linear-gradient(135deg, #1877f2, #0a4da3);
+    color: #fff;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+.my-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+.my-card:hover { transform: translateY(-2px); }
+.my-card-inner { display: flex; }
+.my-card-img {
+    width: 140px;
+    min-height: 120px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+.my-card-img-placeholder {
+    width: 140px;
+    min-height: 120px;
+    flex-shrink: 0;
+    background: #e4e6eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bcc0c4;
+    font-size: 2rem;
+}
+.my-card-body {
+    padding: 1rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.my-card-title {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+.my-card-price { font-weight: 700; color: #1877f2; font-size: 1.1rem; }
+.my-card-meta { font-size: 0.8rem; color: #65676b; }
+.status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.status-active { background: #e6f4ea; color: #137333; }
+.status-sold { background: #fce8e6; color: #d93025; }
+.status-paused { background: #fef7e0; color: #b06000; }
+.filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+.filter-tab {
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    border: 1px solid #dadde1;
+    color: #65676b;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.filter-tab:hover { border-color: #1877f2; color: #1877f2; }
+.filter-tab.active { background: #1877f2; color: #fff; border-color: #1877f2; }
+.my-empty {
+    text-align: center;
+    padding: 3rem;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.my-empty i { font-size: 3.5rem; color: #bcc0c4; }
+@media (max-width: 576px) {
+    .my-card-inner { flex-direction: column; }
+    .my-card-img,
+    .my-card-img-placeholder { width: 100%; min-height: 160px; }
+}
+</style>
+
+<div class="container py-3" style="max-width: 800px;">
+    <div class="my-hero d-flex flex-wrap justify-content-between align-items-center">
+        <div>
+            <h1 class="h4 mb-1"><i class="bi bi-box-seam me-2"></i>I Miei Annunci</h1>
+            <p class="mb-0 small opacity-75">Gestisci i tuoi articoli in vendita</p>
+        </div>
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <a href="{{ url_for('marketplace.create_listing') }}" class="btn btn-light fw-semibold">
+                <i class="bi bi-plus-lg me-1"></i> Nuovo annuncio
+            </a>
+            <a href="{{ url_for('marketplace.index') }}" class="btn btn-outline-light">
+                <i class="bi bi-shop-window me-1"></i> Marketplace
+            </a>
+        </div>
+    </div>
+
+    <div class="filter-tabs">
+        <a href="{{ url_for('marketplace.my_listings') }}" 
+           class="filter-tab {{ 'active' if not status_filter }}">Tutti</a>
+        <a href="{{ url_for('marketplace.my_listings', status='active') }}" 
+           class="filter-tab {{ 'active' if status_filter == 'active' }}">Attivi</a>
+        <a href="{{ url_for('marketplace.my_listings', status='sold') }}" 
+           class="filter-tab {{ 'active' if status_filter == 'sold' }}">Venduti</a>
+        <a href="{{ url_for('marketplace.my_listings', status='paused') }}" 
+           class="filter-tab {{ 'active' if status_filter == 'paused' }}">In pausa</a>
+    </div>
+
+    {% if listings %}
+        {% for item in listings %}
+            <div class="my-card">
+                <div class="my-card-inner">
+                    <a href="{{ url_for('marketplace.listing_detail', listing_id=item.id) }}">
+                        {% if item.image_1 %}
+                            <img src="{{ url_for('static', filename='uploads/' + item.image_1) }}" 
+                                 class="my-card-img" alt="{{ item.title }}" loading="lazy">
+                        {% else %}
+                            <div class="my-card-img-placeholder">
+                                <i class="bi bi-image"></i>
+                            </div>
+                        {% endif %}
+                    </a>
+                    <div class="my-card-body">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <a href="{{ url_for('marketplace.listing_detail', listing_id=item.id) }}" 
+                                   class="my-card-title text-decoration-none text-dark">{{ item.title }}</a>
+                                <span class="status-badge status-{{ item.status }}">
+                                    {% if item.status == 'active' %}Attivo
+                                    {% elif item.status == 'sold' %}Venduto
+                                    {% elif item.status == 'paused' %}In pausa
+                                    {% else %}{{ item.status }}{% endif %}
+                                </span>
+                            </div>
+                            <div class="my-card-price">
+                                {% if item.price == 0 %}Gratis{% else %}&euro;{{ "%.2f"|format(item.price) }}{% endif %}
+                            </div>
+                            <div class="my-card-meta">
+                                <i class="bi bi-eye"></i> {{ item.views_count or 0 }} visualizzazioni &middot;
+                                <i class="bi bi-clock"></i> {{ item.created_at.strftime('%d/%m/%Y') }}
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <a href="{{ url_for('marketplace.edit_listing', listing_id=item.id) }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Modifica
+                            </a>
+                            {% if item.status == 'active' %}
+                                <form method="POST" action="{{ url_for('marketplace.mark_sold', listing_id=item.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-check-circle"></i> Venduto
+                                    </button>
+                                </form>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('marketplace.delete_listing', listing_id=item.id) }}" class="d-inline"
+                                  onsubmit="return confirm('Eliminare questo annuncio?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="my-empty">
+            <i class="bi bi-box-seam d-block mb-3"></i>
+            <h5 class="fw-bold">
+                {% if status_filter %}
+                    Nessun annuncio {{ status_filter }}
+                {% else %}
+                    Non hai ancora pubblicato annunci
+                {% endif %}
+            </h5>
+            <p class="text-muted mb-3">Inizia a vendere nella tua community sportiva!</p>
+            <a href="{{ url_for('marketplace.create_listing') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Pubblica il tuo primo annuncio
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

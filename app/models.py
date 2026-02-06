@@ -2,7 +2,7 @@
 Database Models
 All SQLAlchemy models for SONACIP platform
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -3154,3 +3154,396 @@ class EmailConfirmationSetting(db.Model):
 
     def __repr__(self):
         return f'<EmailConfirmationSetting enabled={self.enabled}>'
+
+
+class PushSubscription(db.Model):
+    """Browser push notification subscriptions"""
+    __tablename__ = 'push_subscription'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    endpoint = db.Column(db.Text, nullable=False)
+    p256dh_key = db.Column(db.String(255))
+    auth_key = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('push_subscriptions', lazy='dynamic'))
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'endpoint', name='uq_push_subscription_user_endpoint'),
+    )
+
+    def __repr__(self):
+        return f'<PushSubscription {self.id} user={self.user_id}>'
+
+
+class Group(db.Model):
+    """Community groups within societies"""
+    __tablename__ = 'group'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    avatar = db.Column(db.String(255))
+    cover_image = db.Column(db.String(255))
+    is_private = db.Column(db.Boolean, default=False)
+    max_members = db.Column(db.Integer, default=100)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    creator = db.relationship('User', foreign_keys=[creator_id], backref=db.backref('created_groups', lazy='dynamic'))
+    members = db.relationship('GroupMembership', backref='group', lazy='dynamic', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f'<Group {self.name}>'
+
+
+class GroupMembership(db.Model):
+    """Group membership"""
+    __tablename__ = 'group_membership'
+
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    role = db.Column(db.String(20), default='member')
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_muted = db.Column(db.Boolean, default=False)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('group_memberships', lazy='dynamic'))
+
+    __table_args__ = (
+        db.UniqueConstraint('group_id', 'user_id', name='uq_group_membership'),
+    )
+
+    def __repr__(self):
+        return f'<GroupMembership group={self.group_id} user={self.user_id} role={self.role}>'
+
+
+class GroupMessage(db.Model):
+    """Messages within groups"""
+    __tablename__ = 'group_message'
+
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    content = db.Column(db.Text, nullable=False)
+    image = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    group = db.relationship('Group', foreign_keys=[group_id], backref=db.backref('messages', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f'<GroupMessage {self.id} group={self.group_id} user={self.user_id}>'
+
+
+class Story(db.Model):
+    """Temporary stories/status"""
+    __tablename__ = 'story'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    media_url = db.Column(db.String(255), nullable=False)
+    media_type = db.Column(db.String(20), default='image')
+    caption = db.Column(db.Text)
+    background_color = db.Column(db.String(7))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24))
+    views_count = db.Column(db.Integer, default=0)
+
+    author = db.relationship('User', foreign_keys=[user_id], backref=db.backref('stories', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Story {self.id} by user={self.user_id}>'
+
+
+class StoryView(db.Model):
+    """Track who viewed stories"""
+    __tablename__ = 'story_view'
+
+    id = db.Column(db.Integer, primary_key=True)
+    story_id = db.Column(db.Integer, db.ForeignKey('story.id'), nullable=False, index=True)
+    viewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    viewed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    story = db.relationship('Story', foreign_keys=[story_id], backref=db.backref('views', lazy='dynamic'))
+    viewer = db.relationship('User', foreign_keys=[viewer_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('story_id', 'viewer_id', name='uq_story_view'),
+    )
+
+    def __repr__(self):
+        return f'<StoryView story={self.story_id} viewer={self.viewer_id}>'
+
+
+class Poll(db.Model):
+    """Polls/surveys"""
+    __tablename__ = 'poll'
+
+    id = db.Column(db.Integer, primary_key=True)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    is_anonymous = db.Column(db.Boolean, default=False)
+    multiple_choice = db.Column(db.Boolean, default=False)
+    closes_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+    options = db.relationship('PollOption', backref='poll', lazy='dynamic', cascade='all, delete-orphan')
+    creator = db.relationship('User', foreign_keys=[creator_id], backref=db.backref('polls_created', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Poll {self.id} "{self.title}">'
+
+
+class PollOption(db.Model):
+    """Poll answer options"""
+    __tablename__ = 'poll_option'
+
+    id = db.Column(db.Integer, primary_key=True)
+    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False, index=True)
+    text = db.Column(db.String(200), nullable=False)
+    votes_count = db.Column(db.Integer, default=0)
+    display_order = db.Column(db.Integer, default=0)
+
+    def __repr__(self):
+        return f'<PollOption {self.id} poll={self.poll_id}>'
+
+
+class PollVote(db.Model):
+    """User votes on polls"""
+    __tablename__ = 'poll_vote'
+
+    id = db.Column(db.Integer, primary_key=True)
+    poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False, index=True)
+    option_id = db.Column(db.Integer, db.ForeignKey('poll_option.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    voted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    poll = db.relationship('Poll', foreign_keys=[poll_id], backref=db.backref('votes', lazy='dynamic'))
+    option = db.relationship('PollOption', foreign_keys=[option_id], backref=db.backref('votes', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('poll_id', 'user_id', 'option_id', name='uq_poll_vote'),
+    )
+
+    def __repr__(self):
+        return f'<PollVote poll={self.poll_id} option={self.option_id} user={self.user_id}>'
+
+
+class AthleteStat(db.Model):
+    """Athlete performance tracking"""
+    __tablename__ = 'athlete_stat'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    season = db.Column(db.String(20))
+    sport_type = db.Column(db.String(50))
+    stat_date = db.Column(db.Date, nullable=False)
+    stat_type = db.Column(db.String(50))
+    metrics = db.Column(db.Text)
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('athlete_stats', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<AthleteStat {self.id} user={self.user_id} type={self.stat_type}>'
+
+
+class StatTemplate(db.Model):
+    """Templates for stat types"""
+    __tablename__ = 'stat_template'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    sport_type = db.Column(db.String(50))
+    stat_type = db.Column(db.String(50))
+    fields = db.Column(db.Text)
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    is_global = db.Column(db.Boolean, default=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<StatTemplate {self.name} sport={self.sport_type}>'
+
+
+class DocumentFolder(db.Model):
+    """Folders for organizing documents"""
+    __tablename__ = 'document_folder'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    parent_id = db.Column(db.Integer, db.ForeignKey('document_folder.id'), nullable=True, index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    children = db.relationship('DocumentFolder', backref=db.backref('parent', remote_side='DocumentFolder.id'), lazy='dynamic')
+    documents = db.relationship('Document', backref='folder', lazy='dynamic')
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<DocumentFolder {self.name}>'
+
+
+class Document(db.Model):
+    """Document management"""
+    __tablename__ = 'document'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_name = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.Integer)
+    file_type = db.Column(db.String(50))
+    folder_id = db.Column(db.Integer, db.ForeignKey('document_folder.id'), nullable=True, index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_public = db.Column(db.Boolean, default=False)
+    download_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    uploader = db.relationship('User', foreign_keys=[uploaded_by], backref=db.backref('uploaded_documents', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Document {self.title}>'
+
+
+class Badge(db.Model):
+    """Gamification badges"""
+    __tablename__ = 'badge'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    icon = db.Column(db.String(50))
+    color = db.Column(db.String(7), default='#1877f2')
+    category = db.Column(db.String(50))
+    requirement_type = db.Column(db.String(50))
+    requirement_value = db.Column(db.Integer, default=1)
+    points = db.Column(db.Integer, default=10)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Badge {self.name}>'
+
+
+class UserBadge(db.Model):
+    """Badges earned by users"""
+    __tablename__ = 'user_badge'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    badge_id = db.Column(db.Integer, db.ForeignKey('badge.id'), nullable=False, index=True)
+    earned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_notified = db.Column(db.Boolean, default=False)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('badges', lazy='dynamic'))
+    badge = db.relationship('Badge', foreign_keys=[badge_id], backref=db.backref('awarded_to', lazy='dynamic'))
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'badge_id', name='uq_user_badge'),
+    )
+
+    def __repr__(self):
+        return f'<UserBadge user={self.user_id} badge={self.badge_id}>'
+
+
+class UserPoints(db.Model):
+    """Gamification points"""
+    __tablename__ = 'user_points'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True, index=True)
+    total_points = db.Column(db.Integer, default=0)
+    level = db.Column(db.Integer, default=1)
+    posts_count = db.Column(db.Integer, default=0)
+    events_attended = db.Column(db.Integer, default=0)
+    login_streak = db.Column(db.Integer, default=0)
+    last_login_date = db.Column(db.Date)
+    badges_count = db.Column(db.Integer, default=0)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('points', uselist=False))
+
+    def __repr__(self):
+        return f'<UserPoints user={self.user_id} points={self.total_points} level={self.level}>'
+
+
+class DashboardWidget(db.Model):
+    """Available dashboard widgets"""
+    __tablename__ = 'dashboard_widget'
+
+    id = db.Column(db.Integer, primary_key=True)
+    widget_key = db.Column(db.String(50), nullable=False, unique=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    icon = db.Column(db.String(50))
+    category = db.Column(db.String(50))
+    default_size = db.Column(db.String(20), default='medium')
+    is_active = db.Column(db.Boolean, default=True)
+
+    def __repr__(self):
+        return f'<DashboardWidget {self.widget_key}>'
+
+
+class UserDashboardLayout(db.Model):
+    """User's dashboard configuration"""
+    __tablename__ = 'user_dashboard_layout'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    widget_key = db.Column(db.String(50), nullable=False)
+    position = db.Column(db.Integer, default=0)
+    size = db.Column(db.String(20), default='medium')
+    is_visible = db.Column(db.Boolean, default=True)
+    config = db.Column(db.Text)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('dashboard_layouts', lazy='dynamic'))
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'widget_key', name='uq_user_dashboard_layout'),
+    )
+
+    def __repr__(self):
+        return f'<UserDashboardLayout user={self.user_id} widget={self.widget_key}>'
+
+
+class FeePayment(db.Model):
+    """Payment records for society fees"""
+    __tablename__ = 'fee_payment'
+
+    id = db.Column(db.Integer, primary_key=True)
+    fee_id = db.Column(db.Integer, db.ForeignKey('society_fee.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    amount = db.Column(db.Float, nullable=False)
+    payment_method = db.Column(db.String(50))
+    stripe_payment_id = db.Column(db.String(255), nullable=True)
+    stripe_receipt_url = db.Column(db.String(500), nullable=True)
+    status = db.Column(db.String(20), default='pending')
+    paid_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text)
+
+    fee = db.relationship('SocietyFee', foreign_keys=[fee_id], backref=db.backref('payments', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('fee_payments', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<FeePayment {self.id} fee={self.fee_id} user={self.user_id} status={self.status}>'

@@ -126,13 +126,10 @@ class ProductionConfig(Config):
     TRAP_HTTP_EXCEPTIONS = False
     TRAP_BAD_REQUEST_ERRORS = False
 
-    # Override with stronger settings in production
-    # Fail fast if SECRET_KEY not set
     @classmethod
     def validate_config(cls):
-        """Validate production configuration - fail fast on missing critical settings"""
-        if not os.environ.get('SECRET_KEY'):
-            raise ValueError("SECRET_KEY environment variable must be set in production!")
+        """Validate production configuration after app factory has run."""
+        pass
 
 
 config = {

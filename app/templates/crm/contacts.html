@@ -1,17 +1,107 @@
 {% extends "base.html" %}
 {% block title %}Contatti - CRM{% endblock %}
+
+{% block extra_css %}
+<style>
+.gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+.filter-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.filter-card .btn-outline-primary {
+    border-color: #1877f2;
+    color: #1877f2;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: .85rem;
+}
+.filter-card .btn-outline-primary:hover,
+.filter-card .btn-outline-primary.active {
+    background: #1877f2;
+    border-color: #1877f2;
+    color: white;
+}
+.filter-card .btn-outline-success {
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: .85rem;
+}
+.filter-card .btn-outline-success.active {
+    background: #198754;
+    color: white;
+}
+.filter-card .btn-outline-danger {
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: .85rem;
+}
+.filter-card .btn-outline-danger.active {
+    background: #dc3545;
+    color: white;
+}
+.contacts-table-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    overflow: hidden;
+}
+.contacts-table-card .table thead {
+    background: #f8f9fa;
+}
+.contacts-table-card .table thead th {
+    font-weight: 700;
+    font-size: .85rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #555;
+    border-bottom: 2px solid #e9ecef;
+}
+.contacts-table-card .table tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+.contacts-table-card .table tbody tr {
+    transition: background .2s;
+}
+.contacts-table-card .table tbody tr:hover {
+    background: #e7f3ff;
+}
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: rgba(0,0,0,0.5);
+}
+.empty-state i {
+    font-size: 4rem;
+    color: #1877f2;
+    opacity: .2;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="bi bi-people"></i> Contatti</h1>
-        <a href="{{ url_for('crm.new_contact') }}" class="btn btn-primary">
-            <i class="bi bi-person-plus"></i> Nuovo Contatto
-        </a>
+    <div class="gradient-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="h3 mb-1"><i class="bi bi-person-lines-fill me-2"></i>Contatti</h1>
+                <p class="mb-0 opacity-75">Gestisci i contatti del CRM</p>
+            </div>
+            <a href="{{ url_for('crm.new_contact') }}" class="btn btn-light text-primary fw-bold">
+                <i class="bi bi-person-plus me-1"></i> Nuovo Contatto
+            </a>
+        </div>
     </div>
-    
-    <div class="card mb-3">
+
+    <div class="card filter-card mb-3">
         <div class="card-body">
-            <div class="btn-group" role="group">
+            <div class="btn-group flex-wrap" role="group">
                 <a href="{{ url_for('crm.contacts') }}" class="btn btn-sm btn-outline-primary {{ 'active' if not status_filter }}">Tutti</a>
                 <a href="{{ url_for('crm.contacts', status='new') }}" class="btn btn-sm btn-outline-primary {{ 'active' if status_filter == 'new' }}">Nuovi</a>
                 <a href="{{ url_for('crm.contacts', status='contacted') }}" class="btn btn-sm btn-outline-primary {{ 'active' if status_filter == 'contacted' }}">Contattati</a>
@@ -21,8 +111,8 @@
             </div>
         </div>
     </div>
-    
-    <div class="card">
+
+    <div class="card contacts-table-card">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
@@ -49,18 +139,24 @@
                             <td>{{ contact.phone or '-' }}</td>
                             <td>{{ contact.contact_type }}</td>
                             <td>
-                                <span class="badge bg-{{ 'success' if contact.status == 'converted' else 'primary' }}">
+                                <span class="badge bg-{{ 'success' if contact.status == 'converted' else 'primary' }}" style="{{ 'background:#1877f2!important;' if contact.status != 'converted' }}">
                                     {{ contact.status }}
                                 </span>
                             </td>
                             <td>{{ contact.created_at.strftime('%d/%m/%Y') }}</td>
                             <td>
-                                <a href="{{ url_for('crm.contact_detail', contact_id=contact.id) }}" class="btn btn-sm btn-outline-primary">Vedi</a>
+                                <a href="{{ url_for('crm.contact_detail', contact_id=contact.id) }}" class="btn btn-sm btn-outline-primary" style="border-radius:8px;">Vedi</a>
                             </td>
                         </tr>
                     {% else %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted">Nessun contatto trovato</td>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="bi bi-person-lines-fill d-block mb-2"></i>
+                                    <h5>Nessun contatto trovato</h5>
+                                    <p class="text-muted small">Aggiungi un nuovo contatto per iniziare</p>
+                                </div>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>

@@ -1,25 +1,86 @@
 {% extends 'base.html' %}
 {% block title %}{{ tournament.name }} | Torneo{% endblock %}
+
+{% block extra_css %}
+<style>
+  .td-gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .td-gradient-header .pill-fmt {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border-radius: 20px;
+    padding: 2px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .td-gradient-header .chip-stat {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+  }
+  .td-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background: #fff;
+  }
+  .td-card:hover {
+    box-shadow: 0 8px 24px rgba(24,119,242,0.12);
+    border-color: #1877f2;
+  }
+  .td-match-item {
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    transition: all 0.25s ease;
+    background: #fff;
+  }
+  .td-match-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-color: #1877f2;
+  }
+  .td-bracket-cell {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.75rem;
+    transition: all 0.25s ease;
+    background: #fff;
+  }
+  .td-bracket-cell:hover {
+    box-shadow: 0 4px 12px rgba(24,119,242,0.12);
+    border-color: #1877f2;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-  <div class="section-hero mb-4 card-hover">
+  <div class="td-gradient-header">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
       <div class="d-flex gap-3 align-items-center">
-        <div class="avatar-ring">
-          <div class="bg-white rounded-circle d-flex align-items-center justify-content-center" style="width:64px;height:64px;">
-            <i class="bi bi-trophy-fill fs-3 text-warning"></i>
-          </div>
+        <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center" style="width:64px;height:64px;">
+          <i class="bi bi-trophy-fill fs-3" style="color:#ffc107;"></i>
         </div>
         <div>
-          <div class="pill mb-2">{{ tournament.format }}</div>
+          <span class="pill-fmt mb-2">{{ tournament.format }}</span>
           <h1 class="h3 mb-0">{{ tournament.name }}</h1>
-          <div class="text-muted small">Stagione {{ tournament.season or 'n/d' }}</div>
+          <div class="small" style="opacity:0.85;">Stagione {{ tournament.season or 'n/d' }}</div>
         </div>
       </div>
-      <div class="d-flex gap-2 align-items-center">
+      <div class="d-flex gap-2 align-items-center flex-wrap">
         <span class="badge bg-dark text-uppercase">{{ tournament.status }}</span>
-        <span class="chip">{{ teams|length }} squadre</span>
-        <span class="chip">{{ matches|length }} partite</span>
+        <span class="chip-stat">{{ teams|length }} squadre</span>
+        <span class="chip-stat">{{ matches|length }} partite</span>
         {% if can_manage %}
           <form method="post" action="{{ url_for('tournaments.publish_tournament', tournament_id=tournament.id) }}">
             {{ csrf_token() }}
@@ -34,9 +95,9 @@
 
   <div class="row g-3 mb-4">
     <div class="col-md-8">
-      <div class="glass-card h-100 p-3 card-hover">
+      <div class="td-card h-100 p-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <span class="fw-semibold"><i class="bi bi-controller"></i> Partite</span>
+          <span class="fw-semibold"><i class="bi bi-controller me-1"></i> Partite</span>
           {% if can_manage %}
             <form class="d-flex flex-wrap gap-2 align-items-center" method="post" action="{{ url_for('tournaments.add_match', tournament_id=tournament.id) }}">
               {{ csrf_token() }}
@@ -61,7 +122,7 @@
         </div>
         <div class="d-flex flex-column gap-3">
           {% for m in matches %}
-            <div class="p-3 border rounded card-hover">
+            <div class="td-match-item">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <div class="fw-semibold">{{ m.home_team.name if m.home_team else 'TBD' }} vs {{ m.away_team.name if m.away_team else 'TBD' }}</div>
                 <span class="badge bg-dark text-uppercase">{{ m.status }}</span>
@@ -99,9 +160,9 @@
       </div>
 
       {% if tournament.format == 'knockout' %}
-        <div class="glass-card p-3 mt-3 card-hover">
+        <div class="td-card p-3 mt-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-semibold"><i class="bi bi-diagram-3"></i> Tabellone (piramidale)</span>
+            <span class="fw-semibold"><i class="bi bi-diagram-3 me-1"></i> Tabellone (piramidale)</span>
             {% if can_manage %}
               <form method="post" action="{{ url_for('tournaments.generate_bracket', tournament_id=tournament.id) }}" class="d-flex gap-2 align-items-center">
                 {{ csrf_token() }}
@@ -121,7 +182,7 @@
                   <div class="fw-semibold mb-2">{{ bracket_rounds[r][0].round_label if bracket_rounds[r] else ('Round ' ~ r) }}</div>
                   <div class="d-flex flex-column gap-2">
                     {% for m in bracket_rounds[r] %}
-                      <div class="border rounded p-2">
+                      <div class="td-bracket-cell">
                         <div class="small text-muted">#{{ m.round_number }}.{{ m.position }}</div>
                         <div class="d-flex justify-content-between">
                           <span class="{{ 'fw-bold' if m.winner_team_id == m.home_team_id else '' }}">{{ m.home_team.name if m.home_team else 'TBD' }}</span>
@@ -144,9 +205,9 @@
       {% endif %}
 
       {% if tournament.format == 'round_robin' and can_manage %}
-        <div class="glass-card p-3 mt-3 card-hover">
+        <div class="td-card p-3 mt-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="fw-semibold"><i class="bi bi-calendar3"></i> Calendario automatico</span>
+            <span class="fw-semibold"><i class="bi bi-calendar3 me-1"></i> Calendario automatico</span>
           </div>
           <form method="post" action="{{ url_for('tournaments.generate_schedule', tournament_id=tournament.id) }}" class="row g-2 align-items-end">
             {{ csrf_token() }}
@@ -176,7 +237,7 @@
       {% endif %}
     </div>
     <div class="col-md-4">
-      <div class="glass-card p-3 mb-3 card-hover">
+      <div class="td-card p-3 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="fw-semibold">Squadre</span>
           {% if can_manage %}
@@ -216,7 +277,7 @@
           </form>
         {% endif %}
       </div>
-      <div class="glass-card p-3 card-hover">
+      <div class="td-card p-3">
         <div class="fw-semibold mb-2">Classifica</div>
         <div class="table-responsive">
           <table class="table mb-0 align-middle">

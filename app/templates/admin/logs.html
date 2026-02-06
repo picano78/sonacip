@@ -1,45 +1,184 @@
 {% extends "base.html" %}
 {% block title %}Log Audit - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.logs-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 28px 32px;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(24, 119, 242, 0.3);
+}
+.logs-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+.logs-header p {
+    opacity: 0.85;
+    margin-bottom: 0;
+}
+.filter-card {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: none;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+}
+.filter-card .form-select {
+    border-radius: 10px;
+    border: 2px solid #e4e6eb;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+.filter-card .form-select:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.15);
+}
+.filter-card .btn-primary {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.filter-card .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+.logs-table-card {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: none;
+    overflow: hidden;
+}
+.logs-table-card .table {
+    margin-bottom: 0;
+}
+.logs-table-card .table thead {
+    background: #f8f9fa;
+}
+.logs-table-card .table thead th {
+    border: none;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #65676b;
+    font-weight: 700;
+    padding: 14px 16px;
+}
+.logs-table-card .table tbody tr {
+    transition: background 0.2s;
+    border-bottom: 1px solid #f0f2f5;
+}
+.logs-table-card .table tbody tr:hover {
+    background: #f8f9ff;
+}
+.logs-table-card .table td {
+    padding: 14px 16px;
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+.action-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+.action-badge.action-login { background: #e8f5e9; color: #2e7d32; }
+.action-badge.action-logout { background: #fff3e0; color: #e65100; }
+.action-badge.action-create { background: #e3f2fd; color: #1565c0; }
+.action-badge.action-update { background: #f3e5f5; color: #7b1fa2; }
+.action-badge.action-delete { background: #ffebee; color: #c62828; }
+.action-badge.action-default { background: #f0f2f5; color: #65676b; }
+.ip-badge {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.82rem;
+    color: #65676b;
+    background: #f0f2f5;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+.timestamp-text {
+    color: #65676b;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-    <h1 class="mb-4"><i class="bi bi-file-text"></i> Log Audit</h1>
-    <div class="card mb-3">
-        <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-6">
-                    <select name="action" class="form-select">
-                        <option value="">Tutte le Azioni</option>
-                        {% for action in actions %}
-                            <option value="{{ action }}" {{ 'selected' if action == current_action }}>{{ action }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">Filtra</button>
-                </div>
-            </form>
+    <div class="logs-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-1"><i class="bi bi-file-text-fill me-2"></i>Log Audit</h1>
+                <p>Traccia tutte le azioni sulla piattaforma</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light btn-sm px-3">
+                <i class="bi bi-arrow-left me-1"></i> Torna alla dashboard
+            </a>
         </div>
     </div>
-    <div class="card">
+
+    <div class="filter-card">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label fw-semibold text-muted small text-uppercase">Filtra per azione</label>
+                <select name="action" class="form-select">
+                    <option value="">Tutte le Azioni</option>
+                    {% for action in actions %}
+                        <option value="{{ action }}" {{ 'selected' if action == current_action }}>{{ action }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel me-1"></i> Filtra
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="logs-table-card">
         <div class="table-responsive">
-            <table class="table table-sm table-hover mb-0">
+            <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Data/Ora</th>
-                        <th>Utente</th>
-                        <th>Azione</th>
-                        <th>Dettagli</th>
-                        <th>IP</th>
+                        <th><i class="bi bi-clock me-1"></i>Data/Ora</th>
+                        <th><i class="bi bi-person me-1"></i>Utente</th>
+                        <th><i class="bi bi-lightning me-1"></i>Azione</th>
+                        <th><i class="bi bi-info-circle me-1"></i>Dettagli</th>
+                        <th><i class="bi bi-globe me-1"></i>IP</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
                         <tr>
-                            <td>{{ log.created_at|datetime_format }}</td>
-                            <td>{{ log.user.username if log.user else 'Sistema' }}</td>
-                            <td><span class="badge bg-secondary">{{ log.action }}</span></td>
-                            <td>{{ (log.details or '')[:50] }}{{ '...' if log.details and log.details|length > 50 }}</td>
-                            <td>{{ log.ip_address }}</td>
+                            <td><span class="timestamp-text">{{ log.created_at|datetime_format }}</span></td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; background: linear-gradient(135deg, #1877f2, #42a5f5); color: white; font-size: 0.65rem; font-weight: 600;">
+                                        {{ (log.user.username[:2].upper()) if log.user else 'SI' }}
+                                    </div>
+                                    <span class="fw-semibold">{{ log.user.username if log.user else 'Sistema' }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% set action_lower = log.action|lower %}
+                                <span class="action-badge {% if 'login' in action_lower %}action-login{% elif 'logout' in action_lower %}action-logout{% elif 'creat' in action_lower or 'add' in action_lower %}action-create{% elif 'updat' in action_lower or 'edit' in action_lower %}action-update{% elif 'delet' in action_lower or 'remov' in action_lower %}action-delete{% else %}action-default{% endif %}">
+                                    {{ log.action }}
+                                </span>
+                            </td>
+                            <td><span class="text-muted">{{ (log.details or '')[:50] }}{{ '...' if log.details and log.details|length > 50 }}</span></td>
+                            <td><span class="ip-badge">{{ log.ip_address }}</span></td>
                         </tr>
                     {% endfor %}
                 </tbody>

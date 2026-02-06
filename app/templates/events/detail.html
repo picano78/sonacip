@@ -1,65 +1,110 @@
 {% extends "base.html" %}
 {% block title %}{{ event.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .detail-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    margin-bottom: 16px;
+  }
+  .info-label {
+    font-weight: 600;
+    color: #333;
+  }
+  .info-label i { color: #1877f2; margin-right: .35rem; }
+  .convocated-item {
+    border-radius: 8px;
+    transition: background .2s;
+  }
+  .convocated-item:hover { background: #f8f9fa; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="mb-0">{{ event.title }}</h2>
-            <span class="badge bg-{{ 'primary' if event.event_type == 'allenamento' else 'success' if event.event_type == 'partita' else 'warning' }}">
-                {{ event.event_type|title }}
-            </span>
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h1><i class="bi bi-calendar-event me-2"></i>{{ event.title }}</h1>
+                </div>
+                <span class="badge bg-{{ 'primary' if event.event_type == 'allenamento' else 'success' if event.event_type == 'partita' else 'warning' }}" style="font-size: .85rem;">
+                    {{ event.event_type|title }}
+                </span>
+            </div>
+            <a href="{{ url_for('events.index') }}" class="btn btn-outline-light">
+                <i class="bi bi-arrow-left me-1"></i> Tutti gli eventi
+            </a>
         </div>
-        <div class="card-body">
+    </div>
+
+    <div class="card detail-card">
+        <div class="card-body p-4">
             {% if event.description %}
-                <p>{{ event.description }}</p>
+                <p class="mb-3">{{ event.description }}</p>
             {% endif %}
             <div class="row">
                 <div class="col-md-6">
-                    <p><strong><i class="bi bi-calendar"></i> Inizio:</strong> {{ event.start_date|datetime_format }}</p>
+                    <p><span class="info-label"><i class="bi bi-calendar"></i>Inizio:</span> {{ event.start_date|datetime_format }}</p>
                     {% if event.end_date %}
-                        <p><strong><i class="bi bi-calendar-check"></i> Fine:</strong> {{ event.end_date|datetime_format }}</p>
+                        <p><span class="info-label"><i class="bi bi-calendar-check"></i>Fine:</span> {{ event.end_date|datetime_format }}</p>
                     {% endif %}
                 </div>
                 <div class="col-md-6">
                     {% if event.location %}
-                        <p><strong><i class="bi bi-geo-alt"></i> Località:</strong> {{ event.location }}</p>
+                        <p><span class="info-label"><i class="bi bi-geo-alt"></i>Località:</span> {{ event.location }}</p>
                     {% endif %}
                     {% if event.address %}
-                        <p><strong><i class="bi bi-map"></i> Indirizzo:</strong> {{ event.address }}</p>
+                        <p><span class="info-label"><i class="bi bi-map"></i>Indirizzo:</span> {{ event.address }}</p>
                     {% endif %}
                 </div>
             </div>
-            {% if event.tournament_name or event.opponent_name or event.home_away or event.score_for or event.score_against or event.bracket_url %}
-                <hr>
-                <h5>Dettagli Partita/Torneo</h5>
+        </div>
+    </div>
+
+    {% if event.tournament_name or event.opponent_name or event.home_away or event.score_for or event.score_against or event.bracket_url %}
+        <div class="card detail-card">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-trophy me-2" style="color: #1877f2;"></i>Dettagli Partita/Torneo</h5>
                 <div class="row">
                     {% if event.tournament_name %}
                         <div class="col-md-6">
-                            <p><strong><i class="bi bi-trophy"></i> Torneo:</strong> {{ event.tournament_name }}</p>
+                            <p><span class="info-label"><i class="bi bi-trophy"></i>Torneo:</span> {{ event.tournament_name }}</p>
                         </div>
                     {% endif %}
                     {% if event.tournament_phase %}
                         <div class="col-md-6">
-                            <p><strong><i class="bi bi-diagram-3"></i> Fase:</strong> {{ event.tournament_phase }}</p>
+                            <p><span class="info-label"><i class="bi bi-diagram-3"></i>Fase:</span> {{ event.tournament_phase }}</p>
                         </div>
                     {% endif %}
                 </div>
                 <div class="row">
                     {% if event.opponent_name %}
                         <div class="col-md-6">
-                            <p><strong><i class="bi bi-shield"></i> Avversario:</strong> {{ event.opponent_name }}</p>
+                            <p><span class="info-label"><i class="bi bi-shield"></i>Avversario:</span> {{ event.opponent_name }}</p>
                         </div>
                     {% endif %}
                     {% if event.home_away %}
                         <div class="col-md-6">
-                            <p><strong><i class="bi bi-house"></i> Campo:</strong> {{ 'Casa' if event.home_away == 'home' else 'Trasferta' if event.home_away == 'away' else 'Campo neutro' }}</p>
+                            <p><span class="info-label"><i class="bi bi-house"></i>Campo:</span> {{ 'Casa' if event.home_away == 'home' else 'Trasferta' if event.home_away == 'away' else 'Campo neutro' }}</p>
                         </div>
                     {% endif %}
                 </div>
                 <div class="row">
                     {% if event.score_for or event.score_against %}
                         <div class="col-md-6">
-                            <p><strong><i class="bi bi-activity"></i> Risultato:</strong>
+                            <p><span class="info-label"><i class="bi bi-activity"></i>Risultato:</span>
                                 {% if event.score_for and event.score_against %}
                                     {{ event.score_for }} - {{ event.score_against }}
                                 {% else %}
@@ -70,43 +115,66 @@
                     {% endif %}
                     {% if event.bracket_url %}
                         <div class="col-md-6">
-                            <p><strong><i class="bi bi-link-45deg"></i> Tabellone:</strong> <a href="{{ event.bracket_url }}" target="_blank" rel="noopener">Apri</a></p>
+                            <p><span class="info-label"><i class="bi bi-link-45deg"></i>Tabellone:</span> <a href="{{ event.bracket_url }}" target="_blank" rel="noopener" style="color: #1877f2;">Apri</a></p>
                         </div>
                     {% endif %}
                 </div>
-            {% endif %}
-            <hr>
-            <h5>Statistiche Convocazioni</h5>
-            <p>Totale: {{ stats.total_convocated }} | Accettati: {{ stats.accepted }} | In Attesa: {{ stats.pending }}</p>
-            
-            {% if is_convocated %}
-                <div class="alert alert-info">
-                    <p class="mb-2"><strong>Sei stato convocato per questo evento!</strong></p>
-                    {% if my_status == 'pending' %}
-                        <form method="POST" class="d-inline">
-                            <button type="submit" formaction="{{ url_for('events.respond', event_id=event.id, response='accepted') }}" 
-                                    class="btn btn-success btn-sm">Accetta</button>
-                            <button type="submit" formaction="{{ url_for('events.respond', event_id=event.id, response='rejected') }}" 
-                                    class="btn btn-danger btn-sm">Rifiuta</button>
-                        </form>
-                    {% else %}
-                        <span class="badge bg-{{ 'success' if my_status == 'accepted' else 'danger' }}">
-                            {{ 'Accettato' if my_status == 'accepted' else 'Rifiutato' }}
-                        </span>
-                    {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="card detail-card">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-people me-2" style="color: #1877f2;"></i>Statistiche Convocazioni</h5>
+            <div class="d-flex gap-4 flex-wrap">
+                <div><span class="fw-bold" style="color: #1877f2; font-size: 1.5rem;">{{ stats.total_convocated }}</span><br><small class="text-muted">Totale</small></div>
+                <div><span class="fw-bold text-success" style="font-size: 1.5rem;">{{ stats.accepted }}</span><br><small class="text-muted">Accettati</small></div>
+                <div><span class="fw-bold text-warning" style="font-size: 1.5rem;">{{ stats.pending }}</span><br><small class="text-muted">In Attesa</small></div>
+            </div>
+        </div>
+    </div>
+
+    {% if is_convocated %}
+        <div class="card detail-card" style="border-left: 4px solid #1877f2;">
+            <div class="card-body p-4">
+                <p class="mb-2 fw-bold"><i class="bi bi-bell me-2" style="color: #1877f2;"></i>Sei stato convocato per questo evento!</p>
+                {% if my_status == 'pending' %}
+                    <form method="POST" class="d-inline">
+                        <button type="submit" formaction="{{ url_for('events.respond', event_id=event.id, response='accepted') }}"
+                                class="btn btn-success btn-sm" style="border-radius: 8px;">
+                            <i class="bi bi-check-circle me-1"></i> Accetta
+                        </button>
+                        <button type="submit" formaction="{{ url_for('events.respond', event_id=event.id, response='rejected') }}"
+                                class="btn btn-danger btn-sm" style="border-radius: 8px;">
+                            <i class="bi bi-x-circle me-1"></i> Rifiuta
+                        </button>
+                    </form>
+                {% else %}
+                    <span class="badge bg-{{ 'success' if my_status == 'accepted' else 'danger' }}">
+                        {{ 'Accettato' if my_status == 'accepted' else 'Rifiutato' }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if can_manage %}
+        <div class="card detail-card">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-gear me-2" style="color: #1877f2;"></i>Gestione Evento</h5>
+                <div class="d-flex gap-2 mb-4">
+                    <a href="{{ url_for('events.convocate', event_id=event.id) }}" class="btn btn-primary btn-sm" style="border-radius: 8px;">
+                        <i class="bi bi-person-plus me-1"></i> Convoca Atleti
+                    </a>
+                    <a href="{{ url_for('events.edit', event_id=event.id) }}" class="btn btn-warning btn-sm" style="border-radius: 8px;">
+                        <i class="bi bi-pencil me-1"></i> Modifica
+                    </a>
                 </div>
-            {% endif %}
-            
-            {% if can_manage %}
-                <hr>
-                <h5>Gestione Evento</h5>
-                <a href="{{ url_for('events.convocate', event_id=event.id) }}" class="btn btn-primary btn-sm">Convoca Atleti</a>
-                <a href="{{ url_for('events.edit', event_id=event.id) }}" class="btn btn-warning btn-sm">Modifica</a>
-                
-                <h5 class="mt-3">Atleti Convocati</h5>
-                <ul class="list-group">
+
+                <h6 class="fw-bold mb-2">Atleti Convocati</h6>
+                <ul class="list-group list-group-flush">
                     {% for item in convocated %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <li class="list-group-item d-flex justify-content-between align-items-center convocated-item">
                             {{ item.user.get_full_name() }}
                             <span class="badge bg-{{ 'success' if item.status == 'accepted' else 'warning' if item.status == 'pending' else 'danger' }}">
                                 {{ item.status|title }}
@@ -114,8 +182,8 @@
                         </li>
                     {% endfor %}
                 </ul>
-            {% endif %}
+            </div>
         </div>
-    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -2,33 +2,82 @@
 
 {% block title %}Marketplace - {{ package.name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .detail-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    margin-bottom: 16px;
+  }
+  .price-badge-lg {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: inline-block;
+  }
+  .btn-facebook {
+    background: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .btn-facebook:hover {
+    background: #155fc7;
+    color: white;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h1 class="mb-1">{{ package.name }}</h1>
-      <div class="text-muted">{{ package.slug }}</div>
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-box-seam me-2"></i>{{ package.name }}</h1>
+        <p>{{ package.slug }}</p>
+      </div>
+      <a class="btn btn-outline-light" href="{{ url_for('marketplace.index') }}">
+        <i class="bi bi-arrow-left me-1"></i> Torna al marketplace
+      </a>
     </div>
-    <a class="btn btn-outline-secondary" href="{{ url_for('marketplace.index') }}">Torna al marketplace</a>
   </div>
 
   {% if package.description %}
-    <div class="mb-3">{{ package.description }}</div>
+    <div class="card detail-card">
+      <div class="card-body p-4">
+        <p class="mb-0">{{ package.description }}</p>
+      </div>
+    </div>
   {% endif %}
 
-  <div class="mb-3">
-    <span class="badge bg-light text-dark">€{{ "%.2f"|format(package.price_one_time or 0) }} {{ package.currency or 'EUR' }}</span>
+  <div class="d-flex align-items-center gap-3 mb-3">
+    <span class="price-badge-lg">€{{ "%.2f"|format(package.price_one_time or 0) }} {{ package.currency or 'EUR' }}</span>
     {% if package.stripe_price_one_time_id %}
-      <span class="text-muted small ms-2">Stripe</span>
+      <span class="text-muted small"><i class="bi bi-credit-card me-1"></i>Stripe</span>
     {% endif %}
   </div>
 
-  <div class="card mb-3">
-    <div class="card-header"><strong>Contenuto</strong></div>
-    <div class="card-body">
-      <ul class="mb-0">
+  <div class="card detail-card">
+    <div class="card-body p-4">
+      <h5 class="fw-bold mb-3"><i class="bi bi-list-check me-2" style="color: #1877f2;"></i>Contenuto</h5>
+      <ul class="mb-0 list-unstyled">
         {% for it in items %}
-          <li>
+          <li class="d-flex align-items-center gap-2 py-2 border-bottom">
+            <i class="bi bi-check-circle-fill" style="color: #1877f2;"></i>
             {{ it.template.name if it.template else ('Template #' ~ it.template_id) }}
             <span class="text-muted small">({{ it.template.template_type if it.template else '-' }})</span>
           </li>
@@ -40,17 +89,27 @@
   </div>
 
   {% if current_user.is_authenticated %}
-    <form method="post" action="{{ url_for('marketplace.buy', package_id=package.id) }}">
-      {{ csrf_token() }}
-      <button class="btn btn-primary" type="submit">Acquista</button>
-      <a class="btn btn-outline-primary" href="{{ url_for('marketplace.my_purchases') }}">I miei acquisti</a>
-    </form>
+    <div class="card detail-card">
+      <div class="card-body p-4">
+        <form method="post" action="{{ url_for('marketplace.buy', package_id=package.id) }}" class="d-flex gap-2 align-items-center">
+          {{ csrf_token() }}
+          <button class="btn btn-facebook" type="submit">
+            <i class="bi bi-cart-plus me-1"></i> Acquista
+          </button>
+          <a class="btn btn-outline-primary" style="border-radius: 8px;" href="{{ url_for('marketplace.my_purchases') }}">I miei acquisti</a>
+        </form>
+      </div>
+    </div>
   {% else %}
-    <div class="alert alert-info">
-      Effettua il login per acquistare e installare pacchetti.
-      <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-primary ms-2">Login</a>
+    <div class="card detail-card" style="border-left: 4px solid #1877f2;">
+      <div class="card-body p-4 d-flex align-items-center gap-3">
+        <i class="bi bi-info-circle" style="color: #1877f2; font-size: 1.5rem;"></i>
+        <div>
+          Effettua il login per acquistare e installare pacchetti.
+          <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-facebook ms-2">Login</a>
+        </div>
+      </div>
     </div>
   {% endif %}
 </div>
 {% endblock %}
-

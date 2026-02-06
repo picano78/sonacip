@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Membri - Gestione Società{% endblock %}
-{% block content %}
+
+{% block extra_css %}
 <style>
+  .gradient-header {
+      background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 14px;
+      margin-bottom: 24px;
+  }
   .role-badge-atleta { background-color: #1877f2; }
   .role-badge-coach { background-color: #198754; }
   .role-badge-dirigente { background-color: #6f42c1; }
@@ -11,26 +19,84 @@
   .cert-expiring { color: #ffc107; }
   .cert-expired { color: #dc3545; }
   .cert-none { color: #adb5bd; }
+  .filter-card {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .filter-card .form-control,
+  .filter-card .form-select {
+      border-radius: 10px;
+      border: 1px solid #e0e0e0;
+  }
+  .filter-card .form-control:focus,
+  .filter-card .form-select:focus {
+      border-color: #1877f2;
+      box-shadow: 0 0 0 .2rem rgba(24,119,242,.15);
+  }
+  .members-table-card {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      overflow: hidden;
+  }
+  .members-table-card .table thead {
+      background: #f8f9fa;
+  }
+  .members-table-card .table thead th {
+      font-weight: 700;
+      font-size: .85rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: #555;
+      border-bottom: 2px solid #e9ecef;
+  }
+  .members-table-card .table tbody tr:nth-child(even) {
+      background: #fafbfc;
+  }
+  .members-table-card .table tbody tr {
+      transition: background .2s;
+  }
+  .members-table-card .table tbody tr:hover {
+      background: #e7f3ff;
+  }
+  .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: rgba(0,0,0,0.5);
+  }
+  .empty-state i {
+      font-size: 4rem;
+      color: #1877f2;
+      opacity: .2;
+  }
 </style>
+{% endblock %}
 
+{% block content %}
 <div class="container my-4">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
-    <h1 class="h3"><i class="bi bi-people me-2"></i>Membri della Società</h1>
-    <div class="d-flex gap-2">
-      <a href="{{ url_for('crm.member_add') }}" class="btn btn-success"><i class="bi bi-person-plus me-1"></i> Aggiungi Membro</a>
-      <a href="{{ url_for('crm.index') }}" class="btn btn-outline-secondary">Dashboard</a>
+  <div class="gradient-header">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div>
+        <h1 class="h3 mb-1"><i class="bi bi-people-fill me-2"></i>Membri della Società</h1>
+        <p class="mb-0 opacity-75">Gestisci i membri e i ruoli</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('crm.member_add') }}" class="btn btn-light text-primary fw-bold"><i class="bi bi-person-plus me-1"></i> Aggiungi Membro</a>
+        <a href="{{ url_for('crm.index') }}" class="btn btn-outline-light">Dashboard</a>
+      </div>
     </div>
   </div>
 
-  <div class="card mb-3">
+  <div class="card filter-card mb-3">
     <div class="card-body">
       <form method="get" class="row g-2 align-items-end">
         <div class="col-md-5">
-          <label class="form-label small">Cerca per nome/email</label>
+          <label class="form-label small fw-semibold">Cerca per nome/email</label>
           <input type="text" name="q" class="form-control" placeholder="Nome, cognome o email..." value="{{ name_filter or '' }}">
         </div>
         <div class="col-md-4">
-          <label class="form-label small">Filtra per ruolo</label>
+          <label class="form-label small fw-semibold">Filtra per ruolo</label>
           <select name="role" class="form-select">
             <option value="">Tutti i ruoli</option>
             <option value="atleta" {{ 'selected' if role_filter == 'atleta' }}>Atleta</option>
@@ -41,14 +107,14 @@
           </select>
         </div>
         <div class="col-md-3 d-flex gap-2">
-          <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filtra</button>
-          <a href="{{ url_for('crm.members') }}" class="btn btn-outline-secondary">Reset</a>
+          <button type="submit" class="btn btn-primary flex-fill" style="background:#1877f2;border-color:#1877f2;border-radius:10px;"><i class="bi bi-search"></i> Filtra</button>
+          <a href="{{ url_for('crm.members') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Reset</a>
         </div>
       </form>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card members-table-card">
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead>
@@ -92,11 +158,11 @@
               </td>
               <td class="text-end">
                 <div class="d-flex gap-1 justify-content-end">
-                  <a href="{{ url_for('crm.member_detail', membership_id=m.id) }}" class="btn btn-sm btn-outline-primary" title="Dettaglio"><i class="bi bi-eye"></i></a>
+                  <a href="{{ url_for('crm.member_detail', membership_id=m.id) }}" class="btn btn-sm btn-outline-primary" title="Dettaglio" style="border-radius:8px;"><i class="bi bi-eye"></i></a>
                   {% if can('crm','manage') %}
                     <div class="dropdown">
-                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                      <ul class="dropdown-menu dropdown-menu-end">
+                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border-radius:8px;"><i class="bi bi-three-dots-vertical"></i></button>
+                      <ul class="dropdown-menu dropdown-menu-end" style="border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.12);">
                         <li>
                           <form method="post" action="{{ url_for('crm.member_role_update', membership_id=m.id) }}">
                             {{ csrf_token() }}
@@ -109,7 +175,7 @@
                                 <option value="staff" {{ 'selected' if m.role_name == 'staff' }}>Staff</option>
                                 <option value="appassionato" {{ 'selected' if m.role_name == 'appassionato' }}>Appassionato</option>
                               </select>
-                              <button type="submit" class="btn btn-sm btn-primary w-100">Aggiorna</button>
+                              <button type="submit" class="btn btn-sm btn-primary w-100" style="background:#1877f2;border-color:#1877f2;">Aggiorna</button>
                             </div>
                           </form>
                         </li>
@@ -128,7 +194,13 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="5" class="text-center text-muted py-4">Nessun membro trovato</td>
+              <td colspan="5" class="text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-people d-block mb-2"></i>
+                    <h5>Nessun membro trovato</h5>
+                    <p class="text-muted small">Prova a modificare i filtri di ricerca</p>
+                </div>
+              </td>
             </tr>
           {% endfor %}
         </tbody>

@@ -1,25 +1,102 @@
 {% extends "base.html" %}
 {% block title %}{{ dashboard.name }} - Cruscotto{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dash-gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .dash-gradient-header p { opacity: 0.85; }
+  .dash-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background: #fff;
+  }
+  .dash-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(24,119,242,0.12);
+    border-color: #1877f2;
+  }
+  .dash-stat-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+    background: #fff;
+    border-top: 3px solid #1877f2;
+  }
+  .dash-stat-card:hover {
+    box-shadow: 0 4px 16px rgba(24,119,242,0.12);
+  }
+  .dash-stat-card .h5 {
+    color: #1877f2;
+  }
+  .pill-link {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    border: 1px solid #e5e7eb;
+    color: #333;
+    background: #fff;
+  }
+  .pill-link:hover {
+    background: #1877f2;
+    color: #fff;
+    border-color: #1877f2;
+    transform: translateY(-1px);
+  }
+  .pill-link-primary {
+    background: #1877f2;
+    color: #fff;
+    border-color: #1877f2;
+  }
+  .pill-link-primary:hover {
+    background: #155fc7;
+    color: #fff;
+  }
+  .notif-item {
+    border-left: 3px solid #1877f2;
+    padding: 0.75rem 1rem;
+    transition: background 0.2s ease;
+  }
+  .notif-item:hover {
+    background: #f0f7ff;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h1 class="h4 mb-0"><i class="bi bi-speedometer2"></i> {{ dashboard.name }}</h1>
-      <div class="text-muted small">{{ dashboard.description or '' }}</div>
-    </div>
-    <div class="d-flex gap-2">
-      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('main.customize_dashboard') }}">
-        <i class="bi bi-grid-1x2 me-1"></i> Personalizza Widget
-      </a>
-      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('main.edit_dashboard') }}">
-        <i class="bi bi-pencil"></i> Modifica
-      </a>
-      <form method="post" action="{{ url_for('main.reset_dashboard') }}">
-        {{ csrf_token() }}
-        <button class="btn btn-outline-secondary btn-sm" type="submit" onclick="return confirm('Ripristinare il cruscotto al template?')">
-          <i class="bi bi-arrow-counterclockwise"></i> Reset
-        </button>
-      </form>
+  <div class="dash-gradient-header">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <h1 class="h4 mb-1"><i class="bi bi-speedometer2 me-2"></i>{{ dashboard.name }}</h1>
+        <p class="mb-0">{{ dashboard.description or '' }}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-light btn-sm" href="{{ url_for('main.customize_dashboard') }}">
+          <i class="bi bi-grid-1x2 me-1"></i> Personalizza Widget
+        </a>
+        <a class="btn btn-outline-light btn-sm" href="{{ url_for('main.edit_dashboard') }}">
+          <i class="bi bi-pencil me-1"></i> Modifica
+        </a>
+        <form method="post" action="{{ url_for('main.reset_dashboard') }}">
+          {{ csrf_token() }}
+          <button class="btn btn-light btn-sm" type="submit" onclick="return confirm('Ripristinare il cruscotto al template?')">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -39,22 +116,22 @@
       {% set wtype = w.type if w and w.type else w.get('type') %}
       {% if wtype == 'quick_links' %}
         <div class="col-12 col-lg-6">
-          <div class="card">
-            <div class="card-header"><strong>Link rapidi</strong></div>
+          <div class="dash-card">
+            <div class="card-header bg-white border-bottom" style="border-radius:12px 12px 0 0;"><strong><i class="bi bi-link-45deg me-1" style="color:#1877f2;"></i>Link rapidi</strong></div>
             <div class="card-body">
               <div class="d-flex flex-wrap gap-2">
-                <a class="btn btn-sm btn-primary" href="{{ url_for('social.feed') }}"><i class="bi bi-house"></i> Feed</a>
-                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('social.profile', user_id=current_user.id) }}"><i class="bi bi-person"></i> Profilo</a>
-                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('notifications.index') }}"><i class="bi bi-bell"></i> Notifiche</a>
-                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('messages.inbox') }}"><i class="bi bi-envelope"></i> Messaggi</a>
+                <a class="pill-link pill-link-primary" href="{{ url_for('social.feed') }}"><i class="bi bi-house me-1"></i> Feed</a>
+                <a class="pill-link" href="{{ url_for('social.profile', user_id=current_user.id) }}"><i class="bi bi-person me-1"></i> Profilo</a>
+                <a class="pill-link" href="{{ url_for('notifications.index') }}"><i class="bi bi-bell me-1"></i> Notifiche</a>
+                <a class="pill-link" href="{{ url_for('messages.inbox') }}"><i class="bi bi-envelope me-1"></i> Messaggi</a>
                 {% if can('events', 'view') %}
-                  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('events.index') }}"><i class="bi bi-calendar-event"></i> Eventi</a>
+                  <a class="pill-link" href="{{ url_for('events.index') }}"><i class="bi bi-calendar-event me-1"></i> Eventi</a>
                 {% endif %}
                 {% if can('crm', 'access') %}
-                  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('crm.index') }}"><i class="bi bi-briefcase"></i> CRM</a>
+                  <a class="pill-link" href="{{ url_for('crm.index') }}"><i class="bi bi-briefcase me-1"></i> CRM</a>
                 {% endif %}
                 {% if can('admin', 'access') %}
-                  <a class="btn btn-sm btn-outline-dark" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-gear"></i> Admin</a>
+                  <a class="pill-link" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-gear me-1"></i> Admin</a>
                 {% endif %}
               </div>
             </div>
@@ -62,30 +139,30 @@
         </div>
       {% elif wtype == 'stats' %}
         <div class="col-12 col-lg-6">
-          <div class="card">
-            <div class="card-header"><strong>Statistiche personali</strong></div>
+          <div class="dash-card">
+            <div class="card-header bg-white border-bottom" style="border-radius:12px 12px 0 0;"><strong><i class="bi bi-bar-chart me-1" style="color:#1877f2;"></i>Statistiche personali</strong></div>
             <div class="card-body">
               <div class="row g-3">
                 <div class="col-6">
-                  <div class="p-3 border rounded">
+                  <div class="dash-stat-card">
                     <div class="text-muted small">Post</div>
                     <div class="h5 mb-0">{{ stats.posts or 0 }}</div>
                   </div>
                 </div>
                 <div class="col-6">
-                  <div class="p-3 border rounded">
+                  <div class="dash-stat-card">
                     <div class="text-muted small">Eventi creati</div>
                     <div class="h5 mb-0">{{ stats.events_created or 0 }}</div>
                   </div>
                 </div>
                 <div class="col-6">
-                  <div class="p-3 border rounded">
+                  <div class="dash-stat-card">
                     <div class="text-muted small">Task assegnati</div>
                     <div class="h5 mb-0">{{ stats.tasks_assigned or 0 }}</div>
                   </div>
                 </div>
                 <div class="col-6">
-                  <div class="p-3 border rounded">
+                  <div class="dash-stat-card">
                     <div class="text-muted small">Non letti (notif/mess)</div>
                     <div class="h5 mb-0">{{ (stats.notifications_unread or 0) + (stats.messages_unread or 0) }}</div>
                   </div>
@@ -96,15 +173,15 @@
         </div>
       {% elif wtype == 'recent_notifications' %}
         <div class="col-12">
-          <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <strong>Notifiche recenti</strong>
+          <div class="dash-card">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center" style="border-radius:12px 12px 0 0;">
+              <strong><i class="bi bi-bell me-1" style="color:#1877f2;"></i>Notifiche recenti</strong>
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('notifications.index') }}">Vedi tutte</a>
             </div>
             <div class="list-group list-group-flush">
               {% if recent_notifications %}
                 {% for n in recent_notifications %}
-                  <div class="list-group-item">
+                  <div class="list-group-item notif-item">
                     <div class="fw-semibold">{{ n.title }}</div>
                     <div class="text-muted small">{{ n.message }}</div>
                   </div>

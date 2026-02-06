@@ -1,48 +1,37 @@
 {% extends "base.html" %}
 {% block title %}{{ t('profile_connections') }} - {{ user.get_full_name() }}{% endblock %}
-{% block content %}
-<style>
-.connections-container {
-    background: #f3f2ef;
-    min-height: 100vh;
-    padding: 2rem 0;
-}
 
+{% block extra_css %}
+<style>
+.gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
 .connections-card {
     background: white;
-    border-radius: 10px;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
-    max-width: 900px;
-    margin: 0 auto;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
 }
-
-.connections-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid rgba(0,0,0,0.08);
+.connections-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
 }
-
-.connections-header h1 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
 .connection-item {
     display: flex;
     align-items: center;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid rgba(0,0,0,0.08);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
     transition: background 0.2s;
 }
-
 .connection-item:hover {
-    background: #f7f8fa;
+    background: #f0f7ff;
 }
-
 .connection-item:last-child {
     border-bottom: none;
 }
-
 .connection-avatar {
     width: 72px;
     height: 72px;
@@ -50,46 +39,40 @@
     object-fit: cover;
     margin-right: 1rem;
 }
-
 .connection-avatar-placeholder {
     width: 72px;
     height: 72px;
     border-radius: 50%;
-    background: #e0e0e0;
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: 1rem;
     font-size: 2rem;
-    color: #666;
+    color: white;
 }
-
 .connection-info {
     flex: 1;
 }
-
 .connection-name {
     font-weight: 600;
     color: rgba(0,0,0,0.9);
     text-decoration: none;
     font-size: 1rem;
 }
-
 .connection-name:hover {
     text-decoration: underline;
-    color: #0a66c2;
+    color: #1877f2;
 }
-
 .connection-headline {
     color: rgba(0,0,0,0.6);
     font-size: 0.875rem;
     margin-top: 4px;
 }
-
 .btn-message {
     background: transparent;
-    color: #0a66c2;
-    border: 1px solid #0a66c2;
+    color: #1877f2;
+    border: 1px solid #1877f2;
     padding: 6px 16px;
     border-radius: 20px;
     font-weight: 600;
@@ -97,58 +80,65 @@
     text-decoration: none;
     transition: all 0.2s;
 }
-
 .btn-message:hover {
-    background: rgba(10,102,194,0.1);
-    color: #0a66c2;
+    background: rgba(24,119,242,0.1);
+    color: #1877f2;
 }
-
 .empty-state {
     text-align: center;
     padding: 3rem;
     color: rgba(0,0,0,0.6);
 }
-
 .empty-state i {
     font-size: 4rem;
-    color: #e0e0e0;
+    color: #1877f2;
+    opacity: .3;
     margin-bottom: 1rem;
 }
 </style>
+{% endblock %}
 
-<div class="connections-container">
-    <div class="container">
-        <div class="connections-card">
-            <div class="connections-header">
-                <h1>{{ connections|length }} {{ t('profile_connections') }}</h1>
+{% block content %}
+<div class="container my-4">
+    <div class="gradient-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="mb-1"><i class="bi bi-people-fill me-2"></i>{{ connections|length }} {{ t('profile_connections') }}</h1>
+                <p class="mb-0 opacity-75">{{ user.get_full_name() }}</p>
             </div>
-            {% if connections %}
-            {% for conn in connections %}
-            <div class="connection-item">
-                {% if conn.avatar %}
-                <img src="{{ url_for('static', filename='uploads/' + conn.avatar) }}" class="connection-avatar" alt="">
-                {% else %}
-                <div class="connection-avatar-placeholder"><i class="bi bi-person-fill"></i></div>
-                {% endif %}
-                <div class="connection-info">
-                    <a href="{{ url_for('social.profile', user_id=conn.id) }}" class="connection-name">{{ conn.get_full_name() }}</a>
-                    {% if conn.bio %}
-                    <div class="connection-headline">{{ conn.bio[:100] }}{% if conn.bio|length > 100 %}...{% endif %}</div>
-                    {% endif %}
-                </div>
-                <a href="{{ url_for('messages.conversations') }}?to={{ conn.id }}" class="btn-message">
-                    <i class="bi bi-chat-dots me-1"></i>{{ t('messages_new') }}
-                </a>
-            </div>
-            {% endfor %}
-            {% else %}
-            <div class="empty-state">
-                <i class="bi bi-people"></i>
-                <h5>{{ t('profile_no_connections') }}</h5>
-                <p>{{ t('profile_no_connections_desc') }}</p>
-            </div>
-            {% endif %}
+            <a href="{{ url_for('social.profile', user_id=user.id) }}" class="btn btn-outline-light">
+                <i class="bi bi-arrow-left me-1"></i>Profilo
+            </a>
         </div>
+    </div>
+
+    <div class="connections-card">
+        {% if connections %}
+        {% for conn in connections %}
+        <div class="connection-item">
+            {% if conn.avatar %}
+            <img src="{{ url_for('static', filename='uploads/' + conn.avatar) }}" class="connection-avatar" alt="">
+            {% else %}
+            <div class="connection-avatar-placeholder"><i class="bi bi-person-fill"></i></div>
+            {% endif %}
+            <div class="connection-info">
+                <a href="{{ url_for('social.profile', user_id=conn.id) }}" class="connection-name">{{ conn.get_full_name() }}</a>
+                {% if conn.bio %}
+                <div class="connection-headline">{{ conn.bio[:100] }}{% if conn.bio|length > 100 %}...{% endif %}</div>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('messages.conversations') }}?to={{ conn.id }}" class="btn-message">
+                <i class="bi bi-chat-dots me-1"></i>{{ t('messages_new') }}
+            </a>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people d-block"></i>
+            <h5>{{ t('profile_no_connections') }}</h5>
+            <p>{{ t('profile_no_connections_desc') }}</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

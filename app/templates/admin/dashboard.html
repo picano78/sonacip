@@ -6,53 +6,107 @@
 .admin-header {
     background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
     color: white;
-    padding: 24px;
-    border-radius: 12px;
-    margin-bottom: 24px;
+    padding: 28px 32px;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(24, 119, 242, 0.3);
 }
 .stat-card {
     background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
     border: none;
+    position: relative;
+    overflow: hidden;
 }
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
 }
 .stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
 }
 .stat-value {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 2.2rem;
+    font-weight: 800;
     line-height: 1.2;
+    letter-spacing: -0.5px;
 }
+.stat-value.text-users { color: #1877f2; }
+.stat-value.text-societies { color: #198754; }
+.stat-value.text-athletes { color: #0dcaf0; }
+.stat-value.text-posts { color: #fd7e14; }
 .stat-label {
     color: #65676b;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.system-status-row {
+    background: white;
+    border-radius: 14px;
+    padding: 16px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.status-badge .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 .menu-section {
     background: white;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin-bottom: 16px;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 18px;
+    border-left: 4px solid transparent;
+    transition: border-color 0.3s;
+}
+.menu-section:nth-child(odd) {
+    border-left-color: #1877f2;
+}
+.menu-section:nth-child(even) {
+    border-left-color: #42a5f5;
+}
+.menu-section:hover {
+    border-left-color: #1877f2;
 }
 .menu-section-title {
-    font-weight: 600;
+    font-weight: 700;
     color: #1877f2;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e4e6eb;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f2f5;
+    font-size: 0.95rem;
 }
 .menu-grid {
     display: grid;
@@ -63,23 +117,30 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 16px 12px;
-    border-radius: 10px;
-    background: #f0f2f5;
+    padding: 18px 12px;
+    border-radius: 12px;
+    background: #f8f9fa;
     text-decoration: none;
     color: #1c1e21;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
     text-align: center;
+    border: 1px solid transparent;
 }
 .menu-item:hover {
-    background: #e4e6eb;
+    background: #edf4ff;
     color: #1877f2;
-    transform: scale(1.02);
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(24, 119, 242, 0.15);
+    border-color: rgba(24, 119, 242, 0.2);
 }
 .menu-item i {
     font-size: 1.8rem;
     margin-bottom: 8px;
     color: #1877f2;
+    transition: transform 0.2s;
+}
+.menu-item:hover i {
+    transform: scale(1.15);
 }
 .menu-item span {
     font-size: 0.85rem;
@@ -87,53 +148,63 @@
 }
 .recent-card {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     overflow: hidden;
 }
 .recent-card-header {
-    padding: 16px;
-    border-bottom: 1px solid #e4e6eb;
-    font-weight: 600;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.3px;
 }
 .user-item {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
+    padding: 14px 18px;
     border-bottom: 1px solid #f0f2f5;
     text-decoration: none;
     color: inherit;
-    transition: background 0.2s;
+    transition: background 0.2s, padding-left 0.2s;
 }
 .user-item:hover {
-    background: #f0f2f5;
+    background: #f8f9ff;
+    padding-left: 22px;
 }
 .user-avatar {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     background: linear-gradient(135deg, #1877f2, #42a5f5);
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-weight: 600;
-    margin-right: 12px;
+    font-weight: 700;
+    margin-right: 14px;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 8px rgba(24, 119, 242, 0.25);
 }
 .user-info {
     flex: 1;
 }
 .user-name {
-    font-weight: 600;
+    font-weight: 700;
     color: #1c1e21;
 }
 .user-role {
-    font-size: 0.85rem;
-    color: #65676b;
-}
-.user-time {
     font-size: 0.8rem;
     color: #65676b;
+    font-weight: 500;
+}
+.user-time {
+    font-size: 0.78rem;
+    color: #65676b;
+    background: #f0f2f5;
+    padding: 3px 8px;
+    border-radius: 8px;
 }
 </style>
 {% endblock %}
@@ -147,7 +218,7 @@
                 <p class="mb-0 opacity-75">Gestisci la piattaforma in modo semplice e visivo</p>
             </div>
             <div class="d-none d-md-block">
-                <span class="badge bg-white text-primary fs-6">SONACIP</span>
+                <span class="badge bg-white text-primary fs-6 px-3 py-2" style="border-radius: 10px;">SONACIP</span>
             </div>
         </div>
     </div>
@@ -160,7 +231,7 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div>
-                        <div class="stat-value">{{ stats.total_users }}</div>
+                        <div class="stat-value text-users">{{ stats.total_users }}</div>
                         <div class="stat-label">Utenti</div>
                     </div>
                 </div>
@@ -173,7 +244,7 @@
                         <i class="bi bi-building"></i>
                     </div>
                     <div>
-                        <div class="stat-value">{{ stats.total_societies }}</div>
+                        <div class="stat-value text-societies">{{ stats.total_societies }}</div>
                         <div class="stat-label">Società</div>
                     </div>
                 </div>
@@ -186,7 +257,7 @@
                         <i class="bi bi-person-badge"></i>
                     </div>
                     <div>
-                        <div class="stat-value">{{ stats.total_athletes }}</div>
+                        <div class="stat-value text-athletes">{{ stats.total_athletes }}</div>
                         <div class="stat-label">Atleti</div>
                     </div>
                 </div>
@@ -199,12 +270,32 @@
                         <i class="bi bi-file-post"></i>
                     </div>
                     <div>
-                        <div class="stat-value">{{ stats.total_posts }}</div>
+                        <div class="stat-value text-posts">{{ stats.total_posts }}</div>
                         <div class="stat-label">Post</div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="system-status-row">
+        <span class="fw-bold text-muted small text-uppercase me-2"><i class="bi bi-hdd-rack me-1"></i>Sistema</span>
+        <span class="status-badge" style="background: #e8f5e9; color: #2e7d32;">
+            <span class="status-dot" style="background: #2e7d32;"></span>
+            Operativo
+        </span>
+        <span class="status-badge" style="background: #e3f2fd; color: #1565c0;">
+            <i class="bi bi-code-slash"></i> v2.0
+        </span>
+        <span class="status-badge" style="background: #f3e5f5; color: #7b1fa2;">
+            <i class="bi bi-database"></i> DB OK
+        </span>
+        <span class="status-badge" style="background: #fff3e0; color: #e65100;">
+            <i class="bi bi-envelope"></i> SMTP
+        </span>
+        <span class="status-badge" style="background: #e8f5e9; color: #2e7d32;">
+            <i class="bi bi-shield-check"></i> Sicuro
+        </span>
     </div>
 
     <div class="row g-4">

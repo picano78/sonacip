@@ -1,24 +1,72 @@
 {% extends 'base.html' %}
 {% block title %}Nuovo Torneo{% endblock %}
+
+{% block extra_css %}
+<style>
+  .tc-gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .tc-form-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .tc-form-card .form-control:focus,
+  .tc-form-card .form-select:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 0.2rem rgba(24,119,242,0.15);
+  }
+  .btn-fb-gradient {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .btn-fb-gradient:hover {
+    background: linear-gradient(135deg, #155fc7 0%, #1877f2 100%);
+    color: #fff;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-  <h1 class="h3 mb-3">Crea nuovo torneo</h1>
-  <form method="post">
-    {{ form.hidden_tag() }}
-    <div class="row g-3">
-      <div class="col-md-6">{{ form.name.label(class='form-label') }}{{ form.name(class='form-control') }}</div>
-      <div class="col-md-6">{{ form.format.label(class='form-label') }}{{ form.format(class='form-select') }}</div>
-      <div class="col-md-6">{{ form.season.label(class='form-label') }}{{ form.season(class='form-control') }}</div>
-      <div class="col-md-3">{{ form.start_date.label(class='form-label') }}{{ form.start_date(class='form-control') }}</div>
-      <div class="col-md-3">{{ form.end_date.label(class='form-label') }}{{ form.end_date(class='form-control') }}</div>
-      <div class="col-12">{{ form.description.label(class='form-label') }}{{ form.description(class='form-control', rows=3) }}</div>
-      <div class="col-12 form-check">{{ form.auto_select(class='form-check-input', id='autoSel') }}<label for="autoSel" class="form-check-label">Abilita selezione automatica squadre</label></div>
-      <div class="col-12">{{ form.auto_criteria.label(class='form-label') }}{{ form.auto_criteria(class='form-control', rows=3, placeholder='Esempio: {"category": "U17"}') }}</div>
+  <div class="tc-gradient-header">
+    <div class="d-flex align-items-center gap-3">
+      <i class="bi bi-plus-circle fs-3"></i>
+      <div>
+        <h1 class="h3 mb-0">Nuovo Torneo</h1>
+        <p class="mb-0" style="opacity:0.85;">Configura e crea un nuovo torneo</p>
+      </div>
     </div>
-    <div class="mt-3 d-flex gap-2">
-      <a href="{{ url_for('tournaments.list_tournaments') }}" class="btn btn-outline-secondary">Annulla</a>
-      <button class="btn btn-primary" type="submit">Crea</button>
+  </div>
+
+  <div class="tc-form-card">
+    <div class="card-body p-4">
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+          <div class="col-md-6">{{ form.name.label(class='form-label') }}{{ form.name(class='form-control') }}</div>
+          <div class="col-md-6">{{ form.format.label(class='form-label') }}{{ form.format(class='form-select') }}</div>
+          <div class="col-md-6">{{ form.season.label(class='form-label') }}{{ form.season(class='form-control') }}</div>
+          <div class="col-md-3">{{ form.start_date.label(class='form-label') }}{{ form.start_date(class='form-control') }}</div>
+          <div class="col-md-3">{{ form.end_date.label(class='form-label') }}{{ form.end_date(class='form-control') }}</div>
+          <div class="col-12">{{ form.description.label(class='form-label') }}{{ form.description(class='form-control', rows=3) }}</div>
+          <div class="col-12 form-check ps-4">{{ form.auto_select(class='form-check-input', id='autoSel') }}<label for="autoSel" class="form-check-label">Abilita selezione automatica squadre</label></div>
+          <div class="col-12">{{ form.auto_criteria.label(class='form-label') }}{{ form.auto_criteria(class='form-control', rows=3, placeholder='Esempio: {"category": "U17"}') }}</div>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+          <a href="{{ url_for('tournaments.list_tournaments') }}" class="btn btn-outline-secondary">Annulla</a>
+          <button class="btn btn-fb-gradient" type="submit"><i class="bi bi-check-lg me-1"></i>Crea</button>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
 </div>
 {% endblock %}

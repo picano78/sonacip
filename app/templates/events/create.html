@@ -1,85 +1,141 @@
 {% extends "base.html" %}
 {% block title %}Crea Evento{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .form-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .form-card .form-control:focus,
+  .form-card .form-select:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 .2rem rgba(24,119,242,.25);
+  }
+  .match-details-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fafbfc;
+  }
+  .btn-facebook {
+    background: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .btn-facebook:hover {
+    background: #155fc7;
+    color: white;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1><i class="bi bi-plus-circle me-2"></i>Crea Evento</h1>
+                <p>Crea un nuovo evento per la community</p>
+            </div>
+            <a href="{{ url_for('events.index') }}" class="btn btn-outline-light">
+                <i class="bi bi-arrow-left me-1"></i> Tutti gli eventi
+            </a>
+        </div>
+    </div>
+
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="mb-4">Crea Nuovo Evento</h2>
+            <div class="card form-card">
+                <div class="card-body p-4">
                     <form method="POST">
                         {{ form.hidden_tag() }}
                         <div class="mb-3">
-                            {{ form.title.label(class="form-label") }}
+                            {{ form.title.label(class="form-label fw-semibold") }}
                             {{ form.title(class="form-control") }}
                         </div>
                         <div class="mb-3">
-                            {{ form.event_type.label(class="form-label") }}
+                            {{ form.event_type.label(class="form-label fw-semibold") }}
                             {{ form.event_type(class="form-select") }}
                         </div>
-                        <div class="card mb-3">
+                        <div class="card match-details-card mb-3">
                             <div class="card-body">
-                                <h5 class="card-title">Dettagli Partita/Torneo (opzionale)</h5>
+                                <h5 class="card-title fw-bold"><i class="bi bi-trophy me-2" style="color: #1877f2;"></i>Dettagli Partita/Torneo (opzionale)</h5>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        {{ form.tournament_name.label(class="form-label") }}
+                                        {{ form.tournament_name.label(class="form-label fw-semibold") }}
                                         {{ form.tournament_name(class="form-control") }}
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        {{ form.tournament_phase.label(class="form-label") }}
+                                        {{ form.tournament_phase.label(class="form-label fw-semibold") }}
                                         {{ form.tournament_phase(class="form-control") }}
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        {{ form.opponent_name.label(class="form-label") }}
+                                        {{ form.opponent_name.label(class="form-label fw-semibold") }}
                                         {{ form.opponent_name(class="form-control") }}
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        {{ form.home_away.label(class="form-label") }}
+                                        {{ form.home_away.label(class="form-label fw-semibold") }}
                                         {{ form.home_away(class="form-select") }}
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        {{ form.score_for.label(class="form-label") }}
+                                        {{ form.score_for.label(class="form-label fw-semibold") }}
                                         {{ form.score_for(class="form-control") }}
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        {{ form.score_against.label(class="form-label") }}
+                                        {{ form.score_against.label(class="form-label fw-semibold") }}
                                         {{ form.score_against(class="form-control") }}
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    {{ form.bracket_url.label(class="form-label") }}
+                                    {{ form.bracket_url.label(class="form-label fw-semibold") }}
                                     {{ form.bracket_url(class="form-control") }}
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
-                            {{ form.description.label(class="form-label") }}
+                            {{ form.description.label(class="form-label fw-semibold") }}
                             {{ form.description(class="form-control", rows="3") }}
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                {{ form.start_date.label(class="form-label") }}
+                                {{ form.start_date.label(class="form-label fw-semibold") }}
                                 {{ form.start_date(class="form-control") }}
                             </div>
                             <div class="col-md-6 mb-3">
-                                {{ form.end_date.label(class="form-label") }}
+                                {{ form.end_date.label(class="form-label fw-semibold") }}
                                 {{ form.end_date(class="form-control") }}
                             </div>
                         </div>
                         <div class="mb-3">
-                            {{ form.location.label(class="form-label") }}
+                            {{ form.location.label(class="form-label fw-semibold") }}
                             {{ form.location(class="form-control") }}
                         </div>
                         <div class="mb-3">
-                            {{ form.address.label(class="form-label") }}
+                            {{ form.address.label(class="form-label fw-semibold") }}
                             {{ form.address(class="form-control") }}
                         </div>
-                        <button type="submit" class="btn btn-primary">Crea Evento</button>
-                        <a href="{{ url_for('events.index') }}" class="btn btn-secondary">Annulla</a>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-facebook">
+                                <i class="bi bi-check-circle me-1"></i> Crea Evento
+                            </button>
+                            <a href="{{ url_for('events.index') }}" class="btn btn-secondary">Annulla</a>
+                        </div>
                     </form>
                 </div>
             </div>

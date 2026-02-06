@@ -2,20 +2,19 @@
 CRM Forms
 """
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SelectField, DateField, BooleanField, IntegerField
+from wtforms import StringField, TextAreaField, SelectField, DateField, BooleanField, IntegerField, HiddenField
 from wtforms.validators import DataRequired, Email, Optional, Length
 from app.models import User, SocietyMembership
 
 
 class ContactForm(FlaskForm):
-    """Form for creating/editing contacts"""
     first_name = StringField('Nome', validators=[DataRequired()])
     last_name = StringField('Cognome', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), Email()])
     phone = StringField('Telefono', validators=[Optional()])
     company = StringField('Azienda/Società', validators=[Optional()])
     position = StringField('Posizione', validators=[Optional()])
-    
+
     contact_type = SelectField('Tipo Contatto', choices=[
         ('prospect', 'Prospect'),
         ('athlete', 'Atleta Potenziale'),
@@ -24,7 +23,7 @@ class ContactForm(FlaskForm):
         ('parent', 'Genitore'),
         ('other', 'Altro')
     ], validators=[DataRequired()])
-    
+
     status = SelectField('Stato', choices=[
         ('new', 'Nuovo'),
         ('contacted', 'Contattato'),
@@ -32,7 +31,7 @@ class ContactForm(FlaskForm):
         ('converted', 'Convertito'),
         ('lost', 'Perso')
     ], validators=[DataRequired()])
-    
+
     source = SelectField('Fonte', choices=[
         ('website', 'Sito Web'),
         ('social', 'Social Media'),
@@ -41,7 +40,7 @@ class ContactForm(FlaskForm):
         ('advertising', 'Pubblicità'),
         ('other', 'Altro')
     ], validators=[Optional()])
-    
+
     notes = TextAreaField('Note', validators=[Optional()])
     address = StringField('Indirizzo', validators=[Optional()])
     city = StringField('Città', validators=[Optional()])
@@ -49,82 +48,16 @@ class ContactForm(FlaskForm):
 
 
 class OpportunityForm(FlaskForm):
-    """Form for creating/editing opportunities"""
-    title = StringField('Titolo', validators=[DataRequired()])
-    description = TextAreaField('Descrizione', validators=[Optional()])
-    
-    opportunity_type = SelectField('Tipo', choices=[
-        ('athlete_recruitment', 'Reclutamento Atleta'),
-        ('sponsorship', 'Sponsorizzazione'),
-        ('partnership', 'Partnership'),
-        ('event', 'Evento'),
-        ('membership', 'Iscrizione'),
-        ('other', 'Altro')
-    ], validators=[DataRequired()])
-    
-    stage = SelectField('Fase', choices=[], validators=[DataRequired()])
-    
-    value = StringField('Valore (€)', validators=[Optional()])
-    probability = SelectField('Probabilità', choices=[
-        ('10', '10%'),
-        ('25', '25%'),
-        ('50', '50%'),
-        ('75', '75%'),
-        ('90', '90%'),
-        ('100', '100%')
-    ], validators=[Optional()])
-    
-    expected_close_date = DateField('Data Chiusura Prevista', format='%Y-%m-%d', validators=[Optional()])
-    
-    contact_id = SelectField('Contatto Collegato', coerce=int, validators=[Optional()])
-
-    def __init__(self, *args, **kwargs):
-        society_id = kwargs.pop('society_id', None)
-        super().__init__(*args, **kwargs)
-
-        # Dynamic stage choices from CRM pipeline config (per society).
-        # Fallback to legacy fixed choices when not available.
-        fallback = [
-            ('prospecting', 'Prospecting'),
-            ('qualification', 'Qualificazione'),
-            ('proposal', 'Proposta'),
-            ('negotiation', 'Negoziazione'),
-            ('closed_won', 'Chiusa - Vinta'),
-            ('closed_lost', 'Chiusa - Persa'),
-        ]
-        if not society_id:
-            self.stage.choices = fallback
-            return
-
-        try:
-            from app.models import CRMPipeline, CRMPipelineStage
-
-            pipe = CRMPipeline.query.filter_by(society_id=society_id).first()
-            if not pipe:
-                self.stage.choices = fallback
-                return
-            stages = (
-                CRMPipelineStage.query.filter_by(pipeline_id=pipe.id, is_active=True)
-                .order_by(CRMPipelineStage.position.asc(), CRMPipelineStage.id.asc())
-                .all()
-            )
-            self.stage.choices = [(s.key, s.label) for s in stages] or fallback
-        except Exception:
-            self.stage.choices = fallback
+    """Deprecated – kept as stub for import compatibility."""
+    pass
 
 
 class PipelineStageForm(FlaskForm):
-    key = StringField('Key (tecnica)', validators=[DataRequired(), Length(max=50)])
-    label = StringField('Nome fase', validators=[DataRequired(), Length(max=120)])
-    position = IntegerField('Ordine', validators=[Optional()])
-    color = StringField('Colore', validators=[Optional(), Length(max=20)])
-    is_won = BooleanField('È “vinta”')
-    is_lost = BooleanField('È “persa”')
-    is_active = BooleanField('Attiva', default=True)
+    """Deprecated – kept as stub for import compatibility."""
+    pass
 
 
 class ActivityForm(FlaskForm):
-    """Form for logging activities"""
     activity_type = SelectField('Tipo Attività', choices=[
         ('call', 'Chiamata'),
         ('email', 'Email'),
@@ -133,14 +66,13 @@ class ActivityForm(FlaskForm):
         ('task', 'Task'),
         ('other', 'Altro')
     ], validators=[DataRequired()])
-    
+
     subject = StringField('Oggetto', validators=[DataRequired()])
     description = TextAreaField('Descrizione', validators=[Optional()])
     activity_date = DateField('Data', format='%Y-%m-%d', validators=[Optional()])
     completed = BooleanField('Completata')
-    
+
     contact_id = SelectField('Contatto', coerce=int, validators=[Optional()])
-    opportunity_id = SelectField('Opportunità', coerce=int, validators=[Optional()])
 
 
 class MedicalCertificateForm(FlaskForm):
@@ -202,3 +134,18 @@ class SocietyFeeForm(FlaskForm):
             members = User.query.filter(User.id.in_(member_ids), User.is_active == True).order_by(User.first_name.asc()).all() if member_ids else []
             choices = [(u.id, u.get_full_name()) for u in members]
         self.user_id.choices = choices
+
+
+class MemberSearchForm(FlaskForm):
+    q = StringField('Cerca utente', validators=[Optional(), Length(max=120)])
+
+
+class MemberAddForm(FlaskForm):
+    user_id = HiddenField('user_id', validators=[DataRequired()])
+    role_name = SelectField('Ruolo', choices=[
+        ('atleta', 'Atleta'),
+        ('coach', 'Coach'),
+        ('dirigente', 'Dirigente'),
+        ('staff', 'Staff'),
+        ('appassionato', 'Appassionato'),
+    ], validators=[DataRequired()])

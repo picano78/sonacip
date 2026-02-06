@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}{{ user.get_full_name() }} - Dettaglio Membro{% endblock %}
+{% block content %}
+<style>
+  .profile-card-header {
+    background: linear-gradient(135deg, #1877f2 0%, #0d5bbd 100%);
+    color: #fff;
+    border-radius: .75rem .75rem 0 0;
+    padding: 1.5rem;
+  }
+  [data-bs-theme="dark"] .profile-card-header {
+    background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  }
+  .role-badge-atleta { background-color: #1877f2; }
+  .role-badge-coach { background-color: #198754; }
+  .role-badge-dirigente { background-color: #6f42c1; }
+  .role-badge-staff { background-color: #fd7e14; }
+  .role-badge-appassionato { background-color: #6c757d; }
+</style>
+
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{ url_for('crm.members') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Membri</a>
+    <a href="{{ url_for('crm.index') }}" class="btn btn-outline-secondary">Dashboard</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="profile-card-header text-center">
+          {% if user.avatar_url %}
+            <img src="{{ user.avatar_url }}" class="rounded-circle mb-2" width="80" height="80" alt="avatar" style="object-fit:cover;">
+          {% else %}
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-25 mb-2" style="width:80px;height:80px;">
+              <i class="bi bi-person-fill fs-1"></i>
+            </div>
+          {% endif %}
+          <h5 class="mb-1">{{ user.get_full_name() }}</h5>
+          <p class="mb-1 opacity-75">{{ user.email }}</p>
+          <span class="badge role-badge-{{ membership.role_name }} text-white fs-6">{{ membership.role_name }}</span>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between">
+              <span class="text-muted">Stato</span>
+              <span class="badge bg-{{ 'success' if membership.status == 'active' else 'secondary' }}">{{ membership.status }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+              <span class="text-muted">Iscritto dal</span>
+              <span>{{ membership.created_at.strftime('%d/%m/%Y') if membership.created_at else 'N/D' }}</span>
+            </li>
+          </ul>
+        </div>
+        {% if can('crm','manage') %}
+        <div class="card-footer">
+          <form method="post" action="{{ url_for('crm.member_role_update', membership_id=membership.id) }}" class="mb-2">
+            {{ csrf_token() }}
+            <div class="input-group input-group-sm">
+              <select name="role_name" class="form-select form-select-sm">
+                <option value="atleta" {{ 'selected' if membership.role_name == 'atleta' }}>Atleta</option>
+                <option value="coach" {{ 'selected' if membership.role_name == 'coach' }}>Coach</option>
+                <option value="dirigente" {{ 'selected' if membership.role_name == 'dirigente' }}>Dirigente</option>
+                <option value="staff" {{ 'selected' if membership.role_name == 'staff' }}>Staff</option>
+                <option value="appassionato" {{ 'selected' if membership.role_name == 'appassionato' }}>Appassionato</option>
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary">Cambia Ruolo</button>
+            </div>
+          </form>
+          <form method="post" action="{{ url_for('crm.member_remove', membership_id=membership.id) }}" onsubmit="return confirm('Confermi la rimozione del membro?');">
+            {{ csrf_token() }}
+            <button type="submit" class="btn btn-sm btn-outline-danger w-100"><i class="bi bi-person-x me-1"></i> Rimuovi dalla Società</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-certs"><i class="bi bi-file-medical me-1"></i> Certificati Medici</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-fees"><i class="bi bi-cash-stack me-1"></i> Quote Societarie</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-events"><i class="bi bi-calendar-event me-1"></i> Convocazioni</a></li>
+      </ul>
+
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="tab-certs">
+          {% if can('crm','manage') %}
+          <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Aggiungi Certificato</h6></div>
+            <div class="card-body">
+              <form method="post" action="{{ url_for('crm.member_certificate_create', membership_id=membership.id) }}">
+                {{ cert_form.hidden_tag() }}
+                <input type="hidden" name="user_id" value="{{ user.id }}">
+                <div class="row g-2">
+                  <div class="col-md-3">
+                    {{ cert_form.status.label(class="form-label small") }}
+                    {{ cert_form.status(class="form-select form-select-sm") }}
+                  </div>
+                  <div class="col-md-3">
+                    {{ cert_form.issued_on.label(class="form-label small") }}
+                    {{ cert_form.issued_on(class="form-control form-control-sm") }}
+                  </div>
+                  <div class="col-md-3">
+                    {{ cert_form.expires_on.label(class="form-label small") }}
+                    {{ cert_form.expires_on(class="form-control form-control-sm") }}
+                  </div>
+                  <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-sm btn-success w-100"><i class="bi bi-plus-circle me-1"></i> Aggiungi</button>
+                  </div>
+                  <div class="col-12">
+                    {{ cert_form.notes(class="form-control form-control-sm", placeholder="Note (opzionale)", rows="1") }}
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead>
+                  <tr><th>Rilascio</th><th>Scadenza</th><th>Stato</th><th>Note</th></tr>
+                </thead>
+                <tbody>
+                  {% for cert in certificates %}
+                  <tr>
+                    <td>{{ cert.issued_on.strftime('%d/%m/%Y') if cert.issued_on else '-' }}</td>
+                    <td>{{ cert.expires_on.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                      <span class="badge bg-{{ 'success' if cert.status == 'valid' else ('danger' if cert.status == 'expired' else 'secondary') }}">{{ cert.status }}</span>
+                    </td>
+                    <td class="text-muted small">{{ cert.notes or '-' }}</td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="4" class="text-center text-muted">Nessun certificato</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-fees">
+          {% if can('crm','manage') %}
+          <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Aggiungi Quota</h6></div>
+            <div class="card-body">
+              <form method="post" action="{{ url_for('crm.member_fee_create', membership_id=membership.id) }}">
+                {{ fee_form.hidden_tag() }}
+                <input type="hidden" name="user_id" value="{{ user.id }}">
+                <div class="row g-2">
+                  <div class="col-md-3">
+                    {{ fee_form.description.label(class="form-label small") }}
+                    {{ fee_form.description(class="form-control form-control-sm") }}
+                  </div>
+                  <div class="col-md-2">
+                    {{ fee_form.amount_eur.label(class="form-label small") }}
+                    {{ fee_form.amount_eur(class="form-control form-control-sm") }}
+                  </div>
+                  <div class="col-md-3">
+                    {{ fee_form.due_on.label(class="form-label small") }}
+                    {{ fee_form.due_on(class="form-control form-control-sm") }}
+                  </div>
+                  <div class="col-md-2">
+                    {{ fee_form.status.label(class="form-label small") }}
+                    {{ fee_form.status(class="form-select form-select-sm") }}
+                  </div>
+                  <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-sm btn-success w-100"><i class="bi bi-plus-circle me-1"></i> Aggiungi</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead>
+                  <tr><th>Descrizione</th><th>Importo</th><th>Scadenza</th><th>Stato</th></tr>
+                </thead>
+                <tbody>
+                  {% for fee in fees %}
+                  <tr>
+                    <td>{{ fee.description or 'Quota' }}</td>
+                    <td>&euro;{{ "%.2f"|format((fee.amount_cents or 0) / 100.0) }}</td>
+                    <td>{{ fee.due_on.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                      <span class="badge bg-{{ 'success' if fee.status == 'paid' else ('warning' if fee.status == 'pending' else 'secondary') }}">{{ fee.status }}</span>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="4" class="text-center text-muted">Nessuna quota</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab-events">
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead>
+                  <tr><th>Evento</th><th>Data</th><th>Tipo</th><th>Stato</th></tr>
+                </thead>
+                <tbody>
+                  {% for c in convocations %}
+                  <tr>
+                    <td><strong>{{ c.event.title }}</strong></td>
+                    <td>{{ c.event.start_date.strftime('%d/%m/%Y %H:%M') if c.event.start_date else '-' }}</td>
+                    <td><span class="badge bg-info text-white">{{ c.event.event_type }}</span></td>
+                    <td>
+                      <span class="badge bg-{{ 'success' if c.status == 'accepted' else ('warning' if c.status == 'pending' else 'danger') }}">{{ c.status }}</span>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="4" class="text-center text-muted">Nessuna convocazione</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -803,7 +803,6 @@ def society_dashboard():
 
     member_count = SocietyMembership.query.filter_by(society_id=society.id, status='active').count()
     calendar_count = SocietyCalendarEvent.query.filter_by(society_id=society.id).count()
-    opp_count = Opportunity.query.filter_by(society_id=society.id).count()
     society_posts_count = Post.query.filter_by(society_id=society.id).count()
 
     suggestions = []
@@ -816,15 +815,15 @@ def society_dashboard():
         _suggest("invite_members", "Invita membri", "Aggiungi staff/atleti per far partire il lavoro reale della società.", url_for('social.society_dashboard'))
     if calendar_count == 0:
         _suggest("create_calendar_event", "Crea il primo evento nel planner", "Il calendario è il cuore operativo: crea un allenamento o una partita.", url_for('calendar.create'))
-    if opp_count == 0:
-        _suggest("create_crm_opportunity", "Apri la prima opportunità CRM", "Traccia sponsor/iscrizioni/reclutamento con una opportunità.", url_for('crm.new_opportunity'))
+    if member_count < 3:
+        _suggest("add_crm_member", "Aggiungi membri al CRM", "Gestisci i membri della società con il nuovo modulo CRM.", url_for('crm.members'))
     if society_posts_count == 0:
         _suggest("publish_society_post", "Pubblica un comunicato", "Usa il social per comunicazioni ufficiali verso la società/atleti.", url_for('social.feed'))
     # Onboarding checklist (hybrid: some auto-detected, some manual)
     step_defs = [
         {"key": "invite_one_member", "label": "Invita almeno 1 membro", "auto": member_count >= 2},
         {"key": "create_one_calendar_event", "label": "Crea 1 evento nel calendario", "auto": calendar_count >= 1},
-        {"key": "create_one_crm_opportunity", "label": "Crea 1 opportunità CRM", "auto": opp_count >= 1},
+        {"key": "add_crm_members", "label": "Aggiungi membri al CRM", "auto": member_count >= 3},
         {"key": "publish_one_post", "label": "Pubblica 1 post/comunicato", "auto": society_posts_count >= 1},
         {"key": "review_permissions", "label": "Rivedi permessi ruoli", "auto": False},
     ]

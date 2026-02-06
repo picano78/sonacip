@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Membri - Gestione Società{% endblock %}
+{% block content %}
+<style>
+  .role-badge-atleta { background-color: #1877f2; }
+  .role-badge-coach { background-color: #198754; }
+  .role-badge-dirigente { background-color: #6f42c1; }
+  .role-badge-staff { background-color: #fd7e14; }
+  .role-badge-appassionato { background-color: #6c757d; }
+  .cert-valid { color: #198754; }
+  .cert-expiring { color: #ffc107; }
+  .cert-expired { color: #dc3545; }
+  .cert-none { color: #adb5bd; }
+</style>
+
+<div class="container my-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h1 class="h3"><i class="bi bi-people me-2"></i>Membri della Società</h1>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('crm.member_add') }}" class="btn btn-success"><i class="bi bi-person-plus me-1"></i> Aggiungi Membro</a>
+      <a href="{{ url_for('crm.index') }}" class="btn btn-outline-secondary">Dashboard</a>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small">Cerca per nome/email</label>
+          <input type="text" name="q" class="form-control" placeholder="Nome, cognome o email..." value="{{ name_filter or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Filtra per ruolo</label>
+          <select name="role" class="form-select">
+            <option value="">Tutti i ruoli</option>
+            <option value="atleta" {{ 'selected' if role_filter == 'atleta' }}>Atleta</option>
+            <option value="coach" {{ 'selected' if role_filter == 'coach' }}>Coach</option>
+            <option value="dirigente" {{ 'selected' if role_filter == 'dirigente' }}>Dirigente</option>
+            <option value="staff" {{ 'selected' if role_filter == 'staff' }}>Staff</option>
+            <option value="appassionato" {{ 'selected' if role_filter == 'appassionato' }}>Appassionato</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search"></i> Filtra</button>
+          <a href="{{ url_for('crm.members') }}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Ruolo</th>
+            <th>Certificato Medico</th>
+            <th>Quote</th>
+            <th class="text-end">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in member_data %}
+            {% set m = item.membership %}
+            {% set u = m.user %}
+            <tr>
+              <td>
+                <strong>{{ u.get_full_name() if u else 'N/D' }}</strong>
+                <br><small class="text-muted">{{ u.email if u else '' }}</small>
+              </td>
+              <td>
+                <span class="badge role-badge-{{ m.role_name }} text-white">{{ m.role_name }}</span>
+              </td>
+              <td>
+                {% if item.cert_status == 'valid' %}
+                  <span class="badge bg-success"><i class="bi bi-check-circle"></i> Valido</span>
+                {% elif item.cert_status == 'expiring' %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> In scadenza</span>
+                {% elif item.cert_status == 'expired' %}
+                  <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Scaduto</span>
+                {% else %}
+                  <span class="badge bg-secondary"><i class="bi bi-dash-circle"></i> Assente</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if item.pending_fees > 0 %}
+                  <span class="badge bg-danger">{{ item.pending_fees }} da pagare</span>
+                {% else %}
+                  <span class="badge bg-success">In regola</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="d-flex gap-1 justify-content-end">
+                  <a href="{{ url_for('crm.member_detail', membership_id=m.id) }}" class="btn btn-sm btn-outline-primary" title="Dettaglio"><i class="bi bi-eye"></i></a>
+                  {% if can('crm','manage') %}
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                      <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                          <form method="post" action="{{ url_for('crm.member_role_update', membership_id=m.id) }}">
+                            {{ csrf_token() }}
+                            <div class="px-3 py-1">
+                              <label class="form-label small mb-1">Cambia ruolo</label>
+                              <select name="role_name" class="form-select form-select-sm mb-1">
+                                <option value="atleta" {{ 'selected' if m.role_name == 'atleta' }}>Atleta</option>
+                                <option value="coach" {{ 'selected' if m.role_name == 'coach' }}>Coach</option>
+                                <option value="dirigente" {{ 'selected' if m.role_name == 'dirigente' }}>Dirigente</option>
+                                <option value="staff" {{ 'selected' if m.role_name == 'staff' }}>Staff</option>
+                                <option value="appassionato" {{ 'selected' if m.role_name == 'appassionato' }}>Appassionato</option>
+                              </select>
+                              <button type="submit" class="btn btn-sm btn-primary w-100">Aggiorna</button>
+                            </div>
+                          </form>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <form method="post" action="{{ url_for('crm.member_remove', membership_id=m.id) }}" onsubmit="return confirm('Rimuovere questo membro dalla società?');">
+                            {{ csrf_token() }}
+                            <button type="submit" class="dropdown-item text-danger"><i class="bi bi-person-x me-1"></i> Rimuovi</button>
+                          </form>
+                        </li>
+                      </ul>
+                    </div>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">Nessun membro trovato</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

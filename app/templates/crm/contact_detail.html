@@ -61,28 +61,6 @@
         </div>
         
         <div class="col-md-8">
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between">
-                    <h5 class="mb-0">Opportunità</h5>
-                    <a href="{{ url_for('crm.new_opportunity') }}" class="btn btn-sm btn-primary">Nuova</a>
-                </div>
-                <div class="list-group list-group-flush">
-                    {% for opp in opportunities %}
-                        <a href="{{ url_for('crm.opportunity_detail', opp_id=opp.id) }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>{{ opp.title }}</strong><br>
-                                    <small class="text-muted">{{ opp.opportunity_type }}</small>
-                                </div>
-                                <span class="badge bg-info">{{ opp.stage }}</span>
-                            </div>
-                        </a>
-                    {% else %}
-                        <div class="list-group-item text-muted">Nessuna opportunità</div>
-                    {% endfor %}
-                </div>
-            </div>
-            
             <div class="card">
                 <div class="card-header d-flex justify-content-between">
                     <h5 class="mb-0">Attività</h5>

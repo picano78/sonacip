@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Convocazioni - Gestione Società{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <h1 class="h3"><i class="bi bi-calendar-event me-2"></i>Convocazioni</h1>
+    <a href="{{ url_for('crm.index') }}" class="btn btn-outline-secondary">Dashboard</a>
+  </div>
+
+  {% if event_data %}
+  <div class="row g-3">
+    {% for item in event_data %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="card-title mb-1">{{ item.event.title }}</h6>
+            <p class="text-muted small mb-2">
+              <i class="bi bi-calendar3 me-1"></i>{{ item.event.start_date.strftime('%d/%m/%Y %H:%M') if item.event.start_date else 'TBD' }}
+              {% if item.event.location %}
+                <br><i class="bi bi-geo-alt me-1"></i>{{ item.event.location }}
+              {% endif %}
+            </p>
+            <div class="d-flex gap-2 mb-2">
+              <span class="badge bg-primary">{{ item.total }} convocati</span>
+              <span class="badge bg-success">{{ item.accepted }} accettati</span>
+              <span class="badge bg-warning text-dark">{{ item.pending }} in attesa</span>
+              {% if item.declined > 0 %}
+                <span class="badge bg-danger">{{ item.declined }} rifiutati</span>
+              {% endif %}
+            </div>
+            <div class="progress mb-2" style="height: 6px;">
+              {% set pct_accepted = (item.accepted / item.total * 100) if item.total > 0 else 0 %}
+              {% set pct_pending = (item.pending / item.total * 100) if item.total > 0 else 0 %}
+              {% set pct_declined = (item.declined / item.total * 100) if item.total > 0 else 0 %}
+              <div class="progress-bar bg-success" style="width: {{ pct_accepted }}%"></div>
+              <div class="progress-bar bg-warning" style="width: {{ pct_pending }}%"></div>
+              <div class="progress-bar bg-danger" style="width: {{ pct_declined }}%"></div>
+            </div>
+          </div>
+          {% if can('crm','manage') %}
+          <div class="card-footer">
+            <form method="post" action="{{ url_for('crm.convocation_notify', event_id=item.event.id) }}">
+              {{ csrf_token() }}
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-bell me-1"></i> Invia Notifica</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="card-body text-center text-muted py-5">
+      <i class="bi bi-calendar-x fs-1"></i>
+      <p class="mt-2 mb-0">Nessun evento con convocazioni in programma.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

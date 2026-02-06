@@ -1,137 +1,202 @@
 {% extends "base.html" %}
-{% block title %}CRM Dashboard{% endblock %}
+{% block title %}Gestione Società Sportiva{% endblock %}
 {% block content %}
+<style>
+  .crm-hero {
+    background: linear-gradient(135deg, #1877f2 0%, #0d5bbd 100%);
+    color: #fff;
+    border-radius: 1rem;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  [data-bs-theme="dark"] .crm-hero {
+    background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  }
+  .stat-card {
+    border: none;
+    border-radius: .75rem;
+    transition: transform .15s;
+  }
+  .stat-card:hover { transform: translateY(-3px); }
+  .stat-icon { font-size: 2rem; opacity: .7; }
+  .quick-action-btn {
+    border-radius: .5rem;
+    font-weight: 500;
+  }
+</style>
+
 <div class="container my-4">
-    <h1 class="mb-4"><i class="bi bi-briefcase"></i> CRM Dashboard</h1>
-    {% if can('crm','manage') %}
-      <div class="mb-3">
-        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('crm.compliance') }}">
-          <i class="bi bi-shield-check"></i> Compliance (Certificati/Quote)
-        </a>
+  <div class="crm-hero">
+    <div class="d-flex flex-wrap justify-content-between align-items-center">
+      <div>
+        <h1 class="h3 mb-1"><i class="bi bi-shield-check me-2"></i>Gestione Società Sportiva</h1>
+        <p class="mb-0 opacity-75">Dashboard CRM &mdash; membri, certificati, quote e convocazioni</p>
       </div>
-    {% endif %}
-    
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h3>{{ total_contacts }}</h3>
-                    <p class="mb-0">Contatti Totali</p>
-                    <small>{{ new_contacts }} nuovi</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h3>{{ converted_contacts }}</h3>
-                    <p class="mb-0">Convertiti</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h3>{{ total_opportunities }}</h3>
-                    <p class="mb-0">Opportunità</p>
-                    <small>{{ open_opportunities }} aperte</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark">
-                <div class="card-body">
-                    <h3>€{{ "{:,.2f}".format(total_value) }}</h3>
-                    <p class="mb-0">Valore Pipeline</p>
-                </div>
-            </div>
-        </div>
+      <div class="d-flex gap-2 mt-2 mt-md-0">
+        {% if can('crm','manage') %}
+          <form method="post" action="{{ url_for('crm.reminders_run') }}" class="d-inline">
+            {{ csrf_token() }}
+            <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-bell"></i> Invia Promemoria</button>
+          </form>
+        {% endif %}
+      </div>
     </div>
-    
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Menu CRM</h5>
-                </div>
-                <div class="list-group list-group-flush">
-                    <a href="{{ url_for('crm.contacts') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-people"></i> Contatti
-                    </a>
-                    <a href="{{ url_for('crm.new_contact') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-person-plus"></i> Nuovo Contatto
-                    </a>
-                    <a href="{{ url_for('crm.opportunities') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-graph-up"></i> Opportunità
-                    </a>
-                    <a href="{{ url_for('crm.new_opportunity') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-plus-circle"></i> Nuova Opportunità
-                    </a>
-                    <a href="{{ url_for('crm.new_activity') }}" class="list-group-item list-group-item-action">
-                        <i class="bi bi-calendar-check"></i> Registra Attività
-                    </a>
-                    {% if can('crm','manage') %}
-                      <a href="{{ url_for('crm.pipeline_settings') }}" class="list-group-item list-group-item-action">
-                          <i class="bi bi-diagram-3"></i> Pipeline (Fasi)
-                      </a>
-                    {% endif %}
-                </div>
-            </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card bg-primary text-white">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <div class="h3 mb-0">{{ total_members }}</div>
+            <small>Membri Totali</small>
+          </div>
+          <i class="bi bi-people stat-icon"></i>
         </div>
-        
-        <div class="col-md-8">
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h5 class="mb-0">Contatti Recenti</h5>
-                </div>
-                <div class="list-group list-group-flush">
-                    {% for contact in recent_contacts %}
-                        <a href="{{ url_for('crm.contact_detail', contact_id=contact.id) }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>{{ contact.get_full_name() }}</strong><br>
-                                    <small class="text-muted">{{ contact.email }}</small>
-                                </div>
-                                <span class="badge bg-{{ 'success' if contact.status == 'converted' else 'primary' }}">
-                                    {{ contact.status }}
-                                </span>
-                            </div>
-                        </a>
-                    {% else %}
-                        <div class="list-group-item text-muted">Nessun contatto</div>
-                    {% endfor %}
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Opportunità Recenti</h5>
-                </div>
-                <div class="list-group list-group-flush">
-                    {% for opp in recent_opportunities %}
-                        <a href="{{ url_for('crm.opportunity_detail', opp_id=opp.id) }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>{{ opp.title }}</strong><br>
-                                    <small class="text-muted">{{ opp.opportunity_type }}</small>
-                                </div>
-                                <div>
-                                    {% set st = stage_map.get(opp.stage, {}) %}
-                                    <span class="badge bg-info" {% if st.get('color') %}style="background: {{ st.get('color') }} !important;"{% endif %}>
-                                      {{ st.get('label', opp.stage) }}
-                                    </span>
-                                    {% if opp.value %}
-                                        <br><small>€{{ opp.value }}</small>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </a>
-                    {% else %}
-                        <div class="list-group-item text-muted">Nessuna opportunità</div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card bg-info text-white">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <div class="h3 mb-0">{{ total_athletes }}</div>
+            <small>Atleti</small>
+          </div>
+          <i class="bi bi-person-walking stat-icon"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card bg-warning text-dark">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <div class="h3 mb-0">{{ expiring_certs }}</div>
+            <small>Certificati in Scadenza</small>
+          </div>
+          <i class="bi bi-hourglass-split stat-icon"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card stat-card bg-danger text-white">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <div class="h3 mb-0">{{ overdue_fees }}</div>
+            <small>Quote Scadute</small>
+          </div>
+          <i class="bi bi-exclamation-triangle stat-icon"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-12">
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('crm.members') }}" class="btn btn-primary quick-action-btn"><i class="bi bi-search me-1"></i> Cerca Membro</a>
+        <a href="{{ url_for('crm.member_add') }}" class="btn btn-success quick-action-btn"><i class="bi bi-person-plus me-1"></i> Aggiungi Membro</a>
+        <a href="{{ url_for('crm.compliance') }}" class="btn btn-warning quick-action-btn"><i class="bi bi-shield-check me-1"></i> Compliance</a>
+        <a href="{{ url_for('crm.convocations') }}" class="btn btn-info quick-action-btn text-white"><i class="bi bi-calendar-event me-1"></i> Convocazioni</a>
+        <a href="{{ url_for('crm.contacts') }}" class="btn btn-outline-secondary quick-action-btn"><i class="bi bi-people me-1"></i> Contatti Esterni</a>
+        <a href="{{ url_for('crm.new_activity') }}" class="btn btn-outline-secondary quick-action-btn"><i class="bi bi-calendar-check me-1"></i> Registra Attività</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="bi bi-people me-1"></i> Membri Recenti</h6>
+          <a href="{{ url_for('crm.members') }}" class="btn btn-sm btn-outline-primary">Tutti</a>
+        </div>
+        <div class="list-group list-group-flush">
+          {% for m in recent_members %}
+            <a href="{{ url_for('crm.member_detail', membership_id=m.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ m.user.get_full_name() if m.user else 'N/D' }}</strong>
+                <br><small class="text-muted">{{ m.user.email if m.user else '' }}</small>
+              </div>
+              {% set role_colors = {'atleta':'primary','coach':'success','dirigente':'purple','staff':'warning','appassionato':'secondary'} %}
+              <span class="badge bg-{{ role_colors.get(m.role_name, 'secondary') }}">{{ m.role_name }}</span>
+            </a>
+          {% else %}
+            <div class="list-group-item text-muted">Nessun membro recente</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="bi bi-calendar-event me-1"></i> Prossimi Eventi</h6>
+          <a href="{{ url_for('crm.convocations') }}" class="btn btn-sm btn-outline-primary">Convocazioni</a>
+        </div>
+        <div class="list-group list-group-flush">
+          {% for ev in upcoming_events %}
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ ev.title }}</strong>
+                  <br><small class="text-muted">{{ ev.start_date.strftime('%d/%m/%Y %H:%M') if ev.start_date else 'TBD' }} &mdash; {{ ev.location or '' }}</small>
+                </div>
+                <span class="badge bg-info text-white">{{ ev.event_type }}</span>
+              </div>
+            </div>
+          {% else %}
+            <div class="list-group-item text-muted">Nessun evento in programma</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      {% if expiring_cert_list %}
+      <div class="card mb-3 border-warning">
+        <div class="card-header bg-warning bg-opacity-10">
+          <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-1"></i> Certificati in Scadenza</h6>
+        </div>
+        <div class="list-group list-group-flush">
+          {% for cert in expiring_cert_list %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ cert.user.get_full_name() if cert.user else 'N/D' }}</strong>
+                <br><small class="text-muted">Scade: {{ cert.expires_on.strftime('%d/%m/%Y') }}</small>
+              </div>
+              <span class="badge bg-warning text-dark">In scadenza</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if overdue_fee_list %}
+      <div class="card mb-3 border-danger">
+        <div class="card-header bg-danger bg-opacity-10">
+          <h6 class="mb-0 text-danger"><i class="bi bi-exclamation-circle me-1"></i> Quote Scadute</h6>
+        </div>
+        <div class="list-group list-group-flush">
+          {% for fee in overdue_fee_list %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ fee.user.get_full_name() if fee.user else 'N/D' }}</strong>
+                <br><small class="text-muted">{{ fee.description or 'Quota' }} &mdash; Scadenza: {{ fee.due_on.strftime('%d/%m/%Y') }}</small>
+              </div>
+              <span class="badge bg-danger">&euro;{{ "%.2f"|format((fee.amount_cents or 0) / 100.0) }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if not expiring_cert_list and not overdue_fee_list %}
+      <div class="card">
+        <div class="card-body text-center text-muted py-5">
+          <i class="bi bi-check-circle fs-1 text-success"></i>
+          <p class="mt-2 mb-0">Nessun avviso &mdash; tutto in regola!</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}

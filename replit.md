@@ -156,6 +156,19 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-06: Live preview panel shows sidebar state while editing
 - 2026-02-06: Reset to default button clears custom config
 - 2026-02-06: Added "Ordine Menu" link in admin dashboard Impostazioni Sistema section
+- 2026-02-06: Complete CRM rewrite from sales CRM to sports society member management
+- 2026-02-06: Removed Opportunities, Pipeline routes and templates (sales-focused features)
+- 2026-02-06: Added Member Management: search users, add to society, assign roles (atleta/coach/dirigente/staff/appassionato)
+- 2026-02-06: Member detail page with certificates, fees, and event convocation history
+- 2026-02-06: Live AJAX user search for member enrollment
+- 2026-02-06: CRM dashboard redesigned with sports stats (members, certificates, fees, upcoming events)
+- 2026-02-06: Added Convocations page listing upcoming events with attendance tracking
+- 2026-02-06: Send notification to all convocated athletes from CRM
+- 2026-02-06: Added automatic expiry reminders for certificates (14d, 7d) and overdue fees via notifications
+- 2026-02-06: Manual reminder trigger button with idempotency (no duplicate reminders)
+- 2026-02-06: Quick-create certificates and fees from member detail page
+- 2026-02-06: Member role change and removal with society-scoped permissions
+- 2026-02-06: All CRM features integrated with notifications module via create_notification
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

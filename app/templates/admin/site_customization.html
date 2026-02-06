@@ -141,9 +141,6 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertFooterTemplate('copyright')">
                                 <i class="bi bi-c-circle"></i> Copyright
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertFooterTemplate('social')">
-                                <i class="bi bi-share"></i> Social
-                            </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="insertFooterTemplate('contact')">
                                 <i class="bi bi-telephone"></i> Contatti
                             </button>
@@ -197,7 +194,7 @@ function insertFooterTemplate(type) {
     const textarea = document.getElementById('footerHtml');
     const templates = {
         copyright: '<p class="mb-0">&copy; 2026 SONACIP. Tutti i diritti riservati.</p>',
-        social: '<div class="d-flex gap-3"><a href="#" class="text-white"><i class="bi bi-facebook"></i></a><a href="#" class="text-white"><i class="bi bi-instagram"></i></a><a href="#" class="text-white"><i class="bi bi-twitter"></i></a></div>',
+        social: '',
         contact: '<p class="mb-0"><i class="bi bi-envelope me-2"></i>info@sonacip.it | <i class="bi bi-telephone ms-2 me-1"></i>+39 123 456 789</p>'
     };
     textarea.value += (textarea.value ? '\n' : '') + templates[type];

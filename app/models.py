@@ -2585,7 +2585,7 @@ class AutomationRule(db.Model):
                 if not isinstance(action, dict) or 'type' not in action:
                     return False, 'Each action must have a type'
                 atype = action['type']
-                if atype not in ['notify', 'email', 'social_post', 'webhook', 'task_create', 'whatsapp']:
+                if atype not in ['notify', 'email', 'social_post', 'webhook', 'task_create']:
                     return False, f'Invalid action type: {atype}'
                 if atype in ['notify', 'email'] and 'user_id' not in action:
                     return False, f'{atype} action requires user_id'

@@ -138,6 +138,11 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-06: Admin panel: Conferma Email settings page with toggle, statistics, per-user/bulk confirm, settings customization
 - 2026-02-06: Auto-confirm existing users when enabling feature (via auto_confirm_existing setting)
 - 2026-02-06: Admin dashboard link: "Conferma Email" in Impostazioni Sistema section
+- 2026-02-06: Removed all WhatsApp references from admin, social, notifications, templates, guides, seed data
+- 2026-02-06: Messaging system is now fully standalone internal system (no external service branding)
+- 2026-02-06: Created Super Admin Chat Monitor panel (/admin/chat-monitor) to view all user conversations
+- 2026-02-06: Chat Monitor features: statistics dashboard, conversation list, message viewer, delete messages
+- 2026-02-06: Added "Controllo Chat" link in admin dashboard Comunicazione section
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

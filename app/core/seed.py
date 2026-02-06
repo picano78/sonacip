@@ -36,8 +36,6 @@ def seed_defaults(app) -> dict:
         SmtpSetting,
         EnterpriseSSOSetting,
         AutomationRule,
-        WhatsappSetting,
-        WhatsappTemplate,
         StorageSetting,
         User,
     )
@@ -51,7 +49,6 @@ def seed_defaults(app) -> dict:
         "dashboard_templates_created": 0,
         "navbar_created": 0,
         "smtp_settings_created": 0,
-        "whatsapp_settings_created": 0,
         "automation_rules_created": 0,
     }
 
@@ -245,15 +242,6 @@ def seed_defaults(app) -> dict:
 
             default_addons = [
                 {
-                    "slug": "whatsapp-pro",
-                    "name": "WhatsApp Pro",
-                    "description": "Invio WhatsApp avanzato (template/opt-in/provider).",
-                    "feature_key": "whatsapp_pro",
-                    "price_one_time": 49.0,
-                    "currency": "EUR",
-                    "display_order": 10,
-                },
-                {
                     "slug": "ads-self-serve",
                     "name": "Ads Self‑Serve",
                     "description": "Campagne sponsor gestibili dagli inserzionisti con report e budget.",
@@ -321,41 +309,7 @@ def seed_defaults(app) -> dict:
             summary["smtp_settings_created"] += 1
         if not EnterpriseSSOSetting.query.first():
             db.session.add(EnterpriseSSOSetting(enabled=False, scopes='openid email profile'))
-        if not WhatsappSetting.query.first():
-            db.session.add(WhatsappSetting(enabled=False, provider="webhook"))
-            summary["whatsapp_settings_created"] += 1
         db.session.commit()
-
-        # ---------------------------------------------------------------------
-        # WhatsApp templates (optional, for WhatsApp Pro)
-        # ---------------------------------------------------------------------
-        try:
-            if not WhatsappTemplate.query.first():
-                db.session.add(
-                    WhatsappTemplate(
-                        key="fee_due",
-                        provider_template_name="sonacip_fee_due",
-                        language_code="it",
-                        category="utility",
-                        body_preview="Ciao {{name}}, la tua quota scade il {{due_on}}.",
-                        is_active=True,
-                        created_at=datetime.utcnow(),
-                    )
-                )
-                db.session.add(
-                    WhatsappTemplate(
-                        key="medical_certificate_expiring",
-                        provider_template_name="sonacip_medical_certificate_expiring",
-                        language_code="it",
-                        category="utility",
-                        body_preview="Promemoria: certificato in scadenza il {{expires_on}}.",
-                        is_active=True,
-                        created_at=datetime.utcnow(),
-                    )
-                )
-                db.session.commit()
-        except Exception:
-            db.session.rollback()
 
         # ---------------------------------------------------------------------
         # Ads autopilot: default "house" campaign (idempotent)
@@ -418,7 +372,7 @@ def seed_defaults(app) -> dict:
 
         _ensure_rule(
             "medical_certificate.expiring",
-            "Certificato medico in scadenza (notify+WhatsApp)",
+            "Certificato medico in scadenza (notify)",
             [
                 {
                     "type": "notify",
@@ -426,28 +380,18 @@ def seed_defaults(app) -> dict:
                     "title": "Certificato medico in scadenza",
                     "message": "Il tuo certificato medico scade il {{ expires_on }} (tra {{ days_left }} giorni).",
                 },
-                {
-                    "type": "whatsapp",
-                    "user_id": "{{ user_id }}",
-                    "message": "SONACIP: il tuo certificato medico scade il {{ expires_on }} (tra {{ days_left }} giorni).",
-                },
             ],
         )
 
         _ensure_rule(
             "fee.due",
-            "Quota in scadenza (notify+WhatsApp)",
+            "Quota in scadenza (notify)",
             [
                 {
                     "type": "notify",
                     "user_id": "{{ user_id }}",
                     "title": "Quota in scadenza",
                     "message": "Quota in scadenza il {{ due_on }}: €{{ amount_eur }}. {{ description }}",
-                },
-                {
-                    "type": "whatsapp",
-                    "user_id": "{{ user_id }}",
-                    "message": "SONACIP: quota in scadenza il {{ due_on }}: €{{ amount_eur }}. {{ description }}",
                 },
             ],
         )

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Chat: {{ user_a.get_full_name() }} &harr; {{ user_b.get_full_name() }} - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.conv-header {
+    background: linear-gradient(135deg, #1877f2, #166fe5);
+    color: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+}
+.conv-header h4 {
+    margin: 0;
+    font-weight: 700;
+    color: white;
+}
+.conv-participants {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 12px;
+}
+.participant {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.15);
+    padding: 8px 14px;
+    border-radius: 10px;
+}
+.participant-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.participant-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.participant-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+}
+.arrow-icon {
+    font-size: 1.4rem;
+    opacity: 0.7;
+}
+.chat-timeline {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    max-height: 70vh;
+    overflow-y: auto;
+}
+.msg-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px;
+    border-radius: 10px;
+    transition: background 0.2s;
+}
+.msg-row:hover {
+    background: #f8f9fa;
+}
+.msg-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+.msg-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e4e6ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #65676b;
+    flex-shrink: 0;
+}
+.msg-content {
+    flex: 1;
+}
+.msg-sender {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1a1a2e;
+}
+.msg-time {
+    font-size: 0.75rem;
+    color: #65676b;
+    margin-left: 8px;
+}
+.msg-body {
+    margin-top: 4px;
+    padding: 10px 14px;
+    background: #f0f2f5;
+    border-radius: 0 12px 12px 12px;
+    display: inline-block;
+    max-width: 80%;
+    word-break: break-word;
+}
+.msg-status {
+    font-size: 0.75rem;
+    color: #65676b;
+    margin-top: 4px;
+}
+.msg-status .bi-check2-all {
+    color: #1877f2;
+}
+.msg-actions {
+    flex-shrink: 0;
+    align-self: center;
+}
+.btn-delete-msg {
+    background: #fce4ec;
+    color: #e53935;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s;
+}
+.msg-row:hover .btn-delete-msg {
+    opacity: 1;
+}
+.btn-delete-msg:hover {
+    background: #e53935;
+    color: white;
+}
+.empty-conv {
+    text-align: center;
+    padding: 40px;
+    color: #65676b;
+}
+.empty-conv i {
+    font-size: 3rem;
+    opacity: 0.5;
+    display: block;
+    margin-bottom: 12px;
+}
+.msg-count-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-3">
+    <div class="conv-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h4><i class="bi bi-chat-square-text-fill me-2"></i>Dettaglio Conversazione</h4>
+                <div class="conv-participants">
+                    <div class="participant">
+                        {% if user_a.avatar %}
+                            <img src="{{ url_for('static', filename='uploads/' + user_a.avatar) }}" class="participant-avatar">
+                        {% else %}
+                            <div class="participant-avatar-placeholder"><i class="bi bi-person-fill text-white"></i></div>
+                        {% endif %}
+                        <span class="participant-name">{{ user_a.get_full_name() }}</span>
+                    </div>
+                    <i class="bi bi-arrow-left-right arrow-icon"></i>
+                    <div class="participant">
+                        {% if user_b.avatar %}
+                            <img src="{{ url_for('static', filename='uploads/' + user_b.avatar) }}" class="participant-avatar">
+                        {% else %}
+                            <div class="participant-avatar-placeholder"><i class="bi bi-person-fill text-white"></i></div>
+                        {% endif %}
+                        <span class="participant-name">{{ user_b.get_full_name() }}</span>
+                    </div>
+                </div>
+            </div>
+            <a href="{{ url_for('admin.chat_monitor') }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Tutte le Chat
+            </a>
+        </div>
+    </div>
+
+    <div class="msg-count-bar">
+        <span class="fw-semibold"><i class="bi bi-chat-dots me-2"></i>{{ messages|length }} messaggi in questa conversazione</span>
+        <span class="text-muted small">
+            {% if messages %}
+                Dal {{ messages[0].created_at.strftime('%d/%m/%Y') }} al {{ messages[-1].created_at.strftime('%d/%m/%Y') }}
+            {% endif %}
+        </span>
+    </div>
+
+    <div class="chat-timeline" id="chatTimeline">
+        {% for msg in messages %}
+        {% set sender = user_a if msg.sender_id == user_a.id else user_b %}
+        <div class="msg-row">
+            {% if sender.avatar %}
+                <img src="{{ url_for('static', filename='uploads/' + sender.avatar) }}" class="msg-avatar">
+            {% else %}
+                <div class="msg-avatar-placeholder"><i class="bi bi-person-fill"></i></div>
+            {% endif %}
+            <div class="msg-content">
+                <div>
+                    <span class="msg-sender">{{ sender.get_full_name() }}</span>
+                    <span class="msg-time">{{ msg.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                </div>
+                <div class="msg-body">{{ msg.body }}</div>
+                <div class="msg-status">
+                    {% if msg.is_read %}
+                        <i class="bi bi-check2-all"></i> Letto
+                        {% if msg.read_at %}
+                            {{ msg.read_at.strftime('%H:%M') }}
+                        {% endif %}
+                    {% else %}
+                        <i class="bi bi-check2"></i> Inviato
+                    {% endif %}
+                </div>
+            </div>
+            <div class="msg-actions">
+                <form action="{{ url_for('admin.chat_monitor_delete_message', message_id=msg.id) }}" method="POST" onsubmit="return confirm('Eliminare questo messaggio? L\'azione non pu&ograve; essere annullata.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-delete-msg" title="Elimina messaggio">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-conv">
+            <i class="bi bi-chat-square-dots"></i>
+            <p>Nessun messaggio in questa conversazione</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var timeline = document.getElementById('chatTimeline');
+    if (timeline) timeline.scrollTop = timeline.scrollHeight;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block title %}Controllo Chat - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.monitor-header {
+    background: linear-gradient(135deg, #1877f2, #166fe5);
+    color: white;
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+}
+.monitor-header h3 {
+    margin: 0;
+    font-weight: 700;
+    color: white;
+}
+.monitor-header p {
+    margin: 6px 0 0;
+    opacity: 0.85;
+    font-size: 0.95rem;
+}
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: transform 0.2s;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 1.4rem;
+}
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+.stat-label {
+    font-size: 0.85rem;
+    color: #65676b;
+    margin-top: 4px;
+}
+.conv-table {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.conv-table .table {
+    margin: 0;
+}
+.conv-table .table th {
+    background: #f8f9fa;
+    border: none;
+    padding: 14px 16px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #65676b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.conv-table .table td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-color: #f0f2f5;
+}
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.user-avatar-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.user-avatar-placeholder-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e4e6ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #65676b;
+    font-size: 0.9rem;
+}
+.badge-count {
+    background: #1877f2;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.btn-view {
+    background: #e7f3ff;
+    color: #1877f2;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.btn-view:hover {
+    background: #1877f2;
+    color: white;
+}
+.filter-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.pagination-custom .page-link {
+    border: none;
+    color: #1877f2;
+    border-radius: 8px;
+    margin: 0 2px;
+}
+.pagination-custom .page-item.active .page-link {
+    background: #1877f2;
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-3">
+    <div class="monitor-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h3><i class="bi bi-chat-square-text-fill me-2"></i>Controllo Chat</h3>
+                <p>Monitora e gestisci tutte le conversazioni della piattaforma</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e7f3ff; color: #1877f2;">
+                    <i class="bi bi-chat-dots-fill"></i>
+                </div>
+                <div class="stat-value">{{ total_messages }}</div>
+                <div class="stat-label">Messaggi Totali</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e8f5e9; color: #43a047;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="stat-value">{{ total_conversations }}</div>
+                <div class="stat-label">Conversazioni</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #fff3e0; color: #fb8c00;">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <div class="stat-value">{{ active_chatters }}</div>
+                <div class="stat-label">Utenti Attivi</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #fce4ec; color: #e53935;">
+                    <i class="bi bi-clock-fill"></i>
+                </div>
+                <div class="stat-value">{{ today_messages }}</div>
+                <div class="stat-label">Messaggi Oggi</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small text-muted">Filtra per utente</label>
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Cerca utente..." value="{{ search_q }}">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            {% if user_filter %}
+            <div class="col-auto">
+                <a href="{{ url_for('admin.chat_monitor') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i>Rimuovi filtro
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="conv-table">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Utente A</th>
+                        <th>Utente B</th>
+                        <th class="text-center">Messaggi</th>
+                        <th>Ultima Attivit&agrave;</th>
+                        <th class="text-center">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conv in conversations %}
+                    <tr>
+                        <td>
+                            <div class="user-cell">
+                                {% if conv.user_a.avatar %}
+                                    <img src="{{ url_for('static', filename='uploads/' + conv.user_a.avatar) }}" class="user-avatar-sm">
+                                {% else %}
+                                    <div class="user-avatar-placeholder-sm"><i class="bi bi-person-fill"></i></div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-semibold small">{{ conv.user_a.get_full_name() }}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">@{{ conv.user_a.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="user-cell">
+                                {% if conv.user_b.avatar %}
+                                    <img src="{{ url_for('static', filename='uploads/' + conv.user_b.avatar) }}" class="user-avatar-sm">
+                                {% else %}
+                                    <div class="user-avatar-placeholder-sm"><i class="bi bi-person-fill"></i></div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-semibold small">{{ conv.user_b.get_full_name() }}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">@{{ conv.user_b.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge-count">{{ conv.msg_count }}</span>
+                        </td>
+                        <td>
+                            <span class="small text-muted">{{ conv.last_activity.strftime('%d/%m/%Y %H:%M') if conv.last_activity else '-' }}</span>
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('admin.chat_monitor_conversation', user_a_id=conv.user_a.id, user_b_id=conv.user_b.id) }}" class="btn-view">
+                                <i class="bi bi-eye me-1"></i>Leggi
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            <i class="bi bi-chat-square-dots" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">Nessuna conversazione trovata</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if total_pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination pagination-custom justify-content-center">
+            {% for p in range(1, total_pages + 1) %}
+            <li class="page-item {{ 'active' if p == page else '' }}">
+                <a class="page-link" href="{{ url_for('admin.chat_monitor', page=p, q=search_q, user_id=user_filter) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

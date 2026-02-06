@@ -1,4 +1,4 @@
-"""Direct messages routes - WhatsApp style chat"""
+"""Direct messages routes - Internal messaging system"""
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime
@@ -60,7 +60,7 @@ def get_conversations():
 @bp.route('/')
 @login_required
 def inbox():
-    """Show conversations list (WhatsApp style)"""
+    """Show conversations list"""
     conversations = get_conversations()
     return render_template('messages/conversations.html', 
                          conversations=conversations,

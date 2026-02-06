@@ -17,7 +17,6 @@ from app.admin.forms import (
     DashboardTemplateForm,
     NavigationConfigForm,
     SmtpSettingsForm,
-    WhatsappSettingsForm,
     PageCustomizationForm,
     PrivacySettingsForm,
     SiteCustomizationForm,
@@ -51,9 +50,6 @@ from app.models import (
     SocietyHealthSnapshot,
     StorageSetting,
     SmtpSetting,
-    WhatsappSetting,
-    WhatsappTemplate,
-    WhatsappMessageLog,
     User,
     Payment,
     Subscription,
@@ -346,102 +342,6 @@ def smtp_settings():
         return redirect(url_for('admin.smtp_settings'))
 
     return render_template('admin/smtp_settings.html', form=form, settings=settings)
-
-
-@bp.route('/whatsapp', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def whatsapp_settings():
-    """WhatsApp settings (super admin)."""
-    settings = WhatsappSetting.query.first()
-    if not settings:
-        settings = WhatsappSetting(enabled=False, provider='webhook')
-        db.session.add(settings)
-        db.session.commit()
-
-    form = WhatsappSettingsForm(obj=settings)
-    if form.validate_on_submit():
-        settings.enabled = bool(form.enabled.data)
-        settings.provider = form.provider.data or 'webhook'
-        settings.api_url = form.api_url.data or None
-        if form.api_token.data:
-            settings.api_token = form.api_token.data
-        settings.from_number = form.from_number.data or None
-        settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
-        db.session.commit()
-
-        log_action('update_whatsapp_settings', 'WhatsappSetting', settings.id, 'Updated WhatsApp settings')
-
-        # Optional test send
-        if form.test_phone.data and form.test_message.data:
-            try:
-                from app.notifications.utils import send_whatsapp
-                ok = send_whatsapp(form.test_phone.data, form.test_message.data)
-                if ok:
-                    flash('WhatsApp test inviato (provider).', 'success')
-                else:
-                    flash('WhatsApp non configurato o disabilitato.', 'warning')
-            except Exception as exc:
-                flash(f'Invio WhatsApp fallito: {exc}', 'danger')
-        else:
-            flash('Impostazioni WhatsApp salvate.', 'success')
-
-        return redirect(url_for('admin.whatsapp_settings'))
-
-    return render_template('admin/whatsapp_settings.html', form=form, settings=settings)
-
-
-@bp.route('/whatsapp/templates', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def whatsapp_templates():
-    """WhatsApp templates registry (super admin)."""
-    if request.method == 'POST':
-        key = (request.form.get('key') or '').strip()
-        provider_name = (request.form.get('provider_template_name') or '').strip()
-        language_code = (request.form.get('language_code') or 'it').strip()
-        category = (request.form.get('category') or 'utility').strip()
-        body_preview = (request.form.get('body_preview') or '').strip() or None
-        if not key or len(key) < 3:
-            flash('Key non valida.', 'danger')
-            return redirect(url_for('admin.whatsapp_templates'))
-        if not provider_name:
-            flash('Nome template provider richiesto.', 'danger')
-            return redirect(url_for('admin.whatsapp_templates'))
-        if WhatsappTemplate.query.filter_by(key=key).first():
-            flash('Key già esistente.', 'danger')
-            return redirect(url_for('admin.whatsapp_templates'))
-        t = WhatsappTemplate(
-            key=key,
-            provider_template_name=provider_name,
-            language_code=language_code,
-            category=category,
-            body_preview=body_preview,
-            is_active=True,
-            created_at=datetime.utcnow(),
-        )
-        db.session.add(t)
-        db.session.commit()
-        log_action('create_whatsapp_template', 'WhatsappTemplate', t.id, f'key={key}')
-        flash('Template creato.', 'success')
-        return redirect(url_for('admin.whatsapp_templates'))
-
-    templates = WhatsappTemplate.query.order_by(WhatsappTemplate.created_at.desc()).limit(300).all()
-    recent_logs = WhatsappMessageLog.query.order_by(WhatsappMessageLog.created_at.desc()).limit(50).all()
-    return render_template('admin/whatsapp_templates.html', templates=templates, recent_logs=recent_logs)
-
-
-@bp.route('/whatsapp/templates/<int:template_id>/toggle', methods=['POST'])
-@login_required
-@admin_required
-def whatsapp_template_toggle(template_id: int):
-    t = WhatsappTemplate.query.get_or_404(template_id)
-    t.is_active = not bool(t.is_active)
-    db.session.commit()
-    log_action('toggle_whatsapp_template', 'WhatsappTemplate', t.id, f'active={t.is_active}')
-    flash('Template aggiornato.', 'success')
-    return redirect(url_for('admin.whatsapp_templates'))
 
 
 @bp.route('/platform/fees', methods=['GET', 'POST'])
@@ -1664,7 +1564,6 @@ DEFAULT_PLATFORM_FEATURES = [
     {'key': 'automation', 'name': 'Automazioni', 'description': 'Workflow automatizzati basati su trigger e condizioni', 'category': 'Business', 'icon': 'bi-lightning-fill', 'is_premium': True, 'display_order': 16},
     {'key': 'ads_selfserve', 'name': 'Inserzioni Self-Service', 'description': 'Creazione e gestione campagne pubblicitarie', 'category': 'Business', 'icon': 'bi-megaphone-fill', 'is_premium': True, 'display_order': 17},
     {'key': 'backup', 'name': 'Backup & Ripristino', 'description': 'Backup automatici e ripristino dati', 'category': 'Sicurezza', 'icon': 'bi-cloud-arrow-up-fill', 'is_premium': False, 'display_order': 18},
-    {'key': 'whatsapp_pro', 'name': 'WhatsApp Pro', 'description': 'Invio messaggi e notifiche WhatsApp automatizzati', 'category': 'Comunicazione', 'icon': 'bi-whatsapp', 'is_premium': True, 'display_order': 19},
     {'key': 'enterprise_pack', 'name': 'Enterprise Pack', 'description': 'SSO, audit avanzato, export illimitati e funzionalità enterprise', 'category': 'Sicurezza', 'icon': 'bi-shield-lock-fill', 'is_premium': True, 'display_order': 20},
     {'key': 'analytics_pro', 'name': 'Analytics Pro', 'description': 'Business intelligence e report personalizzati', 'category': 'Business', 'icon': 'bi-bar-chart-line-fill', 'is_premium': True, 'display_order': 21},
     {'key': 'notifications', 'name': 'Notifiche', 'description': 'Sistema di notifiche push, email e in-app', 'category': 'Comunicazione', 'icon': 'bi-bell-fill', 'is_premium': False, 'display_order': 22},
@@ -1956,3 +1855,102 @@ def email_confirmation_settings():
                            unconfirmed_users=unconfirmed_users,
                            pending_users=pending_users,
                            smtp_configured=smtp_configured)
+
+
+@bp.route('/chat-monitor')
+@login_required
+@admin_required
+def chat_monitor():
+    page = request.args.get('page', 1, type=int)
+    search_q = request.args.get('q', '').strip()
+    user_filter = request.args.get('user_id', 0, type=int)
+
+    total_messages = Message.query.count()
+    total_conversations = db.session.query(
+        func.least(Message.sender_id, Message.recipient_id),
+        func.greatest(Message.sender_id, Message.recipient_id)
+    ).distinct().count()
+    active_chatters = db.session.query(func.count(func.distinct(Message.sender_id))).scalar() or 0
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_messages = Message.query.filter(Message.created_at >= today_start).count()
+
+    conversations_q = db.session.query(
+        func.least(Message.sender_id, Message.recipient_id).label('user_a'),
+        func.greatest(Message.sender_id, Message.recipient_id).label('user_b'),
+        func.count(Message.id).label('msg_count'),
+        func.max(Message.created_at).label('last_activity')
+    ).group_by('user_a', 'user_b').order_by(desc('last_activity'))
+
+    if user_filter:
+        conversations_q = conversations_q.filter(
+            or_(Message.sender_id == user_filter, Message.recipient_id == user_filter)
+        )
+
+    count_subq = db.session.query(
+        func.least(Message.sender_id, Message.recipient_id).label('ua'),
+        func.greatest(Message.sender_id, Message.recipient_id).label('ub')
+    )
+    if user_filter:
+        count_subq = count_subq.filter(
+            or_(Message.sender_id == user_filter, Message.recipient_id == user_filter)
+        )
+    total_conv_count = count_subq.group_by('ua', 'ub').count()
+
+    conversations_raw = conversations_q.limit(50).offset((page - 1) * 50).all()
+
+    conversations = []
+    for conv in conversations_raw:
+        user_a = User.query.get(conv.user_a)
+        user_b = User.query.get(conv.user_b)
+        if user_a and user_b:
+            conversations.append({
+                'user_a': user_a,
+                'user_b': user_b,
+                'msg_count': conv.msg_count,
+                'last_activity': conv.last_activity
+            })
+
+    return render_template('admin/chat_monitor.html',
+                           total_messages=total_messages,
+                           total_conversations=total_conversations,
+                           active_chatters=active_chatters,
+                           today_messages=today_messages,
+                           conversations=conversations,
+                           page=page,
+                           total_pages=(total_conv_count + 49) // 50,
+                           user_filter=user_filter,
+                           search_q=search_q)
+
+
+@bp.route('/chat-monitor/conversation/<int:user_a_id>/<int:user_b_id>')
+@login_required
+@admin_required
+def chat_monitor_conversation(user_a_id, user_b_id):
+    user_a = User.query.get_or_404(user_a_id)
+    user_b = User.query.get_or_404(user_b_id)
+
+    messages = Message.query.filter(
+        or_(
+            and_(Message.sender_id == user_a_id, Message.recipient_id == user_b_id),
+            and_(Message.sender_id == user_b_id, Message.recipient_id == user_a_id)
+        )
+    ).order_by(Message.created_at.asc()).all()
+
+    return render_template('admin/chat_monitor_conversation.html',
+                           user_a=user_a, user_b=user_b, messages=messages)
+
+
+@bp.route('/chat-monitor/delete-message/<int:message_id>', methods=['POST'])
+@login_required
+@admin_required
+def chat_monitor_delete_message(message_id):
+    msg = Message.query.get_or_404(message_id)
+    sender_id = msg.sender_id
+    recipient_id = msg.recipient_id
+    db.session.delete(msg)
+    db.session.commit()
+    log_action('delete_message', 'Message', message_id, f'Admin deleted message between users {sender_id} and {recipient_id}')
+    flash('Messaggio eliminato.', 'success')
+    return redirect(url_for('admin.chat_monitor_conversation',
+                            user_a_id=min(sender_id, recipient_id),
+                            user_b_id=max(sender_id, recipient_id)))

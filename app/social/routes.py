@@ -27,7 +27,6 @@ from app.models import (
     TournamentMatch,
     SocietyInvite,
     SocietyMembership,
-    WhatsappOptIn,
     UserOnboardingStep,
     Opportunity,
     Permission,
@@ -512,18 +511,11 @@ def profile(user_id):
     # Check if current user follows this user
     is_following = current_user.is_following(user) if current_user.is_authenticated else False
 
-    whatsapp_opted_in = None
     active_sid = None
     try:
         active_sid = get_active_society_id(current_user)
     except Exception:
         active_sid = None
-    if current_user.is_authenticated and current_user.id == user.id and active_sid:
-        try:
-            row = WhatsappOptIn.query.filter_by(society_id=active_sid, user_id=user.id).first()
-            whatsapp_opted_in = bool(row.is_opted_in) if row else False
-        except Exception:
-            whatsapp_opted_in = None
     
     careers = Career.query.filter_by(user_id=user.id).order_by(Career.start_date.desc()).all()
     educations = Education.query.filter_by(user_id=user.id).order_by(Education.start_year.desc()).all()
@@ -556,7 +548,6 @@ def profile(user_id):
                          pagination=pagination,
                          stats=stats,
                          is_following=is_following,
-                         whatsapp_opted_in=whatsapp_opted_in,
                          active_society_id=active_sid,
                          careers=careers,
                          educations=educations,
@@ -829,9 +820,6 @@ def society_dashboard():
         _suggest("create_crm_opportunity", "Apri la prima opportunità CRM", "Traccia sponsor/iscrizioni/reclutamento con una opportunità.", url_for('crm.new_opportunity'))
     if society_posts_count == 0:
         _suggest("publish_society_post", "Pubblica un comunicato", "Usa il social per comunicazioni ufficiali verso la società/atleti.", url_for('social.feed'))
-    if not current_user.has_feature("whatsapp_pro"):
-        _suggest("upsell_whatsapp_pro", "Attiva WhatsApp Pro", "Automazioni WhatsApp avanzate (template/opt-in) per aumentare retention e pagamenti.", url_for('subscription.addons'))
-
     # Onboarding checklist (hybrid: some auto-detected, some manual)
     step_defs = [
         {"key": "invite_one_member", "label": "Invita almeno 1 membro", "auto": member_count >= 2},
@@ -1019,50 +1007,6 @@ def society_onboarding_complete(step_key: str):
         db.session.add(UserOnboardingStep(society_id=society.id, user_id=current_user.id, step_key=step_key, completed_at=datetime.utcnow()))
         db.session.commit()
     return redirect(url_for('social.society_dashboard'))
-
-
-@bp.route('/whatsapp/optin', methods=['POST'])
-@login_required
-def whatsapp_optin():
-    """User opt-in to receive WhatsApp messages for the active society scope."""
-    society_id = get_active_society_id(current_user)
-    if not society_id:
-        flash('Seleziona una società per attivare WhatsApp.', 'warning')
-        return redirect(url_for('main.dashboard'))
-    if not current_user.phone:
-        flash('Imposta un numero di telefono nel profilo per attivare WhatsApp.', 'warning')
-        return redirect(url_for('social.edit_profile'))
-    row = WhatsappOptIn.query.filter_by(society_id=society_id, user_id=current_user.id).first()
-    if not row:
-        row = WhatsappOptIn(society_id=society_id, user_id=current_user.id)
-        db.session.add(row)
-    row.phone_number = current_user.phone
-    row.is_opted_in = True
-    row.opted_in_at = datetime.utcnow()
-    row.opted_out_at = None
-    row.source = 'user'
-    db.session.commit()
-    flash('WhatsApp attivato per questa società.', 'success')
-    return redirect(url_for('social.profile', user_id=current_user.id))
-
-
-@bp.route('/whatsapp/optout', methods=['POST'])
-@login_required
-def whatsapp_optout():
-    """User opt-out from WhatsApp messages for the active society scope."""
-    society_id = get_active_society_id(current_user)
-    if not society_id:
-        return redirect(url_for('main.dashboard'))
-    row = WhatsappOptIn.query.filter_by(society_id=society_id, user_id=current_user.id).first()
-    if not row:
-        row = WhatsappOptIn(society_id=society_id, user_id=current_user.id, phone_number=current_user.phone)
-        db.session.add(row)
-    row.is_opted_in = False
-    row.opted_out_at = datetime.utcnow()
-    row.source = 'user'
-    db.session.commit()
-    flash('WhatsApp disattivato per questa società.', 'info')
-    return redirect(url_for('social.profile', user_id=current_user.id))
 
 
 @bp.route('/society/invite', methods=['POST'])

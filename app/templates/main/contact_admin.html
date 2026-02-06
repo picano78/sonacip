@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Contatta l'Amministratore - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+  --fb-blue: #1877f2;
+  --fb-blue-dark: #155fc7;
+  --fb-blue-light: #e7f3ff;
+}
+
+.contact-hero {
+  background: linear-gradient(135deg, #1877f2 0%, #0a4da6 100%);
+  color: white;
+  padding: 3.5rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.contact-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(21,95,199,0.2) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.contact-hero h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  position: relative;
+  z-index: 2;
+}
+
+.contact-hero p {
+  font-size: 1.1rem;
+  opacity: 0.95;
+  position: relative;
+  z-index: 2;
+}
+
+.form-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.form-card .form-label {
+  font-weight: 600;
+  color: #050505;
+  margin-bottom: 0.5rem;
+}
+
+.form-card .form-control,
+.form-card .form-select {
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  padding: 0.65rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-card .form-control:focus,
+.form-card .form-select:focus {
+  border-color: var(--fb-blue);
+  box-shadow: 0 0 0 0.2rem rgba(24,119,242,0.15);
+}
+
+.char-counter {
+  font-size: 0.85rem;
+  color: #65676b;
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+.char-counter.warning {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.btn-submit {
+  background: var(--fb-blue);
+  color: white;
+  border: none;
+  padding: 0.75rem 2.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-submit:hover {
+  background: var(--fb-blue-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(24,119,242,0.3);
+  color: white;
+}
+
+.info-card {
+  background: var(--fb-blue-light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border-left: 4px solid var(--fb-blue);
+}
+
+.info-card h6 {
+  font-weight: 700;
+  color: var(--fb-blue);
+  margin-bottom: 0.75rem;
+}
+
+.info-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-card ul li {
+  padding: 0.4rem 0;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.info-card ul li i {
+  color: var(--fb-blue);
+}
+
+.contact-tip {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.contact-tip h6 {
+  font-weight: 600;
+  color: #050505;
+  margin-bottom: 0.5rem;
+}
+
+.contact-tip p {
+  color: #65676b;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="contact-hero">
+  <div class="container text-center">
+    <h1><i class="bi bi-envelope-paper me-2"></i>Contatta l'Amministratore</h1>
+    <p class="mt-2 mx-auto" style="max-width: 550px;">Hai bisogno di aiuto? Invia un messaggio al nostro team e ti risponderemo il prima possibile.</p>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center g-4">
+      <div class="col-lg-7">
+        <div class="form-card">
+          <h4 class="mb-4" style="font-weight: 700; color: #050505;">
+            <i class="bi bi-send me-2" style="color: #1877f2;"></i>Invia un Messaggio
+          </h4>
+          <form method="POST" action="{{ url_for('main.contact_admin') }}" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="mb-3">
+              <label for="subject" class="form-label">Oggetto</label>
+              {{ form.subject(class="form-control" + (" is-invalid" if form.subject.errors else ""), id="subject", placeholder="Inserisci l'oggetto del messaggio") }}
+              {% if form.subject.errors %}
+              <div class="invalid-feedback">
+                {% for error in form.subject.errors %}{{ error }}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="category" class="form-label">Categoria</label>
+              {{ form.category(class="form-select" + (" is-invalid" if form.category.errors else ""), id="category") }}
+              {% if form.category.errors %}
+              <div class="invalid-feedback">
+                {% for error in form.category.errors %}{{ error }}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="message" class="form-label">Messaggio</label>
+              {{ form.message(class="form-control" + (" is-invalid" if form.message.errors else ""), id="message", rows="6", placeholder="Descrivi nel dettaglio la tua richiesta...", maxlength="2000") }}
+              {% if form.message.errors %}
+              <div class="invalid-feedback">
+                {% for error in form.message.errors %}{{ error }}{% endfor %}
+              </div>
+              {% endif %}
+              <div class="char-counter" id="charCounter">0 / 2000 caratteri</div>
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn-submit">
+                <i class="bi bi-send"></i> Invia Messaggio
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="info-card mb-4">
+          <h6><i class="bi bi-clock me-1"></i> Tempi di Risposta</h6>
+          <ul>
+            <li><i class="bi bi-check-circle"></i> Supporto Tecnico: entro 24 ore</li>
+            <li><i class="bi bi-check-circle"></i> Segnalazione Bug: entro 12 ore</li>
+            <li><i class="bi bi-check-circle"></i> Richiesta Funzionalità: entro 48 ore</li>
+            <li><i class="bi bi-check-circle"></i> Domanda Generale: entro 24 ore</li>
+            <li><i class="bi bi-check-circle"></i> Problemi Account: entro 6 ore</li>
+          </ul>
+        </div>
+
+        <div class="contact-tip">
+          <h6><i class="bi bi-lightbulb me-1" style="color: #ffc107;"></i> Suggerimenti</h6>
+          <p>Per ricevere una risposta più rapida, includi nel messaggio quanti più dettagli possibili: schermate, passaggi per riprodurre il problema e il tuo browser/dispositivo.</p>
+        </div>
+
+        <div class="contact-tip mt-3">
+          <h6><i class="bi bi-shield-check me-1" style="color: #28a745;"></i> Privacy</h6>
+          <p>I tuoi messaggi sono trattati in modo confidenziale e visibili solo all'amministratore della piattaforma, nel rispetto del GDPR.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var textarea = document.getElementById('message');
+  var counter = document.getElementById('charCounter');
+  if (textarea && counter) {
+    function updateCounter() {
+      var len = textarea.value.length;
+      counter.textContent = len + ' / 2000 caratteri';
+      if (len > 1800) {
+        counter.classList.add('warning');
+      } else {
+        counter.classList.remove('warning');
+      }
+    }
+    textarea.addEventListener('input', updateCounter);
+    updateCounter();
+  }
+});
+</script>
+{% endblock %}

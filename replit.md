@@ -113,6 +113,20 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-06: Message preview feature before sending
 - 2026-02-06: Admin dashboard "Comunicazione" section with Newsletter link
 - 2026-02-06: Society dashboard "Comunicazioni ai Membri" card with compose and history buttons
+- 2026-02-06: Complete homepage redesign with professional hero, feature cards, stats, and CTA sections
+- 2026-02-06: Created User Guide page (/guida-utente) with accordion sections and step-by-step instructions
+- 2026-02-06: Created Society Guide page (/guida-societa) with admin tutorials and FAQ
+- 2026-02-06: Created Contact Admin page (/contatta-admin) with form to message super admin internally
+- 2026-02-06: Added ContactAdminForm with subject, category, message fields and validation
+- 2026-02-06: Created GDPR-compliant Privacy Policy page (/privacy) with all required sections
+- 2026-02-06: Created Terms of Service page (/termini) with comprehensive legal sections
+- 2026-02-06: Cookie Policy redirect to privacy page with cookie section anchor
+- 2026-02-06: Professional footer redesign with 4-column layout (Brand, Platform, Guides, Legal)
+- 2026-02-06: About page redesign with values cards, mission, and statistics
+- 2026-02-06: Contact page redesign with professional cards (email, phone, location) and CTA
+- 2026-02-06: Added Assistenza and Guida links in sidebar for logged-in users
+- 2026-02-06: Enhanced client-side UX: confirm dialogs, form submit protection, custom tooltips
+- 2026-02-06: Fixed Centro Export error (Society.name → Society.legal_name)
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import current_user, login_required
 from app import db
 from app.utils import check_permission
-from app.main.forms import DashboardEditForm
+from app.main.forms import DashboardEditForm, ContactAdminForm
 
 bp = Blueprint('main', __name__, url_prefix='')
 
@@ -217,3 +217,79 @@ def set_society_scope():
     session['active_society_id'] = int(society_id)
     flash('Contesto società aggiornato.', 'success')
     return redirect(request.referrer or url_for('main.dashboard'))
+
+
+@bp.route('/guida-utente')
+def guide_user():
+    """User guide page."""
+    return render_template('main/guide_user.html')
+
+
+@bp.route('/guida-societa')
+def guide_society():
+    """Society admin guide page."""
+    return render_template('main/guide_society.html')
+
+
+@bp.route('/contatta-admin', methods=['GET', 'POST'])
+@login_required
+def contact_admin():
+    """Contact super admin via internal message."""
+    from app.models import User, Message
+    form = ContactAdminForm()
+    if form.validate_on_submit():
+        admin_user = User.query.filter_by(role='super_admin').first()
+        if not admin_user:
+            admin_user = User.query.filter(
+                User.role.in_(['super_admin', 'admin'])
+            ).first()
+        if not admin_user:
+            flash('Nessun amministratore disponibile al momento. Riprova più tardi.', 'warning')
+            return redirect(url_for('main.contact_admin'))
+
+        category_labels = {
+            'supporto_tecnico': 'Supporto Tecnico',
+            'segnalazione_bug': 'Segnalazione Bug',
+            'richiesta_funzionalita': 'Richiesta Funzionalità',
+            'domanda_generale': 'Domanda Generale',
+            'problemi_account': 'Problemi Account',
+            'altro': 'Altro'
+        }
+        cat_label = category_labels.get(form.category.data, form.category.data)
+        full_subject = f'[{cat_label}] {form.subject.data}'
+
+        try:
+            msg = Message(
+                sender_id=current_user.id,
+                recipient_id=admin_user.id,
+                subject=full_subject,
+                body=form.message.data,
+                is_read=False
+            )
+            db.session.add(msg)
+            db.session.commit()
+            flash('Il tuo messaggio è stato inviato con successo! Riceverai una risposta il prima possibile.', 'success')
+            return redirect(url_for('main.contact_admin'))
+        except Exception:
+            db.session.rollback()
+            flash('Si è verificato un errore nell\'invio del messaggio. Riprova.', 'danger')
+
+    return render_template('main/contact_admin.html', form=form)
+
+
+@bp.route('/privacy')
+def privacy_policy():
+    """Privacy policy page."""
+    return render_template('main/privacy_policy.html')
+
+
+@bp.route('/termini')
+def terms():
+    """Terms of service page."""
+    return render_template('main/terms.html')
+
+
+@bp.route('/cookie-policy')
+def cookie_policy():
+    """Cookie policy page - redirects to privacy with cookie section."""
+    return redirect(url_for('main.privacy_policy') + '#cookieSection')

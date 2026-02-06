@@ -10,12 +10,50 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     });
 
-    // Confirm delete actions
-    const deleteButtons = document.querySelectorAll('[data-confirm-delete]');
-    deleteButtons.forEach(button => {
+    const confirmButtons = document.querySelectorAll('[data-confirm-delete], [data-confirm]');
+    confirmButtons.forEach(button => {
         button.addEventListener('click', function(e) {
-            if (!confirm('Sei sicuro di voler eliminare questo elemento?')) {
+            const msg = this.dataset.confirm || 'Sei sicuro di voler eliminare questo elemento? Questa azione non può essere annullata.';
+            if (!confirm(msg)) {
                 e.preventDefault();
+                e.stopImmediatePropagation();
+            }
+        });
+    });
+
+    document.querySelectorAll('form[data-confirm-submit]').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const msg = this.dataset.confirmSubmit || 'Sei sicuro di voler procedere?';
+            if (!confirm(msg)) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-tooltip-text]').forEach(el => {
+        const tip = document.createElement('div');
+        tip.className = 'sonacip-tooltip';
+        tip.textContent = el.dataset.tooltipText;
+        tip.style.cssText = 'position:absolute;background:#1a1a2e;color:white;padding:6px 12px;border-radius:8px;font-size:0.8rem;white-space:nowrap;z-index:9999;pointer-events:none;opacity:0;transition:opacity 0.2s;';
+        document.body.appendChild(tip);
+        el.addEventListener('mouseenter', function(ev) {
+            const r = this.getBoundingClientRect();
+            tip.style.left = r.left + r.width / 2 - tip.offsetWidth / 2 + 'px';
+            tip.style.top = r.top - tip.offsetHeight - 8 + window.scrollY + 'px';
+            tip.style.opacity = '1';
+        });
+        el.addEventListener('mouseleave', function() { tip.style.opacity = '0'; });
+    });
+
+    document.querySelectorAll('form').forEach(form => {
+        const submitBtn = form.querySelector('[type="submit"]');
+        if (!submitBtn) return;
+        form.addEventListener('submit', function() {
+            if (form.checkValidity()) {
+                submitBtn.disabled = true;
+                const origText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Invio in corso...';
+                setTimeout(() => { submitBtn.disabled = false; submitBtn.innerHTML = origText; }, 8000);
             }
         });
     });

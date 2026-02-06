@@ -86,19 +86,60 @@
         }
     </script>
     
-    <!-- Footer -->
-    <footer class="bg-dark text-white mt-5 py-4">
-        <div class="container text-center">
-            {% if site and site.footer_html %}
-              {{ site.footer_html|safe }}
-            {% else %}
-              <p class="mb-0">&copy; 2026 SONACIP - Sistema di Gestione Sportiva</p>
-              <p class="small mb-0 text-muted">
-                  <a href="{{ url_for('main.about') }}" class="text-muted">Chi Siamo</a> |
-                  <a href="{{ url_for('main.contact') }}" class="text-muted">Contatti</a>
-              </p>
-            {% endif %}
+    <footer class="mt-5" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: #e0e0e0;">
+        {% if site and site.footer_html %}
+        <div class="container py-4 text-center">
+            {{ site.footer_html|safe }}
         </div>
+        {% else %}
+        <div class="container py-5">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="fw-bold text-white mb-3"><i class="bi bi-trophy-fill me-2" style="color: #1877f2;"></i>SONACIP</h5>
+                    <p class="small" style="color: #b0b0b0;">La piattaforma completa per la gestione delle società sportive, atleti e appassionati in Italia.</p>
+                    <div class="d-flex gap-2 mt-3">
+                        <a href="#" class="btn btn-sm btn-outline-light rounded-circle" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="btn btn-sm btn-outline-light rounded-circle" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="btn btn-sm btn-outline-light rounded-circle" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><i class="bi bi-twitter-x"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold text-white mb-3">Piattaforma</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="{{ url_for('main.about') }}" class="text-decoration-none" style="color: #b0b0b0;">Chi Siamo</a></li>
+                        <li class="mb-2"><a href="{{ url_for('main.contact') }}" class="text-decoration-none" style="color: #b0b0b0;">Contatti</a></li>
+                        {% if current_user.is_authenticated %}
+                        <li class="mb-2"><a href="{{ url_for('main.contact_admin') }}" class="text-decoration-none" style="color: #b0b0b0;">Assistenza</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold text-white mb-3">Guide</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="{{ url_for('main.guide_user') }}" class="text-decoration-none" style="color: #b0b0b0;">Guida Utente</a></li>
+                        <li class="mb-2"><a href="{{ url_for('main.guide_society') }}" class="text-decoration-none" style="color: #b0b0b0;">Guida Società</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <h6 class="fw-bold text-white mb-3">Legale</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="{{ url_for('main.privacy_policy') }}" class="text-decoration-none" style="color: #b0b0b0;"><i class="bi bi-shield-lock me-1"></i>Privacy Policy</a></li>
+                        <li class="mb-2"><a href="{{ url_for('main.terms') }}" class="text-decoration-none" style="color: #b0b0b0;"><i class="bi bi-file-text me-1"></i>Termini di Servizio</a></li>
+                        <li class="mb-2"><a href="{{ url_for('main.cookie_policy') }}" class="text-decoration-none" style="color: #b0b0b0;"><i class="bi bi-cookie me-1"></i>Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.1);">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="small mb-0" style="color: #888;">&copy; 2026 SONACIP - Tutti i diritti riservati</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="small mb-0" style="color: #888;">Conforme al GDPR (Reg. UE 2016/679)</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </footer>
 
     {% if privacy and privacy.banner_enabled %}

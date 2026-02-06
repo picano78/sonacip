@@ -162,6 +162,18 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a href="{{ url_for('main.contact_admin') }}" class="sidebar-link" data-tooltip="Assistenza">
+                    <i class="bi bi-headset"></i>
+                    <span class="sidebar-text">Assistenza</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('main.guide_user') }}" class="sidebar-link" data-tooltip="Guida">
+                    <i class="bi bi-question-circle"></i>
+                    <span class="sidebar-text">Guida</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a href="{{ url_for('auth.logout') }}" class="sidebar-link" data-tooltip="Logout">
                     <i class="bi bi-box-arrow-right"></i>
                     <span class="sidebar-text">Logout</span>

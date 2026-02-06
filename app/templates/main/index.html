@@ -2,78 +2,702 @@
 
 {% block title %}{{ page.title if page and page.title else 'Benvenuto - SONACIP' }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* Facebook Blue Theme (#1877f2) */
+  :root {
+    --fb-blue: #1877f2;
+    --fb-blue-dark: #155fc7;
+    --fb-blue-light: #e7f3ff;
+    --text-dark: #050505;
+    --text-light: #65676b;
+    --surface-light: #f0f2f5;
+    --accent-gradient: linear-gradient(135deg, #1877f2 0%, #155fc7 100%);
+  }
+
+  /* Hero Section */
+  .hero-section {
+    position: relative;
+    min-height: 600px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--accent-gradient);
+  }
+
+  .hero-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(21, 95, 199, 0.2) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    color: white;
+    text-align: center;
+    padding: 2rem;
+    max-width: 800px;
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .hero-content h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  .hero-content p {
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    margin-bottom: 2rem;
+    opacity: 0.95;
+    line-height: 1.6;
+  }
+
+  .hero-icons {
+    position: absolute;
+    top: 10%;
+    left: 5%;
+    width: 80px;
+    height: 80px;
+    opacity: 0.15;
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .hero-icons-right {
+    position: absolute;
+    bottom: 10%;
+    right: 5%;
+    width: 100px;
+    height: 100px;
+    opacity: 0.1;
+    animation: float 8s ease-in-out infinite 1s;
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Scroll Animations */
+  .section-animate {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .section-animate.in-view {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .feature-card {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    height: 100%;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    animation: scaleIn 0.6s ease-out both;
+  }
+
+  .feature-card:nth-child(1) { animation-delay: 0.1s; }
+  .feature-card:nth-child(2) { animation-delay: 0.2s; }
+  .feature-card:nth-child(3) { animation-delay: 0.3s; }
+  .feature-card:nth-child(4) { animation-delay: 0.4s; }
+  .feature-card:nth-child(5) { animation-delay: 0.5s; }
+  .feature-card:nth-child(6) { animation-delay: 0.6s; }
+
+  .feature-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--fb-blue);
+    box-shadow: 0 12px 24px rgba(24, 119, 242, 0.15);
+  }
+
+  .feature-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: var(--fb-blue-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    font-size: 2rem;
+    color: var(--fb-blue);
+    transition: all 0.3s ease;
+  }
+
+  .feature-card:hover .feature-icon {
+    background: var(--fb-blue);
+    color: white;
+    transform: scale(1.1);
+  }
+
+  .feature-card h3 {
+    color: var(--text-dark);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  .feature-card p {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  /* Statistics Section */
+  .stats-section {
+    background: var(--accent-gradient);
+    color: white;
+    padding: 4rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stats-section::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(21, 95, 199, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .stat-item {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+
+  .stat-number {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 1rem;
+    opacity: 0.95;
+    font-weight: 500;
+  }
+
+  /* CTA Section */
+  .cta-section {
+    background: var(--surface-light);
+    padding: 4rem 2rem;
+    border-radius: 16px;
+    text-align: center;
+    margin: 4rem 0;
+  }
+
+  .cta-section h2 {
+    color: var(--text-dark);
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .cta-section p {
+    color: var(--text-light);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .btn-facebook {
+    background: var(--fb-blue);
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .btn-facebook:hover {
+    background: var(--fb-blue-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(24, 119, 242, 0.3);
+    color: white;
+  }
+
+  .btn-facebook-outline {
+    background: white;
+    color: var(--fb-blue);
+    border: 2px solid var(--fb-blue);
+    padding: 0.65rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .btn-facebook-outline:hover {
+    background: var(--fb-blue-light);
+    color: var(--fb-blue-dark);
+    transform: translateY(-2px);
+  }
+
+  /* Sections */
+  .section-padding {
+    padding: 4rem 2rem;
+  }
+
+  .section-title {
+    color: var(--text-dark);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .section-subtitle {
+    color: var(--text-light);
+    font-size: 1.1rem;
+    text-align: center;
+    margin-bottom: 3rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Features Grid */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Footer Links */
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: center;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .footer-link {
+    color: var(--fb-blue);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .footer-link:hover {
+    color: var(--fb-blue-dark);
+    transform: translateX(4px);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero-section {
+      min-height: 500px;
+    }
+
+    .cta-buttons {
+      flex-direction: column;
+    }
+
+    .btn-facebook,
+    .btn-facebook-outline {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .section-animate {
+      animation: none;
+    }
+
+    .hero-icons,
+    .hero-icons-right {
+      display: none;
+    }
+
+    .footer-links {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+
+  /* Light/Dark mode support */
+  body[data-theme="dark"] .feature-card {
+    background: #1a1a1a;
+    border-color: #333;
+  }
+
+  body[data-theme="dark"] .feature-card h3 {
+    color: white;
+  }
+
+  body[data-theme="dark"] .feature-card p {
+    color: #aaa;
+  }
+
+  body[data-theme="dark"] .feature-icon {
+    background: rgba(24, 119, 242, 0.2);
+  }
+
+  body[data-theme="dark"] .cta-section {
+    background: #1a1a1a;
+  }
+
+  body[data-theme="dark"] .cta-section h2 {
+    color: white;
+  }
+
+  body[data-theme="dark"] .section-title {
+    color: white;
+  }
+
+  body[data-theme="dark"] .footer-links {
+    border-top-color: #333;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Hero Section -->
-<div class="bg-primary text-white py-5">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1 class="display-4 fw-bold">{{ page.hero_title if page and page.hero_title else 'Benvenuto su SONACIP' }}</h1>
-                <p class="lead">{{ page.hero_subtitle if page and page.hero_subtitle else 'La piattaforma completa per la gestione delle società sportive, atleti e appassionati.' }}</p>
-                <div class="mt-4">
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg me-2">
-                        <i class="bi bi-person-plus"></i> Registrati
-                    </a>
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">
-                        <i class="bi bi-box-arrow-in-right"></i> Login
-                    </a>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <img src="https://via.placeholder.com/500x300/007bff/ffffff?text=SONACIP" 
-                     alt="SONACIP" class="img-fluid rounded">
-            </div>
-        </div>
+<section class="hero-section">
+  <div class="hero-icons">
+    <i class="bi bi-graph-up"></i>
+  </div>
+  <div class="hero-icons-right">
+    <i class="bi bi-people-fill"></i>
+  </div>
+  
+  <div class="hero-content">
+    <h1>{{ page.hero_title if page and page.hero_title else 'Benvenuto su SONACIP' }}</h1>
+    <p>{{ page.hero_subtitle if page and page.hero_subtitle else 'La piattaforma completa per la gestione delle società sportive, atleti e appassionati di sport in Italia.' }}</p>
+    
+    <div class="cta-buttons">
+      <a href="{{ url_for('auth.register') }}" class="btn-facebook">
+        <i class="bi bi-person-plus"></i>
+        Registrati come Appassionato
+      </a>
+      <a href="{{ url_for('auth.register_society') }}" class="btn-facebook-outline">
+        <i class="bi bi-building"></i>
+        Registra la Tua Società
+      </a>
     </div>
-</div>
+  </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="stats-section section-animate">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-item">
+          <div class="stat-number">100+</div>
+          <div class="stat-label">Società Sportive</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-item">
+          <div class="stat-number">5K+</div>
+          <div class="stat-label">Atleti Registrati</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-item">
+          <div class="stat-number">10K+</div>
+          <div class="stat-label">Eventi Creati</div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="stat-item">
+          <div class="stat-number">24/7</div>
+          <div class="stat-label">Supporto Disponibile</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- Features Section -->
-<div class="container my-5">
-    <h2 class="text-center mb-5">Funzionalità Principali</h2>
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <i class="bi bi-people-fill text-primary" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-3">Gestione Utenti</h5>
-                    <p class="card-text">Società sportive, staff, atleti e appassionati in un'unica piattaforma.</p>
-                </div>
-            </div>
+<section class="section-padding section-animate">
+  <div class="container">
+    <h2 class="section-title">Funzionalità Principali</h2>
+    <p class="section-subtitle">Tutto ciò che serve per gestire le tue società sportive in un'unica piattaforma</p>
+    
+    <div class="features-grid">
+      <!-- Gestione Società -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="bi bi-building"></i>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <i class="bi bi-calendar-event-fill text-primary" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-3">Eventi e Convocazioni</h5>
-                    <p class="card-text">Crea eventi, convoca atleti e gestisci le risposte in tempo reale.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <i class="bi bi-share-fill text-primary" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-3">Social Network</h5>
-                    <p class="card-text">Feed, post, like, commenti e sistema di follow stile LinkedIn.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+        <h3>Gestione Società</h3>
+        <p>Amministra società, gestisci membri, ruoli e permessi con facilità. Centralizza tutte le informazioni della tua organizzazione.</p>
+      </div>
 
-<!-- CTA Section -->
-<div class="bg-light py-5">
-    <div class="container text-center">
-        <h2>Pronto a Iniziare?</h2>
-        <p class="lead">Unisciti a SONACIP oggi stesso!</p>
-        <div class="mt-4">
-            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-2">
-                Registrati come Appassionato
-            </a>
-            <a href="{{ url_for('auth.register_society') }}" class="btn btn-success btn-lg">
-                Registra la Tua Società
-            </a>
+      <!-- Eventi e Calendario -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="bi bi-calendar-event"></i>
         </div>
+        <h3>Eventi e Calendario</h3>
+        <p>Crea e gestisci eventi, alllenamenti e gare. Sincronizza facilmente con i tuoi atleti e staff della società.</p>
+      </div>
+
+      <!-- Social Network -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="bi bi-share-fill"></i>
+        </div>
+        <h3>Social Network</h3>
+        <p>Comunica con la tua comunità. Feed, post, like, commenti e sistema di follow stile LinkedIn per atleti e appassionati.</p>
+      </div>
+
+      <!-- Marketplace -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="bi bi-bag-check"></i>
+        </div>
+        <h3>Marketplace</h3>
+        <p>Vendi e acquista equipaggiamenti sportivi. Crea annunci, gestisci transazioni e raggiungi atleti e società in tutta Italia.</p>
+      </div>
+
+      <!-- Messaggistica -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="bi bi-chat-dots"></i>
+        </div>
+        <h3>Messaggistica</h3>
+        <p>Comunica in tempo reale con atleti, staff e altre società. Chat dirette e notifiche istantanee per coordinazione efficace.</p>
+      </div>
+
+      <!-- Tornei -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="bi bi-trophy"></i>
+        </div>
+        <h3>Gestione Tornei</h3>
+        <p>Organizza tornei e competizioni. Tabelloni, classifiche, risultati live e condivisione in tempo reale con tutti i partecipanti.</p>
+      </div>
     </div>
-</div>
+  </div>
+</section>
+
+<!-- CTA Section: Users -->
+<section class="section-padding section-animate">
+  <div class="container">
+    <div class="cta-section">
+      <h2>Sei un Appassionato di Sport?</h2>
+      <p>Unisciti a migliaia di atleti e appassionati che già usano SONACIP per connettersi, competere e crescere nello sport.</p>
+      <div class="cta-buttons">
+        <a href="{{ url_for('auth.register') }}" class="btn-facebook">
+          <i class="bi bi-pencil-square"></i>
+          Registrati Subito
+        </a>
+        <a href="{{ url_for('main.contact') }}" class="btn-facebook-outline">
+          <i class="bi bi-book"></i>
+          Leggi la Guida
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section: Societies -->
+<section class="section-padding section-animate">
+  <div class="container">
+    <div class="cta-section">
+      <h2>Gestisci la Tua Società Sportiva</h2>
+      <p>SONACIP è lo strumento completo per le società sportive italiane. Gestisci tutto da un'unica piattaforma: atleti, eventi, comunicazioni e tornei.</p>
+      <div class="cta-buttons">
+        <a href="{{ url_for('auth.register_society') }}" class="btn-facebook">
+          <i class="bi bi-building"></i>
+          Registra la Tua Società
+        </a>
+        <a href="{{ url_for('main.contact') }}" class="btn-facebook-outline">
+          <i class="bi bi-info-circle"></i>
+          Scopri di Più
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Details Section -->
+<section class="section-padding section-animate" style="background: var(--surface-light);">
+  <div class="container">
+    <div class="row align-items-center g-4">
+      <div class="col-md-6">
+        <h2 class="section-title" style="text-align: left;">Perché Scegliere SONACIP?</h2>
+        <ul style="list-style: none; padding: 0;">
+          <li style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+            <i class="bi bi-check-circle-fill" style="color: var(--fb-blue); font-size: 1.5rem; flex-shrink: 0; margin-top: 0.25rem;"></i>
+            <div>
+              <strong style="color: var(--text-dark); display: block; margin-bottom: 0.25rem;">Piattaforma Italiana</strong>
+              <span style="color: var(--text-light);">Sviluppata per le esigenze specifiche delle società sportive italiane</span>
+            </div>
+          </li>
+          <li style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+            <i class="bi bi-check-circle-fill" style="color: var(--fb-blue); font-size: 1.5rem; flex-shrink: 0; margin-top: 0.25rem;"></i>
+            <div>
+              <strong style="color: var(--text-dark); display: block; margin-bottom: 0.25rem;">Facile da Usare</strong>
+              <span style="color: var(--text-light);">Interfaccia intuitiva che non richiede competenze tecniche</span>
+            </div>
+          </li>
+          <li style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+            <i class="bi bi-check-circle-fill" style="color: var(--fb-blue); font-size: 1.5rem; flex-shrink: 0; margin-top: 0.25rem;"></i>
+            <div>
+              <strong style="color: var(--text-dark); display: block; margin-bottom: 0.25rem;">Supporto 24/7</strong>
+              <span style="color: var(--text-light);">Team di supporto sempre disponibile per aiutarti</span>
+            </div>
+          </li>
+          <li style="margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: flex-start;">
+            <i class="bi bi-check-circle-fill" style="color: var(--fb-blue); font-size: 1.5rem; flex-shrink: 0; margin-top: 0.25rem;"></i>
+            <div>
+              <strong style="color: var(--text-dark); display: block; margin-bottom: 0.25rem;">Sicuro e Affidabile</strong>
+              <span style="color: var(--text-light);">Dati protetti con i più alti standard di sicurezza</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <div style="background: var(--fb-blue); border-radius: 16px; padding: 3rem 2rem; color: white; text-align: center; min-height: 400px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <i class="bi bi-rocket-takeoff" style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.9;"></i>
+          <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Inizia Oggi</h3>
+          <p style="margin-bottom: 2rem; font-size: 1rem; line-height: 1.6;">Non serve carta di credito. Accedi in 5 minuti e inizia subito a usare SONACIP.</p>
+          <a href="{{ url_for('auth.register') }}" class="btn-facebook" style="background: white; color: var(--fb-blue); margin-top: auto;">
+            <i class="bi bi-arrow-right"></i>
+            Registrati Gratis
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer Links Section -->
+<section class="section-padding section-animate">
+  <div class="container">
+    <div style="text-align: center; padding: 2rem 0;">
+      <h3 style="color: var(--text-dark); font-size: 1.25rem; font-weight: 600; margin-bottom: 2rem;">Hai Domande?</h3>
+      <div class="footer-links">
+        <a href="{{ url_for('main.contact') }}" class="footer-link">
+          <i class="bi bi-chat-left-text"></i>
+          Contattaci
+        </a>
+        <a href="{{ url_for('main.about') }}" class="footer-link">
+          <i class="bi bi-info-circle"></i>
+          Chi Siamo
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Scroll Animation Script -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    });
+
+    document.querySelectorAll('.section-animate').forEach(section => {
+      observer.observe(section);
+    });
+  });
+</script>
 {% endblock %}

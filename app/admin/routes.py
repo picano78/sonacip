@@ -1676,6 +1676,16 @@ DEFAULT_PLATFORM_FEATURES = [
     {'key': 'notifications', 'name': 'Notifiche', 'description': 'Sistema di notifiche push, email e in-app', 'category': 'Comunicazione', 'icon': 'bi-bell-fill', 'is_premium': False, 'display_order': 22},
     {'key': 'profile_linkedin', 'name': 'Profilo LinkedIn-Style', 'description': 'Profili avanzati con carriera, educazione e competenze', 'category': 'Social', 'icon': 'bi-person-badge-fill', 'is_premium': False, 'display_order': 23},
     {'key': 'data_export', 'name': 'Esportazione Dati', 'description': 'Download dati della propria società in CSV', 'category': 'Business', 'icon': 'bi-download', 'is_premium': False, 'display_order': 24},
+    {'key': 'groups', 'name': 'Gruppi Community', 'description': 'Gruppi tematici e community con feed e chat', 'category': 'Social', 'icon': 'bi-people', 'is_premium': False, 'display_order': 30},
+    {'key': 'stories', 'name': 'Storie/Status', 'description': 'Contenuti temporanei tipo Instagram Stories', 'category': 'Social', 'icon': 'bi-circle-fill', 'is_premium': False, 'display_order': 31},
+    {'key': 'polls', 'name': 'Sondaggi', 'description': 'Sistema di sondaggi e votazioni', 'category': 'Social', 'icon': 'bi-bar-chart-line', 'is_premium': False, 'display_order': 32},
+    {'key': 'sports_stats', 'name': 'Statistiche Sportive', 'description': 'Tracking prestazioni e statistiche atleti', 'category': 'Organizzazione', 'icon': 'bi-activity', 'is_premium': False, 'display_order': 33},
+    {'key': 'documents', 'name': 'Gestione Documenti', 'description': 'Archivio documenti condiviso con cartelle', 'category': 'Organizzazione', 'icon': 'bi-folder2-open', 'is_premium': False, 'display_order': 34},
+    {'key': 'payments_online', 'name': 'Pagamenti Online', 'description': 'Pagamento quote con carta via Stripe', 'category': 'Business', 'icon': 'bi-credit-card', 'is_premium': True, 'display_order': 35},
+    {'key': 'gamification', 'name': 'Gamification', 'description': 'Badge, punti, livelli e classifiche', 'category': 'Social', 'icon': 'bi-trophy-fill', 'is_premium': False, 'display_order': 36},
+    {'key': 'custom_dashboard', 'name': 'Dashboard Personalizzabile', 'description': 'Dashboard con widget drag-and-drop', 'category': 'Organizzazione', 'icon': 'bi-grid-1x2', 'is_premium': False, 'display_order': 37},
+    {'key': 'multi_language', 'name': 'Multi-lingua', 'description': 'Supporto multilingua (IT/EN/ES/FR/DE)', 'category': 'Comunicazione', 'icon': 'bi-translate', 'is_premium': False, 'display_order': 38},
+    {'key': 'push_notifications', 'name': 'Notifiche Push', 'description': 'Notifiche push nel browser', 'category': 'Comunicazione', 'icon': 'bi-bell-fill', 'is_premium': True, 'display_order': 39},
 ]
 
 

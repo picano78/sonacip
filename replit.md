@@ -143,6 +143,11 @@ SONACIP is a comprehensive Italian-language platform for managing sports societi
 - 2026-02-06: Created Super Admin Chat Monitor panel (/admin/chat-monitor) to view all user conversations
 - 2026-02-06: Chat Monitor features: statistics dashboard, conversation list, message viewer, delete messages
 - 2026-02-06: Added "Controllo Chat" link in admin dashboard Comunicazione section
+- 2026-02-06: Redesigned Planner month view to match Google Calendar mobile style
+- 2026-02-06: Month view: prev/next navigation, "Oggi" button, today circle highlight, colored event pills
+- 2026-02-06: Month view: leading/trailing days from adjacent months shown in light gray
+- 2026-02-06: Month view: floating action button (FAB) for quick event creation
+- 2026-02-06: Month view: view switcher tabs (Giorno/Settimana/Mese) and facility filter
 
 ## User Preferences
 - Menu should be a sidebar overlay with icons (not dropdown)

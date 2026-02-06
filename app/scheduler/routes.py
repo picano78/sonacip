@@ -118,7 +118,6 @@ def grid():
         end_date = start_date + timedelta(days=7)
     elif view == 'month':
         start_date = start_date.replace(day=1)
-        # Calculate end of month
         if start_date.month == 12:
             end_date = start_date.replace(year=start_date.year + 1, month=1)
         else:
@@ -167,6 +166,22 @@ def grid():
             h = hours[-1]
         grid_map[(day, h)].append(ev)
 
+    month_names_it = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                       'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+    prev_month = (start_date.replace(day=1) - timedelta(days=1)).replace(day=1) if view == 'month' else None
+    next_month = end_date if view == 'month' else None
+    today = datetime.utcnow().date()
+
+    leading_days = []
+    trailing_days = []
+    if view == 'month' and days:
+        first_weekday = days[0].weekday()
+        for i in range(first_weekday, 0, -1):
+            leading_days.append((days[0] - timedelta(days=i)).day)
+        last_weekday = days[-1].weekday()
+        for i in range(1, 7 - last_weekday):
+            trailing_days.append(i)
+
     return render_template(
         'calendar/grid.html',
         view=view,
@@ -177,6 +192,13 @@ def grid():
         facilities=facilities,
         facility_id=facility_id,
         grid_map=grid_map,
+        month_name=month_names_it[start_date.month] if view == 'month' else '',
+        month_year=start_date.year if view == 'month' else '',
+        prev_month=prev_month,
+        next_month=next_month,
+        today=today,
+        leading_days=leading_days,
+        trailing_days=trailing_days,
     )
 
 

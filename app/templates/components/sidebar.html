@@ -10,20 +10,20 @@
     <nav class="sidebar-nav">
         <ul class="sidebar-menu">
             <li class="sidebar-item">
-                <a href="{{ url_for('main.dashboard') }}" class="sidebar-link" data-tooltip="Cruscotto">
+                <a href="{{ url_for('main.dashboard') }}" class="sidebar-link" data-tooltip="Cruscotto" title="Cruscotto">
                     <i class="bi bi-speedometer2"></i>
                     <span class="sidebar-text">Cruscotto</span>
                 </a>
             </li>
             {% if feature_enabled('planner') %}
             <li class="sidebar-item">
-                <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner">
+                <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner" title="Planner">
                     <i class="bi bi-calendar-check"></i>
                     <span class="sidebar-text">Planner</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a href="{{ url_for('calendar.index') }}" class="sidebar-link" data-tooltip="Calendario Società">
+                <a href="{{ url_for('calendar.index') }}" class="sidebar-link" data-tooltip="Calendario Società" title="Calendario Società">
                     <i class="bi bi-calendar3-range"></i>
                     <span class="sidebar-text">Calendario</span>
                 </a>
@@ -31,7 +31,7 @@
             {% endif %}
             {% if feature_enabled('social_feed') %}
             <li class="sidebar-item">
-                <a href="{{ url_for('social.feed') }}" class="sidebar-link" data-tooltip="Social">
+                <a href="{{ url_for('social.feed') }}" class="sidebar-link" data-tooltip="Social" title="Social">
                     <i class="bi bi-people-fill"></i>
                     <span class="sidebar-text">Social</span>
                 </a>
@@ -47,7 +47,7 @@
                         {% set act = l.action if l.action is defined else l.get('action') %}
                         {% if not res or not act or can(res, act) %}
                             <li class="sidebar-item">
-                                <a href="{{ url_for(endpoint) }}" class="sidebar-link" data-tooltip="{{ label }}">
+                                <a href="{{ url_for(endpoint) }}" class="sidebar-link" data-tooltip="{{ label }}" title="{{ label }}">
                                     {% if icon %}<i class="bi {{ icon }}"></i>{% else %}<i class="bi bi-link-45deg"></i>{% endif %}
                                     <span class="sidebar-text">{{ label }}</span>
                                 </a>
@@ -58,7 +58,7 @@
             {% else %}
                 {% if feature_enabled('social_feed') and can('social', 'comment') %}
                     <li class="sidebar-item">
-                        <a href="{{ url_for('social.feed') }}" class="sidebar-link" data-tooltip="Home">
+                        <a href="{{ url_for('social.feed') }}" class="sidebar-link" data-tooltip="Home" title="Home">
                             <i class="bi bi-house-fill"></i>
                             <span class="sidebar-text">Home</span>
                         </a>
@@ -66,7 +66,7 @@
                 {% endif %}
                 {% if feature_enabled('social_feed') %}
                 <li class="sidebar-item">
-                    <a href="{{ url_for('social.explore') }}" class="sidebar-link" data-tooltip="Esplora">
+                    <a href="{{ url_for('social.explore') }}" class="sidebar-link" data-tooltip="Esplora" title="Esplora">
                         <i class="bi bi-compass"></i>
                         <span class="sidebar-text">Esplora</span>
                     </a>
@@ -74,7 +74,7 @@
                 {% endif %}
                 {% if feature_enabled('events') and can('events', 'view') %}
                     <li class="sidebar-item">
-                        <a href="{{ url_for('events.index') }}" class="sidebar-link" data-tooltip="Eventi">
+                        <a href="{{ url_for('events.index') }}" class="sidebar-link" data-tooltip="Eventi" title="Eventi">
                             <i class="bi bi-calendar-event"></i>
                             <span class="sidebar-text">Eventi</span>
                         </a>
@@ -82,7 +82,7 @@
                 {% endif %}
                 {% if feature_enabled('tournaments') and can('tournaments', 'view') %}
                     <li class="sidebar-item">
-                        <a href="{{ url_for('tournaments.list_tournaments') }}" class="sidebar-link" data-tooltip="Tornei">
+                        <a href="{{ url_for('tournaments.list_tournaments') }}" class="sidebar-link" data-tooltip="Tornei" title="Tornei">
                             <i class="bi bi-trophy"></i>
                             <span class="sidebar-text">Tornei</span>
                         </a>
@@ -90,7 +90,7 @@
                 {% endif %}
                 {% if feature_enabled('marketplace') %}
                 <li class="sidebar-item">
-                    <a href="{{ url_for('marketplace.index') }}" class="sidebar-link" data-tooltip="Marketplace">
+                    <a href="{{ url_for('marketplace.index') }}" class="sidebar-link" data-tooltip="Marketplace" title="Marketplace">
                         <i class="bi bi-shop"></i>
                         <span class="sidebar-text">Marketplace</span>
                     </a>
@@ -98,7 +98,7 @@
                 {% endif %}
                 {% if feature_enabled('crm') and can('crm', 'access') %}
                     <li class="sidebar-item">
-                        <a href="{{ url_for('crm.index') }}" class="sidebar-link" data-tooltip="CRM">
+                        <a href="{{ url_for('crm.index') }}" class="sidebar-link" data-tooltip="CRM" title="CRM">
                             <i class="bi bi-briefcase"></i>
                             <span class="sidebar-text">CRM</span>
                         </a>
@@ -106,7 +106,7 @@
                 {% endif %}
                 {% if feature_enabled('advanced_stats') and can('analytics', 'access') %}
                     <li class="sidebar-item">
-                        <a href="{{ url_for('analytics.dashboard') }}" class="sidebar-link" data-tooltip="Analytics">
+                        <a href="{{ url_for('analytics.dashboard') }}" class="sidebar-link" data-tooltip="Analytics" title="Analytics">
                             <i class="bi bi-graph-up"></i>
                             <span class="sidebar-text">Analytics</span>
                         </a>
@@ -114,7 +114,7 @@
                 {% endif %}
                 {% if can('admin', 'access') %}
                     <li class="sidebar-item">
-                        <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link" data-tooltip="Admin">
+                        <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link" data-tooltip="Admin" title="Admin">
                             <i class="bi bi-gear-fill"></i>
                             <span class="sidebar-text">Admin</span>
                         </a>
@@ -127,14 +127,14 @@
         
         <ul class="sidebar-menu sidebar-menu-bottom">
             <li class="sidebar-item">
-                <a href="{{ url_for('social.search') }}" class="sidebar-link" data-tooltip="Cerca">
+                <a href="{{ url_for('social.search') }}" class="sidebar-link" data-tooltip="Cerca" title="Cerca">
                     <i class="bi bi-search"></i>
                     <span class="sidebar-text">Cerca</span>
                 </a>
             </li>
             {% if feature_enabled('notifications') %}
             <li class="sidebar-item">
-                <a href="{{ url_for('notifications.index') }}" class="sidebar-link position-relative" data-tooltip="Notifiche">
+                <a href="{{ url_for('notifications.index') }}" class="sidebar-link position-relative" data-tooltip="Notifiche" title="Notifiche">
                     <i class="bi bi-bell-fill"></i>
                     <span class="sidebar-text">Notifiche</span>
                     {% set unread_count = get_unread_notifications_count() %}
@@ -146,7 +146,7 @@
             {% endif %}
             {% if feature_enabled('messaging') %}
             <li class="sidebar-item">
-                <a href="{{ url_for('messages.inbox') }}" class="sidebar-link position-relative" data-tooltip="Messaggi">
+                <a href="{{ url_for('messages.inbox') }}" class="sidebar-link position-relative" data-tooltip="Messaggi" title="Messaggi">
                     <i class="bi bi-envelope"></i>
                     <span class="sidebar-text">Messaggi</span>
                     {% set unread_msgs = get_unread_messages_count() %}
@@ -157,13 +157,13 @@
             </li>
             {% endif %}
             <li class="sidebar-item">
-                <button class="sidebar-link sidebar-btn" type="button" data-theme-toggle data-tooltip="Tema">
+                <button class="sidebar-link sidebar-btn" type="button" data-theme-toggle data-tooltip="Tema" title="Tema">
                     <i class="bi bi-moon"></i>
                     <span class="sidebar-text">Tema</span>
                 </button>
             </li>
             <li class="sidebar-item sidebar-user">
-                <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="sidebar-link" data-tooltip="{{ current_user.get_full_name() }}">
+                <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="sidebar-link" data-tooltip="{{ current_user.get_full_name() }}" title="{{ current_user.get_full_name() }}">
                     {% if current_user.avatar %}
                         <img src="{{ url_for('static', filename='uploads/' + current_user.avatar) }}" 
                              alt="Avatar" class="sidebar-avatar">
@@ -174,19 +174,19 @@
                 </a>
             </li>
             <li class="sidebar-item">
-                <a href="{{ url_for('main.contact_admin') }}" class="sidebar-link" data-tooltip="Assistenza">
+                <a href="{{ url_for('main.contact_admin') }}" class="sidebar-link" data-tooltip="Assistenza" title="Assistenza">
                     <i class="bi bi-headset"></i>
                     <span class="sidebar-text">Assistenza</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a href="{{ url_for('main.guide_user') }}" class="sidebar-link" data-tooltip="Guida">
+                <a href="{{ url_for('main.guide_user') }}" class="sidebar-link" data-tooltip="Guida" title="Guida">
                     <i class="bi bi-question-circle"></i>
                     <span class="sidebar-text">Guida</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a href="{{ url_for('auth.logout') }}" class="sidebar-link" data-tooltip="Logout">
+                <a href="{{ url_for('auth.logout') }}" class="sidebar-link" data-tooltip="Logout" title="Logout">
                     <i class="bi bi-box-arrow-right"></i>
                     <span class="sidebar-text">Logout</span>
                 </a>
@@ -197,13 +197,13 @@
     <nav class="sidebar-nav">
         <ul class="sidebar-menu">
             <li class="sidebar-item">
-                <a href="{{ url_for('auth.login') }}" class="sidebar-link" data-tooltip="Login">
+                <a href="{{ url_for('auth.login') }}" class="sidebar-link" data-tooltip="Login" title="Login">
                     <i class="bi bi-box-arrow-in-right"></i>
                     <span class="sidebar-text">Login</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a href="{{ url_for('auth.register') }}" class="sidebar-link" data-tooltip="Registrati">
+                <a href="{{ url_for('auth.register') }}" class="sidebar-link" data-tooltip="Registrati" title="Registrati">
                     <i class="bi bi-person-plus"></i>
                     <span class="sidebar-text">Registrati</span>
                 </a>

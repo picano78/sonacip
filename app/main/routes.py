@@ -79,8 +79,36 @@ def healthz():
 @login_required
 def dashboard():
     """User dashboard (personal, configurable)."""
-    from app.models import Dashboard, DashboardTemplate, Notification, Message, Post, Event, Task
+    from app.models import Dashboard, DashboardTemplate, Notification, Message, Post, Event, Task, UserDashboardLayout
+    from app.main.dashboard_widgets import render_widget, get_widget_registry, get_widget_info, DEFAULT_WIDGETS
     import json
+
+    user_layouts = UserDashboardLayout.query.filter_by(
+        user_id=current_user.id, is_visible=True
+    ).order_by(UserDashboardLayout.position).all()
+
+    rendered_widgets = []
+    if user_layouts:
+        for layout in user_layouts:
+            html = render_widget(layout.widget_key, current_user)
+            info = get_widget_info(layout.widget_key)
+            size_class = {'small': 'col-12 col-md-4', 'medium': 'col-12 col-md-6', 'large': 'col-12'}.get(layout.size, 'col-12 col-md-6')
+            rendered_widgets.append({
+                'key': layout.widget_key,
+                'html': html,
+                'size_class': size_class,
+                'info': info,
+            })
+    else:
+        for wkey in DEFAULT_WIDGETS:
+            html = render_widget(wkey, current_user)
+            info = get_widget_info(wkey)
+            rendered_widgets.append({
+                'key': wkey,
+                'html': html,
+                'size_class': 'col-12 col-md-6',
+                'info': info,
+            })
 
     dash = Dashboard.query.filter_by(user_id=current_user.id, is_default=True).first()
     if not dash:
@@ -117,7 +145,6 @@ def dashboard():
 
     widgets = dash.get_widgets()
 
-    # Basic data used by widgets (keep safe / fast)
     stats = {}
     try:
         stats = {
@@ -142,7 +169,93 @@ def dashboard():
         widgets=widgets,
         stats=stats,
         recent_notifications=recent_notifications,
+        rendered_widgets=rendered_widgets,
+        has_custom_layout=bool(user_layouts),
     )
+
+
+@bp.route('/dashboard/customize')
+@login_required
+def customize_dashboard():
+    """Dashboard customization page with drag-drop widgets."""
+    from app.models import UserDashboardLayout
+    from app.main.dashboard_widgets import get_widget_registry, DEFAULT_WIDGETS
+    import json
+
+    all_widgets = get_widget_registry()
+    user_layouts = UserDashboardLayout.query.filter_by(
+        user_id=current_user.id
+    ).order_by(UserDashboardLayout.position).all()
+
+    active_keys = {l.widget_key for l in user_layouts}
+    active_widgets = []
+    for l in user_layouts:
+        winfo = None
+        for w in all_widgets:
+            if w['key'] == l.widget_key:
+                winfo = w
+                break
+        active_widgets.append({
+            'key': l.widget_key,
+            'size': l.size or 'medium',
+            'visible': l.is_visible,
+            'info': winfo or {'key': l.widget_key, 'name': l.widget_key, 'icon': 'bi-square', 'description': ''},
+        })
+
+    available_widgets = [w for w in all_widgets if w['key'] not in active_keys]
+
+    return render_template('main/dashboard_customize.html',
+        all_widgets=all_widgets,
+        active_widgets=active_widgets,
+        available_widgets=available_widgets,
+        has_layout=bool(user_layouts))
+
+
+@bp.route('/dashboard/save-layout', methods=['POST'])
+@login_required
+def save_dashboard_layout():
+    """Save widget layout from customization page."""
+    from app.models import UserDashboardLayout
+    import json
+
+    try:
+        data = request.get_json()
+        if not data or 'widgets' not in data:
+            return jsonify({'status': 'error', 'message': 'Dati non validi'}), 400
+
+        UserDashboardLayout.query.filter_by(user_id=current_user.id).delete()
+
+        for i, w in enumerate(data['widgets']):
+            layout = UserDashboardLayout(
+                user_id=current_user.id,
+                widget_key=w.get('key', ''),
+                position=i,
+                size=w.get('size', 'medium'),
+                is_visible=w.get('visible', True),
+            )
+            db.session.add(layout)
+
+        db.session.commit()
+        return jsonify({'status': 'ok', 'message': 'Layout salvato con successo!'})
+    except Exception:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': 'Errore nel salvataggio'}), 500
+
+
+@bp.route('/dashboard/reset-layout', methods=['POST'])
+@login_required
+def reset_dashboard_layout():
+    """Reset widget layout to defaults."""
+    from app.models import UserDashboardLayout
+
+    try:
+        UserDashboardLayout.query.filter_by(user_id=current_user.id).delete()
+        db.session.commit()
+        flash('Layout del cruscotto ripristinato.', 'success')
+    except Exception:
+        db.session.rollback()
+        flash('Errore nel ripristino.', 'danger')
+    return redirect(url_for('main.dashboard'))
 
 
 @bp.route('/dashboard/edit', methods=['GET', 'POST'])
@@ -298,6 +411,26 @@ def privacy_policy():
 def terms():
     """Terms of service page."""
     return render_template('main/terms.html')
+
+
+@bp.route('/set-language', methods=['POST'])
+def set_language():
+    """Set user language preference."""
+    from app.translations import SUPPORTED_LANGUAGES
+    lang = request.form.get('language', 'it')
+    if lang not in SUPPORTED_LANGUAGES:
+        lang = 'it'
+    session['language'] = lang
+    if current_user.is_authenticated:
+        try:
+            current_user.language = lang
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    referrer = request.referrer
+    if referrer and (referrer.startswith('/') or referrer.startswith(request.host_url)):
+        return redirect(referrer)
+    return redirect(url_for('main.index'))
 
 
 @bp.route('/cookie-policy')

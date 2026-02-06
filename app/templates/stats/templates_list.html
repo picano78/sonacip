@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Template Statistiche - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('stats.index') }}">Statistiche</a></li>
+                    <li class="breadcrumb-item active">Template</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="fw-bold"><i class="bi bi-file-earmark-ruled me-2" style="color: #1877f2;"></i>Template Statistiche</h2>
+                <a href="{{ url_for('stats.template_create') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Nuovo Template</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if templates %}
+            <div class="row g-3">
+                {% for t in templates %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-2">{{ t.name }}</h5>
+                            <div class="mb-2">
+                                {% if t.sport_type %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary me-1">{{ t.sport_type }}</span>
+                                {% endif %}
+                                {% if t.stat_type %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ t.stat_type }}</span>
+                                {% endif %}
+                            </div>
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-list-ul me-1"></i>{{ t._fields_count }} campi definiti
+                            </p>
+                            {% if t.is_global %}
+                            <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-globe me-1"></i>Globale</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-white border-0">
+                            <small class="text-muted">
+                                {% if t.creator %}
+                                Creato da {{ t.creator.first_name or '' }} {{ t.creator.last_name or t.creator.username }}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5 text-muted">
+                    <i class="bi bi-file-earmark-ruled display-4"></i>
+                    <p class="mt-2">Nessun template creato. Crea il primo per standardizzare le registrazioni.</p>
+                    <a href="{{ url_for('stats.template_create') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Crea Template</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

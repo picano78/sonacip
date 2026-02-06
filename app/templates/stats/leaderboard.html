@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Classifica - Statistiche{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('stats.index') }}">Statistiche</a></li>
+                    <li class="breadcrumb-item active">Classifica</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold"><i class="bi bi-award me-2" style="color: #1877f2;"></i>Classifica Atleti</h2>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Sport</label>
+                            <select name="sport" class="form-select" onchange="this.form.submit()">
+                                <option value="">Tutti gli sport</option>
+                                {% for s in sports %}
+                                <option value="{{ s }}" {% if current_sport == s %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Stagione</label>
+                            <select name="season" class="form-select" onchange="this.form.submit()">
+                                <option value="">Tutte le stagioni</option>
+                                {% for s in seasons %}
+                                <option value="{{ s }}" {% if current_season == s %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Metrica</label>
+                            <select name="metric" class="form-select" onchange="this.form.submit()">
+                                {% for m in available_metrics %}
+                                <option value="{{ m }}" {% if current_metric == m %}selected{% endif %}>{{ m|capitalize }}</option>
+                                {% endfor %}
+                                {% if not available_metrics %}
+                                <option value="gol" {% if current_metric == 'gol' %}selected{% endif %}>Gol</option>
+                                <option value="assist" {% if current_metric == 'assist' %}selected{% endif %}>Assist</option>
+                                <option value="presenze" {% if current_metric == 'presenze' %}selected{% endif %}>Presenze</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-filter me-1"></i>Filtra</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 fw-bold">
+                    <i class="bi bi-trophy-fill me-1" style="color: #ffc107;"></i>Classifica per {{ current_metric|capitalize if current_metric else 'Gol' }}
+                </div>
+                <div class="card-body p-0">
+                    {% if leaderboard %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 60px;" class="text-center">#</th>
+                                    <th>Atleta</th>
+                                    <th class="text-end">{{ current_metric|capitalize if current_metric else 'Valore' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in leaderboard %}
+                                <tr>
+                                    <td class="text-center">
+                                        {% if item.rank == 1 %}
+                                        <span class="badge rounded-pill" style="background-color: #ffd700; color: #333; font-size: 0.9rem;">1</span>
+                                        {% elif item.rank == 2 %}
+                                        <span class="badge rounded-pill" style="background-color: #c0c0c0; color: #333; font-size: 0.9rem;">2</span>
+                                        {% elif item.rank == 3 %}
+                                        <span class="badge rounded-pill" style="background-color: #cd7f32; color: #fff; font-size: 0.9rem;">3</span>
+                                        {% else %}
+                                        <span class="text-muted fw-bold">{{ item.rank }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('stats.athlete', user_id=item.user.id) }}" class="text-decoration-none fw-semibold">
+                                            {{ item.user.first_name or '' }} {{ item.user.last_name or item.user.username }}
+                                        </a>
+                                        {% if item.user.sport %}
+                                        <br><small class="text-muted">{{ item.user.sport }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-bold" style="color: #1877f2; font-size: 1.1rem;">{{ item.value|int if item.value == item.value|int else item.value }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-trophy display-4"></i>
+                        <p class="mt-2">Nessun dato disponibile per i filtri selezionati.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

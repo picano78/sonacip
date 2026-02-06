@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Gestione Pagamenti - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="bi bi-cash-stack" style="color: #1877f2;"></i> Gestione Pagamenti</h2>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="fs-4 fw-bold text-success">&euro; {{ '%.2f'|format(total_received) }}</div>
+                    <small class="text-muted">Totale Ricevuto</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="fs-4 fw-bold text-warning">&euro; {{ '%.2f'|format(total_pending) }}</div>
+                    <small class="text-muted">In Attesa</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center">
+                    <div class="fs-4 fw-bold" style="color: #1877f2;">&euro; {{ '%.2f'|format(this_month) }}</div>
+                    <small class="text-muted">Questo Mese</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h6 class="mb-0"><i class="bi bi-funnel"></i> Filtri</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small">Stato</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">Tutti</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completato</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>In attesa</option>
+                        <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Fallito</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Utente</label>
+                    <input type="text" name="user" class="form-control form-control-sm" placeholder="Nome o username" value="{{ user_filter }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Data da</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Data a</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-sm text-white w-100" style="background-color: #1877f2;">
+                        <i class="bi bi-search"></i> Filtra
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-list-ul"></i> Pagamenti ({{ payments|length }})</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Utente</th>
+                        <th>Quota</th>
+                        <th>Importo</th>
+                        <th>Metodo</th>
+                        <th>Stato</th>
+                        <th>Data</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.user.get_full_name() }}</td>
+                        <td>{{ p.fee.description if p.fee else '-' }}</td>
+                        <td class="fw-bold">&euro; {{ '%.2f'|format(p.amount) }}</td>
+                        <td>{{ p.payment_method or '-' }}</td>
+                        <td>
+                            {% if p.status == 'completed' %}
+                                <span class="badge bg-success">Completato</span>
+                            {% elif p.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">In attesa</span>
+                            {% elif p.status == 'failed' %}
+                                <span class="badge bg-danger">Fallito</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ p.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.created_at.strftime('%d/%m/%Y') if p.created_at else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('payments.receipt', payment_id=p.id) }}" class="btn btn-sm btn-outline-primary" title="Ricevuta">
+                                <i class="bi bi-receipt"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-3">Nessun pagamento trovato.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if pending_fees %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h6 class="mb-0"><i class="bi bi-pencil-square"></i> Registra Pagamento Manuale</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Utente</th>
+                            <th>Descrizione</th>
+                            <th>Importo</th>
+                            <th>Scadenza</th>
+                            <th>Azione</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fee in pending_fees %}
+                        <tr>
+                            <td>{{ fee.user.get_full_name() if fee.user else '-' }}</td>
+                            <td>{{ fee.description or '-' }}</td>
+                            <td>&euro; {{ '%.2f'|format(fee.amount_cents / 100.0) }}</td>
+                            <td>{{ fee.due_on.strftime('%d/%m/%Y') if fee.due_on else '-' }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#manualModal{{ fee.id }}">
+                                    <i class="bi bi-check-lg"></i> Registra
+                                </button>
+
+                                <div class="modal fade" id="manualModal{{ fee.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form action="{{ url_for('payments.manual_payment', fee_id=fee.id) }}" method="post">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Registra Pagamento Manuale</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p><strong>{{ fee.description or ('Quota #' ~ fee.id) }}</strong> — &euro; {{ '%.2f'|format(fee.amount_cents / 100.0) }}</p>
+                                                    <p>Utente: {{ fee.user.get_full_name() if fee.user else '-' }}</p>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Metodo di pagamento</label>
+                                                        <select name="payment_method" class="form-select">
+                                                            <option value="contanti">Contanti</option>
+                                                            <option value="bonifico">Bonifico Bancario</option>
+                                                            <option value="assegno">Assegno</option>
+                                                            <option value="altro">Altro</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Note (opzionale)</label>
+                                                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="bi bi-check-lg"></i> Conferma Pagamento
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -3246,15 +3246,23 @@ class Story(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    media_url = db.Column(db.String(255), nullable=False)
+    media_url = db.Column(db.String(500))
     media_type = db.Column(db.String(20), default='image')
     caption = db.Column(db.Text)
-    background_color = db.Column(db.String(7))
+    background_color = db.Column(db.String(20), default='#1877f2')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24))
     views_count = db.Column(db.Integer, default=0)
 
     author = db.relationship('User', foreign_keys=[user_id], backref=db.backref('stories', lazy='dynamic'))
+
+    @property
+    def is_expired(self):
+        return datetime.utcnow() >= self.expires_at if self.expires_at else False
+
+    @property
+    def view_count(self):
+        return self.views.count() if hasattr(self, 'views') else self.views_count or 0
 
     def __repr__(self):
         return f'<Story {self.id} by user={self.user_id}>'

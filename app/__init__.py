@@ -70,6 +70,13 @@ CORE_MODULES = [
     'scheduler',
     'subscription',
     'marketplace',
+    'groups',
+    'stories',
+    'polls',
+    'stats',
+    'payments',
+    'documents',
+    'gamification',
 ]
 
 
@@ -671,12 +678,9 @@ def create_app(config_name: str | None = None) -> Flask:
             def get_unread_messages_count():
                 return 0
 
-        # Translation function
-        from app.translations import t
-        user_lang = 'it'
-        if current_user and current_user.is_authenticated:
-            user_lang = getattr(current_user, 'language', 'it') or 'it'
-        
+        from app.translations import t, get_user_language, SUPPORTED_LANGUAGES, LANGUAGE_NAMES, LANGUAGE_FLAGS
+        user_lang = get_user_language()
+
         def translate(key):
             return t(key, user_lang)
 
@@ -707,6 +711,10 @@ def create_app(config_name: str | None = None) -> Flask:
             'get_unread_messages_count': _get_unread_messages_count,
             't': translate,
             'user_lang': user_lang,
+            'current_language': user_lang,
+            'supported_languages': SUPPORTED_LANGUAGES,
+            'language_names': LANGUAGE_NAMES,
+            'language_flags': LANGUAGE_FLAGS,
             'feature_enabled': feature_enabled,
         }
 

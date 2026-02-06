@@ -1,10 +1,11 @@
 """
 Notification routes
 """
+import os
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from app import db
-from app.models import Notification
+from app import db, csrf
+from app.models import Notification, PushSubscription
 from datetime import datetime
 
 bp = Blueprint('notifications', __name__, url_prefix='/notifications')
@@ -136,3 +137,77 @@ def recent():
             'created_at': n.created_at.isoformat()
         } for n in notifications]
     })
+
+
+@bp.route('/push/subscribe', methods=['POST'])
+@csrf.exempt
+@login_required
+def push_subscribe():
+    """Save push subscription for current user"""
+    try:
+        data = request.get_json(silent=True)
+        if not data or not data.get('endpoint'):
+            return jsonify({'success': False, 'error': 'Endpoint richiesto'}), 400
+
+        endpoint = data['endpoint']
+        keys = data.get('keys', {})
+        p256dh = keys.get('p256dh', '')
+        auth = keys.get('auth', '')
+
+        existing = PushSubscription.query.filter_by(
+            user_id=current_user.id,
+            endpoint=endpoint
+        ).first()
+
+        if existing:
+            existing.p256dh_key = p256dh
+            existing.auth_key = auth
+            existing.is_active = True
+        else:
+            sub = PushSubscription(
+                user_id=current_user.id,
+                endpoint=endpoint,
+                p256dh_key=p256dh,
+                auth_key=auth,
+                is_active=True
+            )
+            db.session.add(sub)
+
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/push/unsubscribe', methods=['POST'])
+@csrf.exempt
+@login_required
+def push_unsubscribe():
+    """Remove push subscription for current user"""
+    try:
+        data = request.get_json(silent=True)
+        if not data or not data.get('endpoint'):
+            return jsonify({'success': False, 'error': 'Endpoint richiesto'}), 400
+
+        sub = PushSubscription.query.filter_by(
+            user_id=current_user.id,
+            endpoint=data['endpoint']
+        ).first()
+
+        if sub:
+            db.session.delete(sub)
+            db.session.commit()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/push/vapid-key')
+@login_required
+def push_vapid_key():
+    """Return the VAPID public key"""
+    vapid_key = os.environ.get('VAPID_PUBLIC_KEY', '')
+    return jsonify({'publicKey': vapid_key})

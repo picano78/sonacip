@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Crea Gruppo - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .create-card {
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .btn-facebook {
+    background: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .btn-facebook:hover {
+    background: #155fc7;
+    color: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="mb-3">
+    <a href="{{ url_for('groups.index') }}" class="text-decoration-none">
+      <i class="bi bi-arrow-left me-1"></i>Torna alla Community
+    </a>
+  </div>
+
+  <div class="card create-card">
+    <div class="card-header bg-white border-bottom">
+      <h4 class="mb-0"><i class="bi bi-plus-circle me-2 text-primary"></i>Crea Nuovo Gruppo</h4>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('groups.create') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-3">
+          <label for="name" class="form-label fw-semibold">Nome del Gruppo *</label>
+          <input type="text" class="form-control" id="name" name="name" required maxlength="120"
+                 placeholder="Es. Squadra Under 18">
+        </div>
+
+        <div class="mb-3">
+          <label for="description" class="form-label fw-semibold">Descrizione</label>
+          <textarea class="form-control" id="description" name="description" rows="3"
+                    placeholder="Descrivi il tuo gruppo..."></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label for="avatar" class="form-label fw-semibold">Avatar del Gruppo</label>
+          <input type="file" class="form-control" id="avatar" name="avatar" accept="image/*">
+          <div class="form-text">Formati accettati: PNG, JPG, GIF, WebP</div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label for="max_members" class="form-label fw-semibold">Numero Massimo Membri</label>
+            <input type="number" class="form-control" id="max_members" name="max_members"
+                   value="100" min="2" max="10000">
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="is_private" name="is_private">
+              <label class="form-check-label fw-semibold" for="is_private">
+                <i class="bi bi-lock me-1"></i>Gruppo Privato
+              </label>
+              <div class="form-text">Solo su invito o approvazione</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-facebook btn-lg">
+            <i class="bi bi-check-circle me-1"></i>Crea Gruppo
+          </button>
+          <a href="{{ url_for('groups.index') }}" class="btn btn-outline-secondary">Annulla</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

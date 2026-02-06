@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Sondaggi - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .poll-card {
+        border: none;
+        border-radius: 16px;
+        transition: transform .2s, box-shadow .2s;
+        overflow: hidden;
+    }
+    .poll-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    .poll-badge-active {
+        background: #1877f2;
+        color: #fff;
+        font-size: 11px;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+    .poll-badge-closed {
+        background: #6c757d;
+        color: #fff;
+        font-size: 11px;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+    .poll-votes-count {
+        color: #1877f2;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h4 class="fw-bold mb-0"><i class="bi bi-bar-chart-fill me-2" style="color: #1877f2;"></i>Sondaggi</h4>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('polls.my_polls') }}" class="btn btn-outline-primary">
+                <i class="bi bi-person me-1"></i> I miei
+            </a>
+            <a href="{{ url_for('polls.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i> Crea Sondaggio
+            </a>
+        </div>
+    </div>
+
+    {% if active_polls %}
+    <h6 class="text-muted fw-semibold mb-3"><i class="bi bi-lightning-fill me-1"></i>Attivi</h6>
+    <div class="row g-3 mb-4">
+        {% for poll in active_polls %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ url_for('polls.detail', poll_id=poll.id) }}" class="text-decoration-none">
+                <div class="card poll-card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="poll-badge-active">Attivo</span>
+                            <span class="poll-votes-count"><i class="bi bi-people-fill me-1"></i>{{ total_votes(poll) }}</span>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1">{{ poll.title }}</h6>
+                        {% if poll.description %}
+                        <p class="text-muted small mb-2">{{ poll.description[:100] }}{% if poll.description|length > 100 %}...{% endif %}</p>
+                        {% endif %}
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-person me-1"></i>{{ poll.creator.get_full_name() }}
+                            </small>
+                            {% if poll.closes_at %}
+                            <small class="text-muted">
+                                <i class="bi bi-clock me-1"></i>Scade: {{ poll.closes_at.strftime('%d/%m/%Y %H:%M') }}
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if closed_polls %}
+    <h6 class="text-muted fw-semibold mb-3"><i class="bi bi-lock-fill me-1"></i>Chiusi</h6>
+    <div class="row g-3 mb-4">
+        {% for poll in closed_polls %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ url_for('polls.detail', poll_id=poll.id) }}" class="text-decoration-none">
+                <div class="card poll-card shadow-sm h-100" style="opacity: 0.8;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="poll-badge-closed">Chiuso</span>
+                            <span class="poll-votes-count"><i class="bi bi-people-fill me-1"></i>{{ total_votes(poll) }}</span>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1">{{ poll.title }}</h6>
+                        {% if poll.description %}
+                        <p class="text-muted small mb-2">{{ poll.description[:100] }}{% if poll.description|length > 100 %}...{% endif %}</p>
+                        {% endif %}
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-person me-1"></i>{{ poll.creator.get_full_name() }}
+                            </small>
+                            <small class="text-muted">
+                                {{ total_votes(poll) }} voti totali
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not active_polls and not closed_polls %}
+    <div class="text-center py-5">
+        <i class="bi bi-bar-chart" style="font-size: 48px; color: #ccc;"></i>
+        <p class="text-muted mt-3">Nessun sondaggio ancora. Creane uno!</p>
+        <a href="{{ url_for('polls.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Crea Sondaggio
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% block title %}Storie - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stories-container {
+        display: flex;
+        gap: 16px;
+        overflow-x: auto;
+        padding: 16px 0;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .stories-container::-webkit-scrollbar { display: none; }
+
+    .story-avatar-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        min-width: 80px;
+    }
+    .story-avatar-ring {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        padding: 3px;
+        background: linear-gradient(135deg, #1877f2, #42a5f5, #1877f2);
+        transition: transform .2s;
+    }
+    .story-avatar-ring:hover { transform: scale(1.08); }
+    .story-avatar-ring.seen {
+        background: #ccc;
+    }
+    .story-avatar-ring img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #fff;
+    }
+    .story-avatar-name {
+        font-size: 11px;
+        margin-top: 4px;
+        text-align: center;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: #333;
+    }
+
+    .story-add-btn {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        border: 2px dashed #1877f2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        color: #1877f2;
+        cursor: pointer;
+        transition: all .2s;
+        background: rgba(24,119,242,0.05);
+    }
+    .story-add-btn:hover {
+        background: rgba(24,119,242,0.15);
+        transform: scale(1.08);
+    }
+
+    .story-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.95);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .story-overlay.active { display: flex; }
+
+    .story-viewer {
+        position: relative;
+        width: 100%;
+        max-width: 420px;
+        height: 90vh;
+        max-height: 750px;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .story-progress-bar {
+        display: flex;
+        gap: 3px;
+        padding: 8px 12px 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+    }
+    .story-progress-bar .progress-segment {
+        flex: 1;
+        height: 3px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .story-progress-bar .progress-segment .fill {
+        height: 100%;
+        background: #fff;
+        width: 0%;
+        transition: width 5s linear;
+    }
+    .story-progress-bar .progress-segment.done .fill { width: 100%; transition: none; }
+    .story-progress-bar .progress-segment.active .fill { width: 100%; }
+
+    .story-header {
+        position: absolute;
+        top: 16px;
+        left: 12px;
+        right: 12px;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .story-header img {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #fff;
+    }
+    .story-header .name { color: #fff; font-weight: 600; font-size: 14px; }
+    .story-header .time { color: rgba(255,255,255,0.7); font-size: 12px; }
+    .story-close-btn {
+        margin-left: auto;
+        color: #fff;
+        font-size: 24px;
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 4px 8px;
+    }
+
+    .story-content {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .story-content img, .story-content video {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    .story-caption-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 40px 16px 16px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.7));
+        color: #fff;
+        font-size: 15px;
+    }
+
+    .story-nav {
+        position: absolute;
+        top: 0; bottom: 0;
+        width: 40%;
+        z-index: 5;
+        cursor: pointer;
+    }
+    .story-nav.left { left: 0; }
+    .story-nav.right { right: 0; }
+
+    .story-footer {
+        padding: 8px 12px;
+        color: rgba(255,255,255,0.6);
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .story-delete-btn {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        z-index: 10;
+        background: rgba(220,53,69,0.8);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h4 class="fw-bold mb-0"><i class="bi bi-circle-fill me-2" style="color: #1877f2;"></i>Storie</h4>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createStoryModal">
+            <i class="bi bi-plus-circle me-1"></i> Crea Storia
+        </button>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4" style="border-radius: 16px;">
+        <div class="card-body p-3">
+            <div class="stories-container">
+                <div class="story-avatar-wrap" data-bs-toggle="modal" data-bs-target="#createStoryModal">
+                    <div class="story-add-btn">
+                        <i class="bi bi-plus"></i>
+                    </div>
+                    <span class="story-avatar-name">La tua storia</span>
+                </div>
+
+                {% for uid, data in users_with_stories.items() %}
+                <div class="story-avatar-wrap" onclick="openUserStories({{ uid }})">
+                    <div class="story-avatar-ring {% if not data.has_unseen %}seen{% endif %}">
+                        {% if data.user.avatar %}
+                        <img src="/uploads/avatars/{{ data.user.avatar }}" alt="">
+                        {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ data.user.get_full_name()|urlencode }}&background=1877f2&color=fff&size=72" alt="">
+                        {% endif %}
+                    </div>
+                    <span class="story-avatar-name">
+                        {% if data.user.id == current_user.id %}Tu{% else %}{{ data.user.first_name or data.user.username }}{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if not users_with_stories %}
+    <div class="text-center py-5">
+        <i class="bi bi-camera" style="font-size: 48px; color: #ccc;"></i>
+        <p class="text-muted mt-3">Nessuna storia attiva al momento.</p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createStoryModal">
+            <i class="bi bi-plus-circle me-1"></i> Crea la prima storia
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<div class="story-overlay" id="storyOverlay">
+    <div class="story-viewer" id="storyViewer">
+        <div class="story-progress-bar" id="storyProgressBar"></div>
+        <div class="story-header" id="storyHeader">
+            <img src="" id="storyAuthorAvatar" alt="">
+            <div>
+                <div class="name" id="storyAuthorName"></div>
+                <div class="time" id="storyTime"></div>
+            </div>
+            <button class="story-close-btn" onclick="closeStoryViewer()">&times;</button>
+        </div>
+        <div class="story-content" id="storyContent">
+            <div class="story-nav left" onclick="prevStory()"></div>
+            <div class="story-nav right" onclick="nextStory()"></div>
+        </div>
+        <div class="story-footer" id="storyFooter"></div>
+        <button class="story-delete-btn d-none" id="storyDeleteBtn" onclick="deleteCurrentStory()">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</div>
+
+<div class="modal fade" id="createStoryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-camera me-2" style="color: #1877f2;"></i>Crea Storia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('stories.create') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Immagine o Video</label>
+                        <input type="file" name="media" class="form-control" accept="image/*,video/*" id="storyFileInput">
+                        <div id="storyPreview" class="mt-2 text-center d-none">
+                            <img src="" style="max-height: 200px; border-radius: 12px;" id="storyPreviewImg">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Didascalia</label>
+                        <input type="text" name="caption" class="form-control" maxlength="500" placeholder="Scrivi qualcosa...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Colore di sfondo</label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="color" name="background_color" value="#1877f2" class="form-control form-control-color" style="width: 50px;">
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-sm rounded-circle" style="width:30px;height:30px;background:#1877f2;" onclick="this.closest('form').querySelector('[name=background_color]').value='#1877f2'"></button>
+                                <button type="button" class="btn btn-sm rounded-circle" style="width:30px;height:30px;background:#e74c3c;" onclick="this.closest('form').querySelector('[name=background_color]').value='#e74c3c'"></button>
+                                <button type="button" class="btn btn-sm rounded-circle" style="width:30px;height:30px;background:#2ecc71;" onclick="this.closest('form').querySelector('[name=background_color]').value='#2ecc71'"></button>
+                                <button type="button" class="btn btn-sm rounded-circle" style="width:30px;height:30px;background:#f39c12;" onclick="this.closest('form').querySelector('[name=background_color]').value='#f39c12'"></button>
+                                <button type="button" class="btn btn-sm rounded-circle" style="width:30px;height:30px;background:#9b59b6;" onclick="this.closest('form').querySelector('[name=background_color]').value='#9b59b6'"></button>
+                                <button type="button" class="btn btn-sm rounded-circle" style="width:30px;height:30px;background:#1a1a2e;" onclick="this.closest('form').querySelector('[name=background_color]').value='#1a1a2e'"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i> Pubblica</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentUserStories = [];
+let currentStoryIndex = 0;
+let storyTimer = null;
+const STORY_DURATION = 5000;
+
+document.getElementById('storyFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            document.getElementById('storyPreviewImg').src = ev.target.result;
+            document.getElementById('storyPreview').classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('storyPreview').classList.add('d-none');
+    }
+});
+
+function openUserStories(userId) {
+    fetch(`/stories/user/${userId}`)
+        .then(r => r.json())
+        .then(stories => {
+            if (!stories.length) return;
+            currentUserStories = stories;
+            currentStoryIndex = stories.findIndex(s => !s.viewed);
+            if (currentStoryIndex < 0) currentStoryIndex = 0;
+            showStoryOverlay();
+            loadStory(currentStoryIndex);
+        });
+}
+
+function showStoryOverlay() {
+    document.getElementById('storyOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeStoryViewer() {
+    document.getElementById('storyOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+    clearTimeout(storyTimer);
+}
+
+function loadStory(index) {
+    clearTimeout(storyTimer);
+    if (index < 0 || index >= currentUserStories.length) {
+        closeStoryViewer();
+        return;
+    }
+    currentStoryIndex = index;
+    const storyData = currentUserStories[index];
+
+    fetch(`/stories/view/${storyData.id}`)
+        .then(r => r.json())
+        .then(data => {
+            const avatar = data.author_avatar
+                ? `/uploads/avatars/${data.author_avatar}`
+                : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.author_name)}&background=1877f2&color=fff&size=36`;
+            document.getElementById('storyAuthorAvatar').src = avatar;
+            document.getElementById('storyAuthorName').textContent = data.author_name;
+            document.getElementById('storyTime').textContent = data.time_ago;
+            document.getElementById('storyFooter').textContent = `👁 ${data.view_count} visualizzazioni`;
+
+            const content = document.getElementById('storyContent');
+            const navLeft = content.querySelector('.story-nav.left');
+            const navRight = content.querySelector('.story-nav.right');
+            content.querySelectorAll('.story-media, .story-caption-overlay, .story-text-only').forEach(el => el.remove());
+
+            if (data.media_url) {
+                if (data.media_type === 'video') {
+                    const vid = document.createElement('video');
+                    vid.className = 'story-media';
+                    vid.src = data.media_url;
+                    vid.autoplay = true;
+                    vid.muted = false;
+                    vid.playsInline = true;
+                    content.insertBefore(vid, navLeft);
+                } else {
+                    const img = document.createElement('img');
+                    img.className = 'story-media';
+                    img.src = data.media_url;
+                    content.insertBefore(img, navLeft);
+                }
+            } else {
+                const textDiv = document.createElement('div');
+                textDiv.className = 'story-text-only d-flex align-items-center justify-content-center w-100 h-100';
+                textDiv.style.background = data.background_color;
+                textDiv.innerHTML = `<p class="text-white text-center px-4" style="font-size: 22px; font-weight: 600;">${data.caption || ''}</p>`;
+                content.insertBefore(textDiv, navLeft);
+            }
+
+            if (data.caption && data.media_url) {
+                const cap = document.createElement('div');
+                cap.className = 'story-caption-overlay';
+                cap.textContent = data.caption;
+                content.appendChild(cap);
+            }
+
+            const deleteBtn = document.getElementById('storyDeleteBtn');
+            if (data.is_own) {
+                deleteBtn.classList.remove('d-none');
+            } else {
+                deleteBtn.classList.add('d-none');
+            }
+
+            buildProgressBar();
+            startStoryTimer();
+        });
+}
+
+function buildProgressBar() {
+    const bar = document.getElementById('storyProgressBar');
+    bar.innerHTML = '';
+    currentUserStories.forEach((s, i) => {
+        const seg = document.createElement('div');
+        seg.className = 'progress-segment';
+        if (i < currentStoryIndex) seg.classList.add('done');
+        if (i === currentStoryIndex) seg.classList.add('active');
+        seg.innerHTML = '<div class="fill"></div>';
+        bar.appendChild(seg);
+    });
+}
+
+function startStoryTimer() {
+    storyTimer = setTimeout(() => {
+        nextStory();
+    }, STORY_DURATION);
+}
+
+function nextStory() {
+    if (currentStoryIndex < currentUserStories.length - 1) {
+        loadStory(currentStoryIndex + 1);
+    } else {
+        closeStoryViewer();
+    }
+}
+
+function prevStory() {
+    if (currentStoryIndex > 0) {
+        loadStory(currentStoryIndex - 1);
+    }
+}
+
+function deleteCurrentStory() {
+    const storyId = currentUserStories[currentStoryIndex].id;
+    if (!confirm('Eliminare questa storia?')) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/stories/${storyId}/delete`;
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrf_token';
+    csrf.value = '{{ csrf_token() }}';
+    form.appendChild(csrf);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+document.addEventListener('keydown', function(e) {
+    if (!document.getElementById('storyOverlay').classList.contains('active')) return;
+    if (e.key === 'Escape') closeStoryViewer();
+    if (e.key === 'ArrowRight') nextStory();
+    if (e.key === 'ArrowLeft') prevStory();
+});
+</script>
+{% endblock %}

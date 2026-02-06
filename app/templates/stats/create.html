@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Nuova Registrazione - Statistiche{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('stats.index') }}">Statistiche</a></li>
+                    <li class="breadcrumb-item active">Nuova Registrazione</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold"><i class="bi bi-plus-circle me-2" style="color: #1877f2;"></i>Registra Statistiche</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="post" id="statsForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Atleta <span class="text-danger">*</span></label>
+                                <select name="user_id" class="form-select" required>
+                                    <option value="">Seleziona atleta...</option>
+                                    {% for m in members %}
+                                    <option value="{{ m.id }}">{{ m.first_name or '' }} {{ m.last_name or m.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Data <span class="text-danger">*</span></label>
+                                <input type="date" name="stat_date" class="form-control" required value="{{ today }}">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Sport <span class="text-danger">*</span></label>
+                                <select name="sport_type" id="sportType" class="form-select" required>
+                                    <option value="">Seleziona...</option>
+                                    <option value="Calcio">Calcio</option>
+                                    <option value="Basket">Basket</option>
+                                    <option value="Pallavolo">Pallavolo</option>
+                                    <option value="Nuoto">Nuoto</option>
+                                    <option value="Atletica">Atletica</option>
+                                    <option value="Tennis">Tennis</option>
+                                    <option value="Rugby">Rugby</option>
+                                    <option value="Altro">Altro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Tipo Stat</label>
+                                <input type="text" name="stat_type" class="form-control" placeholder="es. Partita, Allenamento">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Stagione</label>
+                                <input type="text" name="season" class="form-control" placeholder="es. 2025/2026">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-speedometer2 me-1" style="color: #1877f2;"></i>Metriche</h5>
+
+                        <div id="defaultMetrics">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small">Gol</label>
+                                    <input type="number" name="metric_gol" class="form-control" min="0" step="1" data-sports="Calcio,Basket,Pallavolo,Rugby">
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small">Assist</label>
+                                    <input type="number" name="metric_assist" class="form-control" min="0" step="1" data-sports="Calcio,Basket,Pallavolo,Rugby">
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small">Minuti</label>
+                                    <input type="number" name="metric_minuti" class="form-control" min="0" step="1">
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small">Voto</label>
+                                    <input type="number" name="metric_voto" class="form-control" min="0" max="10" step="0.5">
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small">Presenze</label>
+                                    <input type="number" name="metric_presenze" class="form-control" min="0" step="1">
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small">Ammonizioni</label>
+                                    <input type="number" name="metric_ammonizioni" class="form-control" min="0" step="1" data-sports="Calcio,Basket,Rugby">
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small">Espulsioni</label>
+                                    <input type="number" name="metric_espulsioni" class="form-control" min="0" step="1" data-sports="Calcio,Basket,Rugby">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+                        <h6 class="fw-semibold mb-3"><i class="bi bi-plus-square me-1"></i>Metriche Personalizzate</h6>
+                        <div id="customMetrics"></div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mb-3" id="addCustomMetric">
+                            <i class="bi bi-plus me-1"></i>Aggiungi metrica
+                        </button>
+
+                        <hr class="my-3">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Note</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="Note aggiuntive..."></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i>Salva Registrazione</button>
+                            <a href="{{ url_for('stats.index') }}" class="btn btn-outline-secondary">Annulla</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 fw-bold">
+                    <i class="bi bi-info-circle me-1" style="color: #1877f2;"></i>Guida
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">Seleziona l'atleta e compila le metriche disponibili. I campi non compilati verranno ignorati.</p>
+                    <p class="small text-muted mb-0">Puoi aggiungere metriche personalizzate usando il pulsante "Aggiungi metrica".</p>
+                </div>
+            </div>
+
+            {% if templates %}
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white border-0 fw-bold">
+                    <i class="bi bi-file-earmark-ruled me-1" style="color: #1877f2;"></i>Template Disponibili
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for t in templates %}
+                        <div class="list-group-item px-0 border-0">
+                            <small class="fw-semibold">{{ t.name }}</small>
+                            {% if t.sport_type %}<br><small class="text-muted">{{ t.sport_type }}</small>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const sportSelect = document.getElementById('sportType');
+    const metricInputs = document.querySelectorAll('#defaultMetrics input[data-sports]');
+
+    function updateVisibility() {
+        const sport = sportSelect.value;
+        metricInputs.forEach(input => {
+            const sports = (input.getAttribute('data-sports') || '').split(',');
+            const parent = input.closest('.col-md-3, .col-6');
+            if (!sport || sports.includes(sport) || sports[0] === '') {
+                if (parent) parent.style.display = '';
+            } else {
+                if (parent) parent.style.display = '';
+            }
+        });
+    }
+
+    sportSelect.addEventListener('change', updateVisibility);
+    updateVisibility();
+
+    let customIdx = 0;
+    document.getElementById('addCustomMetric').addEventListener('click', function() {
+        customIdx++;
+        const row = document.createElement('div');
+        row.className = 'row g-2 mb-2 align-items-end';
+        row.innerHTML = '<div class="col-5"><input type="text" name="custom_key" class="form-control form-control-sm" placeholder="Nome metrica"></div>' +
+            '<div class="col-5"><input type="text" name="custom_value" class="form-control form-control-sm" placeholder="Valore"></div>' +
+            '<div class="col-2"><button type="button" class="btn btn-sm btn-outline-danger w-100 remove-custom"><i class="bi bi-trash"></i></button></div>';
+        document.getElementById('customMetrics').appendChild(row);
+        row.querySelector('.remove-custom').addEventListener('click', function() { row.remove(); });
+    });
+})();
+</script>
+{% endblock %}

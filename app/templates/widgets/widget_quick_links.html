@@ -1,0 +1,16 @@
+<div class="card shadow-sm border-0 h-100">
+    <div class="card-header bg-white border-bottom" style="border-color: #1877f2 !important;">
+        <h6 class="mb-0"><i class="bi bi-link-45deg text-primary"></i> Link Rapidi</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for link in links %}
+            <div class="col-6">
+                <a href="{{ link.url }}" class="btn btn-outline-primary btn-sm w-100 text-truncate">
+                    <i class="bi {{ link.icon }}"></i> {{ link.label }}
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

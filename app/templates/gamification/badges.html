@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Badge - Gamification{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h4 mb-0"><i class="bi bi-award" style="color:#1877f2"></i> Badge</h1>
+      <div class="text-muted small">{{ earned_count }}/{{ total_count }} badge guadagnati</div>
+    </div>
+    <a href="{{ url_for('gamification.index') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Gamification
+    </a>
+  </div>
+
+  <div class="row g-3">
+    {% for item in badge_data %}
+    {% set b = item.badge %}
+    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+      <div class="card h-100 {% if not item.earned %}opacity-75{% endif %}" style="{% if item.earned %}border-color:{{ b.color or '#1877f2' }};border-width:2px;{% endif %}">
+        <div class="card-body text-center">
+          <div style="font-size:2.5rem;color:{% if item.earned %}{{ b.color or '#1877f2' }}{% else %}#ccc{% endif %};">
+            <i class="bi {{ b.icon or 'bi-award' }}"></i>
+          </div>
+          <h6 class="mt-2 mb-1">{{ b.name }}</h6>
+          <p class="text-muted small mb-2">{{ b.description }}</p>
+          <div class="mb-2">
+            <span class="badge bg-primary">+{{ b.points }} pt</span>
+            {% if b.category %}
+            <span class="badge bg-secondary">{{ b.category }}</span>
+            {% endif %}
+          </div>
+          {% if item.earned %}
+          <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Guadagnato!</span>
+          {% else %}
+          <div class="progress mb-1" style="height:8px;">
+            <div class="progress-bar" style="width:{{ item.progress }}%;background:{{ b.color or '#1877f2' }};" role="progressbar"></div>
+          </div>
+          <div class="text-muted small">{{ item.current }}/{{ item.required }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

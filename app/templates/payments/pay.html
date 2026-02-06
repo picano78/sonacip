@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Paga Quota - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <a href="{{ url_for('payments.index') }}" class="btn btn-sm btn-outline-secondary mb-3">
+                <i class="bi bi-arrow-left"></i> Torna ai pagamenti
+            </a>
+
+            <div class="card shadow-sm">
+                <div class="card-header text-white" style="background-color: #1877f2;">
+                    <h5 class="mb-0"><i class="bi bi-credit-card-2-front-fill"></i> Dettaglio Quota</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="text-muted small">Descrizione</label>
+                        <p class="fw-bold mb-0">{{ fee.description or ('Quota #' ~ fee.id) }}</p>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="text-muted small">Importo</label>
+                            <p class="fw-bold fs-4 mb-0" style="color: #1877f2;">&euro; {{ '%.2f'|format(amount_eur) }}</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-muted small">Scadenza</label>
+                            <p class="fw-bold mb-0">{{ fee.due_on.strftime('%d/%m/%Y') if fee.due_on else '-' }}</p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Stato</label>
+                        <p class="mb-0">
+                            {% if fee.status == 'paid' %}
+                                <span class="badge bg-success">Pagato</span>
+                            {% elif fee.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">In attesa</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ fee.status }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    {% if fee.status != 'paid' %}
+                    <form action="{{ url_for('payments.checkout', fee_id=fee.id) }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-lg w-100 text-white mb-3" style="background-color: #1877f2;">
+                            <i class="bi bi-credit-card"></i> Paga con Carta
+                        </button>
+                    </form>
+
+                    <div class="text-center">
+                        <small class="text-muted">
+                            <i class="bi bi-shield-lock-fill"></i> Pagamento sicuro tramite Stripe
+                        </small>
+                    </div>
+
+                    <hr>
+
+                    <div class="text-center">
+                        <p class="text-muted small mb-0">
+                            <i class="bi bi-info-circle"></i> Per pagamento manuale (contanti o bonifico),
+                            contatta l'amministratore della tua società sportiva.
+                        </p>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success text-center mb-0">
+                        <i class="bi bi-check-circle-fill"></i> Questa quota è già stata pagata.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

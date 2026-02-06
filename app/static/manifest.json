@@ -1,22 +1,60 @@
 {
-  "name": "Sonacip",
-  "short_name": "Sonacip",
-  "description": "La piattaforma #1 per lo sport dilettantistico",
+  "name": "SONACIP - Piattaforma Sport Dilettantistico",
+  "short_name": "SONACIP",
+  "description": "La piattaforma #1 per la gestione dello sport dilettantistico italiano. Società, atleti, eventi e tornei.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0d6efd",
+  "theme_color": "#1877f2",
   "orientation": "portrait",
   "icons": [
     {
       "src": "/static/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/static/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "short_name": "Feed",
+      "url": "/social/feed",
+      "icons": [{"src": "/static/icons/icon-192x192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Messaggi",
+      "short_name": "Messaggi",
+      "url": "/messages/",
+      "icons": [{"src": "/static/icons/icon-192x192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Calendario",
+      "short_name": "Calendario",
+      "url": "/scheduler/",
+      "icons": [{"src": "/static/icons/icon-192x192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Profilo",
+      "short_name": "Profilo",
+      "url": "/social/profile",
+      "icons": [{"src": "/static/icons/icon-192x192.png", "sizes": "192x192"}]
+    }
+  ],
+  "categories": ["sports", "social"],
+  "screenshots": [
+    {
+      "src": "/static/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "SONACIP Dashboard"
     }
   ]
 }

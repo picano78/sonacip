@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}{{ poll.title }} - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-bar-bg {
+        height: 40px;
+        background: #f0f2f5;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        cursor: default;
+    }
+    .result-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1877f2, #42a5f5);
+        border-radius: 10px;
+        transition: width 0.8s ease;
+        min-width: 0;
+    }
+    .result-bar-text {
+        position: absolute;
+        top: 0;
+        left: 12px;
+        right: 12px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .vote-option-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 14px 16px;
+        cursor: pointer;
+        transition: all .2s;
+        margin-bottom: 8px;
+    }
+    .vote-option-card:hover {
+        border-color: #1877f2;
+        background: rgba(24,119,242,0.04);
+    }
+    .vote-option-card input:checked + .option-label {
+        color: #1877f2;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <a href="{{ url_for('polls.index') }}" class="text-decoration-none mb-3 d-inline-block">
+                <i class="bi bi-arrow-left me-1"></i> Torna ai sondaggi
+            </a>
+
+            <div class="card shadow-sm border-0 mt-2" style="border-radius: 16px;">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4 class="fw-bold mb-1">{{ poll.title }}</h4>
+                            {% if poll.description %}
+                            <p class="text-muted mb-0">{{ poll.description }}</p>
+                            {% endif %}
+                        </div>
+                        {% if is_active %}
+                        <span class="badge rounded-pill" style="background: #1877f2;">Attivo</span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-secondary">Chiuso</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-3 text-muted small mb-4">
+                        <span><i class="bi bi-person me-1"></i>{{ poll.creator.get_full_name() }}</span>
+                        <span><i class="bi bi-calendar me-1"></i>{{ poll.created_at.strftime('%d/%m/%Y') }}</span>
+                        {% if poll.multiple_choice %}
+                        <span><i class="bi bi-check2-square me-1"></i>Scelta multipla</span>
+                        {% endif %}
+                        {% if poll.is_anonymous %}
+                        <span><i class="bi bi-incognito me-1"></i>Anonimo</span>
+                        {% endif %}
+                    </div>
+
+                    {% if not has_voted and is_active %}
+                    <form method="POST" action="{{ url_for('polls.vote', poll_id=poll.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% for opt in options %}
+                        <label class="vote-option-card d-flex align-items-center gap-3 w-100">
+                            {% if poll.multiple_choice %}
+                            <input type="checkbox" name="option_id" value="{{ opt.id }}" class="form-check-input" style="min-width: 20px;">
+                            {% else %}
+                            <input type="radio" name="option_id" value="{{ opt.id }}" class="form-check-input" style="min-width: 20px;">
+                            {% endif %}
+                            <span class="option-label">{{ opt.text }}</span>
+                        </label>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary w-100 mt-3" style="border-radius: 10px; padding: 12px;">
+                            <i class="bi bi-check2-circle me-1"></i> Vota
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="mb-3">
+                        {% for r in results %}
+                        <div class="mb-3">
+                            <div class="result-bar-bg">
+                                <div class="result-bar-fill" style="width: {{ r.percentage }}%;"></div>
+                                <div class="result-bar-text">
+                                    <span>{{ r.text }}</span>
+                                    <span>{{ r.percentage }}% ({{ r.count }})</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="text-center text-muted">
+                        <i class="bi bi-people-fill me-1"></i> {{ total_votes }} voti totali
+                        {% if has_voted %}
+                        <span class="ms-2 badge bg-success"><i class="bi bi-check me-1"></i>Hai votato</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if (poll.creator_id == current_user.id or current_user.is_admin()) and is_active %}
+                    <hr>
+                    <form method="POST" action="{{ url_for('polls.close_poll', poll_id=poll.id) }}" class="text-center">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Chiudere il sondaggio?')">
+                            <i class="bi bi-lock me-1"></i> Chiudi Sondaggio
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if poll.closes_at %}
+                    <div class="text-center text-muted small mt-3">
+                        <i class="bi bi-clock me-1"></i>
+                        {% if is_active %}
+                        Scade il {{ poll.closes_at.strftime('%d/%m/%Y alle %H:%M') }}
+                        {% else %}
+                        Scaduto il {{ poll.closes_at.strftime('%d/%m/%Y alle %H:%M') }}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

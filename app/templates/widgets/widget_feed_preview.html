@@ -1,0 +1,29 @@
+<div class="card shadow-sm border-0 h-100">
+    <div class="card-header bg-white border-bottom" style="border-color: #1877f2 !important;">
+        <h6 class="mb-0"><i class="bi bi-rss-fill text-primary"></i> Ultime dal Feed</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            {% if posts %}
+                {% for post in posts %}
+                <a href="#" class="list-group-item list-group-item-action py-2 px-3">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2">
+                            <i class="bi bi-person-fill text-primary"></i>
+                        </div>
+                        <div class="flex-grow-1 text-truncate">
+                            <small class="fw-bold">{{ post.author }}</small>
+                            <p class="mb-0 small text-muted text-truncate">{{ post.content[:80] }}</p>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox fs-3"></i>
+                    <p class="small mb-0 mt-1">Nessun post recente</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

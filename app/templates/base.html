@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="{{ current_language|default('it') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -47,7 +47,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body data-theme="light" {% if current_user.is_authenticated %}class="has-sidebar"{% endif %}>
+<body data-theme="light" {% if current_user.is_authenticated %}class="has-sidebar" data-user-id="{{ current_user.id }}"{% endif %}>
     
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -85,6 +85,9 @@
             });
         }
     </script>
+    {% if current_user.is_authenticated %}
+    <script src="{{ url_for('static', filename='js/push.js') }}"></script>
+    {% endif %}
     
     <footer class="mt-5" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: #e0e0e0;">
         {% if site and site.footer_html %}
@@ -131,10 +134,23 @@
             </div>
             <hr style="border-color: rgba(255,255,255,0.1);">
             <div class="row align-items-center">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <p class="small mb-0" style="color: #888;">&copy; 2026 SONACIP - Tutti i diritti riservati</p>
                 </div>
-                <div class="col-md-6 text-md-end">
+                <div class="col-md-4 text-center">
+                    <div class="d-flex justify-content-center gap-1 flex-wrap">
+                        {% for code in supported_languages|default(['it','en','es','fr','de']) %}
+                        <form method="post" action="{{ url_for('main.set_language') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="language" value="{{ code }}">
+                            <button type="submit" class="btn btn-sm px-2 py-0 {{ 'btn-light' if current_language|default('it') == code else '' }}" style="font-size: 0.75rem; color: {{ '#fff' if current_language|default('it') != code else '#333' }}; opacity: {{ '1' if current_language|default('it') == code else '0.7' }};">
+                                {{ (language_flags|default({}))[code]|default('') }} {{ code|upper }}
+                            </button>
+                        </form>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
                     <p class="small mb-0" style="color: #888;">Conforme al GDPR (Reg. UE 2016/679)</p>
                 </div>
             </div>

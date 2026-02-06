@@ -211,6 +211,12 @@ def login():
         login_user(user, remember=form.remember_me.data)
         user.last_seen = datetime.utcnow()
         _safe_commit("auth.login:last_seen")
+
+        try:
+            from app.gamification.engine import update_login_streak
+            update_login_streak(user.id)
+        except Exception:
+            pass
         
         # Log the login
         try:

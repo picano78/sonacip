@@ -8,18 +8,32 @@
       <div class="text-muted small">{{ dashboard.description or '' }}</div>
     </div>
     <div class="d-flex gap-2">
-      <a class="btn btn-outline-primary" href="{{ url_for('main.edit_dashboard') }}">
-        <i class="bi bi-pencil"></i> Personalizza
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('main.customize_dashboard') }}">
+        <i class="bi bi-grid-1x2 me-1"></i> Personalizza Widget
+      </a>
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('main.edit_dashboard') }}">
+        <i class="bi bi-pencil"></i> Modifica
       </a>
       <form method="post" action="{{ url_for('main.reset_dashboard') }}">
         {{ csrf_token() }}
-        <button class="btn btn-outline-secondary" type="submit" onclick="return confirm('Ripristinare il cruscotto al template?')">
+        <button class="btn btn-outline-secondary btn-sm" type="submit" onclick="return confirm('Ripristinare il cruscotto al template?')">
           <i class="bi bi-arrow-counterclockwise"></i> Reset
         </button>
       </form>
     </div>
   </div>
 
+  {% if rendered_widgets %}
+  <div class="row g-3 mb-4">
+    {% for rw in rendered_widgets %}
+      <div class="{{ rw.size_class }}">
+        {{ rw.html|safe }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not has_custom_layout %}
   <div class="row g-3">
     {% for w in widgets %}
       {% set wtype = w.type if w and w.type else w.get('type') %}
@@ -110,6 +124,6 @@
       {% endif %}
     {% endfor %}
   </div>
+  {% endif %}
 </div>
 {% endblock %}
-

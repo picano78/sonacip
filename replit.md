@@ -28,6 +28,12 @@ Key architectural features include:
     - **Backup System:** Enhanced with a graphical UI, file upload/restore capabilities, and hourly scheduling.
     - **Feature Control:** A `PlatformFeature` model allows super administrators to toggle 24 site features on/off, distinguishing between premium and free functionalities.
 
+## Recent Changes (Feb 6, 2026)
+- **Gamification System:** Full gamification module with points, badges (12 default badges), 10-level progression system, login streak tracking, leaderboard, and admin badge management. Engine in `app/gamification/engine.py`, routes in `app/gamification/routes.py`, templates in `app/templates/gamification/`.
+- **Customizable Dashboards:** Dashboard widget system with 12 widget types (feed preview, upcoming events, tasks, notifications, stats, mini calendar, groups, polls, documents, leaderboard mini, weather, quick links). Drag-and-drop customization interface with save/reset. Widget module in `app/main/dashboard_widgets.py`, customize template in `app/templates/main/dashboard_customize.html`, widget partials in `app/templates/widgets/`.
+- **Login Streak Integration:** Auth login flow automatically updates user login streak for gamification engagement.
+- **Sidebar Navigation:** Gamification link added to sidebar navigation in both menu configurations.
+
 ## External Dependencies
 - **Database:** SQLite (default), PostgreSQL (optional)
 - **Payment Processing:** Stripe

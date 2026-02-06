@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user.get_full_name() }} - Gamification{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <a href="{{ url_for('gamification.leaderboard') }}" class="btn btn-outline-primary btn-sm mb-3">
+    <i class="bi bi-arrow-left me-1"></i> Classifica
+  </a>
+
+  <div class="card mb-4" style="border-top: 4px solid #1877f2;">
+    <div class="card-body">
+      <div class="d-flex align-items-center mb-3">
+        {% if profile_user.avatar %}
+          <img src="{{ url_for('static', filename='uploads/' + profile_user.avatar) }}" alt="Avatar" class="rounded-circle me-3" style="width:80px;height:80px;object-fit:cover;">
+        {% else %}
+          <div class="rounded-circle me-3 d-flex align-items-center justify-content-center" style="width:80px;height:80px;background:#1877f2;color:#fff;font-size:2rem;">
+            <i class="bi bi-person-fill"></i>
+          </div>
+        {% endif %}
+        <div>
+          <h4 class="mb-0">{{ profile_user.get_full_name() }}</h4>
+          <div class="d-flex align-items-center gap-3 mt-1">
+            <span class="badge" style="background:#1877f2;font-size:0.9rem;">Livello {{ level }}</span>
+            <span class="text-muted">{{ points }} punti</span>
+          </div>
+        </div>
+      </div>
+      <div class="progress" style="height:16px;">
+        <div class="progress-bar" role="progressbar" style="width:{{ progress }}%;background:#1877f2;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">
+          {{ progress|int }}%
+        </div>
+      </div>
+      {% if next_lvl_pts %}
+      <div class="text-muted small mt-1">{{ points }}/{{ next_lvl_pts }} punti per Livello {{ level + 1 }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <h5 class="mb-3"><i class="bi bi-award me-1"></i> Badge Guadagnati ({{ user_badges|length }})</h5>
+  {% if user_badges %}
+  <div class="row g-3">
+    {% for ub, badge in user_badges %}
+    <div class="col-6 col-md-4 col-lg-3">
+      <div class="card h-100 text-center" style="border-color:{{ badge.color or '#1877f2' }};border-width:2px;">
+        <div class="card-body">
+          <div style="font-size:2rem;color:{{ badge.color or '#1877f2' }};">
+            <i class="bi {{ badge.icon or 'bi-award' }}"></i>
+          </div>
+          <h6 class="mt-2 mb-1">{{ badge.name }}</h6>
+          <div class="text-muted small">{{ badge.description }}</div>
+          <div class="mt-2"><span class="badge bg-success">+{{ badge.points }} pt</span></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center text-muted py-4">
+    <i class="bi bi-emoji-neutral" style="font-size:2rem;"></i>
+    <div class="mt-2">Nessun badge guadagnato.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

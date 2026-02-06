@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Classifica - Gamification{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h4 mb-0"><i class="bi bi-trophy-fill" style="color:#1877f2"></i> Classifica</h1>
+    <a href="{{ url_for('gamification.index') }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Gamification
+    </a>
+  </div>
+
+  {% if entries %}
+  <div class="row justify-content-center mb-4">
+    {% for up, u in entries[:3] %}
+    {% set rank = loop.index %}
+    <div class="col-12 col-md-4 mb-3">
+      <div class="card text-center {% if rank == 1 %}border-warning{% elif rank == 2 %}border-secondary{% else %}border{% endif %}" style="{% if rank == 1 %}border-width:3px;{% elif rank == 2 %}border-width:2px;{% endif %}">
+        <div class="card-body">
+          {% if rank == 1 %}
+          <div style="font-size:2rem;color:#ffc107;"><i class="bi bi-trophy-fill"></i></div>
+          {% elif rank == 2 %}
+          <div style="font-size:1.8rem;color:#aaa;"><i class="bi bi-trophy-fill"></i></div>
+          {% else %}
+          <div style="font-size:1.6rem;color:#cd7f32;"><i class="bi bi-trophy-fill"></i></div>
+          {% endif %}
+          {% if u.avatar %}
+            <img src="{{ url_for('static', filename='uploads/' + u.avatar) }}" alt="" class="rounded-circle my-2" style="width:60px;height:60px;object-fit:cover;">
+          {% else %}
+            <div class="rounded-circle my-2 mx-auto d-flex align-items-center justify-content-center" style="width:60px;height:60px;background:#1877f2;color:#fff;font-size:1.3rem;">
+              <i class="bi bi-person-fill"></i>
+            </div>
+          {% endif %}
+          <h6 class="mb-0">{{ u.get_full_name() }}</h6>
+          <div class="text-muted small">Livello {{ get_level(up.total_points) }}</div>
+          <div class="h5 mt-1 mb-0" style="color:#1877f2;">{{ up.total_points }} pt</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th style="width:60px;">#</th>
+            <th>Utente</th>
+            <th class="text-center">Livello</th>
+            <th class="text-center">Punti</th>
+            <th class="text-center">Badge</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for up, u in entries %}
+          {% set rank = loop.index %}
+          <tr {% if u.id == current_user.id %}class="table-primary"{% endif %}>
+            <td>
+              {% if rank == 1 %}
+              <i class="bi bi-trophy-fill text-warning"></i>
+              {% elif rank == 2 %}
+              <i class="bi bi-trophy-fill" style="color:#aaa"></i>
+              {% elif rank == 3 %}
+              <i class="bi bi-trophy-fill" style="color:#cd7f32"></i>
+              {% else %}
+              {{ rank }}
+              {% endif %}
+            </td>
+            <td>
+              <a href="{{ url_for('gamification.profile', user_id=u.id) }}" class="text-decoration-none">
+                {{ u.get_full_name() }}
+              </a>
+            </td>
+            <td class="text-center"><span class="badge" style="background:#1877f2">{{ get_level(up.total_points) }}</span></td>
+            <td class="text-center fw-bold">{{ up.total_points }}</td>
+            <td class="text-center">{{ up.badges_count or 0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-trophy" style="font-size:3rem;"></i>
+    <div class="mt-2">La classifica è vuota. Inizia a guadagnare punti!</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

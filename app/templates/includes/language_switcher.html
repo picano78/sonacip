@@ -1,0 +1,19 @@
+<div class="language-switcher dropdown">
+  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+    {{ language_flags.get(current_language, '') }} {{ current_language|upper }}
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown" style="min-width: auto;">
+    {% for lang_code in supported_languages %}
+    <li>
+      <form method="POST" action="{{ url_for('main.set_language') }}" class="d-inline w-100">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="language" value="{{ lang_code }}">
+        <button type="submit" class="dropdown-item d-flex align-items-center gap-1 {% if lang_code == current_language %}active{% endif %}">
+          {{ language_flags.get(lang_code, '') }} {{ lang_code|upper }}
+          <small class="text-muted ms-1">{{ language_names.get(lang_code, '') }}</small>
+        </button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+</div>

@@ -1,0 +1,27 @@
+<div class="card shadow-sm border-0 h-100">
+    <div class="card-header bg-white border-bottom" style="border-color: #1877f2 !important;">
+        <h6 class="mb-0"><i class="bi bi-bell-fill text-primary"></i> Notifiche Recenti</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            {% if notifications %}
+                {% for notif in notifications %}
+                <div class="list-group-item py-2 px-3">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-circle-fill text-primary me-2" style="font-size: 0.5rem; margin-top: 6px;"></i>
+                        <div>
+                            <p class="mb-0 small">{{ notif.message }}</p>
+                            <small class="text-muted">{{ notif.time_ago }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-bell-slash fs-3"></i>
+                    <p class="small mb-0 mt-1">Nessuna notifica</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

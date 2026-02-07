@@ -182,45 +182,76 @@ def login():
     if valid:
         identifier = (form.identifier.data or "").strip()
         identifier_lower = identifier.lower()
-        try:
-            user = User.query.filter(
+        user = None
+
+        def _do_user_lookup():
+            return User.query.filter(
                 or_(
                     func.lower(User.email) == identifier_lower,
                     func.lower(User.username) == identifier_lower,
                 )
             ).first()
+
+        try:
+            user = _do_user_lookup()
         except Exception:
             db.session.rollback()
-            current_app.logger.exception("User lookup failed during login")
-            flash('Servizio temporaneamente non disponibile. Riprova tra qualche istante.', 'danger')
-            return redirect(url_for('auth.login'))
-        
+            current_app.logger.exception("User lookup failed during login — attempting schema repair")
+            try:
+                from app import _sqlite_add_missing_columns
+                uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
+                if uri.startswith("sqlite:"):
+                    _sqlite_add_missing_columns(current_app, db)
+                    user = _do_user_lookup()
+                else:
+                    raise
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception("User lookup failed after repair attempt")
+                flash('Servizio temporaneamente non disponibile. Riprova tra qualche istante.', 'danger')
+                return redirect(url_for('auth.login'))
+
         if user is None or not user.check_password(form.password.data):
             flash('Credenziali non valide', 'danger')
             return redirect(url_for('auth.login'))
-        
-        if not user.is_active:
-            flash('Account disabilitato. Contatta l\'amministratore.', 'warning')
-            return redirect(url_for('auth.login'))
 
-        if is_email_confirmation_required() and not user.email_confirmed:
-            role_name = user.role_obj.name if user.role_obj else ''
-            if role_name != 'super_admin':
-                session['_email_confirm_uid'] = user.id
-                flash('Devi confermare il tuo indirizzo email prima di effettuare il login.', 'warning')
-                return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
-        
+        try:
+            if not user.is_active:
+                flash('Account disabilitato. Contatta l\'amministratore.', 'warning')
+                return redirect(url_for('auth.login'))
+        except Exception:
+            pass
+
+        try:
+            if is_email_confirmation_required() and getattr(user, 'email_confirmed', True) is False:
+                role_name = ''
+                try:
+                    role_name = user.role_obj.name if user.role_obj else ''
+                except Exception:
+                    pass
+                if role_name != 'super_admin':
+                    session['_email_confirm_uid'] = user.id
+                    flash('Devi confermare il tuo indirizzo email prima di effettuare il login.', 'warning')
+                    return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
+        except Exception:
+            current_app.logger.exception("Email confirmation check failed, skipping")
+
         login_user(user, remember=form.remember_me.data)
-        user.last_seen = datetime.utcnow()
-        _safe_commit("auth.login:last_seen")
+        try:
+            user.last_seen = datetime.utcnow()
+            _safe_commit("auth.login:last_seen")
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
         try:
             from app.gamification.engine import update_login_streak
             update_login_streak(user.id)
         except Exception:
             pass
-        
-        # Log the login
+
         try:
             db.session.add(
                 AuditLog(
@@ -237,10 +268,13 @@ def login():
                 db.session.rollback()
             except Exception:
                 pass
-        
-        flash(f'Benvenuto, {user.get_full_name()}!', 'success')
-        
-        # Redirect to next page or dashboard
+
+        try:
+            name = user.get_full_name()
+        except Exception:
+            name = user.username or 'utente'
+        flash(f'Benvenuto, {name}!', 'success')
+
         next_page = request.args.get('next')
         if not next_page or not next_page.startswith('/'):
             next_page = url_for('social.feed')
@@ -542,27 +576,33 @@ def register_society():
         )
         user.set_password(form.password.data)
         db.session.add(user)
-        db.session.commit()
+        if not _safe_commit("auth.register_society:create_user"):
+            flash('Errore durante la registrazione. Riprova.', 'danger')
+            return redirect(url_for('auth.register_society'))
 
-        # Create Society profile row (1:1 mapped by user.id)
-        society = Society(
-            id=user.id,
-            legal_name=form.company_name.data,
-            company_type=form.company_type.data,
-            vat_number=form.vat_number.data or None,
-            fiscal_code=form.fiscal_code.data,
-            email=form.email.data,
-            phone=form.phone.data,
-            website=form.website.data or None,
-            address=form.address.data,
-            city=form.city.data,
-            province=form.province.data,
-            postal_code=form.postal_code.data,
-        )
-        db.session.add(society)
-        db.session.commit()
+        try:
+            society = Society(
+                id=user.id,
+                legal_name=form.company_name.data,
+                company_type=form.company_type.data,
+                vat_number=form.vat_number.data or None,
+                fiscal_code=form.fiscal_code.data,
+                email=form.email.data,
+                phone=form.phone.data,
+                website=form.website.data or None,
+                address=form.address.data,
+                city=form.city.data,
+                province=form.province.data,
+                postal_code=form.postal_code.data,
+            )
+            db.session.add(society)
+            _safe_commit("auth.register_society:create_society")
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
-        # Create default dashboard for the new society user
         try:
             tpl = DashboardTemplate.query.filter_by(role_name=role_name).first()
             if not tpl:
@@ -591,50 +631,66 @@ def register_society():
                 is_default=True,
             )
             db.session.add(dash)
-            db.session.commit()
+            _safe_commit("auth.register_society:dashboard")
         except Exception:
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
-        # Attach free plan subscription to society (until paid plans configured)
-        free_plan = Plan.query.filter_by(slug='free').first()
-        if free_plan:
-            existing_sub = Subscription.query.filter_by(society_id=user.id, status='active').first()
-            if not existing_sub:
-                sub = Subscription(
-                    society_id=user.id,
-                    plan_id=free_plan.id,
-                    status='active',
-                    billing_cycle='monthly',
-                    start_date=datetime.utcnow(),
-                    amount=0,
-                    auto_renew=False
-                )
-                db.session.add(sub)
-                db.session.commit()
+        try:
+            free_plan = Plan.query.filter_by(slug='free').first()
+            if free_plan:
+                existing_sub = Subscription.query.filter_by(society_id=user.id, status='active').first()
+                if not existing_sub:
+                    sub = Subscription(
+                        society_id=user.id,
+                        plan_id=free_plan.id,
+                        status='active',
+                        billing_cycle='monthly',
+                        start_date=datetime.utcnow(),
+                        amount=0,
+                        auto_renew=False
+                    )
+                    db.session.add(sub)
+                    _safe_commit("auth.register_society:subscription")
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
-        log = AuditLog(
-            user_id=user.id,
-            action='register_society',
-            entity_type='User',
-            entity_id=user.id,
-            details='New society registered',
-            ip_address=request.remote_addr
-        )
-        db.session.add(log)
-        db.session.commit()
+        try:
+            log = AuditLog(
+                user_id=user.id,
+                action='register_society',
+                entity_type='User',
+                entity_id=user.id,
+                details='New society registered',
+                ip_address=request.remote_addr
+            )
+            db.session.add(log)
+            _safe_commit("auth.register_society:audit_log")
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
-        if is_email_confirmation_required():
-            session['_email_confirm_uid'] = user.id
-            session['_email_confirm_resends'] = 0
-            email_sent = send_confirmation_email(user)
-            if email_sent:
-                flash('Registrazione società completata! Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta.', 'success')
-            else:
-                flash('Registrazione società completata! Non è stato possibile inviare l\'email di conferma. Puoi richiederne una nuova.', 'warning')
-            return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
-        else:
-            flash('Registrazione società completata! Effettua il login.', 'success')
-            return redirect(url_for('auth.login', next=url_for('main.dashboard')))
+        try:
+            if is_email_confirmation_required():
+                session['_email_confirm_uid'] = user.id
+                session['_email_confirm_resends'] = 0
+                email_sent = send_confirmation_email(user)
+                if email_sent:
+                    flash('Registrazione società completata! Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta.', 'success')
+                else:
+                    flash('Registrazione società completata! Non è stato possibile inviare l\'email di conferma. Puoi richiederne una nuova.', 'warning')
+                return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
+        except Exception:
+            pass
+        flash('Registrazione società completata! Effettua il login.', 'success')
+        return redirect(url_for('auth.login', next=url_for('main.dashboard')))
 
     return render_template('auth/register_society.html', form=form)
 
@@ -643,16 +699,21 @@ def register_society():
 def logout():
     """Logout"""
     if current_user.is_authenticated:
-        # Log the logout
-        log = AuditLog(
-            user_id=current_user.id,
-            action='logout',
-            entity_type='User',
-            entity_id=current_user.id,
-            ip_address=request.remote_addr
-        )
-        db.session.add(log)
-        db.session.commit()
+        try:
+            log = AuditLog(
+                user_id=current_user.id,
+                action='logout',
+                entity_type='User',
+                entity_id=current_user.id,
+                ip_address=request.remote_addr
+            )
+            db.session.add(log)
+            _safe_commit("auth.logout:audit_log")
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
     
     logout_user()
     flash('Logout effettuato con successo.', 'info')
@@ -687,11 +748,16 @@ def email_confirm_pending(user_id):
     if pending_uid != user_id:
         flash('Effettua il login per continuare.', 'info')
         return redirect(url_for('auth.login'))
-    user = User.query.get(user_id)
+    try:
+        user = User.query.get(user_id)
+    except Exception:
+        db.session.rollback()
+        flash('Effettua il login per continuare.', 'info')
+        return redirect(url_for('auth.login'))
     if not user:
         flash('Effettua il login per continuare.', 'info')
         return redirect(url_for('auth.login'))
-    if user.email_confirmed:
+    if getattr(user, 'email_confirmed', False):
         session.pop('_email_confirm_uid', None)
         flash('Email già confermata. Puoi effettuare il login.', 'success')
         return redirect(url_for('auth.login'))

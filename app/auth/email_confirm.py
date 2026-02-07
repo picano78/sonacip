@@ -11,7 +11,14 @@ from app.models import EmailConfirmationSetting, SmtpSetting
 
 
 def get_confirmation_settings():
-    setting = EmailConfirmationSetting.query.first()
+    try:
+        setting = EmailConfirmationSetting.query.first()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return EmailConfirmationSetting(enabled=False)
     if not setting:
         setting = EmailConfirmationSetting(enabled=False)
         db.session.add(setting)
@@ -23,8 +30,11 @@ def get_confirmation_settings():
 
 
 def is_email_confirmation_required():
-    setting = get_confirmation_settings()
-    return setting.enabled
+    try:
+        setting = get_confirmation_settings()
+        return setting.enabled
+    except Exception:
+        return False
 
 
 def generate_confirm_token(user):

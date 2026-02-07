@@ -405,9 +405,12 @@ def _sqlite_add_missing_columns(app: Flask, _db) -> None:
                 return ' DEFAULT 0.0'
             return " DEFAULT ''"
 
+        added_count = 0
+        checked_tables = 0
         for table_name, table_obj in _db.metadata.tables.items():
             if table_name not in existing_tables:
                 continue
+            checked_tables += 1
 
             existing_cols = {c['name'] for c in inspector.get_columns(table_name)}
 
@@ -422,9 +425,12 @@ def _sqlite_add_missing_columns(app: Flask, _db) -> None:
                 try:
                     _db.session.execute(text(sql))
                     _db.session.commit()
-                    app.logger.info("SQLite: added column %s.%s (%s)", table_name, col.name, sqlite_type)
-                except Exception:
+                    added_count += 1
+                    app.logger.info("SQLite: added column %s.%s (%s%s)", table_name, col.name, sqlite_type, default_clause)
+                except Exception as col_err:
                     _db.session.rollback()
+                    app.logger.warning("SQLite: could not add column %s.%s: %s", table_name, col.name, col_err)
+        app.logger.info("SQLite schema check complete: %d tables inspected, %d columns added", checked_tables, added_count)
     except Exception:
         try:
             app.logger.exception("SQLite missing-column check failed")
@@ -507,12 +513,14 @@ def _auto_upgrade_db(app: Flask) -> None:
                     if not _try_alembic_upgrade():
                         _fallback_create_all()
                     else:
-                        _sqlite_add_missing_columns(app, db)
+                        with app.app_context():
+                            _sqlite_add_missing_columns(app, db)
             else:
                 if not _try_alembic_upgrade():
                     _fallback_create_all()
                 else:
-                    _sqlite_add_missing_columns(app, db)
+                    with app.app_context():
+                        _sqlite_add_missing_columns(app, db)
         else:
             if not _try_alembic_upgrade():
                 _fallback_create_all()

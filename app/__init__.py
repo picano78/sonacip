@@ -329,6 +329,109 @@ def _normalize_sqlite_db(app: Flask) -> None:
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = opts
 
 
+def _sqlite_add_missing_columns(app: Flask, _db) -> None:
+    """
+    SQLite does not add columns to existing tables via db.create_all().
+    This inspects every model table and adds any missing columns with
+    ALTER TABLE ADD COLUMN (which SQLite supports).
+    """
+    try:
+        from sqlalchemy import inspect as sa_inspect, text
+        from app import models as _models  # noqa: F401 — ensure metadata is populated
+
+        inspector = sa_inspect(_db.engine)
+        existing_tables = set(inspector.get_table_names())
+
+        def _sa_type_to_sqlite(col_type) -> str:
+            type_name = type(col_type).__name__.upper()
+            type_str = str(col_type).split('(')[0].upper()
+            integer_types = {'INTEGER', 'SMALLINT', 'SMALLINTEGER', 'BIGINT',
+                             'BIGINTEGER', 'INT', 'TINYINT'}
+            real_types = {'FLOAT', 'REAL', 'DOUBLE', 'NUMERIC', 'DECIMAL'}
+            text_types = {'VARCHAR', 'STRING', 'TEXT', 'CHAR', 'NVARCHAR',
+                          'NCHAR', 'CLOB', 'UUID', 'ENUM', 'JSON'}
+            blob_types = {'BLOB', 'LARGEBINARY', 'BINARY', 'VARBINARY',
+                          'LONGBLOB', 'MEDIUMBLOB'}
+            if type_name in integer_types or type_str in integer_types:
+                return 'INTEGER'
+            if type_name == 'BOOLEAN' or type_str == 'BOOLEAN':
+                return 'INTEGER'
+            if type_name in real_types or type_str in real_types:
+                return 'REAL'
+            if type_name in blob_types or type_str in blob_types:
+                return 'BLOB'
+            if type_name in ('DATE', 'DATETIME', 'TIMESTAMP', 'TIME'):
+                return 'TEXT'
+            if type_name in text_types or type_str in text_types:
+                return 'TEXT'
+            return 'TEXT'
+
+        def _default_sql(col) -> str:
+            if col.default is not None:
+                try:
+                    if col.default.is_scalar:
+                        val = col.default.arg
+                        if isinstance(val, bool):
+                            return f' DEFAULT {1 if val else 0}'
+                        if isinstance(val, (int, float)):
+                            return f' DEFAULT {val}'
+                        if isinstance(val, str):
+                            return f" DEFAULT '{val.replace(chr(39), chr(39)+chr(39))}'"
+                except Exception:
+                    pass
+            if col.server_default is not None:
+                try:
+                    raw = col.server_default.arg
+                    sd = str(raw.text) if hasattr(raw, 'text') else str(raw)
+                    sd = sd.strip("'\"")
+                    if sd.upper() in ('CURRENT_TIMESTAMP', 'NOW()'):
+                        return " DEFAULT CURRENT_TIMESTAMP"
+                    if sd.upper() in ('TRUE', 'FALSE'):
+                        return f" DEFAULT {1 if sd.upper() == 'TRUE' else 0}"
+                    try:
+                        numeric = float(sd)
+                        return f" DEFAULT {numeric}"
+                    except (ValueError, TypeError):
+                        pass
+                    return f" DEFAULT '{sd.replace(chr(39), chr(39)+chr(39))}'"
+                except Exception:
+                    pass
+            if col.nullable is not False:
+                return ' DEFAULT NULL'
+            sqlite_type = _sa_type_to_sqlite(col.type)
+            if sqlite_type == 'INTEGER':
+                return ' DEFAULT 0'
+            if sqlite_type == 'REAL':
+                return ' DEFAULT 0.0'
+            return " DEFAULT ''"
+
+        for table_name, table_obj in _db.metadata.tables.items():
+            if table_name not in existing_tables:
+                continue
+
+            existing_cols = {c['name'] for c in inspector.get_columns(table_name)}
+
+            for col in table_obj.columns:
+                if col.name in existing_cols:
+                    continue
+
+                sqlite_type = _sa_type_to_sqlite(col.type)
+                default_clause = _default_sql(col)
+
+                sql = f'ALTER TABLE "{table_name}" ADD COLUMN "{col.name}" {sqlite_type}{default_clause}'
+                try:
+                    _db.session.execute(text(sql))
+                    _db.session.commit()
+                    app.logger.info("SQLite: added column %s.%s (%s)", table_name, col.name, sqlite_type)
+                except Exception:
+                    _db.session.rollback()
+    except Exception:
+        try:
+            app.logger.exception("SQLite missing-column check failed")
+        except Exception:
+            pass
+
+
 def _auto_upgrade_db(app: Flask) -> None:
     """
     Ensure DB schema is upgraded without manual commands.
@@ -367,6 +470,8 @@ def _auto_upgrade_db(app: Flask) -> None:
             with app.app_context():
                 from app import models as _models  # noqa: F401
                 db.create_all()
+                if is_sqlite:
+                    _sqlite_add_missing_columns(app, db)
         except Exception:
             try:
                 app.logger.exception("db.create_all fallback also failed")
@@ -401,9 +506,13 @@ def _auto_upgrade_db(app: Flask) -> None:
 
                     if not _try_alembic_upgrade():
                         _fallback_create_all()
+                    else:
+                        _sqlite_add_missing_columns(app, db)
             else:
                 if not _try_alembic_upgrade():
                     _fallback_create_all()
+                else:
+                    _sqlite_add_missing_columns(app, db)
         else:
             if not _try_alembic_upgrade():
                 _fallback_create_all()

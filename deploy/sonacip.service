@@ -7,15 +7,15 @@ Wants=postgresql.service
 Type=simple
 User=sonacip
 Group=sonacip
-WorkingDirectory=/var/www/sonacip
-EnvironmentFile=/var/www/sonacip/.env
+WorkingDirectory=/opt/sonacip
+EnvironmentFile=/opt/sonacip/.env
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/var/www/sonacip/venv/bin/gunicorn \
+ExecStart=/opt/sonacip/venv/bin/gunicorn \
     --bind 127.0.0.1:8000 \
     --workers 3 \
     --timeout 120 \
-    --access-logfile /var/www/sonacip/logs/access.log \
-    --error-logfile /var/www/sonacip/logs/error.log \
+    --access-logfile /opt/sonacip/logs/access.log \
+    --error-logfile /opt/sonacip/logs/error.log \
     --capture-output \
     wsgi:app
 ExecReload=/bin/kill -s HUP $MAINPID
@@ -28,7 +28,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
-ReadWritePaths=/var/www/sonacip
+ReadWritePaths=/opt/sonacip
 UMask=0027
 
 [Install]

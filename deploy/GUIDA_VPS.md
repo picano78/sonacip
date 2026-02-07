@@ -49,8 +49,8 @@ sudo apt install -y python3.11 python3.11-venv python3.11-dev \
 sudo useradd -r -m -s /bin/bash sonacip
 
 # Crea directory
-sudo mkdir -p /var/www/sonacip
-sudo chown sonacip:sonacip /var/www/sonacip
+sudo mkdir -p /opt/sonacip
+sudo chown sonacip:sonacip /opt/sonacip
 ```
 
 ## 3. Database PostgreSQL
@@ -70,10 +70,10 @@ GRANT ALL PRIVILEGES ON DATABASE sonacip TO sonacip;
 
 ```bash
 # Dal tuo computer locale, trasferisci il progetto
-scp -r ./* tuouser@tuovps:/var/www/sonacip/
+scp -r ./* tuouser@tuovps:/opt/sonacip/
 
 # Oppure con git
-sudo -u sonacip git clone <tuo-repo> /var/www/sonacip
+sudo -u sonacip git clone <tuo-repo> /opt/sonacip
 ```
 
 ## 5. Configura l'Ambiente
@@ -81,7 +81,7 @@ sudo -u sonacip git clone <tuo-repo> /var/www/sonacip
 ```bash
 # Entra come utente sonacip
 sudo -iu sonacip
-cd /var/www/sonacip
+cd /opt/sonacip
 
 # Crea ambiente virtuale Python
 python3.11 -m venv venv
@@ -177,12 +177,12 @@ sudo certbot --nginx -d tuodominio.it -d www.tuodominio.it
 
 ```bash
 # Imposta i permessi corretti
-sudo chown -R sonacip:sonacip /var/www/sonacip
-sudo chmod -R 755 /var/www/sonacip
-sudo chmod 600 /var/www/sonacip/.env
-sudo chmod -R 775 /var/www/sonacip/uploads
-sudo chmod -R 775 /var/www/sonacip/backups
-sudo chmod -R 775 /var/www/sonacip/logs
+sudo chown -R sonacip:sonacip /opt/sonacip
+sudo chmod -R 755 /opt/sonacip
+sudo chmod 600 /opt/sonacip/.env
+sudo chmod -R 775 /opt/sonacip/uploads
+sudo chmod -R 775 /opt/sonacip/backups
+sudo chmod -R 775 /opt/sonacip/logs
 ```
 
 ---
@@ -203,10 +203,10 @@ sudo journalctl -u sonacip -f
 sudo tail -f /var/log/nginx/access.log
 
 # Log errori applicazione
-tail -f /var/www/sonacip/logs/error.log
+tail -f /opt/sonacip/logs/error.log
 
 # Aggiorna l'applicazione
-cd /var/www/sonacip
+cd /opt/sonacip
 sudo -u sonacip git pull
 sudo -u sonacip venv/bin/pip install -r requirements.txt
 sudo systemctl restart sonacip
@@ -219,7 +219,7 @@ sudo systemctl restart sonacip
 sudo crontab -u sonacip -e
 
 # Aggiungi questa riga:
-0 3 * * * pg_dump sonacip > /var/www/sonacip/backups/sonacip_$(date +\%Y\%m\%d).sql 2>/dev/null
+0 3 * * * pg_dump sonacip > /opt/sonacip/backups/sonacip_$(date +\%Y\%m\%d).sql 2>/dev/null
 ```
 
 ## Uso con SQLite (alternativa a PostgreSQL)

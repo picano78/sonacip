@@ -1,7 +1,7 @@
 /* Custom Styles for SONACIP */
 
 :root {
-    --primary-color: #0d6efd;
+    --primary-color: #1877f2;
     --secondary-color: #6c757d;
     --accent: #8c5ff8;
     --surface: #0f172a;
@@ -124,7 +124,7 @@ main {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #0d6efd, #8c5ff8);
+    background: linear-gradient(135deg, #1877f2, #8c5ff8);
     box-shadow: 0 0 0 6px rgba(13,110,253,0.12);
 }
 
@@ -370,7 +370,7 @@ body[data-theme="dark"] .btn-outline-dark {
     top: 16px;
     left: 16px;
     z-index: 1050;
-    background: var(--primary-color, #0d6efd);
+    background: var(--primary-color, #1877f2);
     color: #fff;
     border: none;
     border-radius: 8px;

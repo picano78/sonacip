@@ -98,7 +98,7 @@
         
         <div class="mb-3">
           {{ form.identifier.label(class="form-label") }}
-          {{ form.identifier(class="form-control" + (" is-invalid" if form.identifier.errors else "")) }}
+          {{ form.identifier(class="form-control" + (" is-invalid" if form.identifier.errors else ""), autocomplete="username") }}
           {% if form.identifier.errors %}
             <div class="invalid-feedback">
               {{ form.identifier.errors[0] }}
@@ -108,7 +108,7 @@
         
         <div class="mb-3">
           {{ form.password.label(class="form-label") }}
-          {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
+          {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), autocomplete="current-password") }}
           {% if form.password.errors %}
             <div class="invalid-feedback">
               {{ form.password.errors[0] }}

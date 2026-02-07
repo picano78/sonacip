@@ -30,6 +30,18 @@ main, auth, admin, ads, crm, events, social, backup, notifications, analytics, m
 - **Backup System:** Graphical UI with file upload/restore and hourly scheduling.
 - **Feature Control:** `PlatformFeature` model (34+ features) with super admin toggle, premium/free distinction.
 
+## Recent Improvements (Feb 7, 2026)
+
+### UI/UX Polish
+- SVG favicon and PWA icons (trophy on #1877f2 background, all sizes: 16, 32, 180, 192, 512)
+- Consistent Facebook-blue (#1877f2) theme across all CSS and templates (replaced Bootstrap default #0d6efd)
+- Redesigned error pages (403, 404, 500) with animated gradient illustrations and action buttons
+- Modernized auth pages: reset_password, reset_password_request, register_society now use card-based gradient design
+- HTML autocomplete attributes on all auth form inputs for browser autofill support
+- GDPR-style cookie banner (bottom bar with slide animation, replaces modal popup)
+- Global page loading indicator (animated gradient bar at top)
+- Error handlers in `app/__init__.py` now render proper templates with try/except fallback
+
 ## Recent Features (Feb 6, 2026)
 
 ### Groups & Community (`app/groups/`)

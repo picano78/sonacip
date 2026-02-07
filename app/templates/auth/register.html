@@ -93,14 +93,14 @@
         <div class="row">
           <div class="col-md-6 mb-3">
             {{ form.first_name.label(class="form-label") }}
-            {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else "")) }}
+            {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else ""), autocomplete="given-name") }}
             {% if form.first_name.errors %}
               <div class="invalid-feedback">{{ form.first_name.errors[0] }}</div>
             {% endif %}
           </div>
           <div class="col-md-6 mb-3">
             {{ form.last_name.label(class="form-label") }}
-            {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else "")) }}
+            {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else ""), autocomplete="family-name") }}
             {% if form.last_name.errors %}
               <div class="invalid-feedback">{{ form.last_name.errors[0] }}</div>
             {% endif %}
@@ -109,7 +109,7 @@
         
         <div class="mb-3">
           {{ form.email.label(class="form-label") }}
-          {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+          {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), autocomplete="email") }}
           {% if form.email.errors %}
             <div class="invalid-feedback">{{ form.email.errors[0] }}</div>
           {% endif %}
@@ -117,7 +117,7 @@
         
         <div class="mb-3">
           {{ form.username.label(class="form-label") }}
-          {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
+          {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), autocomplete="username") }}
           {% if form.username.errors %}
             <div class="invalid-feedback">{{ form.username.errors[0] }}</div>
           {% endif %}
@@ -126,7 +126,7 @@
         <div class="row">
           <div class="col-md-6 mb-3">
             {{ form.phone.label(class="form-label") }}
-            {{ form.phone(class="form-control") }}
+            {{ form.phone(class="form-control", autocomplete="tel") }}
           </div>
           <div class="col-md-6 mb-3">
             {{ form.language.label(class="form-label") }}
@@ -149,7 +149,7 @@
         
         <div class="mb-3">
           {{ form.password.label(class="form-label") }}
-          {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
+          {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), autocomplete="new-password") }}
           {% if form.password.errors %}
             <div class="invalid-feedback">{{ form.password.errors[0] }}</div>
           {% endif %}
@@ -157,7 +157,7 @@
         
         <div class="mb-3">
           {{ form.password2.label(class="form-label") }}
-          {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else "")) }}
+          {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else ""), autocomplete="new-password") }}
           {% if form.password2.errors %}
             <div class="invalid-feedback">{{ form.password2.errors[0] }}</div>
           {% endif %}

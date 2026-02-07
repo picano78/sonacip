@@ -218,41 +218,66 @@ document.addEventListener('DOMContentLoaded', function() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // Privacy banner modal handling (configurable by super admin)
-    const privacyModalEl = document.getElementById('privacyModal');
-    if (privacyModalEl) {
-        const currentVersion = privacyModalEl.dataset.privacyVersion || 'v1';
+    // Privacy cookie bar handling (GDPR-style bottom bar)
+    const privacyCookieBar = document.getElementById('privacyCookieBar');
+    if (privacyCookieBar) {
+        const currentVersion = privacyCookieBar.dataset.privacyVersion || 'v1';
         const storedVersion = localStorage.getItem('sonacipPrivacyVersion');
-        const privacyModal = new bootstrap.Modal(privacyModalEl);
         const acceptBtn = document.getElementById('acceptPrivacyBtn');
+        const rejectBtn = document.getElementById('rejectPrivacyBtn');
 
         if (storedVersion !== currentVersion) {
-            privacyModal.show();
+            privacyCookieBar.style.display = 'block';
+            privacyCookieBar.style.animation = 'slideUpBar 0.4s ease-out';
         }
+
+        const hideBar = () => {
+            privacyCookieBar.style.animation = 'slideDownBar 0.3s ease-in forwards';
+            setTimeout(() => { privacyCookieBar.style.display = 'none'; }, 300);
+        };
 
         if (acceptBtn) {
             acceptBtn.addEventListener('click', () => {
                 localStorage.setItem('sonacipPrivacyVersion', currentVersion);
-                privacyModal.hide();
+                hideBar();
+            });
+        }
+        if (rejectBtn) {
+            rejectBtn.addEventListener('click', () => {
+                localStorage.setItem('sonacipPrivacyVersion', currentVersion + '_rejected');
+                hideBar();
             });
         }
     }
 
     // Ads tracking (impressions) - only after privacy accepted (version stored)
     try {
-        const privacyVersion = privacyModalEl ? (privacyModalEl.dataset.privacyVersion || 'v1') : (localStorage.getItem('sonacipPrivacyVersion') || 'v1');
+        const barEl = document.getElementById('privacyCookieBar');
+        const privacyVersion = barEl ? (barEl.dataset.privacyVersion || 'v1') : (localStorage.getItem('sonacipPrivacyVersion') || 'v1');
         const accepted = localStorage.getItem('sonacipPrivacyVersion') === privacyVersion;
         if (accepted) {
             const nodes = document.querySelectorAll('[data-ad-impression-url]');
             nodes.forEach(n => {
                 const url = n.getAttribute('data-ad-impression-url');
                 if (!url) return;
-                // fire-and-forget
                 fetch(url, { method: 'GET', credentials: 'same-origin' }).catch(() => {});
             });
         }
-    } catch (e) {
-        // ignore
+    } catch (e) {}
+
+    // Page loading indicator
+    const pageLoader = document.getElementById('pageLoader');
+    if (pageLoader) {
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a[href]');
+            if (link && !link.target && !link.href.startsWith('javascript:') && !link.href.startsWith('#') && !link.dataset.bsToggle && !link.closest('.ac-dropdown')) {
+                pageLoader.style.display = 'block';
+            }
+        });
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', () => { pageLoader.style.display = 'block'; });
+        });
+        window.addEventListener('pageshow', () => { pageLoader.style.display = 'none'; });
     }
 
     // Theme toggle (light/dark)

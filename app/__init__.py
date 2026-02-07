@@ -526,51 +526,37 @@ def create_app(config_name: str | None = None) -> Flask:
             400,
         )
 
+    from flask import render_template as _rt
+
+    def _error_page(template: str, code: int, fallback_title: str, fallback_msg: str):
+        try:
+            return _rt(template), code
+        except Exception:
+            return (
+                f"<!doctype html><html lang='it'><head><meta charset='utf-8'>"
+                f"<meta name='viewport' content='width=device-width, initial-scale=1'>"
+                f"<title>{fallback_title}</title></head><body>"
+                f"<h1>{fallback_title}</h1><p>{fallback_msg}</p>"
+                f"<p><a href='/'>Torna alla home</a></p></body></html>"
+            ), code
+
     @app.errorhandler(Forbidden)
     def handle_forbidden(err: Forbidden):
         if _wants_json():
             return {"error": "forbidden"}, 403
-        return (
-            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
-            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-            "<title>Accesso negato</title></head><body>"
-            "<h1>Accesso negato</h1>"
-            "<p>Non hai i permessi per accedere a questa risorsa.</p>"
-            "<p><a href='/'>Torna alla home</a></p>"
-            "</body></html>",
-            403,
-        )
+        return _error_page("errors/403.html", 403, "Accesso negato", "Non hai i permessi per accedere a questa risorsa.")
 
     @app.errorhandler(NotFound)
     def handle_not_found(err: NotFound):
         if _wants_json():
             return {"error": "not_found"}, 404
-        return (
-            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
-            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-            "<title>Pagina non trovata</title></head><body>"
-            "<h1>Pagina non trovata</h1>"
-            "<p>La pagina richiesta non esiste.</p>"
-            "<p><a href='/'>Torna alla home</a></p>"
-            "</body></html>",
-            404,
-        )
+        return _error_page("errors/404.html", 404, "Pagina non trovata", "La pagina richiesta non esiste.")
 
     @app.errorhandler(InternalServerError)
     def handle_internal_server_error(err: InternalServerError):
-        # Keep it generic: avoid leaking details in production.
         if _wants_json():
             return {"error": "internal_server_error"}, 500
-        return (
-            "<!doctype html><html lang='it'><head><meta charset='utf-8'>"
-            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-            "<title>Errore</title></head><body>"
-            "<h1>Si è verificato un errore</h1>"
-            "<p>Riprova tra qualche istante.</p>"
-            "<p><a href='/'>Torna alla home</a></p>"
-            "</body></html>",
-            500,
-        )
+        return _error_page("errors/500.html", 500, "Errore del server", "Riprova tra qualche istante.")
 
     @login_manager.user_loader
     def load_user(user_id):

@@ -19,17 +19,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% if appearance and appearance.favicon_url %}
       <link rel="icon" href="{{ appearance.favicon_url }}">
+    {% else %}
+      <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
+      <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+      <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
+      <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     {% endif %}
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="{{ (appearance.primary_color if appearance else '') or '#0d6efd' }}">
+    <meta name="theme-color" content="{{ (appearance.primary_color if appearance else '') or '#1877f2' }}">
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
 
     <style>
         :root {
-            --primary-color: {{ (appearance.primary_color if appearance else '') or '#0d6efd' }};
+            --primary-color: {{ (appearance.primary_color if appearance else '') or '#1877f2' }};
             --secondary-color: {{ (appearance.secondary_color if appearance else '') or '#6c757d' }};
             --accent-color: {{ (appearance.accent_color if appearance else '') or '#20c997' }};
             --app-font: {{ (appearance.font_family if appearance else '') or 'Inter, system-ui, -apple-system, sans-serif' }};
@@ -154,32 +159,54 @@
     </footer>
 
     {% if privacy and privacy.banner_enabled %}
-    <div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true" data-privacy-version="{{ privacy.updated_at.timestamp() if (privacy and privacy.updated_at) else 'v1' }}">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-shield-lock"></i> Privacy e Cookie</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-3">{{ privacy.consent_message if privacy else 'Usiamo cookie tecnici per migliorare la tua esperienza.' }}</p>
-                    <div class="small">
-                        {% if privacy and privacy.privacy_url %}
-                            <a href="{{ privacy.privacy_url }}" target="_blank" rel="noopener" class="me-3"><i class="bi bi-file-text"></i> Privacy policy</a>
-                        {% endif %}
-                        {% if privacy and privacy.cookie_url %}
-                            <a href="{{ privacy.cookie_url }}" target="_blank" rel="noopener"><i class="bi bi-cookie"></i> Cookie policy</a>
-                        {% endif %}
+    <div id="privacyCookieBar" data-privacy-version="{{ privacy.updated_at.timestamp() if (privacy and privacy.updated_at) else 'v1' }}" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999; background:rgba(30,58,95,0.97); backdrop-filter:blur(12px); color:#fff; box-shadow:0 -4px 24px rgba(0,0,0,0.18); border-top:1px solid rgba(255,255,255,0.08);">
+        <div class="container py-3">
+            <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
+                <div class="d-flex align-items-start gap-3 flex-grow-1">
+                    <div style="min-width:40px; height:40px; background:rgba(24,119,242,0.2); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-shield-lock-fill" style="font-size:1.2rem; color:#42a5f5;"></i>
+                    </div>
+                    <div>
+                        <p class="mb-1" style="font-size:0.92rem; line-height:1.5;">
+                            {{ privacy.consent_message if privacy else 'Utilizziamo cookie tecnici per garantire il corretto funzionamento del sito. Leggi la nostra informativa per i dettagli.' }}
+                        </p>
+                        <div class="d-flex gap-3" style="font-size:0.8rem;">
+                            {% if privacy and privacy.privacy_url %}
+                                <a href="{{ privacy.privacy_url }}" target="_blank" rel="noopener" style="color:#90caf9; text-decoration:none;"><i class="bi bi-file-text me-1"></i>Privacy Policy</a>
+                            {% endif %}
+                            {% if privacy and privacy.cookie_url %}
+                                <a href="{{ privacy.cookie_url }}" target="_blank" rel="noopener" style="color:#90caf9; text-decoration:none;"><i class="bi bi-cookie me-1"></i>Cookie Policy</a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Rifiuta</button>
-                    <button type="button" class="btn btn-primary" id="acceptPrivacyBtn">Accetta</button>
+                <div class="d-flex gap-2 flex-shrink-0">
+                    <button type="button" id="rejectPrivacyBtn" style="background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:8px 20px; font-weight:600; font-size:0.875rem; cursor:pointer; transition:all 0.2s;">Rifiuta</button>
+                    <button type="button" id="acceptPrivacyBtn" style="background:linear-gradient(135deg,#1877f2,#42a5f5); color:#fff; border:none; border-radius:8px; padding:8px 24px; font-weight:600; font-size:0.875rem; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 8px rgba(24,119,242,0.3);">Accetta</button>
                 </div>
             </div>
         </div>
     </div>
     {% endif %}
+
+    <div id="pageLoader" style="display:none; position:fixed; top:0; left:0; right:0; height:3px; z-index:99999;">
+        <div style="height:100%; width:30%; background:linear-gradient(90deg,#1877f2,#42a5f5,#1877f2); background-size:200% 100%; border-radius:0 2px 2px 0; animation:loaderSlide 1.2s ease-in-out infinite;"></div>
+    </div>
+    <style>
+        @keyframes loaderSlide {
+            0% { width:0; margin-left:0; background-position:0 0; }
+            50% { width:60%; margin-left:20%; background-position:100% 0; }
+            100% { width:0; margin-left:100%; background-position:0 0; }
+        }
+        @keyframes slideUpBar {
+            from { transform:translateY(100%); opacity:0; }
+            to { transform:translateY(0); opacity:1; }
+        }
+        @keyframes slideDownBar {
+            from { transform:translateY(0); opacity:1; }
+            to { transform:translateY(100%); opacity:0; }
+        }
+    </style>
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

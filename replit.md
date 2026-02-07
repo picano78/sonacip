@@ -45,6 +45,53 @@ main, auth, admin, ads, crm, events, social, backup, notifications, analytics, m
 - Updated `deploy/GUIDA_VPS.md` with automated installer instructions (`sonacip_install.sh`), SQLite usage section, and manual installation steps
 - Platform fully transferable: supports PostgreSQL (recommended) and SQLite (fallback), .env configuration, systemd services, Nginx with SSL
 
+### LinkedIn-Style Profile Page
+- Complete profile redesign: cover photo, large avatar with upload, career/education/skills tabs
+- Connection management (request/accept/reject), follow/unfollow, messaging integration
+- Stats row (posts, followers, following, connections), pending connection requests
+- Full dark mode support and mobile responsive
+
+### Enhanced Dashboard
+- Time-of-day greeting (Buongiorno/Buon pomeriggio/Buonasera/Buonanotte) with icons
+- Animated stat cards with count-up animation on load
+- Entry animations (fadeInUp) on all dashboard widgets
+- Animated gradient header with background shift animation
+
+### Admin Dark Mode
+- All admin pages (dashboard, analytics, logs) now support dark mode via `[data-theme="dark"]`
+- Consistent dark palette: #242526 backgrounds, #3a3b3c borders, #e4e6eb text
+
+### Real-Time Notifications
+- Auto-polling every 30 seconds for notification and message counts
+- Updates sidebar badges dynamically, pulse animation on new items
+- Both notification and message badges auto-update
+
+### Global Search
+- Search input in sidebar for authenticated users
+- Autocomplete suggestions for users, societies, events, documents
+- Styled to match sidebar dark theme
+
+### Legal Pages (GDPR)
+- Full Privacy Policy page with GDPR compliance, DPO contact, cookie section, table of contents
+- Terms of Service page with 10 legal sections
+- Both pages linked in footer and cookie banner
+
+### Onboarding Wizard
+- 3-step guided wizard for new users (Welcome, Customize, Connect)
+- Client-side step switching with progress bar and dots
+- New users redirected to onboarding on first login (safe default for existing users)
+
+### Email Templates
+- Branded HTML email templates: base, confirmation, welcome, password reset, notification
+- SONACIP gradient header with trophy icon, white content area, footer
+- All CSS inline for email compatibility, template rendering with fallback
+
+### Infinite Scroll (Social Feed)
+- Infinite scroll replaces pagination on social feed
+- AJAX endpoint `/social/feed/posts` returns partial HTML
+- Loading indicator and "end of feed" message
+- Smooth scroll-triggered loading
+
 ### UI/UX Polish
 - SVG favicon and PWA icons (trophy on #1877f2 background, all sizes: 16, 32, 180, 192, 512)
 - Consistent Facebook-blue (#1877f2) theme across all CSS and templates (replaced Bootstrap default #0d6efd)

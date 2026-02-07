@@ -7,6 +7,24 @@
     </div>
     
     {% if current_user.is_authenticated %}
+    <style>
+    .sidebar-search{padding:0.6rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);}
+    .sidebar-search form{position:relative;}
+    .sidebar-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.45);font-size:0.85rem;pointer-events:none;}
+    .sidebar-search input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.45rem 0.65rem 0.45rem 2rem;color:#e0e0e0;font-size:0.85rem;outline:none;transition:background 0.2s,border-color 0.2s;}
+    .sidebar-search input::placeholder{color:rgba(255,255,255,0.4);}
+    .sidebar-search input:focus{background:rgba(255,255,255,0.14);border-color:rgba(24,119,242,0.6);}
+    .sidebar.collapsed .sidebar-search{display:none;}
+    </style>
+    <div class="sidebar-search">
+        <form action="{{ url_for('social.search') }}" method="GET" class="position-relative">
+            <i class="bi bi-search"></i>
+            <input type="text" name="q" placeholder="Cerca..." data-autocomplete data-autocomplete-scope="all" autocomplete="off">
+        </form>
+    </div>
+    {% endif %}
+
+    {% if current_user.is_authenticated %}
     {% set menu_cfg = sidebar_menu_config %}
     <nav class="sidebar-nav">
         <ul class="sidebar-menu">

@@ -1,5 +1,5 @@
 """Direct messages routes - Internal messaging system"""
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime
 from sqlalchemy import or_, and_, func
@@ -171,3 +171,14 @@ def view_message(message_id):
     
     other_user_id = message.sender_id if message.recipient_id == current_user.id else message.recipient_id
     return redirect(url_for('messages.chat', user_id=other_user_id))
+
+
+@bp.route('/unread-count')
+@login_required
+def unread_count():
+    """Get unread messages count (AJAX)"""
+    count = Message.query.filter_by(
+        recipient_id=current_user.id,
+        is_read=False
+    ).count()
+    return jsonify({'count': count})

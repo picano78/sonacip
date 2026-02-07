@@ -108,6 +108,8 @@ def healthz():
 @login_required
 def dashboard():
     """User dashboard (personal, configurable)."""
+    if not getattr(current_user, 'onboarding_completed', True):
+        return redirect(url_for('main.onboarding'))
     from app.models import Dashboard, DashboardTemplate, Notification, Message, Post, Event, Task, UserDashboardLayout
     from app.main.dashboard_widgets import render_widget, get_widget_registry, get_widget_info, DEFAULT_WIDGETS
     import json
@@ -192,6 +194,21 @@ def dashboard():
     except Exception:
         recent_notifications = []
 
+    from datetime import datetime
+    hour = datetime.now().hour
+    if hour < 6:
+        greeting = 'Buonanotte'
+        greeting_icon = 'bi-moon-stars-fill'
+    elif hour < 12:
+        greeting = 'Buongiorno'
+        greeting_icon = 'bi-sunrise-fill'
+    elif hour < 18:
+        greeting = 'Buon pomeriggio'
+        greeting_icon = 'bi-sun-fill'
+    else:
+        greeting = 'Buonasera'
+        greeting_icon = 'bi-sunset-fill'
+
     return render_template(
         'main/dashboard.html',
         dashboard=dash,
@@ -200,7 +217,28 @@ def dashboard():
         recent_notifications=recent_notifications,
         rendered_widgets=rendered_widgets,
         has_custom_layout=bool(user_layouts),
+        greeting=greeting,
+        greeting_icon=greeting_icon,
     )
+
+
+@bp.route('/onboarding')
+@login_required
+def onboarding():
+    if getattr(current_user, 'onboarding_completed', False):
+        return redirect(url_for('main.dashboard'))
+    return render_template('main/onboarding.html')
+
+
+@bp.route('/onboarding/complete', methods=['POST'])
+@login_required
+def complete_onboarding():
+    try:
+        current_user.onboarding_completed = True
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return redirect(url_for('main.dashboard'))
 
 
 @bp.route('/dashboard/customize')

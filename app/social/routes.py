@@ -234,6 +234,26 @@ def feed():
                          sidebar_ad_token=sidebar_ad_token)
 
 
+@bp.route('/feed/posts')
+@login_required
+@permission_required('social', 'comment')
+def feed_posts():
+    """Return partial post cards for infinite scroll (AJAX)"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    try:
+        posts_query = Post.query.order_by(Post.created_at.desc())
+        posts = posts_query.paginate(page=page, per_page=per_page, error_out=False).items
+    except Exception:
+        posts = []
+
+    if not posts:
+        return ''
+
+    return render_template('social/feed_partial.html', posts=posts)
+
+
 @bp.route('/post/create', methods=['POST'])
 @login_required
 @permission_required('social', 'post')

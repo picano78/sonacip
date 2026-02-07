@@ -158,28 +158,100 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCounter();
     });
 
-    // Notification polling (optional - check for new notifications)
-    if (document.querySelector('.notification-icon')) {
-        setInterval(updateNotificationCount, 60000); // Every minute
+    // Notification & message polling for authenticated users
+    let _lastNotifCount = -1;
+    let _lastMsgCount = -1;
+
+    if (document.querySelector('body[data-user-id]')) {
+        updateNotificationCount();
+        updateMessageCount();
+        setInterval(updateNotificationCount, 30000);
+        setInterval(updateMessageCount, 30000);
+    }
+
+    if (!document.getElementById('sonacip-pulse-style')) {
+        const pulseStyle = document.createElement('style');
+        pulseStyle.id = 'sonacip-pulse-style';
+        pulseStyle.textContent = '@keyframes badgePulse{0%{transform:scale(1)}50%{transform:scale(1.35)}100%{transform:scale(1)}}.badge-pulse{animation:badgePulse 0.45s ease-in-out 2;}';
+        document.head.appendChild(pulseStyle);
     }
 
     function updateNotificationCount() {
         fetch('/notifications/unread-count', {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(response => response.json())
         .then(data => {
-            const badge = document.querySelector('.notification-badge');
-            if (badge) {
-                if (data.count > 0) {
-                    badge.textContent = data.count;
+            const count = data.count || 0;
+            const isNew = _lastNotifCount >= 0 && count > _lastNotifCount;
+            _lastNotifCount = count;
+
+            document.querySelectorAll('.bi-bell-fill').forEach(icon => {
+                const link = icon.closest('.sidebar-link') || icon.closest('a');
+                if (!link) return;
+                let badge = link.querySelector('.sidebar-badge, .notification-badge');
+                if (count > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'sidebar-badge';
+                        link.appendChild(badge);
+                    }
+                    badge.textContent = count;
                     badge.style.display = 'inline';
-                } else {
+                    if (isNew) {
+                        badge.classList.remove('badge-pulse');
+                        void badge.offsetWidth;
+                        badge.classList.add('badge-pulse');
+                    }
+                } else if (badge) {
                     badge.style.display = 'none';
                 }
+            });
+
+            const legacyBadge = document.querySelector('.notification-badge');
+            if (legacyBadge) {
+                if (count > 0) {
+                    legacyBadge.textContent = count;
+                    legacyBadge.style.display = 'inline';
+                } else {
+                    legacyBadge.style.display = 'none';
+                }
             }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function updateMessageCount() {
+        fetch('/messages/unread-count', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const count = data.count || 0;
+            const isNew = _lastMsgCount >= 0 && count > _lastMsgCount;
+            _lastMsgCount = count;
+
+            document.querySelectorAll('.bi-envelope, .bi-envelope-fill').forEach(icon => {
+                const link = icon.closest('.sidebar-link') || icon.closest('a');
+                if (!link) return;
+                let badge = link.querySelector('.sidebar-badge, .message-badge');
+                if (count > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'sidebar-badge';
+                        link.appendChild(badge);
+                    }
+                    badge.textContent = count;
+                    badge.style.display = 'inline';
+                    if (isNew) {
+                        badge.classList.remove('badge-pulse');
+                        void badge.offsetWidth;
+                        badge.classList.add('badge-pulse');
+                    }
+                } else if (badge) {
+                    badge.style.display = 'none';
+                }
+            });
         })
         .catch(error => console.error('Error:', error));
     }

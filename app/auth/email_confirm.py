@@ -54,7 +54,11 @@ def send_confirmation_email(user):
 
     confirm_url = url_for('auth.confirm_email', token=token, _external=True)
 
-    html_body = f"""
+    try:
+        from flask import render_template as rt
+        html_body = rt('emails/confirm_email.html', user=user, confirm_url=confirm_url, expiry_hours=setting.token_expiry_hours or 48)
+    except Exception:
+        html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f0f2f5;">
         <div style="background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%); color: #fff; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
             <h1 style="margin: 0; font-size: 28px;">🏆 SONACIP</h1>
@@ -63,29 +67,16 @@ def send_confirmation_email(user):
         <div style="padding: 30px; background: #ffffff; border: 1px solid #e4e6eb;">
             <h2 style="color: #1c1e21; margin-top: 0;">Ciao {user.first_name or user.username}! 👋</h2>
             <p style="color: #606770; font-size: 16px; line-height: 1.6;">
-                Grazie per esserti registrato su SONACIP. Per completare la registrazione e accedere alla piattaforma,
-                conferma il tuo indirizzo email cliccando il pulsante qui sotto.
+                Conferma il tuo indirizzo email cliccando il pulsante qui sotto.
             </p>
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{confirm_url}" 
-                   style="display: inline-block; background: #1877f2; color: #ffffff; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; box-shadow: 0 2px 8px rgba(24,119,242,0.3);">
+                   style="display: inline-block; background: #1877f2; color: #ffffff; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600;">
                     ✅ Conferma Email
                 </a>
             </div>
-            <p style="color: #606770; font-size: 14px; line-height: 1.5;">
-                Se il pulsante non funziona, copia e incolla questo link nel tuo browser:
-            </p>
-            <p style="background: #f0f2f5; padding: 12px; border-radius: 6px; word-break: break-all; font-size: 13px; color: #1877f2;">
-                {confirm_url}
-            </p>
-            <hr style="border: none; border-top: 1px solid #e4e6eb; margin: 24px 0;">
             <p style="color: #8a8d91; font-size: 12px;">
-                Questo link scade tra {setting.token_expiry_hours or 48} ore. Se non hai creato un account su SONACIP, ignora questa email.
-            </p>
-        </div>
-        <div style="padding: 16px; text-align: center; border-radius: 0 0 12px 12px; background: #f0f2f5;">
-            <p style="color: #8a8d91; font-size: 12px; margin: 0;">
-                &copy; SONACIP - Piattaforma Gestione Sportiva
+                Questo link scade tra {setting.token_expiry_hours or 48} ore.
             </p>
         </div>
     </div>

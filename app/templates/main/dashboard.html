@@ -3,43 +3,123 @@
 
 {% block extra_css %}
 <style>
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes countUp {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
   .dash-gradient-header {
-    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 50%, #1877f2 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 8s ease infinite;
     color: white;
-    padding: 2rem;
-    border-radius: 14px;
-    margin-bottom: 24px;
+    padding: 2rem 2rem 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .dash-gradient-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
   }
   .dash-gradient-header p { opacity: 0.85; }
+  .greeting-text {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .greeting-sub {
+    font-size: 0.95rem;
+    opacity: 0.85;
+  }
   .dash-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    border: none;
+    border-radius: 14px;
     overflow: hidden;
     transition: all 0.3s ease;
     background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    opacity: 0;
+    animation: fadeInUp 0.5s ease forwards;
   }
+  .dash-card:nth-child(1) { animation-delay: 0.1s; }
+  .dash-card:nth-child(2) { animation-delay: 0.2s; }
+  .dash-card:nth-child(3) { animation-delay: 0.3s; }
+  .dash-card:nth-child(4) { animation-delay: 0.4s; }
   .dash-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(24,119,242,0.12);
-    border-color: #1877f2;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(24,119,242,0.15);
   }
   .dash-stat-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1.25rem;
+    border: none;
+    border-radius: 14px;
+    padding: 1.5rem;
     transition: all 0.3s ease;
     background: #fff;
-    border-top: 3px solid #1877f2;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeInUp 0.5s ease forwards;
   }
+  .dash-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1877f2, #42a5f5);
+  }
+  .dash-stat-card:nth-child(1) { animation-delay: 0.15s; }
+  .dash-stat-card:nth-child(2) { animation-delay: 0.25s; }
+  .dash-stat-card:nth-child(3) { animation-delay: 0.35s; }
+  .dash-stat-card:nth-child(4) { animation-delay: 0.45s; }
   .dash-stat-card:hover {
-    box-shadow: 0 4px 16px rgba(24,119,242,0.12);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(24,119,242,0.15);
   }
-  .dash-stat-card .h5 {
-    color: #1877f2;
+  .dash-stat-card .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-bottom: 0.75rem;
+  }
+  .dash-stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.2;
+    animation: countUp 0.6s ease forwards;
+  }
+  .dash-stat-card .stat-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #65676b;
   }
   .pill-link {
     display: inline-block;
-    padding: 6px 16px;
+    padding: 8px 18px;
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 500;
@@ -53,24 +133,71 @@
     background: #1877f2;
     color: #fff;
     border-color: #1877f2;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24,119,242,0.3);
   }
   .pill-link-primary {
-    background: #1877f2;
+    background: linear-gradient(135deg, #1877f2, #42a5f5);
     color: #fff;
     border-color: #1877f2;
   }
   .pill-link-primary:hover {
-    background: #155fc7;
+    background: linear-gradient(135deg, #155fc7, #1877f2);
     color: #fff;
   }
   .notif-item {
     border-left: 3px solid #1877f2;
     padding: 0.75rem 1rem;
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
   }
   .notif-item:hover {
     background: #f0f7ff;
+    border-left-width: 4px;
+  }
+  .widget-animated {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease forwards;
+  }
+  .progress-ring {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: conic-gradient(#1877f2 var(--progress, 0%), #e4e6eb var(--progress, 0%));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .progress-ring-inner {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #1877f2;
+  }
+  [data-theme="dark"] .dash-card,
+  [data-theme="dark"] .dash-stat-card {
+    background: #242526;
+    border-color: #3a3b3c;
+  }
+  [data-theme="dark"] .notif-item:hover {
+    background: #3a3b3c;
+  }
+  [data-theme="dark"] .pill-link {
+    background: #3a3b3c;
+    color: #e4e6eb;
+    border-color: #3a3b3c;
+  }
+  [data-theme="dark"] .dash-stat-card .stat-label {
+    color: #b0b3b8;
+  }
+  [data-theme="dark"] .progress-ring-inner {
+    background: #242526;
   }
 </style>
 {% endblock %}
@@ -80,12 +207,14 @@
   <div class="dash-gradient-header">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
       <div>
-        <h1 class="h4 mb-1"><i class="bi bi-speedometer2 me-2"></i>{{ dashboard.name }}</h1>
-        <p class="mb-0">{{ dashboard.description or '' }}</p>
+        <div class="greeting-text">
+          <i class="bi {{ greeting_icon|default('bi-sun-fill') }} me-2"></i>{{ greeting|default('Ciao') }}, {{ current_user.first_name or current_user.username }}!
+        </div>
+        <p class="greeting-sub mb-0">{{ dashboard.description or 'Ecco un riepilogo della tua attività' }}</p>
       </div>
       <div class="d-flex gap-2 flex-wrap">
         <a class="btn btn-outline-light btn-sm" href="{{ url_for('main.customize_dashboard') }}">
-          <i class="bi bi-grid-1x2 me-1"></i> Personalizza Widget
+          <i class="bi bi-grid-1x2 me-1"></i> Personalizza
         </a>
         <a class="btn btn-outline-light btn-sm" href="{{ url_for('main.edit_dashboard') }}">
           <i class="bi bi-pencil me-1"></i> Modifica
@@ -100,10 +229,51 @@
     </div>
   </div>
 
+  {% if not has_custom_layout %}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="dash-stat-card">
+        <div class="stat-icon" style="background: rgba(24,119,242,0.1); color: #1877f2;">
+          <i class="bi bi-file-post"></i>
+        </div>
+        <div class="stat-value" style="color: #1877f2;" data-count="{{ stats.posts or 0 }}">{{ stats.posts or 0 }}</div>
+        <div class="stat-label">Post</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dash-stat-card">
+        <div class="stat-icon" style="background: rgba(25,135,84,0.1); color: #198754;">
+          <i class="bi bi-calendar-event"></i>
+        </div>
+        <div class="stat-value" style="color: #198754;" data-count="{{ stats.events_created or 0 }}">{{ stats.events_created or 0 }}</div>
+        <div class="stat-label">Eventi</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dash-stat-card">
+        <div class="stat-icon" style="background: rgba(253,126,20,0.1); color: #fd7e14;">
+          <i class="bi bi-check2-square"></i>
+        </div>
+        <div class="stat-value" style="color: #fd7e14;" data-count="{{ stats.tasks_assigned or 0 }}">{{ stats.tasks_assigned or 0 }}</div>
+        <div class="stat-label">Task</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dash-stat-card">
+        <div class="stat-icon" style="background: rgba(220,53,69,0.1); color: #dc3545;">
+          <i class="bi bi-bell"></i>
+        </div>
+        <div class="stat-value" style="color: #dc3545;" data-count="{{ (stats.notifications_unread or 0) + (stats.messages_unread or 0) }}">{{ (stats.notifications_unread or 0) + (stats.messages_unread or 0) }}</div>
+        <div class="stat-label">Non letti</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {% if rendered_widgets %}
   <div class="row g-3 mb-4">
     {% for rw in rendered_widgets %}
-      <div class="{{ rw.size_class }}">
+      <div class="{{ rw.size_class }} widget-animated" style="animation-delay: {{ loop.index * 0.1 }}s;">
         {{ rw.html|safe }}
       </div>
     {% endfor %}
@@ -117,7 +287,9 @@
       {% if wtype == 'quick_links' %}
         <div class="col-12 col-lg-6">
           <div class="dash-card">
-            <div class="card-header bg-white border-bottom" style="border-radius:12px 12px 0 0;"><strong><i class="bi bi-link-45deg me-1" style="color:#1877f2;"></i>Link rapidi</strong></div>
+            <div class="card-header bg-white border-bottom" style="border-radius:14px 14px 0 0; padding: 16px 20px;">
+              <strong><i class="bi bi-link-45deg me-1" style="color:#1877f2;"></i>Link rapidi</strong>
+            </div>
             <div class="card-body">
               <div class="d-flex flex-wrap gap-2">
                 <a class="pill-link pill-link-primary" href="{{ url_for('social.feed') }}"><i class="bi bi-house me-1"></i> Feed</a>
@@ -138,43 +310,10 @@
           </div>
         </div>
       {% elif wtype == 'stats' %}
-        <div class="col-12 col-lg-6">
-          <div class="dash-card">
-            <div class="card-header bg-white border-bottom" style="border-radius:12px 12px 0 0;"><strong><i class="bi bi-bar-chart me-1" style="color:#1877f2;"></i>Statistiche personali</strong></div>
-            <div class="card-body">
-              <div class="row g-3">
-                <div class="col-6">
-                  <div class="dash-stat-card">
-                    <div class="text-muted small">Post</div>
-                    <div class="h5 mb-0">{{ stats.posts or 0 }}</div>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="dash-stat-card">
-                    <div class="text-muted small">Eventi creati</div>
-                    <div class="h5 mb-0">{{ stats.events_created or 0 }}</div>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="dash-stat-card">
-                    <div class="text-muted small">Task assegnati</div>
-                    <div class="h5 mb-0">{{ stats.tasks_assigned or 0 }}</div>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="dash-stat-card">
-                    <div class="text-muted small">Non letti (notif/mess)</div>
-                    <div class="h5 mb-0">{{ (stats.notifications_unread or 0) + (stats.messages_unread or 0) }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       {% elif wtype == 'recent_notifications' %}
         <div class="col-12">
           <div class="dash-card">
-            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center" style="border-radius:12px 12px 0 0;">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center" style="border-radius:14px 14px 0 0; padding: 16px 20px;">
               <strong><i class="bi bi-bell me-1" style="color:#1877f2;"></i>Notifiche recenti</strong>
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('notifications.index') }}">Vedi tutte</a>
             </div>
@@ -182,25 +321,58 @@
               {% if recent_notifications %}
                 {% for n in recent_notifications %}
                   <div class="list-group-item notif-item">
-                    <div class="fw-semibold">{{ n.title }}</div>
-                    <div class="text-muted small">{{ n.message }}</div>
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <div class="fw-semibold">{{ n.title }}</div>
+                        <div class="text-muted small">{{ n.message }}</div>
+                      </div>
+                      <small class="text-muted">{{ n.created_at.strftime('%d/%m %H:%M') if n.created_at else '' }}</small>
+                    </div>
                   </div>
                 {% endfor %}
               {% else %}
-                <div class="list-group-item text-muted">Nessuna notifica.</div>
+                <div class="list-group-item text-muted text-center py-4">
+                  <i class="bi bi-bell-slash" style="font-size: 2rem; opacity: 0.3;"></i>
+                  <div class="mt-2">Nessuna notifica recente</div>
+                </div>
               {% endif %}
             </div>
           </div>
         </div>
       {% else %}
+        {% if wtype != 'stats' %}
         <div class="col-12">
           <div class="alert alert-warning mb-0">
             Widget non supportato: <code>{{ wtype }}</code>
           </div>
         </div>
+        {% endif %}
       {% endif %}
     {% endfor %}
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('[data-count]').forEach(function(el) {
+    var target = parseInt(el.dataset.count) || 0;
+    if (target === 0) return;
+    var current = 0;
+    var duration = 800;
+    var step = Math.max(1, Math.floor(target / 30));
+    var interval = duration / (target / step);
+    var timer = setInterval(function() {
+      current += step;
+      if (current >= target) {
+        current = target;
+        clearInterval(timer);
+      }
+      el.textContent = current;
+    }, interval);
+  });
+});
+</script>
 {% endblock %}

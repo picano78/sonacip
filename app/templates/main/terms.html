@@ -51,14 +51,20 @@
   z-index: 2;
 }
 
-.accordion-button:not(.collapsed) {
-  background-color: var(--fb-blue-light);
-  color: var(--fb-blue);
-  font-weight: 600;
+.terms-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  border: 1px solid #e4e6ea;
 }
 
-.accordion-button:focus {
-  box-shadow: 0 0 0 0.25rem rgba(24,119,242,0.25);
+.terms-card-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  gap: 0.75rem;
 }
 
 .section-icon {
@@ -71,8 +77,19 @@
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  margin-right: 0.75rem;
   flex-shrink: 0;
+}
+
+.terms-card-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #050505;
+  flex: 1;
+}
+
+.terms-content {
+  padding: 0 1.25rem 1.25rem;
 }
 
 .terms-content h6 {
@@ -129,6 +146,45 @@
 .links-section a:hover {
   text-decoration: underline;
 }
+
+[data-theme="dark"] .terms-card {
+  background: #242526;
+  border-color: #3a3b3c;
+}
+
+[data-theme="dark"] .terms-card-header h3 {
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .terms-content p,
+[data-theme="dark"] .terms-content li {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .terms-content h6 {
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .section-icon {
+  background: rgba(24,119,242,0.15);
+}
+
+[data-theme="dark"] .highlight-box {
+  background: rgba(24,119,242,0.1);
+  border-left-color: #4599ff;
+}
+
+[data-theme="dark"] .highlight-box p {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .links-section {
+  background: #242526;
+}
+
+[data-theme="dark"] .links-section p {
+  color: #b0b3b8 !important;
+}
 </style>
 {% endblock %}
 
@@ -147,241 +203,191 @@
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-lg-10">
-        <div class="accordion" id="termsAccordion">
 
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#termsDefinizioni">
-                <span class="section-icon"><i class="bi bi-book"></i></span>
-                Definizioni
-              </button>
-            </h2>
-            <div id="termsDefinizioni" class="accordion-collapse collapse show" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>Ai fini dei presenti Termini di Servizio, si intende per:</p>
-                <ul>
-                  <li><strong>Piattaforma:</strong> il sito web e l'applicazione SONACIP, accessibili all'indirizzo sonacip.it</li>
-                  <li><strong>Utente:</strong> qualsiasi persona fisica che si registra e utilizza la Piattaforma</li>
-                  <li><strong>Società:</strong> qualsiasi società sportiva registrata sulla Piattaforma tramite un account dedicato</li>
-                  <li><strong>Servizio/Servizi:</strong> tutte le funzionalità offerte dalla Piattaforma, inclusi social network, marketplace, calendario, messaggistica e gestione tornei</li>
-                  <li><strong>Contenuti:</strong> qualsiasi testo, immagine, video o altro materiale pubblicato dagli Utenti sulla Piattaforma</li>
-                  <li><strong>Titolare:</strong> SONACIP, con sede in Via dello Sport, 1 - Milano, gestore della Piattaforma</li>
-                  <li><strong>Account:</strong> l'insieme delle credenziali di accesso e del profilo personale dell'Utente</li>
-                </ul>
-              </div>
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-book"></i></span>
+            <h3>Definizioni</h3>
+          </div>
+          <div class="terms-content">
+            <p>Ai fini dei presenti Termini di Servizio, si intende per:</p>
+            <ul>
+              <li><strong>Piattaforma:</strong> il sito web e l'applicazione SONACIP, accessibili all'indirizzo sonacip.it</li>
+              <li><strong>Utente:</strong> qualsiasi persona fisica che si registra e utilizza la Piattaforma</li>
+              <li><strong>Società:</strong> qualsiasi società sportiva registrata sulla Piattaforma tramite un account dedicato</li>
+              <li><strong>Servizio/Servizi:</strong> tutte le funzionalità offerte dalla Piattaforma, inclusi social network, marketplace, calendario, messaggistica e gestione tornei</li>
+              <li><strong>Contenuti:</strong> qualsiasi testo, immagine, video o altro materiale pubblicato dagli Utenti sulla Piattaforma</li>
+              <li><strong>Titolare:</strong> SONACIP, con sede in Via dello Sport, 1 - Milano, gestore della Piattaforma</li>
+              <li><strong>Account:</strong> l'insieme delle credenziali di accesso e del profilo personale dell'Utente</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-check2-circle"></i></span>
+            <h3>Accettazione dei Termini</h3>
+          </div>
+          <div class="terms-content">
+            <p>L'accesso e l'utilizzo della Piattaforma SONACIP comportano l'accettazione integrale dei presenti Termini di Servizio.</p>
+            <ul>
+              <li>La registrazione alla Piattaforma costituisce accettazione espressa dei presenti Termini</li>
+              <li>L'Utente dichiara di aver letto e compreso integralmente le presenti condizioni</li>
+              <li>In caso di disaccordo con uno o più punti, l'Utente è tenuto a non utilizzare la Piattaforma</li>
+              <li>SONACIP si riserva il diritto di modificare i presenti Termini in qualsiasi momento, dandone comunicazione agli Utenti registrati</li>
+            </ul>
+            <div class="highlight-box">
+              <p><i class="bi bi-info-circle me-1"></i> L'utilizzo continuato della Piattaforma dopo la modifica dei Termini costituisce accettazione tacita delle nuove condizioni.</p>
             </div>
           </div>
+        </div>
 
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsRegistrazione">
-                <span class="section-icon"><i class="bi bi-person-plus"></i></span>
-                Registrazione e Account
-              </button>
-            </h2>
-            <div id="termsRegistrazione" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>Per accedere ai Servizi è necessario creare un Account fornendo informazioni veritiere, accurate e aggiornate.</p>
-                <ul>
-                  <li>L'Utente deve avere almeno 16 anni di età per registrarsi. I minori tra i 16 e i 18 anni necessitano del consenso di un genitore o tutore legale.</li>
-                  <li>Ogni persona può possedere un solo Account personale. La creazione di account multipli è vietata.</li>
-                  <li>L'Utente è responsabile della riservatezza delle proprie credenziali di accesso e di tutte le attività svolte tramite il proprio Account.</li>
-                  <li>In caso di accesso non autorizzato, l'Utente deve informare immediatamente l'amministratore della Piattaforma.</li>
-                  <li>La registrazione di una Società richiede dati verificabili (denominazione, codice fiscale/P.IVA) ed è soggetta ad approvazione.</li>
-                </ul>
-                <div class="highlight-box">
-                  <p><i class="bi bi-info-circle me-1"></i> SONACIP si riserva il diritto di rifiutare o revocare la registrazione di Account che violino i presenti Termini.</p>
-                </div>
-              </div>
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-person-plus"></i></span>
+            <h3>Registrazione e Account</h3>
+          </div>
+          <div class="terms-content">
+            <p>Per accedere ai Servizi è necessario creare un Account fornendo informazioni veritiere, accurate e aggiornate.</p>
+            <ul>
+              <li>L'Utente deve avere almeno 16 anni di età per registrarsi. I minori tra i 16 e i 18 anni necessitano del consenso di un genitore o tutore legale.</li>
+              <li>Ogni persona può possedere un solo Account personale. La creazione di account multipli è vietata.</li>
+              <li>L'Utente è responsabile della riservatezza delle proprie credenziali di accesso e di tutte le attività svolte tramite il proprio Account.</li>
+              <li>In caso di accesso non autorizzato, l'Utente deve informare immediatamente l'amministratore della Piattaforma.</li>
+              <li>La registrazione di una Società richiede dati verificabili (denominazione, codice fiscale/P.IVA) ed è soggetta ad approvazione.</li>
+            </ul>
+            <div class="highlight-box">
+              <p><i class="bi bi-info-circle me-1"></i> SONACIP si riserva il diritto di rifiutare o revocare la registrazione di Account che violino i presenti Termini.</p>
             </div>
           </div>
+        </div>
 
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsObblighi">
-                <span class="section-icon"><i class="bi bi-clipboard-check"></i></span>
-                Obblighi dell'Utente
-              </button>
-            </h2>
-            <div id="termsObblighi" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>L'Utente si impegna a:</p>
-                <ul>
-                  <li>Utilizzare la Piattaforma in conformità con le leggi italiane e dell'Unione Europea vigenti</li>
-                  <li>Non pubblicare contenuti illegali, offensivi, diffamatori, discriminatori o che violino i diritti di terzi</li>
-                  <li>Non utilizzare la Piattaforma per spam, phishing o attività fraudolente</li>
-                  <li>Non tentare di accedere ad aree riservate o di compromettere la sicurezza della Piattaforma</li>
-                  <li>Rispettare la proprietà intellettuale altrui e i diritti d'autore</li>
-                  <li>Non creare profili falsi o impersonare altri utenti</li>
-                  <li>Mantenere aggiornate le proprie informazioni di contatto</li>
-                  <li>Utilizzare un linguaggio rispettoso nelle interazioni con gli altri utenti</li>
-                </ul>
-                <div class="highlight-box">
-                  <p><i class="bi bi-exclamation-triangle me-1"></i> La violazione degli obblighi può comportare la sospensione o la cancellazione dell'Account senza preavviso.</p>
-                </div>
-              </div>
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-file-richtext"></i></span>
+            <h3>Contenuti dell'Utente</h3>
+          </div>
+          <div class="terms-content">
+            <p>L'Utente mantiene la titolarità dei Contenuti pubblicati sulla Piattaforma. Pubblicando Contenuti, l'Utente concede a SONACIP una licenza non esclusiva, gratuita e mondiale per:</p>
+            <ul>
+              <li>Visualizzare, distribuire e promuovere i Contenuti all'interno della Piattaforma</li>
+              <li>Archiviare e gestire tecnicamente i Contenuti per il funzionamento del Servizio</li>
+              <li>Creare copie di backup dei Contenuti</li>
+            </ul>
+            <p>L'Utente garantisce di possedere tutti i diritti necessari sui Contenuti pubblicati e che gli stessi non violano diritti di terzi.</p>
+            <p>SONACIP si riserva il diritto di rimuovere Contenuti che violino i presenti Termini, le leggi vigenti o i diritti di terzi, senza obbligo di preavviso.</p>
+            <p>L'Utente può eliminare i propri Contenuti in qualsiasi momento. La cancellazione potrebbe non essere immediata per ragioni tecniche (cache, backup).</p>
+          </div>
+        </div>
+
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-award"></i></span>
+            <h3>Proprietà Intellettuale</h3>
+          </div>
+          <div class="terms-content">
+            <p>Tutti i diritti di proprietà intellettuale relativi alla Piattaforma SONACIP (inclusi marchi, loghi, design, codice sorgente, documentazione e contenuti editoriali) sono di esclusiva proprietà del Titolare.</p>
+            <ul>
+              <li>È vietata la riproduzione, distribuzione, modifica o utilizzo non autorizzato dei materiali della Piattaforma</li>
+              <li>Il nome "SONACIP" e il relativo logo sono marchi registrati e non possono essere utilizzati senza autorizzazione scritta</li>
+              <li>L'Utente non acquisisce alcun diritto di proprietà intellettuale sulla Piattaforma attraverso il suo utilizzo</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-exclamation-diamond"></i></span>
+            <h3>Limitazioni di Responsabilità</h3>
+          </div>
+          <div class="terms-content">
+            <p>SONACIP fornisce la Piattaforma "così com'è" e "come disponibile". Nei limiti consentiti dalla legge:</p>
+            <ul>
+              <li>SONACIP non garantisce che il Servizio sia ininterrotto, privo di errori o completamente sicuro</li>
+              <li>SONACIP non è responsabile per perdite di dati causate da eventi al di fuori del proprio controllo</li>
+              <li>SONACIP non è responsabile per i Contenuti pubblicati dagli Utenti</li>
+              <li>SONACIP non è responsabile per le transazioni tra Utenti nel Marketplace</li>
+              <li>SONACIP non è responsabile per danni indiretti, incidentali o consequenziali derivanti dall'uso della Piattaforma</li>
+              <li>La responsabilità complessiva di SONACIP è limitata all'importo pagato dall'Utente negli ultimi 12 mesi</li>
+            </ul>
+            <p>Le limitazioni di cui sopra non si applicano nei casi in cui la legge non ne consenta l'esclusione.</p>
+          </div>
+        </div>
+
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-credit-card-2-front"></i></span>
+            <h3>Pagamenti</h3>
+          </div>
+          <div class="terms-content">
+            <p>Alcuni Servizi della Piattaforma possono essere soggetti a pagamento:</p>
+            <ul>
+              <li><strong>Abbonamenti Premium:</strong> l'accesso a funzionalità avanzate può richiedere un abbonamento mensile o annuale. I prezzi sono indicati nella pagina dei piani.</li>
+              <li><strong>Marketplace:</strong> SONACIP può applicare una commissione sulle transazioni effettuate tramite il Marketplace, come indicato nei termini specifici del servizio.</li>
+              <li><strong>Pagamenti ricorrenti:</strong> gli abbonamenti si rinnovano automaticamente alla scadenza, salvo disdetta da parte dell'Utente entro le tempistiche indicate.</li>
+              <li><strong>Rimborsi:</strong> i rimborsi sono gestiti secondo la normativa vigente in materia di diritto di recesso per i contratti a distanza (D.Lgs. 206/2005).</li>
+              <li><strong>Metodi di pagamento:</strong> i pagamenti vengono elaborati tramite provider terzi certificati (es. Stripe). SONACIP non memorizza i dati delle carte di credito.</li>
+            </ul>
+            <div class="highlight-box">
+              <p><i class="bi bi-info-circle me-1"></i> Tutti i prezzi sono espressi in Euro (€) e comprensivi di IVA ove applicabile.</p>
             </div>
           </div>
+        </div>
 
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsContenuti">
-                <span class="section-icon"><i class="bi bi-file-richtext"></i></span>
-                Contenuti dell'Utente
-              </button>
-            </h2>
-            <div id="termsContenuti" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>L'Utente mantiene la titolarità dei Contenuti pubblicati sulla Piattaforma. Pubblicando Contenuti, l'Utente concede a SONACIP una licenza non esclusiva, gratuita e mondiale per:</p>
-                <ul>
-                  <li>Visualizzare, distribuire e promuovere i Contenuti all'interno della Piattaforma</li>
-                  <li>Archiviare e gestire tecnicamente i Contenuti per il funzionamento del Servizio</li>
-                  <li>Creare copie di backup dei Contenuti</li>
-                </ul>
-                <p>L'Utente garantisce di possedere tutti i diritti necessari sui Contenuti pubblicati e che gli stessi non violano diritti di terzi.</p>
-                <p>SONACIP si riserva il diritto di rimuovere Contenuti che violino i presenti Termini, le leggi vigenti o i diritti di terzi, senza obbligo di preavviso.</p>
-                <p>L'Utente può eliminare i propri Contenuti in qualsiasi momento. La cancellazione potrebbe non essere immediata per ragioni tecniche (cache, backup).</p>
-              </div>
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-person-x"></i></span>
+            <h3>Cancellazione Account</h3>
+          </div>
+          <div class="terms-content">
+            <p>L'Utente può richiedere la chiusura del proprio Account in qualsiasi momento tramite le impostazioni del profilo o contattando l'amministratore.</p>
+            <ul>
+              <li>La richiesta di cancellazione sarà elaborata entro 30 giorni</li>
+              <li>I dati personali saranno trattati secondo la Privacy Policy</li>
+              <li>I Contenuti pubblici potranno essere anonimizzati anziché cancellati</li>
+              <li>Gli abbonamenti attivi saranno annullati senza rimborso per il periodo in corso</li>
+              <li>L'Utente può richiedere l'esportazione dei propri dati prima della cancellazione (diritto alla portabilità)</li>
+            </ul>
+            <p>SONACIP può sospendere o terminare l'Account dell'Utente nei seguenti casi:</p>
+            <ul>
+              <li>Violazione dei presenti Termini di Servizio</li>
+              <li>Comportamento illecito o dannoso per la comunità</li>
+              <li>Richiesta dell'autorità giudiziaria</li>
+              <li>Inattività prolungata dell'Account (oltre 24 mesi)</li>
+              <li>Mancato pagamento dei servizi premium</li>
+            </ul>
+            <div class="highlight-box">
+              <p><i class="bi bi-exclamation-triangle me-1"></i> La violazione grave dei Termini può comportare la sospensione immediata dell'Account senza preavviso.</p>
             </div>
           </div>
+        </div>
 
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsProprieta">
-                <span class="section-icon"><i class="bi bi-award"></i></span>
-                Proprietà Intellettuale
-              </button>
-            </h2>
-            <div id="termsProprieta" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>Tutti i diritti di proprietà intellettuale relativi alla Piattaforma SONACIP (inclusi marchi, loghi, design, codice sorgente, documentazione e contenuti editoriali) sono di esclusiva proprietà del Titolare.</p>
-                <ul>
-                  <li>È vietata la riproduzione, distribuzione, modifica o utilizzo non autorizzato dei materiali della Piattaforma</li>
-                  <li>Il nome "SONACIP" e il relativo logo sono marchi registrati e non possono essere utilizzati senza autorizzazione scritta</li>
-                  <li>L'Utente non acquisisce alcun diritto di proprietà intellettuale sulla Piattaforma attraverso il suo utilizzo</li>
-                </ul>
-              </div>
-            </div>
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-bank"></i></span>
+            <h3>Legge Applicabile</h3>
           </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsMarketplace">
-                <span class="section-icon"><i class="bi bi-bag-check"></i></span>
-                Marketplace
-              </button>
-            </h2>
-            <div id="termsMarketplace" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>Il Marketplace di SONACIP consente agli Utenti di pubblicare annunci per la vendita di articoli e servizi sportivi. Le seguenti regole si applicano:</p>
-                <h6>Regole per i venditori</h6>
-                <ul>
-                  <li>Gli annunci devono contenere descrizioni accurate e veritiere dei prodotti/servizi offerti</li>
-                  <li>Le immagini devono rappresentare fedelmente l'articolo in vendita</li>
-                  <li>I prezzi devono essere indicati in Euro (€) e includere eventuali costi aggiuntivi</li>
-                  <li>È vietata la vendita di articoli contraffatti, rubati, illegali o pericolosi</li>
-                  <li>Il venditore è responsabile della qualità e della conformità dei prodotti venduti</li>
-                </ul>
-                <h6>Regole per gli acquirenti</h6>
-                <ul>
-                  <li>L'acquirente è tenuto a verificare le condizioni dell'articolo prima dell'acquisto</li>
-                  <li>Le transazioni tra utenti avvengono sotto la responsabilità delle parti coinvolte</li>
-                  <li>Eventuali controversie devono essere segnalate all'amministratore della Piattaforma</li>
-                </ul>
-                <div class="highlight-box">
-                  <p><i class="bi bi-info-circle me-1"></i> SONACIP agisce esclusivamente come intermediario e non è parte nelle transazioni tra utenti. SONACIP non garantisce la qualità dei prodotti/servizi offerti.</p>
-                </div>
-              </div>
-            </div>
+          <div class="terms-content">
+            <p>I presenti Termini di Servizio sono regolati dalla legge italiana.</p>
+            <p>Per qualsiasi controversia derivante dall'interpretazione o dall'esecuzione dei presenti Termini, sarà competente in via esclusiva il Foro di Milano, fatto salvo il foro del consumatore ai sensi dell'art. 66-bis del Codice del Consumo (D.Lgs. 206/2005).</p>
+            <p>Per i consumatori residenti nell'Unione Europea, resta ferma la possibilità di ricorrere alla piattaforma di risoluzione delle controversie online (ODR) della Commissione Europea, disponibile all'indirizzo <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">https://ec.europa.eu/consumers/odr</a>.</p>
           </div>
+        </div>
 
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsLimitazioni">
-                <span class="section-icon"><i class="bi bi-exclamation-diamond"></i></span>
-                Limitazioni di Responsabilità
-              </button>
-            </h2>
-            <div id="termsLimitazioni" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>SONACIP fornisce la Piattaforma "così com'è" e "come disponibile". Nei limiti consentiti dalla legge:</p>
-                <ul>
-                  <li>SONACIP non garantisce che il Servizio sia ininterrotto, privo di errori o completamente sicuro</li>
-                  <li>SONACIP non è responsabile per perdite di dati causate da eventi al di fuori del proprio controllo</li>
-                  <li>SONACIP non è responsabile per i Contenuti pubblicati dagli Utenti</li>
-                  <li>SONACIP non è responsabile per le transazioni tra Utenti nel Marketplace</li>
-                  <li>SONACIP non è responsabile per danni indiretti, incidentali o consequenziali derivanti dall'uso della Piattaforma</li>
-                  <li>La responsabilità complessiva di SONACIP è limitata all'importo pagato dall'Utente negli ultimi 12 mesi</li>
-                </ul>
-                <p>Le limitazioni di cui sopra non si applicano nei casi in cui la legge non ne consenta l'esclusione.</p>
-              </div>
-            </div>
+        <div class="terms-card">
+          <div class="terms-card-header">
+            <span class="section-icon"><i class="bi bi-envelope"></i></span>
+            <h3>Contatti</h3>
           </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsSospensione">
-                <span class="section-icon"><i class="bi bi-slash-circle"></i></span>
-                Sospensione e Risoluzione
-              </button>
-            </h2>
-            <div id="termsSospensione" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>SONACIP può sospendere o terminare l'Account dell'Utente nei seguenti casi:</p>
-                <ul>
-                  <li>Violazione dei presenti Termini di Servizio</li>
-                  <li>Comportamento illecito o dannoso per la comunità</li>
-                  <li>Richiesta dell'autorità giudiziaria</li>
-                  <li>Inattività prolungata dell'Account (oltre 24 mesi)</li>
-                  <li>Mancato pagamento dei servizi premium</li>
-                </ul>
-                <p>L'Utente può richiedere la chiusura del proprio Account in qualsiasi momento tramite le impostazioni del profilo o contattando l'amministratore.</p>
-                <p>In caso di chiusura:</p>
-                <ul>
-                  <li>I dati personali saranno trattati secondo la Privacy Policy</li>
-                  <li>I Contenuti pubblici potranno essere anonimizzati anziché cancellati</li>
-                  <li>Gli abbonamenti attivi saranno annullati senza rimborso per il periodo in corso</li>
-                </ul>
-              </div>
-            </div>
+          <div class="terms-content">
+            <p>Per qualsiasi domanda relativa ai presenti Termini di Servizio, è possibile contattarci:</p>
+            <ul>
+              <li><strong>Email:</strong> info@sonacip.it</li>
+              <li><strong>PEC:</strong> sonacip@pec.it</li>
+              <li><strong>Indirizzo:</strong> Via dello Sport, 1 - 20100 Milano (MI), Italia</li>
+              <li><strong>Modulo di contatto:</strong> <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a></li>
+            </ul>
           </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsLegge">
-                <span class="section-icon"><i class="bi bi-bank"></i></span>
-                Legge Applicabile
-              </button>
-            </h2>
-            <div id="termsLegge" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>I presenti Termini di Servizio sono regolati dalla legge italiana.</p>
-                <p>Per qualsiasi controversia derivante dall'interpretazione o dall'esecuzione dei presenti Termini, sarà competente in via esclusiva il Foro di Milano, fatto salvo il foro del consumatore ai sensi dell'art. 66-bis del Codice del Consumo (D.Lgs. 206/2005).</p>
-                <p>Per i consumatori residenti nell'Unione Europea, resta ferma la possibilità di ricorrere alla piattaforma di risoluzione delle controversie online (ODR) della Commissione Europea, disponibile all'indirizzo <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">https://ec.europa.eu/consumers/odr</a>.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#termsContatti">
-                <span class="section-icon"><i class="bi bi-envelope"></i></span>
-                Contatti
-              </button>
-            </h2>
-            <div id="termsContatti" class="accordion-collapse collapse" data-bs-parent="#termsAccordion">
-              <div class="accordion-body terms-content">
-                <p>Per qualsiasi domanda relativa ai presenti Termini di Servizio, è possibile contattarci:</p>
-                <ul>
-                  <li><strong>Email:</strong> info@sonacip.it</li>
-                  <li><strong>PEC:</strong> sonacip@pec.it</li>
-                  <li><strong>Indirizzo:</strong> Via dello Sport, 1 - 20100 Milano (MI), Italia</li>
-                  <li><strong>Modulo di contatto:</strong> <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         <div class="links-section mt-4">

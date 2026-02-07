@@ -51,14 +51,50 @@
   z-index: 2;
 }
 
-.accordion-button:not(.collapsed) {
-  background-color: var(--fb-blue-light);
+.privacy-toc {
+  position: sticky;
+  top: 1.5rem;
+}
+
+.privacy-toc .list-group-item {
+  border: none;
+  padding: 0.55rem 1rem;
+  font-size: 0.88rem;
+  color: #333;
+  border-left: 3px solid transparent;
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.privacy-toc .list-group-item:hover,
+.privacy-toc .list-group-item.active {
   color: var(--fb-blue);
+  border-left-color: var(--fb-blue);
+  background: var(--fb-blue-light);
   font-weight: 600;
 }
 
-.accordion-button:focus {
-  box-shadow: 0 0 0 0.25rem rgba(24,119,242,0.25);
+.privacy-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  border: 1px solid #e4e6ea;
+  scroll-margin-top: 1.5rem;
+}
+
+.privacy-card-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  gap: 0.75rem;
+  user-select: none;
+}
+
+.privacy-card-header:hover {
+  background: #f8f9fa;
 }
 
 .section-icon {
@@ -71,8 +107,19 @@
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  margin-right: 0.75rem;
   flex-shrink: 0;
+}
+
+.privacy-card-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #050505;
+  flex: 1;
+}
+
+.privacy-content {
+  padding: 0 1.25rem 1.25rem;
 }
 
 .privacy-content h6 {
@@ -124,6 +171,19 @@
   font-size: 0.9rem;
 }
 
+.dpo-box {
+  background: linear-gradient(135deg, var(--fb-blue-light) 0%, #f0f6ff 100%);
+  border: 1px solid rgba(24,119,242,0.15);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+.dpo-box h6 {
+  color: var(--fb-blue);
+  font-weight: 700;
+}
+
 .links-section {
   background: #f0f2f5;
   border-radius: 12px;
@@ -141,6 +201,67 @@
 .links-section a:hover {
   text-decoration: underline;
 }
+
+[data-theme="dark"] .privacy-card {
+  background: #242526;
+  border-color: #3a3b3c;
+}
+
+[data-theme="dark"] .privacy-card-header:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .privacy-card-header h3 {
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .privacy-content p,
+[data-theme="dark"] .privacy-content li {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .privacy-content h6 {
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .section-icon {
+  background: rgba(24,119,242,0.15);
+}
+
+[data-theme="dark"] .rights-card {
+  background: rgba(24,119,242,0.1);
+}
+
+[data-theme="dark"] .rights-card strong {
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .rights-card span {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .dpo-box {
+  background: rgba(24,119,242,0.08);
+  border-color: rgba(24,119,242,0.2);
+}
+
+[data-theme="dark"] .privacy-toc .list-group-item {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .privacy-toc .list-group-item:hover,
+[data-theme="dark"] .privacy-toc .list-group-item.active {
+  background: rgba(24,119,242,0.1);
+  color: #4599ff;
+}
+
+[data-theme="dark"] .links-section {
+  background: #242526;
+}
+
+[data-theme="dark"] .links-section p {
+  color: #b0b3b8 !important;
+}
 </style>
 {% endblock %}
 
@@ -157,268 +278,229 @@
 
 <section class="py-5">
   <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-lg-10">
-        <div class="accordion" id="privacyAccordion">
+    <div class="row">
+      <div class="col-lg-3 d-none d-lg-block">
+        <div class="privacy-toc">
+          <h6 class="fw-bold mb-3" style="font-size:0.85rem;text-transform:uppercase;letter-spacing:0.5px;color:#65676b;">Indice</h6>
+          <div class="list-group list-group-flush">
+            <a href="#secTitolare" class="list-group-item">Titolare del Trattamento</a>
+            <a href="#secDatiRaccolti" class="list-group-item">Dati Raccolti</a>
+            <a href="#secFinalita" class="list-group-item">Finalità</a>
+            <a href="#secBase" class="list-group-item">Base Giuridica</a>
+            <a href="#secConservazione" class="list-group-item">Conservazione Dati</a>
+            <a href="#secDiritti" class="list-group-item">Diritti dell'Utente</a>
+            <a href="#cookieSection" class="list-group-item">Cookie Policy</a>
+            <a href="#secModifiche" class="list-group-item">Modifiche alla Policy</a>
+            <a href="#secDPO" class="list-group-item">Contatti DPO</a>
+          </div>
+        </div>
+      </div>
 
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#privTitolare">
-                <span class="section-icon"><i class="bi bi-person-badge"></i></span>
-                Titolare del Trattamento
-              </button>
-            </h2>
-            <div id="privTitolare" class="accordion-collapse collapse show" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>Il Titolare del trattamento dei dati personali è:</p>
-                <p><strong>SONACIP - Sistema di Gestione Sportiva</strong></p>
-                <ul>
-                  <li>Sede legale: Via dello Sport, 1 - 20100 Milano (MI), Italia</li>
-                  <li>Email: privacy@sonacip.it</li>
-                  <li>PEC: sonacip@pec.it</li>
-                </ul>
-                <p>Il Titolare è responsabile delle decisioni in merito alle finalità e ai mezzi del trattamento dei dati personali degli utenti della piattaforma SONACIP.</p>
+      <div class="col-lg-9">
+
+        <div class="privacy-card" id="secTitolare">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-person-badge"></i></span>
+            <h3>Titolare del Trattamento</h3>
+          </div>
+          <div class="privacy-content">
+            <p>Il Titolare del trattamento dei dati personali è:</p>
+            <p><strong>SONACIP - Sistema di Gestione Sportiva</strong></p>
+            <ul>
+              <li>Sede legale: Via dello Sport, 1 - 20100 Milano (MI), Italia</li>
+              <li>Email: privacy@sonacip.it</li>
+              <li>PEC: sonacip@pec.it</li>
+            </ul>
+            <p>Il Titolare è responsabile delle decisioni in merito alle finalità e ai mezzi del trattamento dei dati personali degli utenti della piattaforma SONACIP.</p>
+          </div>
+        </div>
+
+        <div class="privacy-card" id="secDatiRaccolti">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-collection"></i></span>
+            <h3>Dati Raccolti</h3>
+          </div>
+          <div class="privacy-content">
+            <h6>Dati forniti direttamente dall'utente</h6>
+            <ul>
+              <li>Dati anagrafici: nome, cognome, data di nascita</li>
+              <li>Dati di contatto: indirizzo email, numero di telefono, indirizzo</li>
+              <li>Dati di accesso: username, password (criptata)</li>
+              <li>Dati del profilo: foto profilo, bio, competenze sportive, carriera</li>
+              <li>Contenuti: post, messaggi, commenti, annunci marketplace</li>
+            </ul>
+            <h6>Dati raccolti automaticamente</h6>
+            <ul>
+              <li>Dati di navigazione: indirizzo IP, tipo di browser, sistema operativo</li>
+              <li>Dati di utilizzo: pagine visitate, tempi di permanenza, funzionalità utilizzate</li>
+              <li>Cookie tecnici e di sessione</li>
+              <li>Log di accesso e sicurezza</li>
+            </ul>
+            <h6>Dati delle società sportive</h6>
+            <ul>
+              <li>Denominazione sociale, codice fiscale/partita IVA</li>
+              <li>Sede legale e sedi operative</li>
+              <li>Dati dei referenti e amministratori</li>
+              <li>Elenco membri e relative qualifiche</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="privacy-card" id="secFinalita">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-bullseye"></i></span>
+            <h3>Finalità del Trattamento</h3>
+          </div>
+          <div class="privacy-content">
+            <p>I dati personali sono trattati per le seguenti finalità:</p>
+            <ul>
+              <li>Gestione dell'account utente e autenticazione</li>
+              <li>Erogazione dei servizi della piattaforma (social network, marketplace, calendario, messaggistica, tornei)</li>
+              <li>Gestione delle società sportive e dei relativi membri</li>
+              <li>Comunicazioni di servizio e notifiche relative all'attività sulla piattaforma</li>
+              <li>Assistenza clienti e supporto tecnico</li>
+              <li>Miglioramento dei servizi e analisi statistiche aggregate</li>
+              <li>Adempimento di obblighi legali e normativi</li>
+              <li>Prevenzione frodi e sicurezza della piattaforma</li>
+              <li>Gestione dei pagamenti e delle transazioni sul marketplace</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="privacy-card" id="secBase">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-file-earmark-check"></i></span>
+            <h3>Base Giuridica</h3>
+          </div>
+          <div class="privacy-content">
+            <p>Il trattamento dei dati personali si basa sulle seguenti basi giuridiche ai sensi dell'art. 6 del GDPR:</p>
+            <ul>
+              <li><strong>Consenso (art. 6.1.a):</strong> per comunicazioni promozionali e cookie non tecnici</li>
+              <li><strong>Esecuzione del contratto (art. 6.1.b):</strong> per l'erogazione dei servizi richiesti dall'utente</li>
+              <li><strong>Obbligo legale (art. 6.1.c):</strong> per adempimenti fiscali e normativi</li>
+              <li><strong>Interesse legittimo (art. 6.1.f):</strong> per sicurezza della piattaforma, prevenzione frodi e miglioramento dei servizi</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="privacy-card" id="secConservazione">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-hourglass-split"></i></span>
+            <h3>Conservazione dei Dati</h3>
+          </div>
+          <div class="privacy-content">
+            <p>I dati personali sono conservati per il tempo strettamente necessario al raggiungimento delle finalità per cui sono raccolti:</p>
+            <ul>
+              <li><strong>Dati dell'account:</strong> per tutta la durata dell'iscrizione e fino a 30 giorni dopo la cancellazione</li>
+              <li><strong>Dati di navigazione:</strong> massimo 12 mesi</li>
+              <li><strong>Dati delle transazioni:</strong> 10 anni per obblighi fiscali</li>
+              <li><strong>Log di sicurezza:</strong> 6 mesi</li>
+              <li><strong>Contenuti pubblicati:</strong> fino alla cancellazione da parte dell'utente o alla chiusura dell'account</li>
+              <li><strong>Backup:</strong> massimo 90 giorni dalla creazione</li>
+            </ul>
+            <p>Al termine del periodo di conservazione, i dati vengono cancellati in modo sicuro e irreversibile.</p>
+          </div>
+        </div>
+
+        <div class="privacy-card" id="secDiritti">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-person-check"></i></span>
+            <h3>Diritti dell'Utente</h3>
+          </div>
+          <div class="privacy-content">
+            <p>Ai sensi degli artt. 15-22 del GDPR, l'utente ha diritto di:</p>
+            <div class="rights-card">
+              <i class="bi bi-eye"></i>
+              <div>
+                <strong>Diritto di Accesso</strong>
+                <span>Ottenere conferma del trattamento e accedere ai propri dati personali.</span>
               </div>
             </div>
-          </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privDatiRaccolti">
-                <span class="section-icon"><i class="bi bi-collection"></i></span>
-                Dati Raccolti
-              </button>
-            </h2>
-            <div id="privDatiRaccolti" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <h6>Dati forniti direttamente dall'utente</h6>
-                <ul>
-                  <li>Dati anagrafici: nome, cognome, data di nascita</li>
-                  <li>Dati di contatto: indirizzo email, numero di telefono, indirizzo</li>
-                  <li>Dati di accesso: username, password (criptata)</li>
-                  <li>Dati del profilo: foto profilo, bio, competenze sportive, carriera</li>
-                  <li>Contenuti: post, messaggi, commenti, annunci marketplace</li>
-                </ul>
-                <h6>Dati raccolti automaticamente</h6>
-                <ul>
-                  <li>Dati di navigazione: indirizzo IP, tipo di browser, sistema operativo</li>
-                  <li>Dati di utilizzo: pagine visitate, tempi di permanenza, funzionalità utilizzate</li>
-                  <li>Cookie tecnici e di sessione</li>
-                  <li>Log di accesso e sicurezza</li>
-                </ul>
-                <h6>Dati delle società sportive</h6>
-                <ul>
-                  <li>Denominazione sociale, codice fiscale/partita IVA</li>
-                  <li>Sede legale e sedi operative</li>
-                  <li>Dati dei referenti e amministratori</li>
-                  <li>Elenco membri e relative qualifiche</li>
-                </ul>
+            <div class="rights-card">
+              <i class="bi bi-pencil-square"></i>
+              <div>
+                <strong>Diritto di Rettifica</strong>
+                <span>Richiedere la correzione di dati inesatti o l'integrazione di dati incompleti.</span>
               </div>
             </div>
-          </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privFinalita">
-                <span class="section-icon"><i class="bi bi-bullseye"></i></span>
-                Finalità del Trattamento
-              </button>
-            </h2>
-            <div id="privFinalita" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>I dati personali sono trattati per le seguenti finalità:</p>
-                <ul>
-                  <li>Gestione dell'account utente e autenticazione</li>
-                  <li>Erogazione dei servizi della piattaforma (social network, marketplace, calendario, messaggistica, tornei)</li>
-                  <li>Gestione delle società sportive e dei relativi membri</li>
-                  <li>Comunicazioni di servizio e notifiche relative all'attività sulla piattaforma</li>
-                  <li>Assistenza clienti e supporto tecnico</li>
-                  <li>Miglioramento dei servizi e analisi statistiche aggregate</li>
-                  <li>Adempimento di obblighi legali e normativi</li>
-                  <li>Prevenzione frodi e sicurezza della piattaforma</li>
-                  <li>Gestione dei pagamenti e delle transazioni sul marketplace</li>
-                </ul>
+            <div class="rights-card">
+              <i class="bi bi-trash"></i>
+              <div>
+                <strong>Diritto alla Cancellazione</strong>
+                <span>Richiedere la cancellazione dei propri dati quando non più necessari alle finalità.</span>
               </div>
             </div>
-          </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privBase">
-                <span class="section-icon"><i class="bi bi-file-earmark-check"></i></span>
-                Base Giuridica
-              </button>
-            </h2>
-            <div id="privBase" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>Il trattamento dei dati personali si basa sulle seguenti basi giuridiche ai sensi dell'art. 6 del GDPR:</p>
-                <ul>
-                  <li><strong>Consenso (art. 6.1.a):</strong> per comunicazioni promozionali e cookie non tecnici</li>
-                  <li><strong>Esecuzione del contratto (art. 6.1.b):</strong> per l'erogazione dei servizi richiesti dall'utente</li>
-                  <li><strong>Obbligo legale (art. 6.1.c):</strong> per adempimenti fiscali e normativi</li>
-                  <li><strong>Interesse legittimo (art. 6.1.f):</strong> per sicurezza della piattaforma, prevenzione frodi e miglioramento dei servizi</li>
-                </ul>
+            <div class="rights-card">
+              <i class="bi bi-box-arrow-right"></i>
+              <div>
+                <strong>Diritto alla Portabilità</strong>
+                <span>Ricevere i propri dati in un formato strutturato e di uso comune per trasferirli.</span>
               </div>
             </div>
-          </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privConservazione">
-                <span class="section-icon"><i class="bi bi-hourglass-split"></i></span>
-                Conservazione dei Dati
-              </button>
-            </h2>
-            <div id="privConservazione" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>I dati personali sono conservati per il tempo strettamente necessario al raggiungimento delle finalità per cui sono raccolti:</p>
-                <ul>
-                  <li><strong>Dati dell'account:</strong> per tutta la durata dell'iscrizione e fino a 30 giorni dopo la cancellazione</li>
-                  <li><strong>Dati di navigazione:</strong> massimo 12 mesi</li>
-                  <li><strong>Dati delle transazioni:</strong> 10 anni per obblighi fiscali</li>
-                  <li><strong>Log di sicurezza:</strong> 6 mesi</li>
-                  <li><strong>Contenuti pubblicati:</strong> fino alla cancellazione da parte dell'utente o alla chiusura dell'account</li>
-                  <li><strong>Backup:</strong> massimo 90 giorni dalla creazione</li>
-                </ul>
-                <p>Al termine del periodo di conservazione, i dati vengono cancellati in modo sicuro e irreversibile.</p>
+            <div class="rights-card">
+              <i class="bi bi-hand-thumbs-down"></i>
+              <div>
+                <strong>Diritto di Opposizione</strong>
+                <span>Opporsi al trattamento dei propri dati per motivi legittimi, incluso il marketing diretto.</span>
               </div>
             </div>
+            <p class="mt-3">Per esercitare i propri diritti, l'utente può inviare una richiesta a <strong>privacy@sonacip.it</strong> o tramite la pagina <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a>. L'utente ha inoltre il diritto di presentare reclamo al Garante per la Protezione dei Dati Personali.</p>
           </div>
+        </div>
 
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privDiritti">
-                <span class="section-icon"><i class="bi bi-person-check"></i></span>
-                Diritti dell'Interessato
-              </button>
-            </h2>
-            <div id="privDiritti" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>Ai sensi degli artt. 15-22 del GDPR, l'utente ha diritto di:</p>
-                <div class="rights-card">
-                  <i class="bi bi-eye"></i>
-                  <div>
-                    <strong>Diritto di Accesso</strong>
-                    <span>Ottenere conferma del trattamento e accedere ai propri dati personali.</span>
-                  </div>
-                </div>
-                <div class="rights-card">
-                  <i class="bi bi-pencil-square"></i>
-                  <div>
-                    <strong>Diritto di Rettifica</strong>
-                    <span>Richiedere la correzione di dati inesatti o l'integrazione di dati incompleti.</span>
-                  </div>
-                </div>
-                <div class="rights-card">
-                  <i class="bi bi-trash"></i>
-                  <div>
-                    <strong>Diritto alla Cancellazione</strong>
-                    <span>Richiedere la cancellazione dei propri dati quando non più necessari alle finalità.</span>
-                  </div>
-                </div>
-                <div class="rights-card">
-                  <i class="bi bi-box-arrow-right"></i>
-                  <div>
-                    <strong>Diritto alla Portabilità</strong>
-                    <span>Ricevere i propri dati in un formato strutturato e di uso comune per trasferirli.</span>
-                  </div>
-                </div>
-                <div class="rights-card">
-                  <i class="bi bi-hand-thumbs-down"></i>
-                  <div>
-                    <strong>Diritto di Opposizione</strong>
-                    <span>Opporsi al trattamento dei propri dati per motivi legittimi, incluso il marketing diretto.</span>
-                  </div>
-                </div>
-                <p class="mt-3">Per esercitare i propri diritti, l'utente può inviare una richiesta a <strong>privacy@sonacip.it</strong> o tramite la pagina <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a>. L'utente ha inoltre il diritto di presentare reclamo al Garante per la Protezione dei Dati Personali.</p>
-              </div>
+        <div class="privacy-card" id="cookieSection">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-cookie"></i></span>
+            <h3>Cookie Policy</h3>
+          </div>
+          <div class="privacy-content">
+            <p>SONACIP utilizza i seguenti tipi di cookie:</p>
+            <ul>
+              <li><strong>Cookie tecnici (necessari):</strong> indispensabili per il funzionamento della piattaforma, gestione della sessione e autenticazione</li>
+              <li><strong>Cookie di preferenza:</strong> memorizzano le preferenze dell'utente (lingua, tema, impostazioni)</li>
+              <li><strong>Cookie analitici:</strong> raccolgono dati anonimi e aggregati per migliorare l'esperienza utente</li>
+            </ul>
+            <p>I cookie tecnici non richiedono il consenso dell'utente. Per i cookie analitici e di profilazione, il consenso viene richiesto tramite il banner cookie al primo accesso.</p>
+            <p>L'utente può gestire le preferenze sui cookie in qualsiasi momento dalle impostazioni del proprio browser.</p>
+          </div>
+        </div>
+
+        <div class="privacy-card" id="secModifiche">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-arrow-repeat"></i></span>
+            <h3>Modifiche alla Policy</h3>
+          </div>
+          <div class="privacy-content">
+            <p>SONACIP si riserva il diritto di modificare la presente Privacy Policy in qualsiasi momento. Le modifiche saranno pubblicate su questa pagina con indicazione della data di ultimo aggiornamento.</p>
+            <p>In caso di modifiche sostanziali, gli utenti registrati riceveranno una notifica tramite email o attraverso la piattaforma. Si consiglia di consultare periodicamente questa pagina per restare aggiornati.</p>
+            <p>L'utilizzo continuato della piattaforma dopo la pubblicazione delle modifiche costituisce accettazione delle stesse.</p>
+          </div>
+        </div>
+
+        <div class="privacy-card" id="secDPO">
+          <div class="privacy-card-header">
+            <span class="section-icon"><i class="bi bi-envelope"></i></span>
+            <h3>Contatti e DPO</h3>
+          </div>
+          <div class="privacy-content">
+            <p>Per qualsiasi domanda relativa alla presente Privacy Policy o al trattamento dei dati personali, è possibile contattarci:</p>
+            <ul>
+              <li><strong>Email:</strong> privacy@sonacip.it</li>
+              <li><strong>PEC:</strong> sonacip@pec.it</li>
+              <li><strong>Indirizzo:</strong> Via dello Sport, 1 - 20100 Milano (MI), Italia</li>
+              <li><strong>Modulo di contatto:</strong> <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a></li>
+            </ul>
+            <div class="dpo-box">
+              <h6><i class="bi bi-shield-check me-1"></i> Responsabile della Protezione dei Dati (DPO)</h6>
+              <p class="mb-1"><strong>Dott. Marco Bianchi</strong></p>
+              <p class="mb-1">Email: <a href="mailto:dpo@sonacip.it">dpo@sonacip.it</a></p>
+              <p class="mb-0">PEC: <a href="mailto:dpo.sonacip@pec.it">dpo.sonacip@pec.it</a></p>
             </div>
+            <p class="mt-3"><strong>Garante per la Protezione dei Dati Personali:</strong><br>
+            Piazza Venezia, 11 - 00187 Roma<br>
+            Email: garante@gpdp.it | PEC: protocollo@pec.gpdp.it<br>
+            Sito web: <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">www.garanteprivacy.it</a></p>
           </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privCookie">
-                <span class="section-icon"><i class="bi bi-cookie"></i></span>
-                Cookie
-              </button>
-            </h2>
-            <div id="privCookie" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>SONACIP utilizza i seguenti tipi di cookie:</p>
-                <ul>
-                  <li><strong>Cookie tecnici (necessari):</strong> indispensabili per il funzionamento della piattaforma, gestione della sessione e autenticazione</li>
-                  <li><strong>Cookie di preferenza:</strong> memorizzano le preferenze dell'utente (lingua, tema, impostazioni)</li>
-                  <li><strong>Cookie analitici:</strong> raccolgono dati anonimi e aggregati per migliorare l'esperienza utente</li>
-                </ul>
-                <p>I cookie tecnici non richiedono il consenso dell'utente. Per i cookie analitici e di profilazione, il consenso viene richiesto tramite il banner cookie al primo accesso.</p>
-                <p>L'utente può gestire le preferenze sui cookie in qualsiasi momento dalle impostazioni del proprio browser.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privSicurezza">
-                <span class="section-icon"><i class="bi bi-lock"></i></span>
-                Sicurezza
-              </button>
-            </h2>
-            <div id="privSicurezza" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>SONACIP adotta misure tecniche e organizzative adeguate per proteggere i dati personali:</p>
-                <ul>
-                  <li>Crittografia delle comunicazioni tramite protocollo HTTPS/TLS</li>
-                  <li>Crittografia delle password con algoritmi di hashing sicuri (bcrypt)</li>
-                  <li>Accesso ai dati limitato al personale autorizzato</li>
-                  <li>Backup regolari e procedure di disaster recovery</li>
-                  <li>Monitoraggio continuo degli accessi e rilevamento anomalie</li>
-                  <li>Aggiornamento costante dei sistemi e delle patch di sicurezza</li>
-                  <li>Procedure di gestione degli incidenti di sicurezza (data breach) conformi al GDPR</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privModifiche">
-                <span class="section-icon"><i class="bi bi-arrow-repeat"></i></span>
-                Modifiche alla Privacy Policy
-              </button>
-            </h2>
-            <div id="privModifiche" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>SONACIP si riserva il diritto di modificare la presente Privacy Policy in qualsiasi momento. Le modifiche saranno pubblicate su questa pagina con indicazione della data di ultimo aggiornamento.</p>
-                <p>In caso di modifiche sostanziali, gli utenti registrati riceveranno una notifica tramite email o attraverso la piattaforma. Si consiglia di consultare periodicamente questa pagina per restare aggiornati.</p>
-                <p>L'utilizzo continuato della piattaforma dopo la pubblicazione delle modifiche costituisce accettazione delle stesse.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#privContatti">
-                <span class="section-icon"><i class="bi bi-envelope"></i></span>
-                Contatti
-              </button>
-            </h2>
-            <div id="privContatti" class="accordion-collapse collapse" data-bs-parent="#privacyAccordion">
-              <div class="accordion-body privacy-content">
-                <p>Per qualsiasi domanda relativa alla presente Privacy Policy o al trattamento dei dati personali, è possibile contattarci:</p>
-                <ul>
-                  <li><strong>Email:</strong> privacy@sonacip.it</li>
-                  <li><strong>PEC:</strong> sonacip@pec.it</li>
-                  <li><strong>Indirizzo:</strong> Via dello Sport, 1 - 20100 Milano (MI), Italia</li>
-                  <li><strong>Modulo di contatto:</strong> <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a></li>
-                </ul>
-                <p><strong>Garante per la Protezione dei Dati Personali:</strong><br>
-                Piazza Venezia, 11 - 00187 Roma<br>
-                Email: garante@gpdp.it | PEC: protocollo@pec.gpdp.it<br>
-                Sito web: <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">www.garanteprivacy.it</a></p>
-              </div>
-            </div>
-          </div>
-
         </div>
 
         <div class="links-section mt-4">

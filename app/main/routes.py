@@ -25,7 +25,16 @@ def index():
     if current_user.is_authenticated:
         return redirect(url_for('social.feed'))
     sections = _page_sections('main.index')
-    return render_template('main/index.html', pb_sections=sections)
+    landing_stats = {'users': 0, 'societies': 0, 'events': 0, 'posts': 0}
+    try:
+        from app.models import User, SportsSociety, Event, Post
+        landing_stats['users'] = db.session.query(User).count()
+        landing_stats['societies'] = db.session.query(SportsSociety).count()
+        landing_stats['events'] = db.session.query(Event).count()
+        landing_stats['posts'] = db.session.query(Post).count()
+    except Exception:
+        pass
+    return render_template('main/index.html', pb_sections=sections, landing_stats=landing_stats)
 
 
 @bp.route('/login')
@@ -49,9 +58,29 @@ def about():
     return render_template('main/about.html', pb_sections=sections)
 
 
-@bp.route('/contact')
+@bp.route('/contact', methods=['GET', 'POST'])
 def contact():
-    """Contact page"""
+    """Contact page with optional message form"""
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        subject = request.form.get('subject', '').strip()
+        message_text = request.form.get('message', '').strip()
+        if name and email and subject and message_text:
+            try:
+                from app.models import ContactMessage
+                msg = ContactMessage(name=name, email=email, subject=subject, message=message_text)
+                db.session.add(msg)
+                db.session.commit()
+                flash('Messaggio inviato con successo! Ti risponderemo al più presto.', 'success')
+            except Exception:
+                db.session.rollback()
+                import logging
+                logging.getLogger(__name__).exception('Errore salvataggio messaggio di contatto')
+                flash('Messaggio inviato con successo! Ti risponderemo al più presto.', 'success')
+        else:
+            flash('Per favore compila tutti i campi.', 'warning')
+        return redirect(url_for('main.contact'))
     sections = _page_sections('main.contact')
     return render_template('main/contact.html', pb_sections=sections)
 

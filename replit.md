@@ -32,6 +32,19 @@ main, auth, admin, ads, crm, events, social, backup, notifications, analytics, m
 
 ## Recent Improvements (Feb 7, 2026)
 
+### Landing Page Enhancement
+- Full landing page with hero, animated stats bar (users/societies/events/posts counters), 6 feature cards, "Come Funziona" 3-step section, testimonials with star ratings, and final CTA
+- Stats bar pulls real data from database via `landing_stats` context
+
+### About & Contact Pages
+- About page: mission statement, 6 value cards (Sicurezza, Semplicità, Indipendenza, Community, Accessibilità, Personalizzazione), 3 feature highlights with alternating layout, CTA section
+- Contact page: 3 info cards (email, orari, sede), contact form with subject dropdown (saves to `ContactMessage` model), FAQ accordion section with 5 common questions
+- `ContactMessage` model added to `app/models.py` for storing contact form submissions
+
+### VPS Deployment Guide
+- Updated `deploy/GUIDA_VPS.md` with automated installer instructions (`sonacip_install.sh`), SQLite usage section, and manual installation steps
+- Platform fully transferable: supports PostgreSQL (recommended) and SQLite (fallback), .env configuration, systemd services, Nginx with SSL
+
 ### UI/UX Polish
 - SVG favicon and PWA icons (trophy on #1877f2 background, all sizes: 16, 32, 180, 192, 512)
 - Consistent Facebook-blue (#1877f2) theme across all CSS and templates (replaced Bootstrap default #0d6efd)
@@ -117,9 +130,10 @@ main, auth, admin, ads, crm, events, social, backup, notifications, analytics, m
 - `Badge`, `UserBadge`, `UserPoints` - Gamification
 - `DashboardWidget`, `UserDashboardLayout` - Dashboard widgets
 - `FeePayment` - Online fee payments
+- `ContactMessage` - Contact form submissions
 
 ## External Dependencies
-- **Database:** PostgreSQL (Neon-backed via Replit)
+- **Database:** PostgreSQL (Neon-backed via Replit) or SQLite (fallback for VPS)
 - **Payment Processing:** Stripe
 - **Authentication:** Authlib (for OAuth)
 - **Email:** SMTP (for email confirmation and broadcast messages)

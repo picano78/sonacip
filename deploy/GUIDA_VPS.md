@@ -1,15 +1,36 @@
 # Guida Installazione SONACIP su VPS
 
 ## Requisiti Minimi
-- Ubuntu 22.04 / Debian 12 (o altra distro Linux)
+- Ubuntu 22.04+ / Debian 12+ (consigliato)
 - Python 3.11+
-- PostgreSQL 14+
-- Nginx
+- PostgreSQL 14+ (consigliato) oppure SQLite 3 (per installazioni leggere)
+- Nginx (reverse proxy)
 - 1 GB RAM, 10 GB disco
+
+## Installazione Automatica (consigliata)
+
+Per un'installazione automatica completa, usa lo script incluso:
+
+```bash
+# Copia il progetto sul server e lancia l'installer come root
+sudo SONACIP_DOMAIN=tuodominio.it \
+     SONACIP_LETSENCRYPT_EMAIL=tuaemail@email.com \
+     bash sonacip_install.sh
+```
+
+Lo script configura automaticamente: utente di sistema, venv Python, systemd, Nginx con SSL, backup automatici, logrotate e healthcheck.
+
+**Opzioni aggiuntive:**
+- `SONACIP_ENABLE_UFW=true` - Configura il firewall UFW
+- `SONACIP_ENABLE_REDIS=true` - Installa e configura Redis per il rate limiting
+
+> Se preferisci un'installazione manuale, segui i passaggi sotto.
 
 ---
 
-## 1. Preparazione Server
+## Installazione Manuale
+
+### 1. Preparazione Server
 
 ```bash
 # Aggiorna il sistema
@@ -200,6 +221,26 @@ sudo crontab -u sonacip -e
 # Aggiungi questa riga:
 0 3 * * * pg_dump sonacip > /var/www/sonacip/backups/sonacip_$(date +\%Y\%m\%d).sql 2>/dev/null
 ```
+
+## Uso con SQLite (alternativa a PostgreSQL)
+
+Se non vuoi installare PostgreSQL, SONACIP funziona anche con SQLite. Basta **non impostare** `DATABASE_URL` nel file `.env` (oppure rimuoverlo):
+
+```bash
+# Nel file .env, commenta o rimuovi la riga DATABASE_URL
+# DATABASE_URL=postgresql://...
+
+# L'app creerà automaticamente il file sonacip.db nella cartella del progetto
+```
+
+SQLite è ideale per:
+- Installazioni piccole (< 50 utenti)
+- Test e sviluppo locale
+- Server con risorse limitate
+
+> **Nota:** Per società con molti membri o accessi simultanei, PostgreSQL è fortemente consigliato.
+
+---
 
 ## Risoluzione Problemi
 

@@ -3555,3 +3555,18 @@ class FeePayment(db.Model):
 
     def __repr__(self):
         return f'<FeePayment {self.id} fee={self.fee_id} user={self.user_id} status={self.status}>'
+
+
+class ContactMessage(db.Model):
+    __tablename__ = 'contact_message'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    subject = db.Column(db.String(50), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<ContactMessage {self.id} from={self.email}>'

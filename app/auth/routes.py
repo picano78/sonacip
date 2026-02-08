@@ -164,7 +164,7 @@ def _enterprise_oidc_client():
 
 
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     """Login page"""
     if current_user.is_authenticated:

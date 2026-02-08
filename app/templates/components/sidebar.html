@@ -1,7 +1,11 @@
 <aside class="sidebar" id="mainSidebar">
     <div class="sidebar-brand">
         <a href="{{ url_for('main.index') }}" class="sidebar-brand-link">
-            <i class="bi {{ (site.navbar_brand_icon if site and site.navbar_brand_icon else 'bi-trophy-fill') }}"></i>
+            {% if appearance and appearance.logo_url %}
+                <img src="{{ appearance.logo_url }}" alt="Logo" style="height:24px; width:auto;" loading="lazy" decoding="async">
+            {% else %}
+                <i class="bi {{ (site.navbar_brand_icon if site and site.navbar_brand_icon else 'bi-trophy-fill') }}"></i>
+            {% endif %}
             <span class="sidebar-brand-text">{{ (site.navbar_brand_text if site and site.navbar_brand_text else 'SONACIP') }}</span>
         </a>
     </div>

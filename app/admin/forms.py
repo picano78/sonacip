@@ -2,6 +2,7 @@
 Admin forms
 """
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, SelectField, BooleanField, TextAreaField, PasswordField, IntegerField, DateTimeField
 from wtforms.validators import DataRequired, Email, Optional, Length
 from wtforms.validators import URL
@@ -128,6 +129,7 @@ class AppearanceSettingsForm(FlaskForm):
     secondary_color = StringField('Colore secondario', validators=[Optional(), Length(max=7)])
     accent_color = StringField('Colore accent', validators=[Optional(), Length(max=7)])
     font_family = StringField('Font', validators=[Optional(), Length(max=100)])
+    logo_upload = FileField('Carica logo', validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Solo immagini!')])
     logo_url = StringField('Logo URL', validators=[Optional(), URL()])
     favicon_url = StringField('Favicon URL', validators=[Optional(), URL()])
     layout_style = StringField('Layout', validators=[Optional(), Length(max=50)])

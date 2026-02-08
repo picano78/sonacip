@@ -11,6 +11,7 @@ from sqlalchemy import or_, and_, func, desc
 from app import db
 from app.cache import get_cache
 from app.admin.utils import admin_required
+from app.social.utils import save_picture
 from app.admin.forms import (
     AdsSettingsForm,
     AppearanceSettingsForm,
@@ -170,7 +171,16 @@ def appearance_settings():
         settings.secondary_color = form.secondary_color.data or settings.secondary_color
         settings.accent_color = form.accent_color.data or settings.accent_color
         settings.font_family = form.font_family.data or settings.font_family
-        settings.logo_url = form.logo_url.data or None
+        if form.logo_upload.data:
+            try:
+                saved_path = save_picture(form.logo_upload.data, folder='avatars', size=(512, 512))
+                settings.logo_url = url_for('static', filename='uploads/' + saved_path)
+            except Exception:
+                if current_app:
+                    current_app.logger.exception('Logo upload failed')
+                flash('Caricamento logo non riuscito.', 'danger')
+        else:
+            settings.logo_url = form.logo_url.data or None
         settings.favicon_url = form.favicon_url.data or None
         settings.layout_style = form.layout_style.data or settings.layout_style
         settings.updated_by = current_user.id

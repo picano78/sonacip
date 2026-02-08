@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // PWA install prompt handling (Android + iOS)
     let deferredPrompt = null;
     const installButtons = [
+        document.getElementById('installAppBtnTop'),
         document.getElementById('installAppBtn'),
         document.getElementById('installAppBtnGuest')
     ].filter(Boolean);

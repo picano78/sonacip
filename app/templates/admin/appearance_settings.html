@@ -131,7 +131,7 @@
         </div>
     </div>
 
-    <form method="post" id="themeForm">
+    <form method="post" id="themeForm" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
         
         <div class="row g-4">
@@ -249,6 +249,19 @@
                     <h5 class="mb-4"><i class="bi bi-image text-primary"></i> Logo e Favicon</h5>
                     
                     <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Logo (caricamento)</label>
+                            <div class="upload-zone mb-2" onclick="document.getElementById('logo_upload').click()">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                                <div class="fw-semibold">Carica un logo</div>
+                                <div class="text-muted" style="font-size:0.85rem;">PNG/JPG/WEBP - consigliato 512x512</div>
+                            </div>
+                            {{ form.logo_upload(class='form-control d-none', id='logo_upload') }}
+                            {% if settings and settings.logo_url %}
+                                <img src="{{ settings.logo_url }}" alt="Logo attuale" class="current-logo" style="max-width: 180px; height:auto;">
+                            {% endif %}
+                            <small class="text-muted d-block">Puoi anche inserire un URL qui sotto.</small>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">URL Logo</label>
                             {{ form.logo_url(class='form-control', placeholder='https://esempio.com/logo.png') }}

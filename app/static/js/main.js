@@ -610,4 +610,77 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // --- Real-time Notification & Message Polling ---
+    var userId = document.body.dataset.userId;
+    if (userId) {
+        var lastNotifCount = -1;
+        var lastMsgCount = -1;
+
+        function updateBadges() {
+            fetch('/notifications/unread-count', { credentials: 'same-origin' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var count = data.count || 0;
+                    document.querySelectorAll('.sidebar-link[href*="notifications"] .sidebar-badge, .notif-badge-live').forEach(function(b) {
+                        if (count > 0) {
+                            b.textContent = count > 99 ? '99+' : count;
+                            b.style.display = '';
+                        } else {
+                            b.style.display = 'none';
+                        }
+                    });
+                    if (lastNotifCount >= 0 && count > lastNotifCount) {
+                        showNotifToast(count - lastNotifCount);
+                    }
+                    lastNotifCount = count;
+                }).catch(function() {});
+
+            fetch('/messages/unread-count', { credentials: 'same-origin' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var count = data.count || 0;
+                    document.querySelectorAll('.sidebar-link[href*="messages"] .sidebar-badge, .msg-badge-live').forEach(function(b) {
+                        if (count > 0) {
+                            b.textContent = count > 99 ? '99+' : count;
+                            b.style.display = '';
+                        } else {
+                            b.style.display = 'none';
+                        }
+                    });
+                    lastMsgCount = count;
+                }).catch(function() {});
+        }
+
+        setInterval(updateBadges, 30000);
+        setTimeout(updateBadges, 3000);
+    }
+
+    // --- Notification Toast ---
+    function showNotifToast(newCount) {
+        var existing = document.getElementById('sonacipNotifToast');
+        if (existing) existing.remove();
+
+        var toast = document.createElement('div');
+        toast.id = 'sonacipNotifToast';
+        toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;background:linear-gradient(135deg,#1877f2,#42a5f5);color:#fff;padding:14px 22px;border-radius:14px;box-shadow:0 8px 32px rgba(24,119,242,0.35);font-size:0.95rem;font-weight:500;display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideInRight 0.4s ease;max-width:360px;';
+        toast.innerHTML = '<i class="bi bi-bell-fill" style="font-size:1.2rem;"></i><span>' + (newCount === 1 ? 'Hai una nuova notifica' : 'Hai ' + newCount + ' nuove notifiche') + '</span>';
+        toast.onclick = function() {
+            window.location.href = '/notifications/';
+        };
+        document.body.appendChild(toast);
+
+        setTimeout(function() {
+            toast.style.animation = 'slideOutRight 0.4s ease forwards';
+            setTimeout(function() { toast.remove(); }, 400);
+        }, 5000);
+    }
+
+    // Inject toast animation CSS once
+    if (!document.getElementById('notifToastCSS')) {
+        var s = document.createElement('style');
+        s.id = 'notifToastCSS';
+        s.textContent = '@keyframes slideInRight{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOutRight{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}';
+        document.head.appendChild(s);
+    }
 });

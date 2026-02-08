@@ -15,12 +15,12 @@
                         </div>
                         <div class="mb-3">
                             {{ form.event_type.label(class="form-label") }}
-                            {{ form.event_type(class="form-select") }}
+                            {{ form.event_type(class="form-select", id="event_type") }}
                         </div>
-                        <div class="card mb-3">
+                        <div class="card mb-3" id="event-detail-card">
                             <div class="card-body">
                                 <h5 class="card-title">Dettagli Partita/Torneo (opzionale)</h5>
-                                <div class="row">
+                                <div class="row" data-event-types="torneo">
                                     <div class="col-md-6 mb-3">
                                         {{ form.tournament_name.label(class="form-label") }}
                                         {{ form.tournament_name(class="form-control") }}
@@ -30,7 +30,7 @@
                                         {{ form.tournament_phase(class="form-control") }}
                                     </div>
                                 </div>
-                                <div class="row">
+                                <div class="row" data-event-types="partita">
                                     <div class="col-md-6 mb-3">
                                         {{ form.opponent_name.label(class="form-label") }}
                                         {{ form.opponent_name(class="form-control") }}
@@ -40,7 +40,7 @@
                                         {{ form.home_away(class="form-select") }}
                                     </div>
                                 </div>
-                                <div class="row">
+                                <div class="row" data-event-types="partita">
                                     <div class="col-md-6 mb-3">
                                         {{ form.score_for.label(class="form-label") }}
                                         {{ form.score_for(class="form-control") }}
@@ -50,7 +50,7 @@
                                         {{ form.score_against(class="form-control") }}
                                     </div>
                                 </div>
-                                <div class="mb-3">
+                                <div class="mb-3" data-event-types="torneo">
                                     {{ form.bracket_url.label(class="form-label") }}
                                     {{ form.bracket_url(class="form-control") }}
                                 </div>
@@ -86,4 +86,31 @@
         </div>
     </div>
 </div>
+<script>
+    (function() {
+        const eventTypeSelect = document.getElementById("event_type");
+        const detailCard = document.getElementById("event-detail-card");
+        const detailBlocks = document.querySelectorAll("[data-event-types]");
+        if (!eventTypeSelect || !detailCard || detailBlocks.length === 0) {
+            return;
+        }
+
+        const updateDetailVisibility = () => {
+            const selectedType = eventTypeSelect.value;
+            let anyVisible = false;
+            detailBlocks.forEach((block) => {
+                const types = (block.dataset.eventTypes || "").split(",").map((t) => t.trim());
+                const shouldShow = types.includes(selectedType);
+                block.style.display = shouldShow ? "" : "none";
+                if (shouldShow) {
+                    anyVisible = true;
+                }
+            });
+            detailCard.style.display = anyVisible ? "" : "none";
+        };
+
+        eventTypeSelect.addEventListener("change", updateDetailVisibility);
+        updateDetailVisibility();
+    })();
+</script>
 {% endblock %}

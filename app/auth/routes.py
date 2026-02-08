@@ -211,7 +211,13 @@ def login():
                 flash('Servizio temporaneamente non disponibile. Riprova tra qualche istante.', 'danger')
                 return redirect(url_for('auth.login'))
 
-        if user is None or not user.check_password(form.password.data):
+        if user is None:
+            current_app.logger.warning("Login failed: no user found for identifier=%r", identifier)
+            flash('Credenziali non valide', 'danger')
+            return redirect(url_for('auth.login'))
+
+        if not user.check_password(form.password.data):
+            current_app.logger.warning("Login failed: wrong password for user id=%s email=%s", user.id, user.email)
             flash('Credenziali non valide', 'danger')
             return redirect(url_for('auth.login'))
 

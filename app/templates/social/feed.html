@@ -27,7 +27,7 @@
                     {{ form.hidden_tag() }}
                     {{ form.content(class="form-control mb-3", rows="3", placeholder="Cosa vuoi condividere?") }}
                     <div class="row g-2 align-items-center mb-2">
-                        {% if feature_enabled('photos') %}
+                        {% if feature_enabled('photos') and (not social_settings or social_settings.allow_photos) %}
                         <div class="col">
                             {{ form.image(class="form-control") }}
                         </div>

@@ -211,6 +211,7 @@ def feed():
                          posts=posts,
                          pagination=pagination,
                          form=form,
+                         social_settings=settings,
                          ad=ad,
                          ad_token=ad_token,
                          sidebar_ad=sidebar_ad,

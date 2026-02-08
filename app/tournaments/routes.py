@@ -285,7 +285,7 @@ def view_tournament(tournament_id):
         )
         .filter_by(is_bracket=True)
         .order_by(TournamentMatch.round_number.asc(), TournamentMatch.position.asc())
-        .all()
+    i    .all()
     )
     bracket_rounds = {}
     for m in bracket_matches:

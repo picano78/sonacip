@@ -7,7 +7,7 @@ import io
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, Response, make_response
 from flask_login import login_required, current_user
 from flask import current_app
-from sqlalchemy import or_, and_, func, desc
+from sqlalchemy import or_, and_, func, desc, case
 from app import db
 from app.cache import get_cache
 from app.admin.utils import admin_required
@@ -1992,18 +1992,27 @@ def chat_monitor():
     search_q = request.args.get('q', '').strip()
     user_filter = request.args.get('user_id', 0, type=int)
 
+    user_a_expr = case(
+        (Message.sender_id <= Message.recipient_id, Message.sender_id),
+        else_=Message.recipient_id,
+    )
+    user_b_expr = case(
+        (Message.sender_id <= Message.recipient_id, Message.recipient_id),
+        else_=Message.sender_id,
+    )
+
     total_messages = Message.query.count()
     total_conversations = db.session.query(
-        func.least(Message.sender_id, Message.recipient_id),
-        func.greatest(Message.sender_id, Message.recipient_id)
+        user_a_expr,
+        user_b_expr,
     ).distinct().count()
     active_chatters = db.session.query(func.count(func.distinct(Message.sender_id))).scalar() or 0
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     today_messages = Message.query.filter(Message.created_at >= today_start).count()
 
     conversations_q = db.session.query(
-        func.least(Message.sender_id, Message.recipient_id).label('user_a'),
-        func.greatest(Message.sender_id, Message.recipient_id).label('user_b'),
+        user_a_expr.label('user_a'),
+        user_b_expr.label('user_b'),
         func.count(Message.id).label('msg_count'),
         func.max(Message.created_at).label('last_activity')
     ).group_by('user_a', 'user_b').order_by(desc('last_activity'))
@@ -2013,10 +2022,7 @@ def chat_monitor():
             or_(Message.sender_id == user_filter, Message.recipient_id == user_filter)
         )
 
-    count_subq = db.session.query(
-        func.least(Message.sender_id, Message.recipient_id).label('ua'),
-        func.greatest(Message.sender_id, Message.recipient_id).label('ub')
-    )
+    count_subq = db.session.query(user_a_expr.label('ua'), user_b_expr.label('ub'))
     if user_filter:
         count_subq = count_subq.filter(
             or_(Message.sender_id == user_filter, Message.recipient_id == user_filter)

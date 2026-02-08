@@ -500,7 +500,7 @@ def _auto_upgrade_db(app: Flask) -> None:
                 pass
             return False
 
-    def _fallback_create_all():
+    def _ensure_schema():
         try:
             with app.app_context():
                 from app import models as _models  # noqa: F401
@@ -512,6 +512,9 @@ def _auto_upgrade_db(app: Flask) -> None:
                 app.logger.exception("db.create_all fallback also failed")
             except Exception:
                 pass
+
+    def _fallback_create_all():
+        _ensure_schema()
 
     try:
         if is_sqlite:
@@ -542,17 +545,17 @@ def _auto_upgrade_db(app: Flask) -> None:
                     if not _try_alembic_upgrade():
                         _fallback_create_all()
                     else:
-                        with app.app_context():
-                            _sqlite_add_missing_columns(app, db)
+                        _ensure_schema()
             else:
                 if not _try_alembic_upgrade():
                     _fallback_create_all()
                 else:
-                    with app.app_context():
-                        _sqlite_add_missing_columns(app, db)
+                    _ensure_schema()
         else:
             if not _try_alembic_upgrade():
                 _fallback_create_all()
+            else:
+                _ensure_schema()
     except Exception:
         try:
             app.logger.exception("Auto-upgrade DB wrapper failed")

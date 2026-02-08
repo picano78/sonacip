@@ -10,6 +10,7 @@ from app import db, limiter
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.society_forms import SocietyInviteForm
 from app.social.utils import save_picture
+from app.social.feed_ranking import get_connection_ids, score_feed_posts
 from app.models import (
     User,
     Post,
@@ -44,7 +45,7 @@ from app.models import (
 from app.cache import get_cache
 from app.utils import permission_required, check_permission, get_active_society_id
 from app.utils import log_action
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 from app.ads.utils import choose_creative, make_token
 
@@ -54,6 +55,91 @@ bp = Blueprint('social', __name__, url_prefix='/social')
 @bp.route('/feed')
 @login_required
 @permission_required('social', 'comment')
+def _build_feed_page(user, page, per_page, settings, admin_access, scope_id, cache, cache_ttl):
+    cache_key = f"feed:{user.id}:p{page}:pp{per_page}"
+    cached_ids = cache.get(cache_key)
+
+    followed_ids = set()
+    try:
+        followed_ids = {u.id for u in user.followed.all()}
+    except Exception:
+        followed_ids = set()
+
+    friend_ids = get_connection_ids(user)
+    friend_ids -= followed_ids
+    if user.id in friend_ids:
+        friend_ids.remove(user.id)
+
+    def is_visible(p: Post) -> bool:
+        if admin_access:
+            return True
+        if p.user_id == user.id:
+            return True
+        if (p.audience or 'public') == 'public':
+            return True
+        if (p.audience or '') == 'direct' and p.target_user_id == user.id:
+            return True
+        if (p.audience or '') == 'society' and scope_id and p.society_id == scope_id:
+            return True
+        if (p.audience or '') == 'followers' and p.user_id in followed_ids:
+            return True
+        return False
+
+    if cached_ids is None:
+        start = (page - 1) * per_page
+        fetch_limit = per_page * 5 + start
+        now = datetime.utcnow()
+
+        promoted = Post.query.filter(
+            Post.is_promoted == True,
+            Post.promotion_ends_at.isnot(None),
+            Post.promotion_ends_at > now
+        ).options(joinedload(Post.author)).order_by(Post.created_at.desc()).limit(per_page * 2).all()
+
+        combined = []
+        seen = set()
+
+        def _extend_posts(query):
+            try:
+                rows = (query.options(joinedload(Post.author))
+                        .order_by(Post.created_at.desc())
+                        .limit(fetch_limit)
+                        .all())
+            except Exception:
+                rows = []
+            for p in rows:
+                if p.id not in seen:
+                    combined.append(p)
+                    seen.add(p.id)
+
+        for p in promoted:
+            if p.id not in seen:
+                combined.append(p)
+                seen.add(p.id)
+
+        base_ids = followed_ids | friend_ids | {user.id}
+        _extend_posts(Post.query.filter(Post.user_id.in_(base_ids)))
+        _extend_posts(Post.query.filter(~Post.user_id.in_(base_ids)))
+
+        combined = [p for p in combined if is_visible(p)]
+        sorted_posts = score_feed_posts(combined, user, followed_ids, friend_ids, settings)
+        total = len(sorted_posts)
+        end = start + per_page
+        page_ids = [p.id for p in sorted_posts[start:end]] if start < total else []
+        cache.set(cache_key, {'ids': page_ids, 'total': total}, ttl=cache_ttl)
+    else:
+        page_ids = cached_ids.get('ids', [])
+        total = cached_ids.get('total', 0)
+
+    if page_ids:
+        posts_map = {p.id: p for p in Post.query.filter(Post.id.in_(page_ids)).options(joinedload(Post.author)).all()}
+        posts = [posts_map[i] for i in page_ids if i in posts_map]
+    else:
+        posts = []
+
+    return posts, total
+
+
 def feed():
     """Main social feed"""
     page = request.args.get('page', 1, type=int)
@@ -66,112 +152,9 @@ def feed():
         flash('Il feed sociale è disabilitato dall\'amministratore.', 'warning')
         return redirect(url_for('main.dashboard'))
     
-    cache_key = f"feed:{current_user.id}:p{page}"
-    cached_ids = cache.get(cache_key)
-
-    start = (page - 1) * per_page
-    # Visibility scoping (athletes see only relevant communications)
     admin_access = check_permission(current_user, 'admin', 'access')
     scope_id = get_active_society_id(current_user)
-    followed_ids = set()
-    try:
-        followed_ids = {u.id for u in current_user.followed.all()}
-    except Exception:
-        followed_ids = set()
-
-    def is_visible(p: Post) -> bool:
-        if admin_access:
-            return True
-        if p.user_id == current_user.id:
-            return True
-        if (p.audience or 'public') == 'public':
-            return True
-        if (p.audience or '') == 'direct' and p.target_user_id == current_user.id:
-            return True
-        if (p.audience or '') == 'society' and scope_id and p.society_id == scope_id:
-            return True
-        if (p.audience or '') == 'followers' and p.user_id in followed_ids:
-            return True
-        return False
-
-    if cached_ids is None:
-        # Get posts from followed users + own posts
-        try:
-            posts_query = current_user.get_feed_posts()
-        except Exception as e:
-            print(f"Error loading feed: {e}")
-            posts_query = Post.query.filter_by(user_id=current_user.id)
-
-        fetch_limit = per_page * 5 + start
-        now = datetime.utcnow()
-        promoted = Post.query.filter(
-            Post.is_promoted == True,
-            Post.promotion_ends_at.isnot(None),
-            Post.promotion_ends_at > now
-        ).order_by(Post.created_at.desc()).limit(per_page * 2).all()
-
-        raw_posts = posts_query.order_by(Post.created_at.desc()).limit(fetch_limit).all()
-
-        combined = []
-        seen = set()
-        for p in promoted + raw_posts:
-            if p.id not in seen:
-                combined.append(p)
-                seen.add(p.id)
-        # Apply visibility filter in-memory (keeps existing query behavior stable)
-        combined = [p for p in combined if is_visible(p)]
-
-    boosted_types = []
-    muted_types = []
-    if settings:
-        try:
-            import json
-            boosted_types = json.loads(settings.boosted_types or '[]')
-            muted_types = json.loads(settings.muted_types or '[]')
-        except Exception:
-            boosted_types = []
-            muted_types = []
-
-    def engagement_score(p):
-        age_hours = max((datetime.utcnow() - p.created_at).total_seconds() / 3600, 0.1)
-        recency = max(0, 48 - age_hours) / 48  # 0-1
-        score = (p.likes_count * 2) + (p.comments_count * 3) + recency * 5
-        if p.is_promoted and p.promotion_ends_at and p.promotion_ends_at > datetime.utcnow():
-            score += 20
-        # Governance: boost tournament/match/official posts
-        if p.is_promoted and settings and settings.boost_official:
-            score += 5
-        # Priority tiers: official society content > tournaments/matches > automations > personal
-        if p.author and p.author.is_society():
-            score += 30
-        if p.post_type and any(token in p.post_type for token in ['tournament', 'match']):
-            score += 20
-        if p.post_type and 'automation' in p.post_type:
-            score += 10
-        if boosted_types:
-            for t in boosted_types:
-                if t in (p.post_type or ''):
-                    score += 5
-        if muted_types:
-            for t in muted_types:
-                if t in (p.post_type or ''):
-                    score -= 10
-        return score
-    if cached_ids is None:
-        sorted_posts = sorted(combined, key=engagement_score, reverse=True)
-        total = len(sorted_posts)
-        end = start + per_page
-        page_ids = [p.id for p in sorted_posts[start:end]] if start < len(sorted_posts) else []
-        cache.set(cache_key, {'ids': page_ids, 'total': total}, ttl=cache_ttl)
-    else:
-        page_ids = cached_ids.get('ids', [])
-        total = cached_ids.get('total', 0)
-
-    if page_ids:
-        posts_map = {p.id: p for p in Post.query.filter(Post.id.in_(page_ids)).options(joinedload(Post.author)).all()}
-        posts = [posts_map[i] for i in page_ids if i in posts_map]
-    else:
-        posts = []
+    posts, total = _build_feed_page(current_user, page, per_page, settings, admin_access, scope_id, cache, cache_ttl)
 
     # Autopilot banners (Facebook-like): pick creatives for placements.
     ad = None
@@ -241,12 +224,77 @@ def feed_posts():
     """Return partial post cards for infinite scroll (AJAX)"""
     page = request.args.get('page', 1, type=int)
     per_page = 10
+    cache_ttl = current_app.config.get('CACHE_DEFAULT_TTL', 120)
+    cache = get_cache()
+    settings = SocialSetting.query.first()
+    admin_access = check_permission(current_user, 'admin', 'access')
+    scope_id = get_active_society_id(current_user)
+    posts, _total = _build_feed_page(current_user, page, per_page, settings, admin_access, scope_id, cache, cache_ttl)
+
+    if not posts:
+        return ''
+
+    return render_template('social/feed_partial.html', posts=posts)
+
+
+@bp.route('/feed/updates')
+@login_required
+@permission_required('social', 'comment')
+def feed_updates():
+    """Return newest posts after a timestamp (AJAX polling)."""
+    since_raw = (request.args.get('since') or '').strip()
+    if not since_raw:
+        return ''
+
+    if since_raw.endswith('Z'):
+        since_raw = since_raw[:-1] + '+00:00'
 
     try:
-        posts_query = Post.query.order_by(Post.created_at.desc())
-        posts = posts_query.paginate(page=page, per_page=per_page, error_out=False).items
+        since_dt = datetime.fromisoformat(since_raw)
+        if since_dt.tzinfo is not None:
+            since_dt = since_dt.astimezone(timezone.utc).replace(tzinfo=None)
+    except Exception:
+        return ''
+
+    settings = SocialSetting.query.first()
+    admin_access = check_permission(current_user, 'admin', 'access')
+    scope_id = get_active_society_id(current_user)
+    followed_ids = set()
+    try:
+        followed_ids = {u.id for u in current_user.followed.all()}
+    except Exception:
+        followed_ids = set()
+    friend_ids = get_connection_ids(current_user)
+    friend_ids -= followed_ids
+    if current_user.id in friend_ids:
+        friend_ids.remove(current_user.id)
+
+    def is_visible(p: Post) -> bool:
+        if admin_access:
+            return True
+        if p.user_id == current_user.id:
+            return True
+        if (p.audience or 'public') == 'public':
+            return True
+        if (p.audience or '') == 'direct' and p.target_user_id == current_user.id:
+            return True
+        if (p.audience or '') == 'society' and scope_id and p.society_id == scope_id:
+            return True
+        if (p.audience or '') == 'followers' and p.user_id in followed_ids:
+            return True
+        return False
+
+    try:
+        posts = (Post.query
+                 .filter(Post.created_at > since_dt)
+                 .options(joinedload(Post.author))
+                 .all())
     except Exception:
         posts = []
+
+    posts = [p for p in posts if is_visible(p)]
+    posts = score_feed_posts(posts, current_user, followed_ids, friend_ids, settings)
+    posts = posts[:20]
 
     if not posts:
         return ''

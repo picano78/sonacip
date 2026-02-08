@@ -8,10 +8,12 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from flask import current_app
 from sqlalchemy import or_, and_, func, desc, case
+from sqlalchemy.orm import joinedload
 from app import db
 from app.cache import get_cache
 from app.admin.utils import admin_required
 from app.social.utils import save_picture
+from app.social.feed_ranking import get_connection_ids, rank_feed_posts
 from app.admin.forms import (
     AdsSettingsForm,
     AppearanceSettingsForm,
@@ -231,6 +233,67 @@ def social_settings():
         return redirect(url_for('admin.social_settings'))
 
     return render_template('admin/social_settings.html', form=form, settings=settings)
+
+
+@bp.route('/social-feed-algorithm', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def social_feed_algorithm():
+    settings = SocialSetting.query.first()
+    if not settings:
+        settings = SocialSetting()
+        db.session.add(settings)
+        db.session.commit()
+
+    if request.method == 'POST':
+        def _int(name, default):
+            try:
+                return int(request.form.get(name, default))
+            except Exception:
+                return default
+
+        def _float(name, default):
+            try:
+                return float(request.form.get(name, default))
+            except Exception:
+                return default
+
+        settings.priority_followed = _int('priority_followed', settings.priority_followed or 0)
+        settings.priority_friends = _int('priority_friends', settings.priority_friends or 1)
+        settings.priority_others = _int('priority_others', settings.priority_others or 2)
+        settings.weight_engagement = _float('weight_engagement', settings.weight_engagement or 1.0)
+        settings.weight_recency = _float('weight_recency', settings.weight_recency or 1.0)
+        settings.weight_promoted = _float('weight_promoted', settings.weight_promoted or 20.0)
+        settings.weight_official = _float('weight_official', settings.weight_official or 30.0)
+        settings.weight_tournament = _float('weight_tournament', settings.weight_tournament or 20.0)
+        settings.weight_automation = _float('weight_automation', settings.weight_automation or 10.0)
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        log_action('update_social_feed_algorithm', 'SocialSetting', settings.id, 'Updated feed ranking weights')
+        flash('Algoritmo feed aggiornato.', 'success')
+        return redirect(url_for('admin.social_feed_algorithm'))
+
+    preview_posts = []
+    try:
+        followed_ids = {u.id for u in current_user.followed.all()}
+    except Exception:
+        followed_ids = set()
+    friend_ids = get_connection_ids(current_user)
+    friend_ids -= followed_ids
+    if current_user.id in friend_ids:
+        friend_ids.remove(current_user.id)
+    try:
+        posts = (Post.query.options(joinedload(Post.author))
+                 .order_by(Post.created_at.desc())
+                 .limit(40)
+                 .all())
+        preview_posts = rank_feed_posts(posts, current_user, followed_ids, friend_ids, settings)[:10]
+    except Exception:
+        preview_posts = []
+
+    return render_template('admin/social_feed_algorithm.html', settings=settings, preview_posts=preview_posts)
 
 
 @bp.route('/storage-settings', methods=['GET', 'POST'])

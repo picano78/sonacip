@@ -1,4 +1,4 @@
-<div class="card mb-3">
+<div class="card mb-3" data-post-id="{{ post.id }}" data-created="{{ post.created_at.isoformat() if post.created_at else '' }}">
     <div class="card-body">
         <div class="d-flex align-items-start mb-3">
             <a href="{{ url_for('social.profile', user_id=post.author.id) }}">

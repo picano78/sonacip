@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block title %}Algoritmo Feed Social{% endblock %}
+
+{% block extra_css %}
+<style>
+.algo-card {
+    background: var(--bs-tertiary-bg);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.algo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.algo-row:last-child {
+    border-bottom: none;
+}
+.algo-label {
+    font-weight: 600;
+}
+.algo-desc {
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+}
+.algo-input {
+    width: 120px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0"><i class="bi bi-diagram-3"></i> Algoritmo Feed</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Torna al pannello
+        </a>
+    </div>
+
+    <form method="post">
+        {{ csrf_token() }}
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header"><strong>Priorita sorgenti</strong></div>
+                    <div class="card-body">
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Seguiti</div>
+                                <div class="algo-desc">Priorita post delle persone seguite</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="priority_followed" value="{{ settings.priority_followed or 0 }}" min="0" max="10" step="1">
+                        </div>
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Amici</div>
+                                <div class="algo-desc">Priorita delle connessioni accettate</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="priority_friends" value="{{ settings.priority_friends or 1 }}" min="0" max="10" step="1">
+                        </div>
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Resto</div>
+                                <div class="algo-desc">Priorita dei contenuti non seguiti</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="priority_others" value="{{ settings.priority_others or 2 }}" min="0" max="10" step="1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header"><strong>Pesi ranking</strong></div>
+                    <div class="card-body">
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Engagement</div>
+                                <div class="algo-desc">Peso di like e commenti</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="weight_engagement" value="{{ settings.weight_engagement or 1.0 }}" min="0" max="5" step="0.1">
+                        </div>
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Recency</div>
+                                <div class="algo-desc">Peso del tempo (post recenti)</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="weight_recency" value="{{ settings.weight_recency or 1.0 }}" min="0" max="5" step="0.1">
+                        </div>
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Promosso</div>
+                                <div class="algo-desc">Bonus per post sponsorizzati</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="weight_promoted" value="{{ settings.weight_promoted or 20.0 }}" min="0" max="100" step="1">
+                        </div>
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Ufficiale</div>
+                                <div class="algo-desc">Bonus per post ufficiali societa</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="weight_official" value="{{ settings.weight_official or 30.0 }}" min="0" max="100" step="1">
+                        </div>
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Tornei/Partite</div>
+                                <div class="algo-desc">Bonus per post sportivi</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="weight_tournament" value="{{ settings.weight_tournament or 20.0 }}" min="0" max="100" step="1">
+                        </div>
+                        <div class="algo-row">
+                            <div>
+                                <div class="algo-label">Automazioni</div>
+                                <div class="algo-desc">Bonus per post automatici</div>
+                            </div>
+                            <input class="form-control algo-input" type="number" name="weight_automation" value="{{ settings.weight_automation or 10.0 }}" min="0" max="100" step="1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3 d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Salva algoritmo
+            </button>
+        </div>
+    </form>
+
+    <div class="card mt-4">
+        <div class="card-header"><strong>Anteprima classifica (top 10)</strong></div>
+        <div class="card-body">
+            {% if preview_posts %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th>Autore</th>
+                                <th>Priorita</th>
+                                <th>Score</th>
+                                <th>Post</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in preview_posts %}
+                                {% set post = item.post %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ post.author.get_full_name() if post.author else 'Utente' }}</td>
+                                    <td>
+                                        {% if item.priority == (settings.priority_followed or 0) %}
+                                            Seguiti
+                                        {% elif item.priority == (settings.priority_friends or 1) %}
+                                            Amici
+                                        {% else %}
+                                            Resto
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ '%.1f'|format(item.score or 0) }}</td>
+                                    <td class="text-muted">{{ (post.content or '')[:80] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-muted">Nessun post disponibile per l'anteprima.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1111,6 +1111,17 @@ class SocialSetting(db.Model):
     boosted_types = db.Column(db.Text)
     muted_types = db.Column(db.Text)
 
+    # Feed algorithm tuning (super admin)
+    priority_followed = db.Column(db.Integer, default=0)
+    priority_friends = db.Column(db.Integer, default=1)
+    priority_others = db.Column(db.Integer, default=2)
+    weight_engagement = db.Column(db.Float, default=1.0)
+    weight_recency = db.Column(db.Float, default=1.0)
+    weight_promoted = db.Column(db.Float, default=20.0)
+    weight_official = db.Column(db.Float, default=30.0)
+    weight_tournament = db.Column(db.Float, default=20.0)
+    weight_automation = db.Column(db.Float, default=10.0)
+
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

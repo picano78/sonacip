@@ -474,6 +474,9 @@ body.has-sidebar footer {
     .sidebar {
         width: 240px;
         transform: translateX(-100%);
+        padding-top: env(safe-area-inset-top, 0);
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        padding-left: env(safe-area-inset-left, 0);
     }
     
     .sidebar.open {
@@ -495,10 +498,89 @@ body.has-sidebar footer {
         display: flex;
         align-items: center;
         justify-content: center;
+        top: calc(16px + env(safe-area-inset-top, 0));
+        left: calc(16px + env(safe-area-inset-left, 0));
     }
     
     body.has-sidebar {
         padding-left: 0;
+    }
+}
+
+/* iOS safe area insets */
+@supports (padding: env(safe-area-inset-top)) {
+    body {
+        padding-top: env(safe-area-inset-top);
+    }
+
+    footer {
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0)) !important;
+    }
+
+    .sidebar-toggle {
+        top: calc(16px + env(safe-area-inset-top, 0));
+    }
+}
+
+/* iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+    html {
+        height: -webkit-fill-available;
+    }
+    body {
+        min-height: -webkit-fill-available;
+    }
+    .sidebar {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+    main {
+        -webkit-overflow-scrolling: touch;
+    }
+    .sidebar-link,
+    .btn,
+    button,
+    a {
+        -webkit-tap-highlight-color: rgba(24, 119, 242, 0.15);
+    }
+    .sidebar-toggle {
+        -webkit-tap-highlight-color: transparent;
+    }
+    .sidebar-link {
+        min-height: 44px;
+    }
+    .btn {
+        min-height: 44px;
+    }
+}
+
+/* Mobile touch targets */
+@media (max-width: 767px) {
+    input, textarea, select {
+        font-size: 16px !important;
+    }
+    .sidebar-link {
+        min-height: 44px;
+        padding: 12px 20px;
+    }
+    .btn-sm {
+        min-height: 36px;
+        padding: 6px 12px;
+    }
+    .card {
+        border-radius: 14px;
+    }
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    .modal-content {
+        border-radius: 16px;
+    }
+    h1, .h1 { font-size: 1.75rem; }
+    h2, .h2 { font-size: 1.5rem; }
+    .container {
+        padding-left: 16px;
+        padding-right: 16px;
     }
 }
 

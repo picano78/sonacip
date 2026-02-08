@@ -394,7 +394,6 @@ document.addEventListener('DOMContentLoaded', function() {
             sidebarOverlay.classList.remove('active');
         });
         
-        // Close sidebar on nav link click (mobile)
         sidebar.querySelectorAll('.sidebar-link').forEach(link => {
             link.addEventListener('click', () => {
                 if (window.innerWidth < 768) {
@@ -403,6 +402,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        const SWIPE_THRESHOLD = 50;
+        const SWIPE_MAX_Y = 80;
+        const EDGE_ZONE = 30;
+
+        document.addEventListener('touchstart', function(e) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+        }, { passive: true });
+
+        document.addEventListener('touchend', function(e) {
+            if (window.innerWidth >= 768) return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+            const dt = Date.now() - touchStartTime;
+            if (dy > SWIPE_MAX_Y || dt > 400) return;
+
+            if (dx > SWIPE_THRESHOLD && touchStartX < EDGE_ZONE && !sidebar.classList.contains('open')) {
+                sidebar.classList.add('open');
+                sidebarOverlay.classList.add('active');
+            }
+            if (dx < -SWIPE_THRESHOLD && sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('active');
+            }
+        }, { passive: true });
     }
 
     // Sidebar collapse toggle for desktop (double-click on brand)

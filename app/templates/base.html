@@ -2,7 +2,11 @@
 <html lang="{{ current_language|default('it') }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
     <title>
       {% if page and page.title %}
         {{ page.title }}
@@ -159,7 +163,7 @@
     </footer>
 
     {% if privacy and privacy.banner_enabled %}
-    <div id="privacyCookieBar" data-privacy-version="{{ privacy.updated_at.timestamp() if (privacy and privacy.updated_at) else 'v1' }}" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999; background:rgba(30,58,95,0.97); backdrop-filter:blur(12px); color:#fff; box-shadow:0 -4px 24px rgba(0,0,0,0.18); border-top:1px solid rgba(255,255,255,0.08);">
+    <div id="privacyCookieBar" data-privacy-version="{{ privacy.updated_at.timestamp() if (privacy and privacy.updated_at) else 'v1' }}" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999; background:rgba(30,58,95,0.97); backdrop-filter:blur(12px); color:#fff; box-shadow:0 -4px 24px rgba(0,0,0,0.18); border-top:1px solid rgba(255,255,255,0.08); padding-bottom:env(safe-area-inset-bottom, 0);">
         <div class="container py-3">
             <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
                 <div class="d-flex align-items-start gap-3 flex-grow-1">

@@ -3,10 +3,12 @@
   "short_name": "SONACIP",
   "description": "La piattaforma #1 per la gestione dello sport dilettantistico italiano. Società, atleti, eventi e tornei.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1877f2",
   "orientation": "portrait",
+  "id": "/",
   "icons": [
     {
       "src": "/static/icons/icon-192x192.png",
@@ -19,6 +21,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [

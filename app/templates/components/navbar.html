@@ -131,6 +131,11 @@
                 </ul>
                 
                 <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="btn btn-light btn-sm ms-2 d-none" id="installAppBtn" type="button">
+                            <i class="bi bi-phone"></i> Scarica app
+                        </button>
+                    </li>
                     {% if society_scopes and society_scopes|length > 1 %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="societyScopeDropdown"
@@ -285,6 +290,11 @@
             {% else %}
                 <!-- Guest Navigation -->
                 <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <button class="btn btn-light btn-sm me-2 d-none" id="installAppBtnGuest" type="button">
+                            <i class="bi bi-phone"></i> Scarica app
+                        </button>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
                     </li>

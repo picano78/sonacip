@@ -1,6 +1,81 @@
 // Main JavaScript for SONACIP
 
 document.addEventListener('DOMContentLoaded', function() {
+    // PWA install prompt handling (Android + iOS)
+    let deferredPrompt = null;
+    const installButtons = [
+        document.getElementById('installAppBtn'),
+        document.getElementById('installAppBtnGuest')
+    ].filter(Boolean);
+    const installBanner = document.getElementById('pwaInstallBanner');
+    const installBannerAction = document.getElementById('pwaInstallAction');
+    const installBannerClose = document.getElementById('pwaInstallClose');
+    const installDesc = document.getElementById('pwaInstallDesc');
+    const installIosHint = document.getElementById('pwaInstallIosHint');
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    function showInstallUI(mode) {
+        if (isStandalone) return;
+        installButtons.forEach(btn => btn.classList.remove('d-none'));
+        if (installBanner) {
+            installBanner.style.display = 'flex';
+        }
+        if (installIosHint) {
+            installIosHint.classList.toggle('d-none', mode !== 'ios');
+        }
+        if (installDesc) {
+            installDesc.textContent = mode === 'ios'
+                ? 'Aggiungi SONACIP alla schermata home per usarla come app.'
+                : 'Aggiungi SONACIP alla schermata home per un accesso rapido.';
+        }
+        if (installBannerAction) {
+            installBannerAction.textContent = mode === 'ios' ? 'Come fare' : 'Installa';
+        }
+    }
+
+    function hideInstallUI() {
+        if (installBanner) {
+            installBanner.style.display = 'none';
+        }
+    }
+
+    function promptInstall() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => {
+                deferredPrompt = null;
+                hideInstallUI();
+            });
+            return;
+        }
+        if (isIos && !isStandalone) {
+            showInstallUI('ios');
+        }
+    }
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        showInstallUI('prompt');
+    });
+
+    installButtons.forEach(btn => {
+        btn.addEventListener('click', promptInstall);
+    });
+
+    if (installBannerAction) {
+        installBannerAction.addEventListener('click', promptInstall);
+    }
+
+    if (installBannerClose) {
+        installBannerClose.addEventListener('click', hideInstallUI);
+    }
+
+    if (isIos && !isStandalone) {
+        showInstallUI('ios');
+    }
+
     // Auto-hide alerts after 5 seconds
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(alert => {

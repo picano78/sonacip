@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ (site.navbar_brand_text if site and site.navbar_brand_text else 'SONACIP') }}">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
     <title>
@@ -80,6 +81,20 @@
     <main>
         {% block content %}{% endblock %}
     </main>
+
+    <div id="pwaInstallBanner" class="pwa-install-banner" style="display:none;">
+        <div class="pwa-install-card">
+            <div class="pwa-install-text">
+                <div class="pwa-install-title">Installa SONACIP sul telefono</div>
+                <div class="pwa-install-desc" id="pwaInstallDesc">Aggiungi SONACIP alla schermata home per un accesso rapido.</div>
+                <div class="pwa-install-ios d-none" id="pwaInstallIosHint">Su iPhone: apri Condividi e scegli Aggiungi a Home.</div>
+            </div>
+            <div class="pwa-install-actions">
+                <button id="pwaInstallAction" class="btn btn-primary btn-sm">Installa</button>
+                <button id="pwaInstallClose" class="btn btn-outline-light btn-sm">Chiudi</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Service Worker Registration -->
     <script>
@@ -210,6 +225,35 @@
         @keyframes slideDownBar {
             from { transform:translateY(0); opacity:1; }
             to { transform:translateY(100%); opacity:0; }
+        }
+        .pwa-install-banner {
+            position: fixed;
+            bottom: 24px;
+            left: 16px;
+            right: 16px;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .pwa-install-card {
+            width: min(920px, 100%);
+            background: linear-gradient(135deg, rgba(24,119,242,0.98), rgba(13,91,189,0.98));
+            color: #fff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+            pointer-events: auto;
+        }
+        .pwa-install-title { font-weight: 700; }
+        .pwa-install-desc, .pwa-install-ios { font-size: 0.9rem; opacity: 0.9; }
+        .pwa-install-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        @media (max-width: 768px) {
+            .pwa-install-card { flex-direction: column; align-items: flex-start; }
         }
     </style>
     

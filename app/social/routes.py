@@ -357,11 +357,18 @@ def promote_post(post_id):
         except Exception:
             return int(default)
 
-    settings = AdsSetting.query.first()
-    if not settings:
-        settings = AdsSetting()
-        db.session.add(settings)
-        db.session.commit()
+    try:
+        settings = AdsSetting.query.first()
+        if not settings:
+            settings = AdsSetting()
+            db.session.add(settings)
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        if current_app:
+            current_app.logger.exception('Ads settings load failed')
+        flash('Impossibile caricare le impostazioni sponsorizzazione.', 'danger')
+        return redirect(url_for('social.view_post', post_id=post_id))
 
     price_per_day = _safe_float(settings.price_per_day, 5.0)
     price_per_thousand_views = _safe_float(settings.price_per_thousand_views, 2.0)
@@ -375,24 +382,32 @@ def promote_post(post_id):
         cost = price_per_day * duration + (price_per_thousand_views / 1000.0) * views
 
         # Simulate payment success
-        payment = Payment(
-            user_id=current_user.id,
-            amount=cost,
-            currency='EUR',
-            status='completed',
-            payment_method='manual',
-            description=f'Promozione post {post.id}'
-        )
-        db.session.add(payment)
+        try:
+            payment = Payment(
+                user_id=current_user.id,
+                amount=cost,
+                currency='EUR',
+                status='completed',
+                payment_method='manual',
+                description=f'Promozione post {post.id}'
+            )
+            db.session.add(payment)
 
-        post.is_promoted = True
-        post.promotion_starts_at = datetime.utcnow()
-        post.promotion_ends_at = datetime.utcnow() + timedelta(days=duration)
-        post.promotion_views_target = views
-        post.promotion_amount = cost
-        post.promotion_views = 0
+            post.is_promoted = True
+            post.promotion_starts_at = datetime.utcnow()
+            post.promotion_ends_at = datetime.utcnow() + timedelta(days=duration)
+            post.promotion_views_target = views
+            post.promotion_amount = cost
+            post.promotion_views = 0
 
-        db.session.commit()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            if current_app:
+                current_app.logger.exception('Promote post failed')
+            flash('Impossibile attivare la sponsorizzazione in questo momento.', 'danger')
+            return redirect(url_for('social.view_post', post_id=post_id))
+
         flash(f'Post sponsorizzato! Costo €{cost:.2f}', 'success')
         return redirect(url_for('social.view_post', post_id=post_id))
 

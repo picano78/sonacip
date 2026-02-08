@@ -1,12 +1,13 @@
 """
 Main routes
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 from app import db
 from app.utils import check_permission
 from app.main.forms import DashboardEditForm, ContactAdminForm
+from types import SimpleNamespace
 
 bp = Blueprint('main', __name__, url_prefix='')
 
@@ -114,9 +115,14 @@ def dashboard():
     from app.main.dashboard_widgets import render_widget, get_widget_registry, get_widget_info, DEFAULT_WIDGETS
     import json
 
-    user_layouts = UserDashboardLayout.query.filter_by(
-        user_id=current_user.id, is_visible=True
-    ).order_by(UserDashboardLayout.position).all()
+    try:
+        user_layouts = UserDashboardLayout.query.filter_by(
+            user_id=current_user.id, is_visible=True
+        ).order_by(UserDashboardLayout.position).all()
+    except Exception:
+        if current_app:
+            current_app.logger.exception('Dashboard layouts load failed')
+        user_layouts = []
 
     rendered_widgets = []
     if user_layouts:
@@ -141,40 +147,53 @@ def dashboard():
                 'info': info,
             })
 
-    dash = Dashboard.query.filter_by(user_id=current_user.id, is_default=True).first()
-    if not dash:
-        dash = Dashboard.query.filter_by(user_id=current_user.id).order_by(Dashboard.id.asc()).first()
+    dash = None
+    try:
+        dash = Dashboard.query.filter_by(user_id=current_user.id, is_default=True).first()
+        if not dash:
+            dash = Dashboard.query.filter_by(user_id=current_user.id).order_by(Dashboard.id.asc()).first()
+
+        if not dash:
+            tpl = DashboardTemplate.query.filter_by(role_name=current_user.role).first()
+            if not tpl:
+                tpl = DashboardTemplate.query.filter_by(role_name=None).first()
+            widgets = []
+            layout = 'grid'
+            if tpl:
+                try:
+                    widgets = json.loads(tpl.widgets or '[]')
+                except Exception:
+                    widgets = []
+                layout = tpl.layout or 'grid'
+            if not widgets:
+                widgets = [
+                    {"type": "quick_links"},
+                    {"type": "stats"},
+                    {"type": "recent_notifications"},
+                ]
+            dash = Dashboard(
+                name='Il mio cruscotto',
+                description='Dashboard personale',
+                user_id=current_user.id,
+                widgets=json.dumps(widgets),
+                layout=layout,
+                is_default=True,
+            )
+            db.session.add(dash)
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        if current_app:
+            current_app.logger.exception('Dashboard load/create failed')
 
     if not dash:
-        tpl = DashboardTemplate.query.filter_by(role_name=current_user.role).first()
-        if not tpl:
-            tpl = DashboardTemplate.query.filter_by(role_name=None).first()
+        dash = SimpleNamespace(name='Cruscotto', description='Dashboard personale')
+        dash.get_widgets = lambda: []
+
+    try:
+        widgets = dash.get_widgets()
+    except Exception:
         widgets = []
-        layout = 'grid'
-        if tpl:
-            try:
-                widgets = json.loads(tpl.widgets or '[]')
-            except Exception:
-                widgets = []
-            layout = tpl.layout or 'grid'
-        if not widgets:
-            widgets = [
-                {"type": "quick_links"},
-                {"type": "stats"},
-                {"type": "recent_notifications"},
-            ]
-        dash = Dashboard(
-            name='Il mio cruscotto',
-            description='Dashboard personale',
-            user_id=current_user.id,
-            widgets=json.dumps(widgets),
-            layout=layout,
-            is_default=True,
-        )
-        db.session.add(dash)
-        db.session.commit()
-
-    widgets = dash.get_widgets()
 
     stats = {}
     try:

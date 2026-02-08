@@ -2,7 +2,7 @@
 CRM Routes
 Sports Society Member Management
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.crm.forms import (
@@ -909,37 +909,46 @@ def compliance():
     cert_filter = (request.args.get('cert') or '').strip()
     fee_filter = (request.args.get('fee') or '').strip()
 
-    cert_q = MedicalCertificate.query.options(joinedload(MedicalCertificate.user)).filter_by(society_id=scope_id)
-    fee_q = SocietyFee.query.options(joinedload(SocietyFee.user)).filter_by(society_id=scope_id)
-
-    today = date.today()
-    soon = today + timedelta(days=14)
-    if cert_filter == 'expiring':
-        cert_q = cert_q.filter(MedicalCertificate.expires_on <= soon, MedicalCertificate.status == 'valid')
-    elif cert_filter == 'expired':
-        cert_q = cert_q.filter(MedicalCertificate.expires_on < today)
-
-    if fee_filter == 'pending':
-        fee_q = fee_q.filter(SocietyFee.status == 'pending')
-    elif fee_filter == 'overdue':
-        fee_q = fee_q.filter(SocietyFee.status == 'pending', SocietyFee.due_on < today)
-
-    certificates = cert_q.order_by(MedicalCertificate.expires_on.asc()).all()
-    fees = fee_q.order_by(SocietyFee.due_on.asc()).all()
-
-    expiring_count = (
-        MedicalCertificate.query.filter_by(society_id=scope_id)
-        .filter(MedicalCertificate.status == 'valid', MedicalCertificate.expires_on <= soon, MedicalCertificate.expires_on >= today)
-        .count()
-    )
-    overdue_fees_count = (
-        SocietyFee.query.filter_by(society_id=scope_id)
-        .filter(SocietyFee.status == 'pending', SocietyFee.due_on < today)
-        .count()
-    )
-
+    certificates = []
+    fees = []
+    expiring_count = 0
+    overdue_fees_count = 0
     cert_form = MedicalCertificateForm(society_id=scope_id)
     fee_form = SocietyFeeForm(society_id=scope_id)
+
+    try:
+        cert_q = MedicalCertificate.query.options(joinedload(MedicalCertificate.user)).filter_by(society_id=scope_id)
+        fee_q = SocietyFee.query.options(joinedload(SocietyFee.user)).filter_by(society_id=scope_id)
+
+        today = date.today()
+        soon = today + timedelta(days=14)
+        if cert_filter == 'expiring':
+            cert_q = cert_q.filter(MedicalCertificate.expires_on <= soon, MedicalCertificate.status == 'valid')
+        elif cert_filter == 'expired':
+            cert_q = cert_q.filter(MedicalCertificate.expires_on < today)
+
+        if fee_filter == 'pending':
+            fee_q = fee_q.filter(SocietyFee.status == 'pending')
+        elif fee_filter == 'overdue':
+            fee_q = fee_q.filter(SocietyFee.status == 'pending', SocietyFee.due_on < today)
+
+        certificates = cert_q.order_by(MedicalCertificate.expires_on.asc()).all()
+        fees = fee_q.order_by(SocietyFee.due_on.asc()).all()
+
+        expiring_count = (
+            MedicalCertificate.query.filter_by(society_id=scope_id)
+            .filter(MedicalCertificate.status == 'valid', MedicalCertificate.expires_on <= soon, MedicalCertificate.expires_on >= today)
+            .count()
+        )
+        overdue_fees_count = (
+            SocietyFee.query.filter_by(society_id=scope_id)
+            .filter(SocietyFee.status == 'pending', SocietyFee.due_on < today)
+            .count()
+        )
+    except Exception:
+        if current_app:
+            current_app.logger.exception('Compliance load failed')
+        flash('Impossibile caricare la sezione compliance.', 'danger')
 
     return render_template(
         'crm/compliance.html',

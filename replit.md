@@ -30,7 +30,22 @@ main, auth, admin, ads, crm, events, social, backup, notifications, analytics, m
 - **Backup System:** Graphical UI with file upload/restore and hourly scheduling.
 - **Feature Control:** `PlatformFeature` model (34+ features) with super admin toggle, premium/free distinction.
 
-## Recent Improvements (Feb 7, 2026)
+## Recent Improvements (Feb 8, 2026)
+
+### iPhone/iOS Compatibility
+- Added iOS PWA meta tags: `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style` (black-translucent), `viewport-fit=cover`
+- Safe area insets for iPhone notch/home indicator on sidebar, sidebar toggle, footer, and cookie banner
+- Swipe gestures: swipe right from left edge to open sidebar, swipe left to close (touch events with passive listeners)
+- Input zoom prevention on mobile (16px font-size on inputs/textareas/selects for iOS)
+- 44px minimum touch targets on sidebar links and buttons (Apple HIG compliance)
+- `-webkit-overflow-scrolling: touch` for smooth scrolling in sidebar and main content
+- `overscroll-behavior: contain` on sidebar to prevent background scroll
+- `-webkit-tap-highlight-color` for subtle touch feedback
+- `-webkit-fill-available` height fix for iOS viewport calculation
+- Mobile-optimized cards (14px border-radius), modals (16px border-radius), and typography
+- PWA manifest updated with `scope`, `id`, and apple-touch-icon entry
+
+## Previous Improvements (Feb 7, 2026)
 
 ### Landing Page Enhancement
 - Full landing page with hero, animated stats bar (users/societies/events/posts counters), 6 feature cards, "Come Funziona" 3-step section, testimonials with star ratings, and final CTA

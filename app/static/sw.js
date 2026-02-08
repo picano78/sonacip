@@ -1,12 +1,15 @@
-const CACHE_NAME = 'sonacip-v2';
-const STATIC_CACHE = 'sonacip-static-v2';
+const CACHE_NAME = 'sonacip-v3';
+const STATIC_CACHE = 'sonacip-static-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/style.css',
   '/static/js/main.js',
+  '/static/icons/icon-192x192.png',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css'
 ];
+
+const OFFLINE_PAGE = `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"><title>SONACIP - Offline</title><style>*{margin:0;padding:0;box-sizing:border-box}body{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#1877f2 0%,#0d5bbd 100%);color:#fff;padding:24px;text-align:center}.container{max-width:400px}.icon{font-size:4rem;margin-bottom:1.5rem;opacity:.9}h1{font-size:1.5rem;margin-bottom:.75rem;font-weight:700}p{font-size:1rem;opacity:.85;margin-bottom:2rem;line-height:1.6}button{background:#fff;color:#1877f2;border:none;padding:14px 32px;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;min-height:44px;transition:transform .2s}button:active{transform:scale(.95)}</style></head><body><div class="container"><div class="icon">📡</div><h1>Sei offline</h1><p>Non è possibile raggiungere SONACIP in questo momento. Controlla la tua connessione internet e riprova.</p><button onclick="location.reload()">Riprova</button></div></body></html>`;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -66,7 +69,10 @@ self.addEventListener('fetch', (event) => {
         return response;
       }).catch(() => {
         return caches.match(event.request).then((cached) => {
-          return cached || caches.match('/');
+          if (cached) return cached;
+          return new Response(OFFLINE_PAGE, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' }
+          });
         });
       })
     );

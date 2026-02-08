@@ -587,17 +587,30 @@
                             <i class="bi bi-pencil"></i> Modifica Profilo
                         </a>
                         {% else %}
+                        {% if connection_status == 'blocked_by_other' %}
+                        <span class="conn-status-badge pending"><i class="bi bi-shield-lock me-1"></i>Non disponibile</span>
+                        {% else %}
+                        {% if connection_status != 'blocked' %}
                         <form method="POST" action="{{ url_for('social.follow' if not is_following else 'social.unfollow', user_id=user.id) }}" class="d-inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn-prof-primary">
                                 {% if is_following %}<i class="bi bi-check-lg"></i> Seguendo{% else %}<i class="bi bi-plus-lg"></i> Segui{% endif %}
                             </button>
                         </form>
+                        {% endif %}
 
                         {% if connection_status == 'connected' %}
                         <span class="conn-status-badge connected"><i class="bi bi-check-circle me-1"></i>Connesso</span>
+                        <form method="POST" action="{{ url_for('social.remove_connection', user_id=user.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-outline"><i class="bi bi-person-x"></i> Rimuovi</button>
+                        </form>
                         {% elif connection_status == 'pending_sent' %}
-                        <span class="conn-status-badge pending"><i class="bi bi-clock me-1"></i>In attesa</span>
+                        <span class="conn-status-badge pending"><i class="bi bi-clock me-1"></i>Invito inviato</span>
+                        <form method="POST" action="{{ url_for('social.cancel_connection', user_id=user.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-outline"><i class="bi bi-x-lg"></i> Annulla</button>
+                        </form>
                         {% elif connection_status == 'pending_received' %}
                         <form method="POST" action="{{ url_for('social.accept_connection', user_id=user.id) }}" class="d-inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -607,6 +620,8 @@
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn-prof-outline">Ignora</button>
                         </form>
+                        {% elif connection_status == 'blocked' %}
+                        <span class="conn-status-badge pending"><i class="bi bi-shield-lock me-1"></i>Hai bloccato</span>
                         {% else %}
                         <form method="POST" action="{{ url_for('social.send_connection', user_id=user.id) }}" class="d-inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -614,9 +629,35 @@
                         </form>
                         {% endif %}
 
+                        {% if connection_status != 'blocked' %}
                         <a href="{{ url_for('messages.compose') }}?to={{ user.id }}" class="btn-prof-secondary">
                             <i class="bi bi-chat-dots"></i> Messaggio
                         </a>
+                        {% endif %}
+
+                        <div class="dropdown d-inline">
+                            <button class="btn-prof-outline dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                Altro
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                {% if connection_status == 'blocked' %}
+                                <li>
+                                    <form method="POST" action="{{ url_for('social.unblock_connection', user_id=user.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="dropdown-item">Sblocca</button>
+                                    </form>
+                                </li>
+                                {% else %}
+                                <li>
+                                    <form method="POST" action="{{ url_for('social.block_connection', user_id=user.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="dropdown-item text-danger">Blocca</button>
+                                    </form>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        {% endif %}
                         {% endif %}
                     </div>
                 </div>

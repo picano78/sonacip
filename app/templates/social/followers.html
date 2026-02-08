@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ t('profile_connections') }} - {{ user.get_full_name() }}{% endblock %}
+{% block title %}{{ t('profile_followers') }} - {{ user.get_full_name() }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -80,21 +80,6 @@
     text-decoration: none;
     transition: all 0.2s;
 }
-.btn-remove {
-    background: transparent;
-    color: #6c757d;
-    border: 1px solid #6c757d;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    text-decoration: none;
-    transition: all 0.2s;
-}
-.btn-remove:hover {
-    background: rgba(108,117,125,0.1);
-    color: #6c757d;
-}
 .btn-message:hover {
     background: rgba(24,119,242,0.1);
     color: #1877f2;
@@ -118,7 +103,7 @@
     <div class="gradient-header">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
-                <h1 class="mb-1"><i class="bi bi-people-fill me-2"></i>{{ connections|length }} {{ t('profile_connections') }}</h1>
+                <h1 class="mb-1"><i class="bi bi-people-fill me-2"></i>{{ pagination.total }} {{ t('profile_followers') }}</h1>
                 <p class="mb-0 opacity-75">{{ user.get_full_name() }}</p>
             </div>
             <a href="{{ url_for('social.profile', user_id=user.id) }}" class="btn btn-outline-light">
@@ -128,40 +113,54 @@
     </div>
 
     <div class="connections-card">
-        {% if connections %}
-        {% for conn in connections %}
+        {% if followers %}
+        {% for follower in followers %}
         <div class="connection-item">
-            {% if conn.avatar %}
-            <img src="{{ url_for('static', filename='uploads/' + conn.avatar) }}" class="connection-avatar" alt="">
+            {% if follower.avatar %}
+            <img src="{{ url_for('static', filename='uploads/' + follower.avatar) }}" class="connection-avatar" alt="">
             {% else %}
             <div class="connection-avatar-placeholder"><i class="bi bi-person-fill"></i></div>
             {% endif %}
             <div class="connection-info">
-                <a href="{{ url_for('social.profile', user_id=conn.id) }}" class="connection-name">{{ conn.get_full_name() }}</a>
-                {% if conn.bio %}
-                <div class="connection-headline">{{ conn.bio[:100] }}{% if conn.bio|length > 100 %}...{% endif %}</div>
+                <a href="{{ url_for('social.profile', user_id=follower.id) }}" class="connection-name">{{ follower.get_full_name() }}</a>
+                {% if follower.bio %}
+                <div class="connection-headline">{{ follower.bio[:100] }}{% if follower.bio|length > 100 %}...{% endif %}</div>
                 {% endif %}
             </div>
-            <div class="d-flex gap-2">
-                <a href="{{ url_for('messages.conversations') }}?to={{ conn.id }}" class="btn-message">
-                    <i class="bi bi-chat-dots me-1"></i>{{ t('messages_new') }}
-                </a>
-                {% if current_user.id == user.id %}
-                <form method="POST" action="{{ url_for('social.remove_connection', user_id=conn.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-remove"><i class="bi bi-person-x me-1"></i>Rimuovi</button>
-                </form>
-                {% endif %}
-            </div>
+            <a href="{{ url_for('messages.conversations') }}?to={{ follower.id }}" class="btn-message">
+                <i class="bi bi-chat-dots me-1"></i>{{ t('messages_new') }}
+            </a>
         </div>
         {% endfor %}
         {% else %}
         <div class="empty-state">
             <i class="bi bi-people d-block"></i>
-            <h5>{{ t('profile_no_connections') }}</h5>
+            <h5>{{ t('profile_followers') }}</h5>
             <p>{{ t('profile_no_connections_desc') }}</p>
         </div>
         {% endif %}
     </div>
+
+    {% if pagination.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('social.followers', user_id=user.id, page=pagination.prev_num) }}">Precedente</a></li>
+            {% endif %}
+            {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+            <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                <a class="page-link" href="{{ url_for('social.followers', user_id=user.id, page=page_num) }}">{{ page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('social.followers', user_id=user.id, page=pagination.next_num) }}">Successivo</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 {% endblock %}

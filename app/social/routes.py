@@ -638,6 +638,8 @@ def profile(user_id):
                 connection_status = 'connected'
             elif conn.status == 'pending':
                 connection_status = 'pending_sent' if conn.requester_id == current_user.id else 'pending_received'
+            elif conn.status == 'blocked':
+                connection_status = 'blocked' if conn.requester_id == current_user.id else 'blocked_by_other'
     
     pending_connections = []
     if current_user.is_authenticated and current_user.id == user.id:
@@ -1609,6 +1611,10 @@ def endorse_skill(skill_id):
 @login_required
 def send_connection(user_id):
     """Send connection request"""
+    user = User.query.get_or_404(user_id)
+    if user.is_admin() and not current_user.is_admin():
+        flash('Non puoi collegarti a questo profilo.', 'warning')
+        return redirect(url_for('social.feed'))
     if user_id == current_user.id:
         flash('Non puoi collegarti a te stesso.', 'warning')
         return redirect(url_for('social.profile', user_id=user_id))
@@ -1619,19 +1625,41 @@ def send_connection(user_id):
     ).first()
     
     if existing:
-        flash('Richiesta di collegamento già esistente.', 'info')
-        return redirect(url_for('social.profile', user_id=user_id))
-    
-    conn = Connection(
-        requester_id=current_user.id,
-        addressee_id=user_id,
-        status='pending'
-    )
-    db.session.add(conn)
+        if existing.status == 'accepted':
+            flash('Sei già collegato con questo utente.', 'info')
+            return redirect(url_for('social.profile', user_id=user_id))
+        if existing.status == 'pending':
+            if existing.requester_id == current_user.id:
+                flash('Richiesta di collegamento già inviata.', 'info')
+            else:
+                flash('Hai una richiesta in attesa da questo utente.', 'info')
+            return redirect(url_for('social.profile', user_id=user_id))
+        if existing.status == 'blocked':
+            flash('Non puoi inviare una richiesta di collegamento a questo utente.', 'warning')
+            return redirect(url_for('social.profile', user_id=user_id))
+        if existing.status == 'rejected':
+            cooldown_days = 7
+            if existing.updated_at and datetime.utcnow() - existing.updated_at < timedelta(days=cooldown_days):
+                remaining = (existing.updated_at + timedelta(days=cooldown_days) - datetime.utcnow()).days + 1
+                flash(f'Puoi reinviare la richiesta tra {remaining} giorni.', 'warning')
+                return redirect(url_for('social.profile', user_id=user_id))
+            # Re-open a previously rejected connection request.
+            existing.requester_id = current_user.id
+            existing.addressee_id = user_id
+            existing.status = 'pending'
+            existing.updated_at = datetime.utcnow()
+            conn = existing
+    else:
+        conn = Connection(
+            requester_id=current_user.id,
+            addressee_id=user_id,
+            status='pending'
+        )
+        db.session.add(conn)
     
     notif = Notification(
         user_id=user_id,
-        type='connection_request',
+        notification_type='social',
         title='Nuova richiesta di collegamento',
         message=f'{current_user.get_full_name()} vuole collegarsi con te',
         link=url_for('social.profile', user_id=current_user.id)
@@ -1657,7 +1685,7 @@ def accept_connection(user_id):
     
     notif = Notification(
         user_id=user_id,
-        type='connection_accepted',
+        notification_type='social',
         title='Collegamento accettato',
         message=f'{current_user.get_full_name()} ha accettato la tua richiesta di collegamento',
         link=url_for('social.profile', user_id=current_user.id)
@@ -1684,6 +1712,90 @@ def reject_connection(user_id):
     
     flash('Richiesta ignorata.', 'info')
     return redirect(url_for('social.profile', user_id=current_user.id))
+
+
+@bp.route('/connection/block/<int:user_id>', methods=['POST'])
+@login_required
+def block_connection(user_id):
+    """Block a user from connecting or interacting via connections."""
+    user = User.query.get_or_404(user_id)
+    if user.is_admin() and not current_user.is_admin():
+        flash('Non puoi bloccare questo profilo.', 'warning')
+        return redirect(url_for('social.feed'))
+    if user_id == current_user.id:
+        flash('Non puoi bloccare te stesso.', 'warning')
+        return redirect(url_for('social.profile', user_id=user_id))
+
+    conn = Connection.query.filter(
+        ((Connection.requester_id == current_user.id) & (Connection.addressee_id == user_id)) |
+        ((Connection.requester_id == user_id) & (Connection.addressee_id == current_user.id))
+    ).first()
+
+    if conn:
+        conn.requester_id = current_user.id
+        conn.addressee_id = user_id
+        conn.status = 'blocked'
+        conn.updated_at = datetime.utcnow()
+    else:
+        conn = Connection(
+            requester_id=current_user.id,
+            addressee_id=user_id,
+            status='blocked'
+        )
+        db.session.add(conn)
+
+    db.session.commit()
+    flash('Utente bloccato.', 'success')
+    return redirect(url_for('social.profile', user_id=user_id))
+
+
+@bp.route('/connection/unblock/<int:user_id>', methods=['POST'])
+@login_required
+def unblock_connection(user_id):
+    """Unblock a previously blocked user."""
+    conn = Connection.query.filter_by(requester_id=current_user.id, addressee_id=user_id, status='blocked').first()
+    if not conn:
+        flash('Blocco non trovato.', 'warning')
+        return redirect(url_for('social.profile', user_id=user_id))
+
+    db.session.delete(conn)
+    db.session.commit()
+    flash('Utente sbloccato.', 'success')
+    return redirect(url_for('social.profile', user_id=user_id))
+
+
+@bp.route('/connection/cancel/<int:user_id>', methods=['POST'])
+@login_required
+def cancel_connection(user_id):
+    """Cancel a pending connection request sent by current user."""
+    conn = Connection.query.filter_by(requester_id=current_user.id, addressee_id=user_id, status='pending').first()
+    if not conn:
+        flash('Richiesta non trovata.', 'warning')
+        return redirect(url_for('social.profile', user_id=user_id))
+
+    db.session.delete(conn)
+    db.session.commit()
+    flash('Richiesta annullata.', 'success')
+    return redirect(url_for('social.profile', user_id=user_id))
+
+
+@bp.route('/connection/remove/<int:user_id>', methods=['POST'])
+@login_required
+def remove_connection(user_id):
+    """Remove an existing connection (mutual)."""
+    conn = Connection.query.filter(
+        ((Connection.requester_id == current_user.id) & (Connection.addressee_id == user_id)) |
+        ((Connection.requester_id == user_id) & (Connection.addressee_id == current_user.id)),
+        Connection.status == 'accepted'
+    ).first()
+    if not conn:
+        flash('Collegamento non trovato.', 'warning')
+        return redirect(url_for('social.profile', user_id=user_id))
+
+    db.session.delete(conn)
+    db.session.commit()
+    flash('Collegamento rimosso.', 'success')
+    return redirect(url_for('social.profile', user_id=user_id))
 
 
 @bp.route('/connections/<int:user_id>')

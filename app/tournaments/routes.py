@@ -2,13 +2,13 @@
 from datetime import datetime, timedelta
 import math
 import random
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import false
 from sqlalchemy.orm import joinedload
 from app import db, limiter
 from app.tournaments.forms import TournamentForm, TournamentTeamForm, TournamentMatchForm, MatchScoreForm
-from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity
+from app.models import Tournament, TournamentTeam, TournamentMatch, TournamentStanding, SocietyCalendarEvent, Post, CRMActivity, SocialSetting
 from app.automation.utils import execute_rules
 from app.utils import permission_required, check_permission, log_action, get_active_society_id
 
@@ -57,13 +57,15 @@ def _trigger(event_type, payload):
     execute_rules(event_type, payload)
 
 
-def _post_kwargs_for_tournament(tournament: Tournament) -> dict:
+def _post_kwargs_for_tournament(tournament: Tournament, audience_override: str | None = None) -> dict:
     """
     Return Post scoping kwargs depending on tournament ownership.
     - Society tournaments: scoped to society feed (audience='society').
     - Personal tournaments: public feed (audience='public').
     """
     if tournament.society_id:
+        if audience_override == "public":
+            return {"audience": "public", "society_id": None, "is_public": True}
         return {"audience": "society", "society_id": tournament.society_id, "is_public": False}
     return {"audience": "public", "society_id": None, "is_public": True}
 
@@ -306,6 +308,14 @@ def publish_tournament(tournament_id):
     tournament = Tournament.query.get_or_404(tournament_id)
     _require_manage(tournament)
 
+    try:
+        settings = SocialSetting.query.first()
+        if settings and not settings.feed_enabled and not check_permission(current_user, 'admin', 'access'):
+            flash("Pubblicazione sul feed social disabilitata dall'amministratore.", 'warning')
+            return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
+    except Exception:
+        pass
+
     teams_count = 0
     try:
         teams_count = tournament.teams.count()
@@ -321,18 +331,26 @@ def publish_tournament(tournament_id):
         when = ""
 
     content = f'Nuovo torneo: "{tournament.name}" — formato {fmt} — {teams_count} squadre{when}.'
+    audience = request.form.get('audience') if tournament.society_id else None
     if _recent_duplicate_post(current_user.id, "tournament_announcement", content):
         flash('Torneo già pubblicato di recente.', 'info')
         return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
 
-    post = Post(
+        post = Post(
         user_id=current_user.id,
         content=content,
         post_type="tournament_announcement",
-        **_post_kwargs_for_tournament(tournament),
+            **_post_kwargs_for_tournament(tournament, audience_override=audience),
     )
-    db.session.add(post)
-    db.session.commit()
+    try:
+        db.session.add(post)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        if current_app:
+            current_app.logger.exception("Tournament publish failed")
+        flash('Errore durante la pubblicazione sul social.', 'danger')
+        return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
 
     try:
         log_action(
@@ -371,14 +389,22 @@ def publish_match_result(tournament_id, match_id):
         flash('Risultato già pubblicato di recente.', 'info')
         return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
 
+    audience = request.form.get('audience') if tournament.society_id else None
     post = Post(
         user_id=current_user.id,
         content=content,
         post_type="tournament_result",
-        **_post_kwargs_for_tournament(tournament),
+        **_post_kwargs_for_tournament(tournament, audience_override=audience),
     )
-    db.session.add(post)
-    db.session.commit()
+    try:
+        db.session.add(post)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        if current_app:
+            current_app.logger.exception("Tournament match publish failed")
+        flash('Errore durante la pubblicazione del risultato.', 'danger')
+        return redirect(url_for('tournaments.view_tournament', tournament_id=tournament.id))
 
     try:
         log_action(

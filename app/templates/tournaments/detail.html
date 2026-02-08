@@ -34,6 +34,20 @@
     transition: all 0.3s ease;
     background: #fff;
   }
+  .td-stat {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 16px;
+    background: #fff;
+  }
+  .td-stat .label { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.06em; }
+  .td-stat .value { font-weight: 700; font-size: 1.1rem; }
+  .td-action-card {
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+    background: #f8fafc;
+  }
   .td-card:hover {
     box-shadow: 0 8px 24px rgba(24,119,242,0.12);
     border-color: #1877f2;
@@ -60,6 +74,33 @@
     box-shadow: 0 4px 12px rgba(24,119,242,0.12);
     border-color: #1877f2;
   }
+  .td-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .td-step {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px;
+    background: #fff;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .td-step .dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e7f0ff;
+    color: #1877f2;
+    font-weight: 700;
+  }
+  .td-step .title { font-weight: 700; }
+  .td-step .desc { font-size: 0.85rem; color: #6c757d; }
 </style>
 {% endblock %}
 
@@ -82,8 +123,14 @@
         <span class="chip-stat">{{ teams|length }} squadre</span>
         <span class="chip-stat">{{ matches|length }} partite</span>
         {% if can_manage %}
-          <form method="post" action="{{ url_for('tournaments.publish_tournament', tournament_id=tournament.id) }}">
+          <form method="post" action="{{ url_for('tournaments.publish_tournament', tournament_id=tournament.id) }}" class="d-flex align-items-center gap-2">
             {{ csrf_token() }}
+            {% if tournament.society_id %}
+              <select name="audience" class="form-select form-select-sm" style="width:auto;">
+                <option value="society">Solo societa</option>
+                <option value="public">Pubblico</option>
+              </select>
+            {% endif %}
             <button class="btn btn-sm btn-outline-light" type="submit">
               <i class="bi bi-megaphone"></i> Pubblica torneo
             </button>
@@ -93,9 +140,60 @@
     </div>
   </div>
 
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3">
+      <div class="td-stat">
+        <div class="label">Formato</div>
+        <div class="value">{{ tournament.format }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="td-stat">
+        <div class="label">Stato</div>
+        <div class="value">{{ tournament.status }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="td-stat">
+        <div class="label">Squadre</div>
+        <div class="value">{{ teams|length }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="td-stat">
+        <div class="label">Partite</div>
+        <div class="value">{{ matches|length }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="td-steps mb-4">
+    <a class="td-step text-decoration-none" href="#teams">
+      <div class="dot">1</div>
+      <div>
+        <div class="title">Aggiungi squadre</div>
+        <div class="desc">Crea le squadre e imposta il seeding.</div>
+      </div>
+    </a>
+    <a class="td-step text-decoration-none" href="#matches">
+      <div class="dot">2</div>
+      <div>
+        <div class="title">Programma partite</div>
+        <div class="desc">Crea o genera le partite del torneo.</div>
+      </div>
+    </a>
+    <a class="td-step text-decoration-none" href="#standings">
+      <div class="dot">3</div>
+      <div>
+        <div class="title">Aggiorna classifica</div>
+        <div class="desc">Inserisci risultati e pubblica.</div>
+      </div>
+    </a>
+  </div>
+
   <div class="row g-3 mb-4">
     <div class="col-md-8">
-      <div class="td-card h-100 p-3">
+      <div class="td-card h-100 p-3" id="matches">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <span class="fw-semibold"><i class="bi bi-controller me-1"></i> Partite</span>
           {% if can_manage %}
@@ -143,9 +241,15 @@
                 {% else %}
                   <div class="fw-bold fs-5">{{ m.home_score }} - {{ m.away_score }}</div>
                   {% if can_manage and m.status == 'played' %}
-                    <form method="post" action="{{ url_for('tournaments.publish_match_result', tournament_id=tournament.id, match_id=m.id) }}">
+                    <form method="post" action="{{ url_for('tournaments.publish_match_result', tournament_id=tournament.id, match_id=m.id) }}" class="d-flex align-items-center gap-2">
                       {{ csrf_token() }}
-                      <button class="btn btn-sm btn-outline-primary ms-2" type="submit">
+                      {% if tournament.society_id %}
+                        <select name="audience" class="form-select form-select-sm" style="width:auto;">
+                          <option value="society">Solo societa</option>
+                          <option value="public">Pubblico</option>
+                        </select>
+                      {% endif %}
+                      <button class="btn btn-sm btn-outline-primary" type="submit">
                         <i class="bi bi-send"></i> Pubblica risultato
                       </button>
                     </form>
@@ -160,7 +264,7 @@
       </div>
 
       {% if tournament.format == 'knockout' %}
-        <div class="td-card p-3 mt-3">
+        <div class="td-card p-3 mt-3" id="bracket">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="fw-semibold"><i class="bi bi-diagram-3 me-1"></i> Tabellone (piramidale)</span>
             {% if can_manage %}
@@ -205,7 +309,7 @@
       {% endif %}
 
       {% if tournament.format == 'round_robin' and can_manage %}
-        <div class="td-card p-3 mt-3">
+        <div class="td-card p-3 mt-3" id="schedule">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="fw-semibold"><i class="bi bi-calendar3 me-1"></i> Calendario automatico</span>
           </div>
@@ -237,7 +341,21 @@
       {% endif %}
     </div>
     <div class="col-md-4">
-      <div class="td-card p-3 mb-3">
+      <div class="td-action-card mb-3">
+        <div class="fw-semibold mb-2"><i class="bi bi-lightning me-1"></i> Gestione rapida</div>
+        <div class="d-flex flex-column gap-2">
+          <a class="btn btn-sm btn-outline-primary" href="#matches"><i class="bi bi-flag"></i> Vai alle partite</a>
+          <a class="btn btn-sm btn-outline-primary" href="#teams"><i class="bi bi-people"></i> Vai alle squadre</a>
+          <a class="btn btn-sm btn-outline-primary" href="#standings"><i class="bi bi-bar-chart"></i> Vai alla classifica</a>
+          {% if tournament.format == 'knockout' %}
+            <a class="btn btn-sm btn-outline-primary" href="#bracket"><i class="bi bi-diagram-3"></i> Tabellone</a>
+          {% endif %}
+          {% if tournament.format == 'round_robin' %}
+            <a class="btn btn-sm btn-outline-primary" href="#schedule"><i class="bi bi-calendar3"></i> Calendario</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="td-card p-3 mb-3" id="teams">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="fw-semibold">Squadre</span>
           {% if can_manage %}
@@ -277,7 +395,7 @@
           </form>
         {% endif %}
       </div>
-      <div class="td-card p-3">
+      <div class="td-card p-3" id="standings">
         <div class="fw-semibold mb-2">Classifica</div>
         <div class="table-responsive">
           <table class="table mb-0 align-middle">

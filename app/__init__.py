@@ -735,6 +735,7 @@ def create_app(config_name: str | None = None) -> Flask:
         site = None
         page = None
         nav_links = None
+        sidebar_menu_config = None
         society_scopes = []
         active_society = None
         active_society_id = None
@@ -813,10 +814,10 @@ def create_app(config_name: str | None = None) -> Flask:
 
         except Exception:
             # DB not initialized yet or models unavailable: keep templates functional.
-            def get_unread_notifications_count():
+            def _get_unread_notifications_count():
                 return 0
 
-            def get_unread_messages_count():
+            def _get_unread_messages_count():
                 return 0
 
         from app.translations import t, get_user_language, SUPPORTED_LANGUAGES, LANGUAGE_NAMES, LANGUAGE_FLAGS

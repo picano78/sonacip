@@ -2,17 +2,6 @@
 {% block title %}Feed - SONACIP{% endblock %}
 {% block content %}
 <div class="container my-4">
-    <div class="section-hero mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div>
-            <div class="pill mb-2"><i class="bi bi-stars"></i> Social Hub</div>
-            <h1 class="h4 mb-0">Feed della società</h1>
-            <p class="text-muted mb-0">Condividi novità, momenti e risultati in un layout più visuale.</p>
-        </div>
-        <div class="d-flex gap-2">
-            <span class="chip">{{ pagination.total or posts|length }} contenuti</span>
-            <span class="chip">{{ current_user.username }}</span>
-        </div>
-    </div>
     <div class="row">
         <div class="col-md-8">
             <div class="glass-card p-3 mb-4 card-hover">
@@ -41,13 +30,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex gap-2 small text-muted">
-                            {% if feature_enabled('photos') %}
-                            <span><i class="bi bi-image"></i> Media</span>
-                            {% endif %}
-                            <span><i class="bi bi-geo"></i> Location</span>
-                        </div>
+                    <div class="d-flex justify-content-end align-items-center">
                         <button type="submit" class="btn btn-dark">
                             <i class="bi bi-send"></i> Pubblica
                         </button>
@@ -58,9 +41,6 @@
             {% if posts %}
                 {% for post in posts %}
                     {% include 'components/post_card.html' %}
-                    {% if ad and ad_token and loop.index == 5 %}
-                      {% include 'components/ad_card.html' %}
-                    {% endif %}
                 {% endfor %}
             {% else %}
                 <div class="glass-card p-4 text-center">
@@ -115,45 +95,7 @@
             </script>
         </div>
         <div class="col-md-4">
-            <div class="glass-card p-3 mb-3 card-hover">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <div class="avatar-ring">
-                        <img src="{{ current_user.avatar_url or url_for('static', filename='img/default-avatar.png') }}" class="rounded-circle avatar-sm" alt="avatar" loading="lazy" decoding="async">
-                    </div>
-                    <div>
-                        <div class="fw-semibold">{{ current_user.get_full_name() }}</div>
-                        <div class="small text-muted">@{{ current_user.username }}</div>
-                    </div>
-                </div>
-                <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="btn btn-sm btn-dark w-100">Vedi Profilo</a>
-            </div>
-            <a href="{{ url_for('marketplace.index') }}" class="text-decoration-none d-block mb-3">
-                <div class="glass-card p-3 card-hover" style="background: linear-gradient(135deg, #1877f2, #0a4da3); color: #fff; border: none;">
-                    <div class="d-flex align-items-center gap-3 mb-2">
-                        <div style="width:44px; height:44px; background:rgba(255,255,255,0.2); border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                            <i class="bi bi-shop-window" style="font-size:1.4rem;"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold" style="font-size:1.05rem;">Marketplace</div>
-                            <div class="small" style="opacity:0.85;">Compra e vendi nella community</div>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <span class="btn btn-sm btn-light fw-semibold" style="pointer-events:none;">
-                            <i class="bi bi-plus-lg me-1"></i> Vendi qualcosa
-                        </span>
-                        <span class="btn btn-sm btn-outline-light" style="pointer-events:none;">
-                            <i class="bi bi-search me-1"></i> Sfoglia
-                        </span>
-                    </div>
-                </div>
-            </a>
-            {% if sidebar_ad and sidebar_ad_token %}
-              {% set ad = sidebar_ad %}
-              {% set ad_token = sidebar_ad_token %}
-              {% include 'components/ad_card.html' %}
-            {% endif %}
-            <div class="glass-card p-3 card-hover">
+            <div class="glass-card p-3 card-hover mb-3">
                 <div class="fw-semibold mb-2">Azioni rapide</div>
                 <div class="d-flex flex-wrap gap-2">
                     <a class="btn btn-sm btn-outline-dark" href="{{ url_for('marketplace.index') }}"><i class="bi bi-shop-window"></i> Marketplace</a>

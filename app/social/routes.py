@@ -345,17 +345,34 @@ def promote_post(post_id):
         flash('Puoi sponsorizzare solo i tuoi post.', 'danger')
         return redirect(url_for('social.view_post', post_id=post_id))
 
+    def _safe_float(value, default):
+        try:
+            return float(value)
+        except Exception:
+            return float(default)
+
+    def _safe_int(value, default):
+        try:
+            return int(value)
+        except Exception:
+            return int(default)
+
     settings = AdsSetting.query.first()
     if not settings:
         settings = AdsSetting()
         db.session.add(settings)
         db.session.commit()
 
+    price_per_day = _safe_float(settings.price_per_day, 5.0)
+    price_per_thousand_views = _safe_float(settings.price_per_thousand_views, 2.0)
+    default_duration = _safe_int(settings.default_duration_days, 7)
+    default_views = _safe_int(settings.default_views, 500)
+
     form = PromotePostForm()
     if form.validate_on_submit():
-        duration = form.duration_days.data
-        views = form.views.data
-        cost = settings.price_per_day * duration + (settings.price_per_thousand_views / 1000.0) * views
+        duration = _safe_int(form.duration_days.data, default_duration)
+        views = _safe_int(form.views.data, default_views)
+        cost = price_per_day * duration + (price_per_thousand_views / 1000.0) * views
 
         # Simulate payment success
         payment = Payment(
@@ -381,12 +398,12 @@ def promote_post(post_id):
 
     # Prefill defaults
     if not form.duration_days.data:
-        form.duration_days.data = settings.default_duration_days
+        form.duration_days.data = default_duration
     if not form.views.data:
-        form.views.data = settings.default_views
+        form.views.data = default_views
 
-    cost_preview = settings.price_per_day * (form.duration_days.data or settings.default_duration_days) + \
-        (settings.price_per_thousand_views / 1000.0) * (form.views.data or settings.default_views)
+    cost_preview = price_per_day * (form.duration_days.data or default_duration) + \
+        (price_per_thousand_views / 1000.0) * (form.views.data or default_views)
 
     return render_template('social/promote.html', form=form, post=post, settings=settings, cost_preview=cost_preview)
 

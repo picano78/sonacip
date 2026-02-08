@@ -38,6 +38,41 @@ def cmd_seed(_args) -> int:
     return 0
 
 
+def cmd_reset_password(args) -> int:
+    from app import db
+    from app.models import User
+
+    app = _create_app()
+    with app.app_context():
+        user = User.query.filter_by(email=args.email).first()
+        if not user:
+            print(f"Utente con email '{args.email}' non trovato.")
+            return 1
+        user.set_password(args.password)
+        db.session.commit()
+        print(f"Password aggiornata per {user.email} (id={user.id}, role={user.role})")
+    return 0
+
+
+def cmd_check_admin(_args) -> int:
+    from app import db
+    from app.models import User
+
+    app = _create_app()
+    with app.app_context():
+        admins = User.query.filter_by(role='super_admin').all()
+        if not admins:
+            admins = User.query.filter(User.role.in_(['super_admin', 'admin'])).all()
+        if not admins:
+            print("Nessun super admin trovato. Esegui: python manage.py seed")
+            return 1
+        for u in admins:
+            can_login = u.check_password("Simone78")
+            print(f"id={u.id} email={u.email} username={u.username} role={u.role} "
+                  f"active={u.is_active} password_ok={can_login}")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="manage.py")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -49,6 +84,14 @@ def main(argv: list[str]) -> int:
 
     seed_parser = sub.add_parser("seed", help="Seed baseline data")
     seed_parser.set_defaults(func=cmd_seed)
+
+    rp_parser = sub.add_parser("reset-password", help="Reset password per un utente")
+    rp_parser.add_argument("email", help="Email dell'utente")
+    rp_parser.add_argument("password", help="Nuova password")
+    rp_parser.set_defaults(func=cmd_reset_password)
+
+    ca_parser = sub.add_parser("check-admin", help="Verifica stato super admin")
+    ca_parser.set_defaults(func=cmd_check_admin)
 
     args = parser.parse_args(argv)
     return args.func(args)

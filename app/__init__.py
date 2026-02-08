@@ -31,7 +31,20 @@ migrate = Migrate()
 mail = Mail()
 csrf = CSRFProtect()
 # Production-safe: rate limiting should never crash critical endpoints (e.g. /auth/login)
-limiter = Limiter(key_func=get_remote_address, swallow_errors=True)
+def _get_real_ip():
+    """
+    Return the real client IP even behind a reverse proxy (nginx).
+    Falls back to REMOTE_ADDR if no forwarded header is present.
+    """
+    from flask import request
+    return (
+        request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or request.headers.get("X-Real-Ip", "")
+        or request.remote_addr
+        or "127.0.0.1"
+    )
+
+limiter = Limiter(key_func=_get_real_ip, swallow_errors=True)
 oauth = OAuth()
 
 # Global SQLAlchemy hook: enforce safe pragmas on SQLite connections.
@@ -438,6 +451,22 @@ def _sqlite_add_missing_columns(app: Flask, _db) -> None:
             pass
 
 
+def _auto_seed(app: Flask) -> None:
+    """
+    Run idempotent seed on startup so roles + super admin always exist.
+    Safe to call multiple times (seed_defaults is idempotent).
+    """
+    try:
+        from app.core.seed import seed_defaults
+        with app.app_context():
+            summary = seed_defaults(app)
+            created = sum(v for v in summary.values() if isinstance(v, int))
+            if created:
+                app.logger.info("Auto-seed completed: %s", summary)
+    except Exception:
+        app.logger.exception("Auto-seed failed (non-fatal)")
+
+
 def _auto_upgrade_db(app: Flask) -> None:
     """
     Ensure DB schema is upgraded without manual commands.
@@ -581,6 +610,8 @@ def create_app(config_name: str | None = None) -> Flask:
 
     # Keep schema aligned automatically (production SQLite).
     _auto_upgrade_db(app)
+
+    _auto_seed(app)
 
     login_manager.login_view = 'auth.login'
 

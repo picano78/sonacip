@@ -5,7 +5,7 @@ from app.models import Document, DocumentFolder, User
 from app.utils import admin_required, log_action
 from datetime import datetime
 import os
-import uuid
+import secrets
 from werkzeug.utils import secure_filename
 
 bp = Blueprint('documents', __name__, url_prefix='/documents')
@@ -155,7 +155,7 @@ def upload():
 
         original_name = secure_filename(f.filename)
         ext = original_name.rsplit('.', 1)[1].lower() if '.' in original_name else ''
-        unique_name = f'{uuid.uuid4().hex}.{ext}' if ext else uuid.uuid4().hex
+        unique_name = f'{secrets.token_hex(16)}.{ext}' if ext else secrets.token_hex(16)
         save_path = os.path.join(UPLOAD_DIR, unique_name)
         f.save(save_path)
 

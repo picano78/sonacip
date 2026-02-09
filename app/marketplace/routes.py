@@ -7,7 +7,7 @@ Marketplace routes
 from __future__ import annotations
 
 import os
-import uuid
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
@@ -45,7 +45,7 @@ def _save_listing_image(file_storage):
     upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, '..', 'uploads')), 'marketplace')
     os.makedirs(upload_dir, exist_ok=True)
     ext = file_storage.filename.rsplit('.', 1)[1].lower()
-    unique_name = f"{uuid.uuid4().hex}.{ext}"
+    unique_name = f"{secrets.token_hex(16)}.{ext}"
     filepath = os.path.join(upload_dir, unique_name)
     try:
         img = Image.open(file_storage)

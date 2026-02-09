@@ -1,6 +1,6 @@
 """Simple caching utilities with optional Redis backend."""
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 import json
 from flask import current_app
@@ -24,7 +24,7 @@ class SimpleCache:
             return None
         
         if key in self._timestamps:
-            if datetime.utcnow() > self._timestamps[key]:
+            if datetime.now(timezone.utc) > self._timestamps[key]:
                 # Expired
                 del self._cache[key]
                 del self._timestamps[key]
@@ -35,7 +35,7 @@ class SimpleCache:
     def set(self, key: str, value: Any, ttl: int = 300):
         """Set cached value with TTL in seconds."""
         self._cache[key] = value
-        self._timestamps[key] = datetime.utcnow() + timedelta(seconds=ttl)
+        self._timestamps[key] = datetime.now(timezone.utc) + timedelta(seconds=ttl)
     
     def delete(self, key: str):
         """Delete cached value."""
@@ -49,7 +49,7 @@ class SimpleCache:
     
     def cleanup(self):
         """Remove expired entries."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired_keys = [k for k, v in self._timestamps.items() if now > v]
         for key in expired_keys:
             self.delete(key)
@@ -73,7 +73,8 @@ class RedisBackedCache(SimpleCache):
             if cached_bytes:
                 try:
                     return json.loads(cached_bytes)
-                except Exception:
+                except (json.JSONDecodeError, TypeError) as e:
+                    current_app.logger.debug(f"Cache JSON decode failed: {e}")
                     pass  # Fallback to in-memory payloads
         return super().get(key)
 

@@ -72,7 +72,7 @@ from app.models import (
     Role,
     EmailConfirmationSetting,
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import json
 from app.utils import log_action
@@ -136,10 +136,10 @@ def dashboard():
         'total_posts': Post.query.count(),
         'total_events': Event.query.count(),
         'active_users_today': User.query.filter(
-            User.last_seen >= datetime.utcnow() - timedelta(days=1)
+            User.last_seen >= datetime.now(timezone.utc) - timedelta(days=1)
         ).count(),
         'new_users_week': User.query.filter(
-            User.created_at >= datetime.utcnow() - timedelta(days=7)
+            User.created_at >= datetime.now(timezone.utc) - timedelta(days=7)
         ).count(),
         'pending_events': Event.query.filter_by(status='scheduled').count()
     }
@@ -186,7 +186,7 @@ def appearance_settings():
         settings.favicon_url = form.favicon_url.data or None
         settings.layout_style = form.layout_style.data or settings.layout_style
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         log_action('update_appearance', 'AppearanceSetting', settings.id, 'Updated global appearance')
@@ -225,7 +225,7 @@ def social_settings():
         settings.boosted_types = form.boosted_types.data or None
         settings.muted_types = form.muted_types.data or None
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         log_action('update_social_settings', 'SocialSetting', settings.id, 'Updated social governance')
@@ -268,7 +268,7 @@ def social_feed_algorithm():
         settings.weight_tournament = _float('weight_tournament', settings.weight_tournament or 20.0)
         settings.weight_automation = _float('weight_automation', settings.weight_automation or 10.0)
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         log_action('update_social_feed_algorithm', 'SocialSetting', settings.id, 'Updated feed ranking weights')
@@ -327,7 +327,7 @@ def storage_settings():
         settings.max_video_mb = _int(form.max_video_mb.data, settings.max_video_mb)
 
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         log_action('update_storage_settings', 'StorageSetting', settings.id, 'Updated storage settings')
@@ -355,7 +355,7 @@ def site_customization():
         settings.footer_html = form.footer_html.data or None
         settings.custom_css = form.custom_css.data or None
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         log_action('update_site_customization', 'SiteCustomization', settings.id, 'Updated global site customization')
@@ -402,7 +402,7 @@ def navigation():
 
         row.value_json = form.links_json.data
         row.updated_by = current_user.id
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc)
         db.session.add(row)
         db.session.commit()
         log_action('update_navigation', 'CustomizationKV', row.id, 'Updated navbar links')
@@ -440,7 +440,7 @@ def smtp_settings():
             settings.password = form.password.data
         settings.default_sender = form.default_sender.data or settings.default_sender
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         log_action('update_smtp_settings', 'SmtpSetting', settings.id, 'Updated SMTP settings')
 
@@ -468,7 +468,7 @@ def platform_fees():
     """Configure platform take-rate settings."""
     settings = PlatformFeeSetting.query.first()
     if not settings:
-        settings = PlatformFeeSetting(take_rate_percent=5, min_fee_cents=0, currency='EUR', updated_at=datetime.utcnow(), updated_by=current_user.id)
+        settings = PlatformFeeSetting(take_rate_percent=5, min_fee_cents=0, currency='EUR', updated_at=datetime.now(timezone.utc), updated_by=current_user.id)
         db.session.add(settings)
         db.session.commit()
 
@@ -487,7 +487,7 @@ def platform_fees():
         settings.min_fee_cents = max(0, min_fee_cents)
         settings.currency = currency or 'EUR'
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         log_action('update_platform_fees', 'PlatformFeeSetting', settings.id, f'pct={settings.take_rate_percent} min={settings.min_fee_cents}')
         flash('Impostazioni aggiornate.', 'success')
@@ -519,7 +519,7 @@ def platform_transactions():
 def payment_settings():
     settings = PlatformPaymentSetting.query.first()
     if not settings:
-        settings = PlatformPaymentSetting(payout_method='stripe', currency='EUR', updated_at=datetime.utcnow(), updated_by=current_user.id)
+        settings = PlatformPaymentSetting(payout_method='stripe', currency='EUR', updated_at=datetime.now(timezone.utc), updated_by=current_user.id)
         db.session.add(settings)
         db.session.commit()
 
@@ -541,7 +541,7 @@ def payment_settings():
         except (ValueError, TypeError):
             settings.min_payout_amount = 50.0
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         log_action('update_payment_settings', 'PlatformPaymentSetting', settings.id, f'method={settings.payout_method}')
         flash('Impostazioni pagamento salvate.', 'success')
@@ -707,14 +707,14 @@ def broadcast_compose():
                 user_id=u.id,
                 message_id=msg.id,
                 delivery_status='sent',
-                sent_at=datetime.utcnow(),
+                sent_at=datetime.now(timezone.utc),
             )
             db.session.add(recipient)
             count += 1
 
         broadcast.total_recipients = count
         broadcast.status = 'sent'
-        broadcast.sent_at = datetime.utcnow()
+        broadcast.sent_at = datetime.now(timezone.utc)
         db.session.commit()
 
         if send_email:
@@ -808,7 +808,7 @@ def enterprise_sso():
     """Enterprise SSO (OIDC) configuration."""
     sso = EnterpriseSSOSetting.query.first()
     if not sso:
-        sso = EnterpriseSSOSetting(enabled=False, scopes='openid email profile', updated_at=datetime.utcnow(), updated_by=current_user.id)
+        sso = EnterpriseSSOSetting(enabled=False, scopes='openid email profile', updated_at=datetime.now(timezone.utc), updated_by=current_user.id)
         db.session.add(sso)
         db.session.commit()
 
@@ -819,7 +819,7 @@ def enterprise_sso():
         sso.client_secret = (request.form.get('client_secret') or '').strip() or None
         sso.scopes = (request.form.get('scopes') or 'openid email profile').strip()
         sso.updated_by = current_user.id
-        sso.updated_at = datetime.utcnow()
+        sso.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         log_action('update_enterprise_sso', 'EnterpriseSSOSetting', sso.id, f'enabled={sso.enabled}')
         flash('SSO aggiornato.', 'success')
@@ -884,7 +884,7 @@ def edit_page():
         settings.hero_subtitle = form.hero_subtitle.data or None
         settings.body_html = form.body_html.data or None
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
 
         db.session.add(settings)
         db.session.commit()
@@ -973,7 +973,7 @@ def dashboard_templates():
         tpl.layout = form.layout.data
         tpl.widgets = form.widgets.data
         tpl.updated_by = current_user.id
-        tpl.updated_at = datetime.utcnow()
+        tpl.updated_at = datetime.now(timezone.utc)
         db.session.add(tpl)
         db.session.commit()
         log_action('update_dashboard_template', 'DashboardTemplate', tpl.id, f'Updated template for role={tpl.role_name}')
@@ -1002,7 +1002,7 @@ def privacy_settings():
         settings.privacy_url = form.privacy_url.data or None
         settings.cookie_url = form.cookie_url.data or None
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         
         # Log admin action
@@ -1038,14 +1038,16 @@ def users():
     
     # Apply filters
     if form.query.data:
-        search = f"%{form.query.data}%"
+        from app.utils import escape_like
+        query_safe = escape_like(form.query.data)
+        search = f"%{query_safe}%"
         query = query.filter(
             or_(
-                User.username.ilike(search),
-                User.email.ilike(search),
-                User.first_name.ilike(search),
-                User.last_name.ilike(search),
-                User.company_name.ilike(search)
+                User.username.ilike(search, escape='\\'),
+                User.email.ilike(search, escape='\\'),
+                User.first_name.ilike(search, escape='\\'),
+                User.last_name.ilike(search, escape='\\'),
+                User.company_name.ilike(search, escape='\\')
             )
         )
     
@@ -1123,7 +1125,7 @@ def edit_user(user_id):
         user.is_active = form.is_active.data
         user.is_verified = form.is_verified.data
         user.is_banned = form.is_banned.data
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(timezone.utc)
         
         db.session.commit()
         
@@ -1285,7 +1287,7 @@ def ads_settings():
         settings.default_duration_days = int(form.default_duration_days.data)
         settings.default_views = int(form.default_views.data)
         settings.updated_by = current_user.id
-        settings.updated_at = datetime.utcnow()
+        settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         flash('Tariffe inserzioni aggiornate.', 'success')
         return redirect(url_for('admin.ads_settings'))
@@ -1323,7 +1325,7 @@ def ads_manager():
                 max_impressions=campaign_form.max_impressions.data,
                 max_clicks=campaign_form.max_clicks.data,
                 created_by=current_user.id,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             db.session.add(c)
             db.session.commit()
@@ -1350,7 +1352,7 @@ def ads_manager():
                 weight=int(creative_form.weight.data or 100),
                 is_active=bool(creative_form.is_active.data),
                 created_by=current_user.id,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             db.session.add(cr)
             db.session.commit()
@@ -1396,27 +1398,29 @@ def search():
     if not query:
         return render_template('admin/search.html', results={})
     
-    search = f"%{query}%"
+    from app.utils import escape_like
+    query_safe = escape_like(query)
+    search = f"%{query_safe}%"
     
     # Search users
     users = User.query.filter(
         or_(
-            User.username.ilike(search),
-            User.email.ilike(search),
-            User.first_name.ilike(search),
-            User.last_name.ilike(search),
-            User.company_name.ilike(search)
+            User.username.ilike(search, escape='\\'),
+            User.email.ilike(search, escape='\\'),
+            User.first_name.ilike(search, escape='\\'),
+            User.last_name.ilike(search, escape='\\'),
+            User.company_name.ilike(search, escape='\\')
         )
     ).limit(20).all()
     
     # Search posts
-    posts = Post.query.filter(Post.content.ilike(search)).limit(20).all()
+    posts = Post.query.filter(Post.content.ilike(search, escape='\\')).limit(20).all()
     
     # Search events
     events = Event.query.filter(
         or_(
-            Event.title.ilike(search),
-            Event.description.ilike(search)
+            Event.title.ilike(search, escape='\\'),
+            Event.description.ilike(search, escape='\\')
         )
     ).limit(20).all()
     
@@ -1436,8 +1440,8 @@ def search():
 def stats():
     """Detailed statistics page"""
     days = 30
-    start_date = datetime.utcnow() - timedelta(days=days)
-    now = datetime.utcnow()
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
+    now = datetime.now(timezone.utc)
 
     # Cache heavy stats briefly (admin page can be expensive on large DBs)
     cache = get_cache()
@@ -1454,7 +1458,7 @@ def stats():
     signup_map = {}
     # Initialize all days with 0
     for i in range(days):
-        d = (datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d')
+        d = (datetime.now(timezone.utc) - timedelta(days=i)).strftime('%Y-%m-%d')
         signup_map[d] = 0
             
     try:
@@ -1515,7 +1519,7 @@ def stats():
         # Activity Trend (Daily)
         activity_map = {}
         for i in range(days):
-            d = (datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d')
+            d = (datetime.now(timezone.utc) - timedelta(days=i)).strftime('%Y-%m-%d')
             activity_map[d] = {'posts': 0, 'events': 0}
             
         posts_period = Post.query.filter(Post.created_at >= start_date).all()
@@ -1809,7 +1813,7 @@ def feature_control_update():
         f.is_premium = premium_key in request.form
         f.is_enabled = enabled_key in request.form
         f.updated_by = current_user.id
-        f.updated_at = datetime.utcnow()
+        f.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     log_action('update_feature_control', 'PlatformFeature', 0, 'Updated premium/free feature settings')
     flash('Configurazione funzionalità aggiornata con successo!', 'success')
@@ -1827,7 +1831,7 @@ def feature_toggle(feature_id):
     elif action == 'toggle_enabled':
         f.is_enabled = not f.is_enabled
     f.updated_by = current_user.id
-    f.updated_at = datetime.utcnow()
+    f.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     status = 'Premium' if f.is_premium else 'Free'
     log_action('toggle_feature', 'PlatformFeature', f.id, f'{f.name} -> {status}')
@@ -1844,7 +1848,7 @@ def feature_control_reset():
             pf.is_premium = fdef['is_premium']
             pf.is_enabled = True
             pf.updated_by = current_user.id
-            pf.updated_at = datetime.utcnow()
+            pf.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     log_action('reset_feature_control', 'PlatformFeature', 0, 'Reset features to default')
     flash('Funzionalità ripristinate ai valori predefiniti.', 'success')
@@ -1876,7 +1880,7 @@ def export_users():
         ])
     resp = make_response(output.getvalue())
     resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    resp.headers['Content-Disposition'] = f'attachment; filename=utenti_sonacip_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    resp.headers['Content-Disposition'] = f'attachment; filename=utenti_sonacip_{datetime.now(timezone.utc).strftime("%Y%m%d")}.csv'
     log_action('export_users', 'User', 0, f'Exported {len(users)} users to CSV')
     return resp
 
@@ -1905,7 +1909,7 @@ def export_societies():
         ])
     resp = make_response(output.getvalue())
     resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    resp.headers['Content-Disposition'] = f'attachment; filename=societa_sonacip_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    resp.headers['Content-Disposition'] = f'attachment; filename=societa_sonacip_{datetime.now(timezone.utc).strftime("%Y%m%d")}.csv'
     log_action('export_societies', 'Society', 0, f'Esportate {len(societies)} società in CSV')
     return resp
 
@@ -1957,7 +1961,7 @@ def export_society_detail(society_id):
     resp = make_response(output.getvalue())
     resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
     safe_name = (society.legal_name or 'societa').replace(' ', '_').lower()[:30]
-    resp.headers['Content-Disposition'] = f'attachment; filename={safe_name}_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    resp.headers['Content-Disposition'] = f'attachment; filename={safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d")}.csv'
     log_action('export_society_detail', 'Society', society.id, f'Exported detailed data for {society.legal_name}')
     return resp
 
@@ -2070,7 +2074,7 @@ def chat_monitor():
         user_b_expr,
     ).distinct().count()
     active_chatters = db.session.query(func.count(func.distinct(Message.sender_id))).scalar() or 0
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_messages = Message.query.filter(Message.created_at >= today_start).count()
 
     conversations_q = db.session.query(
@@ -2206,7 +2210,7 @@ def menu_order_save():
             db.session.add(row)
         row.set_value(order_list)
         row.updated_by = current_user.id
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         log_action('update_menu_order', 'CustomizationKV', row.id, 'Updated sidebar menu order')

@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app import db, csrf
 from app.models import FeePayment, SocietyFee, User
 from app.utils import admin_required, log_action
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import json
 import stripe
@@ -134,12 +134,12 @@ def success():
         fp = FeePayment.query.get(fp_id)
         if fp and fp.user_id == current_user.id and fp.status == 'pending':
             fp.status = 'completed'
-            fp.paid_at = datetime.utcnow()
+            fp.paid_at = datetime.now(timezone.utc)
             fp.stripe_payment_id = session_id
             db.session.add(fp)
             if fp.fee:
                 fp.fee.status = 'paid'
-                fp.fee.paid_at = datetime.utcnow()
+                fp.fee.paid_at = datetime.now(timezone.utc)
                 db.session.add(fp.fee)
             db.session.commit()
     return render_template('payments/success.html', payment=fp)
@@ -179,12 +179,12 @@ def webhook():
             fp = FeePayment.query.get(int(fp_id))
             if fp and fp.status == 'pending':
                 fp.status = 'completed'
-                fp.paid_at = datetime.utcnow()
+                fp.paid_at = datetime.now(timezone.utc)
                 fp.stripe_payment_id = session_obj.get('payment_intent') or session_obj.get('id')
                 db.session.add(fp)
                 if fp.fee and fp.fee.status != 'paid':
                     fp.fee.status = 'paid'
-                    fp.fee.paid_at = datetime.utcnow()
+                    fp.fee.paid_at = datetime.now(timezone.utc)
                     db.session.add(fp.fee)
                 db.session.commit()
 
@@ -194,10 +194,15 @@ def webhook():
 @bp.route('/receipt/<int:payment_id>')
 @login_required
 def receipt(payment_id):
-    fp = FeePayment.query.get_or_404(payment_id)
-    if fp.user_id != current_user.id and not current_user.is_admin():
-        flash('Accesso negato.', 'danger')
-        return redirect(url_for('payments.index'))
+    """View payment receipt with authorization check."""
+    # Fetch only if user has access (super admin mantiene accesso)
+    fp = FeePayment.query.filter_by(id=payment_id).filter(
+        db.or_(
+            FeePayment.user_id == current_user.id,
+            current_user.is_admin() == True
+        )
+    ).first_or_404()
+    
     fee = fp.fee
     amount_eur = fp.amount
     return render_template('payments/receipt.html', payment=fp, fee=fee, amount_eur=amount_eur)
@@ -216,8 +221,14 @@ def admin():
     if status_filter in ALLOWED_STATUSES:
         q = q.filter_by(status=status_filter)
     if user_filter:
+        from app.utils import escape_like
+        user_filter_safe = escape_like(user_filter)
         q = q.join(User, FeePayment.user_id == User.id).filter(
-            (User.username.ilike(f'%{user_filter}%')) | (User.first_name.ilike(f'%{user_filter}%')) | (User.last_name.ilike(f'%{user_filter}%'))
+            db.or_(
+                User.username.ilike(f'%{user_filter_safe}%', escape='\\'),
+                User.first_name.ilike(f'%{user_filter_safe}%', escape='\\'),
+                User.last_name.ilike(f'%{user_filter_safe}%', escape='\\')
+            )
         )
     if date_from:
         try:
@@ -235,7 +246,7 @@ def admin():
     from sqlalchemy import func
     total_received = db.session.query(func.coalesce(func.sum(FeePayment.amount), 0)).filter_by(status='completed').scalar()
     total_pending = db.session.query(func.coalesce(func.sum(FeePayment.amount), 0)).filter_by(status='pending').scalar()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     this_month = db.session.query(func.coalesce(func.sum(FeePayment.amount), 0)).filter(
         FeePayment.status == 'completed', FeePayment.paid_at >= month_start
@@ -273,13 +284,13 @@ def manual_payment(fee_id):
         amount=round(float(fee.amount_cents or 0) / 100.0, 2),
         payment_method=method,
         status='completed',
-        paid_at=datetime.utcnow(),
+        paid_at=datetime.now(timezone.utc),
         notes=notes,
     )
     db.session.add(fp)
 
     fee.status = 'paid'
-    fee.paid_at = datetime.utcnow()
+    fee.paid_at = datetime.now(timezone.utc)
     db.session.add(fee)
     db.session.commit()
 

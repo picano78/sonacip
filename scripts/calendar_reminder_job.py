@@ -92,7 +92,7 @@ def main() -> int:
                             event_id=ev.id,
                             user_id=u.id,
                             kind=kind,
-                            sent_at=datetime.utcnow(),
+                            sent_at=datetime.now(timezone.utc),
                         )
                     )
                     sent += 1

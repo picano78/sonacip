@@ -1,5 +1,5 @@
 """Routes for Society Calendar (strategic, society-wide)"""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
@@ -55,9 +55,9 @@ def index():
     view = request.args.get('view', 'week')
     try:
         start_str = request.args.get('start')
-        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.utcnow().date()
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.now(timezone.utc).date()
     except ValueError:
-        start_date = datetime.utcnow().date()
+        start_date = datetime.now(timezone.utc).date()
 
     start_date, end_date = _date_range(view, start_date)
 
@@ -105,9 +105,9 @@ def grid():
     view = request.args.get('view', 'week')
     try:
         start_str = request.args.get('start')
-        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.utcnow().date()
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.now(timezone.utc).date()
     except ValueError:
-        start_date = datetime.utcnow().date()
+        start_date = datetime.now(timezone.utc).date()
 
     if view not in ('day', 'week', 'month'):
         view = 'week'
@@ -170,7 +170,7 @@ def grid():
                        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
     prev_month = (start_date.replace(day=1) - timedelta(days=1)).replace(day=1) if view == 'month' else None
     next_month = end_date if view == 'month' else None
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
 
     leading_days = []
     trailing_days = []
@@ -231,10 +231,10 @@ def occupancy():
     try:
         start_str = request.args.get('start')
         end_str = request.args.get('end')
-        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.utcnow().date()
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.now(timezone.utc).date()
         end_date = datetime.strptime(end_str, '%Y-%m-%d').date() if end_str else (start_date + timedelta(days=7))
     except ValueError:
-        start_date = datetime.utcnow().date()
+        start_date = datetime.now(timezone.utc).date()
         end_date = start_date + timedelta(days=7)
 
     if end_date <= start_date:
@@ -479,7 +479,7 @@ def respond(event_id, response):
         row = SocietyCalendarAttendance(event_id=event.id, user_id=current_user.id, status='pending')
         db.session.add(row)
     row.status = response
-    row.responded_at = datetime.utcnow()
+    row.responded_at = datetime.now(timezone.utc)
     db.session.commit()
 
     flash('Risposta registrata.', 'success')

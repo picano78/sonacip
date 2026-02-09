@@ -88,7 +88,7 @@ def _build_feed_page(user, page, per_page, settings, admin_access, scope_id, cac
     if cached_ids is None:
         start = (page - 1) * per_page
         fetch_limit = per_page * 5 + start
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         promoted = Post.query.filter(
             Post.is_promoted == True,
@@ -180,7 +180,7 @@ def feed():
     if posts:
         for p in posts:
             if p.is_promoted:
-                if p.promotion_ends_at and p.promotion_ends_at < datetime.utcnow():
+                if p.promotion_ends_at and p.promotion_ends_at < datetime.now(timezone.utc):
                     p.is_promoted = False
                 else:
                     p.promotion_views = (p.promotion_views or 0) + 1
@@ -306,7 +306,7 @@ def feed_updates():
 @bp.route('/post/create', methods=['POST'])
 @login_required
 @permission_required('social', 'post')
-@limiter.limit("10 per minute")
+@limiter.limit("20 per hour")
 def create_post():
     """Create a new post"""
     form = PostForm()
@@ -443,8 +443,8 @@ def promote_post(post_id):
             db.session.add(payment)
 
             post.is_promoted = True
-            post.promotion_starts_at = datetime.utcnow()
-            post.promotion_ends_at = datetime.utcnow() + timedelta(days=duration)
+            post.promotion_starts_at = datetime.now(timezone.utc)
+            post.promotion_ends_at = datetime.now(timezone.utc) + timedelta(days=duration)
             post.promotion_views_target = views
             post.promotion_amount = cost
             post.promotion_views = 0
@@ -686,7 +686,7 @@ def edit_profile():
             cover_file = save_picture(form.cover_photo.data, folder='covers', size=(1200, 400))
             current_user.cover_photo = cover_file
         
-        current_user.updated_at = datetime.utcnow()
+        current_user.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         
         flash('Profilo aggiornato!', 'success')
@@ -711,7 +711,7 @@ def upload_avatar():
     if file:
         avatar_file = save_picture(file, folder='avatars', size=(300, 300))
         current_user.avatar = avatar_file
-        current_user.updated_at = datetime.utcnow()
+        current_user.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         flash('Immagine profilo aggiornata!', 'success')
     
@@ -814,13 +814,15 @@ def search():
     query = form.query.data or ''
     
     if query:
-        search = f"%{query}%"
+        from app.utils import escape_like
+        query_safe = escape_like(query)
+        search = f"%{query_safe}%"
         users_query = User.query.filter(
             or_(
-                User.username.ilike(search),
-                User.first_name.ilike(search),
-                User.last_name.ilike(search),
-                User.company_name.ilike(search)
+                User.username.ilike(search, escape='\\'),
+                User.first_name.ilike(search, escape='\\'),
+                User.last_name.ilike(search, escape='\\'),
+                User.company_name.ilike(search, escape='\\')
             )
         ).filter_by(is_active=True)
     else:
@@ -1067,7 +1069,7 @@ def society_export_data():
     resp = mk_resp(output.getvalue())
     resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
     safe_name = (society.name or 'societa').replace(' ', '_').lower()[:30]
-    resp.headers['Content-Disposition'] = f'attachment; filename=dati_{safe_name}_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    resp.headers['Content-Disposition'] = f'attachment; filename=dati_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d")}.csv'
     try:
         log_action('society_export_data', 'Society', society.id, f'Society exported own data')
     except Exception:
@@ -1088,7 +1090,7 @@ def society_dismiss_suggestion(key: str):
         return redirect(url_for('social.society_dashboard'))
     existing = SocietySuggestionDismissal.query.filter_by(society_id=society.id, user_id=current_user.id, key=key).first()
     if not existing:
-        db.session.add(SocietySuggestionDismissal(society_id=society.id, user_id=current_user.id, key=key, dismissed_at=datetime.utcnow()))
+        db.session.add(SocietySuggestionDismissal(society_id=society.id, user_id=current_user.id, key=key, dismissed_at=datetime.now(timezone.utc)))
         db.session.commit()
     return redirect(url_for('social.society_dashboard'))
 
@@ -1106,7 +1108,7 @@ def society_onboarding_complete(step_key: str):
         return redirect(url_for('social.society_dashboard'))
     existing = UserOnboardingStep.query.filter_by(society_id=society.id, user_id=current_user.id, step_key=step_key).first()
     if not existing:
-        db.session.add(UserOnboardingStep(society_id=society.id, user_id=current_user.id, step_key=step_key, completed_at=datetime.utcnow()))
+        db.session.add(UserOnboardingStep(society_id=society.id, user_id=current_user.id, step_key=step_key, completed_at=datetime.now(timezone.utc)))
         db.session.commit()
     return redirect(url_for('social.society_dashboard'))
 
@@ -1373,7 +1375,7 @@ def respond_invite(invite_id, action):
 
     if action == 'reject':
         inv.status = 'rejected'
-        inv.responded_at = datetime.utcnow()
+        inv.responded_at = datetime.now(timezone.utc)
         db.session.commit()
         log_action('society_invite_reject', 'SocietyInvite', inv.id, f'Rejected invite role={inv.requested_role}', society_id=society_id)
         flash('Invito rifiutato.', 'success')
@@ -1419,7 +1421,7 @@ def respond_invite(invite_id, action):
         current_user.staff_role = 'staff'
 
     inv.status = 'accepted'
-    inv.responded_at = datetime.utcnow()
+    inv.responded_at = datetime.now(timezone.utc)
     db.session.commit()
 
     log_action('society_invite_accept', 'SocietyInvite', inv.id, f'Accepted invite role={requested}', society_id=society_id)
@@ -1639,15 +1641,15 @@ def send_connection(user_id):
             return redirect(url_for('social.profile', user_id=user_id))
         if existing.status == 'rejected':
             cooldown_days = 7
-            if existing.updated_at and datetime.utcnow() - existing.updated_at < timedelta(days=cooldown_days):
-                remaining = (existing.updated_at + timedelta(days=cooldown_days) - datetime.utcnow()).days + 1
+            if existing.updated_at and datetime.now(timezone.utc) - existing.updated_at < timedelta(days=cooldown_days):
+                remaining = (existing.updated_at + timedelta(days=cooldown_days) - datetime.now(timezone.utc)).days + 1
                 flash(f'Puoi reinviare la richiesta tra {remaining} giorni.', 'warning')
                 return redirect(url_for('social.profile', user_id=user_id))
             # Re-open a previously rejected connection request.
             existing.requester_id = current_user.id
             existing.addressee_id = user_id
             existing.status = 'pending'
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = datetime.now(timezone.utc)
             conn = existing
     else:
         conn = Connection(
@@ -1681,7 +1683,7 @@ def accept_connection(user_id):
         return redirect(url_for('social.profile', user_id=current_user.id))
     
     conn.status = 'accepted'
-    conn.updated_at = datetime.utcnow()
+    conn.updated_at = datetime.now(timezone.utc)
     
     notif = Notification(
         user_id=user_id,
@@ -1707,7 +1709,7 @@ def reject_connection(user_id):
         return redirect(url_for('social.profile', user_id=current_user.id))
     
     conn.status = 'rejected'
-    conn.updated_at = datetime.utcnow()
+    conn.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     
     flash('Richiesta ignorata.', 'info')
@@ -1735,7 +1737,7 @@ def block_connection(user_id):
         conn.requester_id = current_user.id
         conn.addressee_id = user_id
         conn.status = 'blocked'
-        conn.updated_at = datetime.utcnow()
+        conn.updated_at = datetime.now(timezone.utc)
     else:
         conn = Connection(
             requester_id=current_user.id,
@@ -1920,7 +1922,7 @@ def society_broadcast_compose():
                 user_id=user.id,
                 message_id=msg.id,
                 delivery_status='sent',
-                sent_at=datetime.utcnow(),
+                sent_at=datetime.now(timezone.utc),
             )
             db.session.add(recipient)
             target_users.append(user)
@@ -1928,7 +1930,7 @@ def society_broadcast_compose():
 
         broadcast.total_recipients = count
         broadcast.status = 'sent'
-        broadcast.sent_at = datetime.utcnow()
+        broadcast.sent_at = datetime.now(timezone.utc)
         db.session.commit()
 
         if send_email:

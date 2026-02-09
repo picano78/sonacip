@@ -5,7 +5,7 @@ from flask import current_app
 from flask_mail import Message
 from app import mail, db
 from app.models import Notification, User, SmtpSetting
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import smtplib
 from email.message import EmailMessage
@@ -111,7 +111,7 @@ def cleanup_old_notifications(days=90):
     """
     Delete read notifications older than specified days
     """
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     try:
         count = Notification.query.filter(

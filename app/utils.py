@@ -4,7 +4,7 @@ Common utilities and decorators for the application
 from functools import wraps
 from flask import flash, redirect, url_for, abort, current_app, request, session, g
 from flask_login import current_user
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def check_feature_enabled(feature_key):
@@ -15,7 +15,8 @@ def check_feature_enabled(feature_key):
         pf = PlatformFeature.query.filter_by(key=feature_key).first()
         if pf and not pf.is_enabled:
             return False
-    except Exception:
+    except (ImportError, AttributeError) as e:
+        current_app.logger.debug(f"Feature check failed: {e}")
         pass
     return True
 
@@ -48,7 +49,7 @@ def rate_limit(key: str, limit: int = 10, window_seconds: int = 60):
             try:
                 from app.cache import get_cache
                 cache = get_cache()
-                now = int(datetime.utcnow().timestamp())
+                now = int(datetime.now(timezone.utc).timestamp())
                 bucket = now // max(1, int(window_seconds))
                 actor = current_user.id if getattr(current_user, "is_authenticated", False) else "anon"
                 ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown").split(",")[0].strip()
@@ -60,9 +61,23 @@ def rate_limit(key: str, limit: int = 10, window_seconds: int = 60):
                     if current_app:
                         current_app.logger.warning(f"Rate limit exceeded key={key} actor={actor} ip={ip}")
                     abort(429)
-            except Exception:
-                # If cache is unavailable, do not block the request.
-                pass
+            except Exception as e:
+                # FALLBACK: if cache unavailable, use strict in-memory rate limiting
+                if current_app:
+                    current_app.logger.error(f"Rate limit cache failed: {e}")
+                if not hasattr(g, '_rate_limit_fallback'):
+                    g._rate_limit_fallback = {}
+                now = int(datetime.now(timezone.utc).timestamp())
+                bucket = now // max(1, int(window_seconds))
+                actor = current_user.id if getattr(current_user, "is_authenticated", False) else "anon"
+                ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown").split(",")[0].strip()
+                fallback_key = f"{key}:{actor}:{ip}:{bucket}"
+                count = g._rate_limit_fallback.get(fallback_key, 0) + 1
+                g._rate_limit_fallback[fallback_key] = count
+                if count > limit:
+                    if current_app:
+                        current_app.logger.warning(f"Rate limit exceeded (fallback) key={key}")
+                    abort(429)
             return f(*args, **kwargs)
         return wrapped
     return decorator
@@ -83,7 +98,8 @@ def check_permission(user, resource, action, society_id=None):
             return False
         try:
             from app.models import Permission, SocietyRolePermission
-        except Exception:
+        except (ImportError, AttributeError) as e:
+            current_app.logger.warning(f"Permission check failed: {e}")
             return False
 
         perm = Permission.query.filter_by(resource=resource, action=action).first()
@@ -93,7 +109,8 @@ def check_permission(user, resource, action, society_id=None):
         role_name = None
         try:
             role_name = user.get_society_role(society_id)
-        except Exception:
+        except (AttributeError, ValueError) as e:
+            current_app.logger.warning(f"Failed to get society role: {e}")
             role_name = None
 
         def _default_allows(rn: str | None) -> bool:
@@ -384,7 +401,7 @@ def timeago(date):
     if not date:
         return ""
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     diff = now - date
     
     seconds = diff.total_seconds()
@@ -408,6 +425,14 @@ def timeago(date):
     
     years = int(seconds // 31536000)
     return f"{years} {'anno' if years == 1 else 'anni'} fa"
+
+
+def escape_like(value: str) -> str:
+    """Escape special characters for SQL LIKE queries to prevent injection."""
+    if not value:
+        return value
+    # Escape backslash first, then SQL LIKE wildcards
+    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 
 def datetime_format(value, format='%d/%m/%Y %H:%M'):

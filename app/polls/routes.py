@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from app.models import Poll, PollOption, PollVote
-from datetime import datetime
+from datetime import datetime, timezone
 
 bp = Blueprint('polls', __name__, url_prefix='/polls')
 
@@ -19,7 +19,7 @@ def _check_feature():
 def _poll_is_active(poll):
     if not poll.is_active:
         return False
-    if poll.closes_at and datetime.utcnow() > poll.closes_at:
+    if poll.closes_at and datetime.now(timezone.utc) > poll.closes_at:
         return False
     return True
 

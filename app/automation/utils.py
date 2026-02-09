@@ -2,7 +2,7 @@
 import json
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from flask import current_app
 from app import db, mail
@@ -10,6 +10,22 @@ from app.models import Automation, AutomationRule, AutomationRun, Notification, 
 from app.automation.validation import evaluate_condition, validate_action_schema
 from flask_mail import Message
 from jinja2 import Template
+from urllib.parse import urlparse
+import ipaddress
+import socket
+
+# SSRF Protection
+BLOCKED_SCHEMES = ['file', 'ftp', 'gopher', 'data', 'javascript']
+BLOCKED_NETWORKS = [
+    ipaddress.ip_network('127.0.0.0/8'),      # Localhost
+    ipaddress.ip_network('10.0.0.0/8'),       # Private
+    ipaddress.ip_network('172.16.0.0/12'),    # Private
+    ipaddress.ip_network('192.168.0.0/16'),   # Private
+    ipaddress.ip_network('169.254.0.0/16'),   # Link-local
+    ipaddress.ip_network('::1/128'),          # IPv6 localhost
+    ipaddress.ip_network('fc00::/7'),         # IPv6 private
+    ipaddress.ip_network('fe80::/10'),        # IPv6 link-local
+]
 
 
 def execute_automations(trigger_type, society_id=None, payload=None):
@@ -27,7 +43,7 @@ def execute_automations(trigger_type, society_id=None, payload=None):
     for auto in automations:
         try:
             auto.execution_count = (auto.execution_count or 0) + 1
-            auto.last_executed_at = datetime.utcnow()
+            auto.last_executed_at = datetime.now(timezone.utc)
             auto.success_count = (auto.success_count or 0) + 1
             executed.append(auto)
         except Exception as exc:
@@ -59,7 +75,7 @@ def execute_rules(event_type: str, payload: Dict[str, Any] = None):
                     rule_id=rule.id,
                     status='skipped',
                     payload=json.dumps(payload),
-                    completed_at=datetime.utcnow()
+                    completed_at=datetime.now(timezone.utc)
                 )
                 db.session.add(run)
                 executed_runs.append(run)
@@ -77,7 +93,7 @@ def execute_rules(event_type: str, payload: Dict[str, Any] = None):
         except Exception as exc:
             run.status = 'failed'
             run.error_message = f'Invalid JSON: {str(exc)}'
-            run.completed_at = datetime.utcnow()
+            run.completed_at = datetime.now(timezone.utc)
             db.session.add(run)
             executed_runs.append(run)
             current_app.logger.error(
@@ -89,11 +105,11 @@ def execute_rules(event_type: str, payload: Dict[str, Any] = None):
         try:
             normalized_actions = actions if isinstance(actions, list) else [actions] if actions else []
             _apply_actions_with_retry(rule, normalized_actions, payload, run)
-            run.completed_at = datetime.utcnow()
+            run.completed_at = datetime.now(timezone.utc)
         except Exception as exc:
             run.status = 'failed'
             run.error_message = str(exc)
-            run.completed_at = datetime.utcnow()
+            run.completed_at = datetime.now(timezone.utc)
             current_app.logger.error(
                 f"Action execution failed for rule {rule.id}: {exc}",
                 extra={
@@ -127,7 +143,7 @@ def _apply_actions_with_retry(rule: AutomationRule, actions: List[Dict[str, Any]
                 delay = base_delay * (2 ** attempt)
                 run.retry_count = attempt + 1
                 run.status = 'retrying'
-                run.next_retry_at = datetime.utcnow() + timedelta(seconds=delay)
+                run.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
                 run.error_message = f"Attempt {attempt + 1} failed: {str(exc)}"
                 db.session.flush()
                 
@@ -246,35 +262,73 @@ def _action_social_post(action: Dict[str, Any], payload: Dict[str, Any]):
     db.session.add(post)
 
 
+def _validate_webhook_url(url: str) -> None:
+    """Validate webhook URL to prevent SSRF attacks."""
+    if not url or not isinstance(url, str):
+        raise ValueError("Invalid webhook URL")
+    
+    parsed = urlparse(url)
+    
+    # Check scheme
+    if parsed.scheme.lower() in BLOCKED_SCHEMES:
+        raise ValueError(f"Scheme '{parsed.scheme}' not allowed")
+    
+    if parsed.scheme.lower() not in ['http', 'https']:
+        raise ValueError("Only HTTP/HTTPS allowed for webhooks")
+    
+    # Check hostname
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("Invalid hostname in webhook URL")
+    
+    # Prevent localhost/private IPs
+    try:
+        addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        for info in addr_info:
+            ip_str = info[4][0]
+            try:
+                ip = ipaddress.ip_address(ip_str.split('%')[0])  # Handle IPv6 scope
+                for network in BLOCKED_NETWORKS:
+                    if ip in network:
+                        raise ValueError(f"Webhook URL resolves to blocked IP range: {ip}")
+            except ValueError as e:
+                if 'blocked' in str(e).lower():
+                    raise
+                continue
+    except socket.gaierror as e:
+        raise ValueError(f"Cannot resolve hostname '{hostname}': {e}")
+
+
 def _action_webhook(action: Dict[str, Any], payload: Dict[str, Any]):
-    """Send webhook HTTP request."""
+    """Send webhook HTTP request with SSRF protection."""
     import requests
+    
     url = action.get('url')
+    if not url:
+        raise ValueError("Webhook URL required")
+    
+    # SECURITY: Validate URL before making request
+    _validate_webhook_url(url)
+    
     method = action.get('method', 'POST').upper()
     headers = action.get('headers', {})
-    timeout = action.get('timeout', 30)
+    timeout = min(action.get('timeout', 30), 60)  # Max 60 seconds
     
     headers.setdefault('Content-Type', 'application/json')
     headers.setdefault('User-Agent', 'SONACIP-Automation/1.0')
     
     try:
         if method == 'POST':
-            response = requests.post(url, json=payload, headers=headers, timeout=timeout)
+            response = requests.post(url, json=payload, headers=headers, timeout=timeout, allow_redirects=False)
         elif method == 'GET':
-            response = requests.get(url, params=payload, headers=headers, timeout=timeout)
+            response = requests.get(url, params=payload, headers=headers, timeout=timeout, allow_redirects=False)
         else:
             raise ValueError(f"Unsupported webhook method: {method}")
         
         response.raise_for_status()
-        current_app.logger.info(
-            f"Webhook sent successfully to {url}",
-            extra={'url': url, 'status': response.status_code}
-        )
+        current_app.logger.info(f"Webhook sent successfully", extra={'url': url, 'status': response.status_code})
     except requests.RequestException as exc:
-        current_app.logger.error(
-            f"Webhook failed to {url}: {exc}",
-            extra={'url': url, 'error': str(exc)}
-        )
+        current_app.logger.error(f"Webhook failed: {exc}", extra={'url': url, 'error': str(exc)})
         raise
 
 

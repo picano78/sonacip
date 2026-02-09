@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import AddOn, AddOnEntitlement, Plan, Subscription, Payment, User, Coupon, CouponRedemption
 from app.utils import admin_required, log_action, check_permission
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import stripe
 
@@ -32,7 +32,7 @@ def _apply_coupon(plan: Plan, amount: float, coupon_code: str | None) -> tuple[f
     c = Coupon.query.filter_by(code=code, is_active=True).first()
     if not c:
         raise ValueError("Coupon non valido.")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if c.valid_from and now < c.valid_from:
         raise ValueError("Coupon non ancora valido.")
     if c.valid_until and now > c.valid_until:
@@ -99,16 +99,16 @@ def subscribe(plan_id):
         plan_id=plan.id,
         status='active' if amount == 0 else 'pending',  # Free plans are immediately active
         billing_cycle=billing_cycle,
-        start_date=datetime.utcnow(),
+        start_date=datetime.now(timezone.utc),
         amount=amount,
         auto_renew=True
     )
     
     # Calculate next billing date
     if billing_cycle == 'monthly':
-        subscription.next_billing_date = datetime.utcnow() + timedelta(days=30)
+        subscription.next_billing_date = datetime.now(timezone.utc) + timedelta(days=30)
     else:
-        subscription.next_billing_date = datetime.utcnow() + timedelta(days=365)
+        subscription.next_billing_date = datetime.now(timezone.utc) + timedelta(days=365)
     
     db.session.add(subscription)
     db.session.commit()
@@ -252,7 +252,7 @@ def buy_addon(addon_id):
         society_id=scope_society_id,
         user_id=None if society else current_user.id,
     ).first()
-    if existing and (not existing.end_date or existing.end_date > datetime.utcnow()):
+    if existing and (not existing.end_date or existing.end_date > datetime.now(timezone.utc)):
         flash('Add-on già attivo.', 'info')
         return redirect(url_for('subscription.addons'))
 
@@ -281,9 +281,9 @@ def buy_addon(addon_id):
         currency=(addon.currency or 'EUR'),
         status='completed',
         payment_method='manual',
-        payment_date=datetime.utcnow(),
+        payment_date=datetime.now(timezone.utc),
         description=f'Add-on: {addon.name}',
-        transaction_id=f'LOCAL_ADDON_{addon.id}_{datetime.utcnow().timestamp()}',
+        transaction_id=f'LOCAL_ADDON_{addon.id}_{datetime.now(timezone.utc).timestamp()}',
         gateway='local',
     )
     payment.payment_metadata = json.dumps({"addon_id": addon.id, "feature_key": addon.feature_key})
@@ -298,7 +298,7 @@ def buy_addon(addon_id):
             payment_id=payment.id,
             status='active',
             source='local',
-            start_date=datetime.utcnow(),
+            start_date=datetime.now(timezone.utc),
         )
     )
     db.session.commit()
@@ -329,7 +329,7 @@ def cancel_subscription(subscription_id):
     
     # Cancel subscription
     subscription.status = 'cancelled'
-    subscription.cancelled_at = datetime.utcnow()
+    subscription.cancelled_at = datetime.now(timezone.utc)
     subscription.auto_renew = False
     
     db.session.commit()
@@ -397,9 +397,9 @@ def process_payment(subscription_id):
         currency='EUR',
         status='completed',  # Would be 'pending' in real implementation
         payment_method=payment_method,
-        payment_date=datetime.utcnow(),
+        payment_date=datetime.now(timezone.utc),
         description=f'Payment for {subscription.plan.name} subscription',
-        transaction_id=f'TEST_{datetime.utcnow().timestamp()}'  # Would come from gateway
+        transaction_id=f'TEST_{datetime.now(timezone.utc).timestamp()}'  # Would come from gateway
     )
     payment.payment_metadata = json.dumps({
         "coupon_code": (coupon.code if coupon else None),
@@ -425,7 +425,7 @@ def process_payment(subscription_id):
     
     # Activate subscription
     subscription.status = 'active'
-    subscription.start_date = datetime.utcnow()
+    subscription.start_date = datetime.now(timezone.utc)
     
     db.session.commit()
     
@@ -488,7 +488,7 @@ def admin_coupons():
             max_redemptions=mr,
             redeemed_count=0,
             is_active=True,
-            valid_from=datetime.utcnow(),
+            valid_from=datetime.now(timezone.utc),
             valid_until=vu,
             plan_id=pid,
             created_by=current_user.id,
@@ -563,7 +563,7 @@ def admin_addons():
             stripe_price_one_time_id=stripe_price_one_time_id,
             is_active=True,
             display_order=display_order,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         db.session.add(row)
         db.session.commit()
@@ -679,14 +679,14 @@ def refund_payment(payment_id):
     except Exception:
         meta = {}
     meta['refund_reason'] = reason
-    meta['refunded_at'] = datetime.utcnow().isoformat()
+    meta['refunded_at'] = datetime.now(timezone.utc).isoformat()
     payment.payment_metadata = json.dumps(meta)
-    payment.updated_at = datetime.utcnow()
+    payment.updated_at = datetime.now(timezone.utc)
     
     # Cancel associated subscription if active
     if payment.subscription and payment.subscription.status == 'active':
         payment.subscription.status = 'cancelled'
-        payment.subscription.cancelled_at = datetime.utcnow()
+        payment.subscription.cancelled_at = datetime.now(timezone.utc)
     
     db.session.commit()
     

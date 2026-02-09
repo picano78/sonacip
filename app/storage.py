@@ -2,7 +2,7 @@
 Storage helpers for pluggable media backends and lightweight assets.
 """
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Tuple
 import shutil
 import subprocess
@@ -67,7 +67,7 @@ def save_image_light(form_picture, folder: str = 'posts', size: Tuple[int, int] 
 
     original_name = secure_filename(form_picture.filename or 'image')
     name, _ext = os.path.splitext(original_name)
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
 
     target_ext = (settings.preferred_image_format or 'webp').lower().replace('.', '')
     filename = f"{name}_{timestamp}.{target_ext}"
@@ -79,8 +79,9 @@ def save_image_light(form_picture, folder: str = 'posts', size: Tuple[int, int] 
             img = img.convert('RGB')
         img.thumbnail(size)
         img.save(file_path, format=target_ext.upper(), quality=settings.image_quality or 75, optimize=True)
-    except Exception:
+    except (IOError, OSError, ValueError) as e:
         # Fallback to raw save if conversion fails
+        current_app.logger.warning(f"Image optimization failed, using raw save: {e}")
         form_picture.save(file_path)
 
     return os.path.join(folder, filename)
@@ -93,7 +94,7 @@ def save_video_light(form_file, folder: str = 'posts') -> str:
     upload_folder = ensure_subfolder(folder)
     original_name = secure_filename(form_file.filename or 'video')
     name, _ext = os.path.splitext(original_name)
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
     filename = f"{name}_{timestamp}.{settings.preferred_video_format or 'mp4'}"
     file_path = os.path.join(upload_folder, filename)
 
@@ -118,8 +119,9 @@ def save_video_light(form_file, folder: str = 'posts') -> str:
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             os.remove(tmp_input)
             return os.path.join(folder, filename)
-        except Exception:
+        except (subprocess.CalledProcessError, OSError) as e:
             # fallback to raw save
+            current_app.logger.warning(f"FFmpeg compression failed: {e}")
             pass
 
     # Fallback when ffmpeg missing or fails
@@ -134,7 +136,7 @@ def save_binary(form_file, folder: str = 'posts') -> str:
     upload_folder = ensure_subfolder(folder)
     original_name = secure_filename(form_file.filename or 'file')
     name, ext = os.path.splitext(original_name)
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
     filename = f"{name}_{timestamp}{ext or ''}"
     file_path = os.path.join(upload_folder, filename)
     form_file.save(file_path)

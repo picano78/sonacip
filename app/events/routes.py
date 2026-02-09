@@ -10,7 +10,7 @@ from app.events.forms import EventForm
 from app.models import Event, User, Notification, event_athletes, Post
 from app.automation.utils import execute_automations, execute_rules
 from app.utils import permission_required, check_permission
-from datetime import datetime
+from datetime import datetime, timezone
 
 bp = Blueprint('events', __name__, url_prefix='/events')
 
@@ -159,7 +159,7 @@ def edit(event_id):
         event.score_for = form.score_for.data or None
         event.score_against = form.score_against.data or None
         event.bracket_url = form.bracket_url.data or None
-        event.updated_at = datetime.utcnow()
+        event.updated_at = datetime.now(timezone.utc)
         
         db.session.commit()
         

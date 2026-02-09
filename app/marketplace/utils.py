@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 from app.models import MarketplacePurchase, Template
@@ -13,7 +13,7 @@ def install_purchase(purchase: MarketplacePurchase, actor_user_id: int) -> None:
     """
     if not purchase or purchase.installed_at:
         return
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Resolve target scope (society preferred, otherwise user-scoped templates)
     target_society_id = purchase.society_id

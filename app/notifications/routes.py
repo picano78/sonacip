@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db, csrf
 from app.models import Notification, PushSubscription
-from datetime import datetime
+from datetime import datetime, timezone
 
 bp = Blueprint('notifications', __name__, url_prefix='/notifications')
 
@@ -66,7 +66,7 @@ def mark_all_read():
         is_read=False
     ).update({
         'is_read': True,
-        'read_at': datetime.utcnow()
+        'read_at': datetime.now(timezone.utc)
     })
     db.session.commit()
     

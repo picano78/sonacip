@@ -1,7 +1,7 @@
 """Ads delivery and tracking routes."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -94,7 +94,7 @@ def selfserve_new():
         objective="traffic",
         society_id=None,
         is_active=True,
-        starts_at=datetime.utcnow(),
+        starts_at=datetime.now(timezone.utc),
         ends_at=None,
         max_impressions=None,
         max_clicks=None,
@@ -104,8 +104,8 @@ def selfserve_new():
         budget_cents=budget_cents,
         spend_cents=0,
         created_by=current_user.id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
     )
     db.session.add(camp)
     db.session.flush()
@@ -121,7 +121,7 @@ def selfserve_new():
             is_active=True,
             weight=100,
             created_by=current_user.id,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     )
     db.session.commit()

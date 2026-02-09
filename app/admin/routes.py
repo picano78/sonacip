@@ -1038,14 +1038,16 @@ def users():
     
     # Apply filters
     if form.query.data:
-        search = f"%{form.query.data}%"
+        from app.utils import escape_like
+        query_safe = escape_like(form.query.data)
+        search = f"%{query_safe}%"
         query = query.filter(
             or_(
-                User.username.ilike(search),
-                User.email.ilike(search),
-                User.first_name.ilike(search),
-                User.last_name.ilike(search),
-                User.company_name.ilike(search)
+                User.username.ilike(search, escape='\\'),
+                User.email.ilike(search, escape='\\'),
+                User.first_name.ilike(search, escape='\\'),
+                User.last_name.ilike(search, escape='\\'),
+                User.company_name.ilike(search, escape='\\')
             )
         )
     
@@ -1396,27 +1398,29 @@ def search():
     if not query:
         return render_template('admin/search.html', results={})
     
-    search = f"%{query}%"
+    from app.utils import escape_like
+    query_safe = escape_like(query)
+    search = f"%{query_safe}%"
     
     # Search users
     users = User.query.filter(
         or_(
-            User.username.ilike(search),
-            User.email.ilike(search),
-            User.first_name.ilike(search),
-            User.last_name.ilike(search),
-            User.company_name.ilike(search)
+            User.username.ilike(search, escape='\\'),
+            User.email.ilike(search, escape='\\'),
+            User.first_name.ilike(search, escape='\\'),
+            User.last_name.ilike(search, escape='\\'),
+            User.company_name.ilike(search, escape='\\')
         )
     ).limit(20).all()
     
     # Search posts
-    posts = Post.query.filter(Post.content.ilike(search)).limit(20).all()
+    posts = Post.query.filter(Post.content.ilike(search, escape='\\')).limit(20).all()
     
     # Search events
     events = Event.query.filter(
         or_(
-            Event.title.ilike(search),
-            Event.description.ilike(search)
+            Event.title.ilike(search, escape='\\'),
+            Event.description.ilike(search, escape='\\')
         )
     ).limit(20).all()
     

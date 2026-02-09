@@ -67,9 +67,7 @@ def cmd_check_admin(_args) -> int:
             print("Nessun super admin trovato. Esegui: python manage.py seed")
             return 1
         for u in admins:
-            can_login = u.check_password("Simone78")
-            print(f"id={u.id} email={u.email} username={u.username} role={u.role} "
-                  f"active={u.is_active} password_ok={can_login}")
+            print(f"id={u.id} email={u.email} username={u.username} role={u.role} active={u.is_active}")
     return 0
 
 

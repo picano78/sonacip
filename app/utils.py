@@ -427,6 +427,14 @@ def timeago(date):
     return f"{years} {'anno' if years == 1 else 'anni'} fa"
 
 
+def escape_like(value: str) -> str:
+    """Escape special characters for SQL LIKE queries to prevent injection."""
+    if not value:
+        return value
+    # Escape backslash first, then SQL LIKE wildcards
+    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+
+
 def datetime_format(value, format='%d/%m/%Y %H:%M'):
     """Format a date/time object to string."""
     if value is None:

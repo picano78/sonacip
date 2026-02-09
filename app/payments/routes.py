@@ -194,10 +194,15 @@ def webhook():
 @bp.route('/receipt/<int:payment_id>')
 @login_required
 def receipt(payment_id):
-    fp = FeePayment.query.get_or_404(payment_id)
-    if fp.user_id != current_user.id and not current_user.is_admin():
-        flash('Accesso negato.', 'danger')
-        return redirect(url_for('payments.index'))
+    """View payment receipt with authorization check."""
+    # Fetch only if user has access (super admin mantiene accesso)
+    fp = FeePayment.query.filter_by(id=payment_id).filter(
+        db.or_(
+            FeePayment.user_id == current_user.id,
+            current_user.is_admin() == True
+        )
+    ).first_or_404()
+    
     fee = fp.fee
     amount_eur = fp.amount
     return render_template('payments/receipt.html', payment=fp, fee=fee, amount_eur=amount_eur)
@@ -216,8 +221,14 @@ def admin():
     if status_filter in ALLOWED_STATUSES:
         q = q.filter_by(status=status_filter)
     if user_filter:
+        from app.utils import escape_like
+        user_filter_safe = escape_like(user_filter)
         q = q.join(User, FeePayment.user_id == User.id).filter(
-            (User.username.ilike(f'%{user_filter}%')) | (User.first_name.ilike(f'%{user_filter}%')) | (User.last_name.ilike(f'%{user_filter}%'))
+            db.or_(
+                User.username.ilike(f'%{user_filter_safe}%', escape='\\'),
+                User.first_name.ilike(f'%{user_filter_safe}%', escape='\\'),
+                User.last_name.ilike(f'%{user_filter_safe}%', escape='\\')
+            )
         )
     if date_from:
         try:

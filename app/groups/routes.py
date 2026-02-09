@@ -2,7 +2,8 @@
 Groups & Community routes
 """
 import os
-import uuid
+import secrets
+import mimetypes
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import or_
@@ -13,6 +14,8 @@ from werkzeug.utils import secure_filename
 bp = Blueprint('groups', __name__, url_prefix='/groups')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_IMAGE_MIMES = {'image/png', 'image/jpeg', 'image/gif', 'image/webp'}
+MAX_IMAGE_SIZE_MB = 10
 
 
 @bp.before_request
@@ -25,16 +28,62 @@ def _check_feature():
 
 
 def save_group_picture(form_picture, subfolder='groups'):
+    """Save group picture with security validations."""
     if not form_picture or not hasattr(form_picture, 'filename') or not form_picture.filename:
         return None
-    filename = secure_filename(form_picture.filename)
-    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'png'
-    if ext not in ALLOWED_EXTENSIONS:
+    
+    # Check file size
+    form_picture.seek(0, os.SEEK_END)
+    file_size = form_picture.tell()
+    form_picture.seek(0)
+    
+    if file_size > MAX_IMAGE_SIZE_MB * 1024 * 1024:
+        current_app.logger.warning(f"File too large: {file_size} bytes")
         return None
-    unique_name = f"{uuid.uuid4().hex}.{ext}"
-    upload_dir = os.path.join(current_app.root_path, '..', 'uploads', subfolder)
-    os.makedirs(upload_dir, exist_ok=True)
-    filepath = os.path.join(upload_dir, unique_name)
+    
+    if file_size == 0:
+        current_app.logger.warning("Empty file not allowed")
+        return None
+    
+    # Validate MIME type from content
+    try:
+        import magic
+        mime = magic.from_buffer(form_picture.read(2048), mime=True)
+        form_picture.seek(0)
+    except ImportError:
+        # Fallback if python-magic not available
+        current_app.logger.warning("python-magic not installed, using extension-based validation")
+        filename = secure_filename(form_picture.filename)
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            return None
+        mime_from_ext = mimetypes.guess_type(f"file.{ext}")[0]
+        if mime_from_ext not in ALLOWED_IMAGE_MIMES:
+            return None
+        mime = mime_from_ext
+    except Exception as e:
+        current_app.logger.error(f"MIME detection failed: {e}")
+        return None
+    
+    if mime not in ALLOWED_IMAGE_MIMES:
+        current_app.logger.warning(f"File type '{mime}' not allowed")
+        return None
+    
+    # Generate secure filename
+    ext = mimetypes.guess_extension(mime) or '.bin'
+    unique_name = f"{secrets.token_hex(16)}{ext}"
+    
+    # Secure path construction
+    upload_base = os.path.abspath(os.path.join(current_app.root_path, '..', 'uploads', subfolder))
+    os.makedirs(upload_base, exist_ok=True, mode=0o755)
+    
+    filepath = os.path.abspath(os.path.join(upload_base, unique_name))
+    
+    # Prevent path traversal
+    if not filepath.startswith(upload_base):
+        current_app.logger.error("Path traversal attempt detected")
+        return None
+    
     form_picture.save(filepath)
     return f"uploads/{subfolder}/{unique_name}"
 

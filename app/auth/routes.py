@@ -61,6 +61,7 @@ def _verify_reset_token(token: str, max_age_seconds: int = 3600) -> int | None:
 
 
 @bp.route("/reset-password", methods=["GET", "POST"])
+@limiter.limit("3 per 15 minutes", methods=["POST"])
 def reset_password_request():
     """Request a password reset link."""
     if current_user.is_authenticated:
@@ -164,7 +165,7 @@ def _enterprise_oidc_client():
 
 
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("10 per minute", methods=["POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def login():
     """Login page"""
     if current_user.is_authenticated:

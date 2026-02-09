@@ -4,12 +4,28 @@ import time
 import traceback
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
+import ipaddress
+import socket
 from flask import current_app
 from app import db, mail
 from app.models import Automation, AutomationRule, AutomationRun, Notification, User
 from app.automation.validation import evaluate_condition, validate_action_schema
 from flask_mail import Message
 from jinja2 import Template
+
+# Security: Blocked schemes and networks for SSRF protection
+BLOCKED_SCHEMES = ['file', 'ftp', 'gopher', 'data', 'javascript']
+BLOCKED_NETWORKS = [
+    ipaddress.ip_network('127.0.0.0/8'),      # Localhost
+    ipaddress.ip_network('10.0.0.0/8'),       # Private
+    ipaddress.ip_network('172.16.0.0/12'),    # Private
+    ipaddress.ip_network('192.168.0.0/16'),   # Private
+    ipaddress.ip_network('169.254.0.0/16'),   # Link-local
+    ipaddress.ip_network('::1/128'),          # IPv6 localhost
+    ipaddress.ip_network('fc00::/7'),         # IPv6 private
+    ipaddress.ip_network('fe80::/10'),        # IPv6 link-local
+]
 
 
 def execute_automations(trigger_type, society_id=None, payload=None):
@@ -246,22 +262,80 @@ def _action_social_post(action: Dict[str, Any], payload: Dict[str, Any]):
     db.session.add(post)
 
 
+def _validate_webhook_url(url: str) -> None:
+    """Validate webhook URL to prevent SSRF attacks."""
+    if not url or not isinstance(url, str):
+        raise ValueError("Invalid webhook URL")
+    
+    # Basic length check
+    if len(url) > 2048:
+        raise ValueError("URL too long")
+    
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise ValueError("Invalid URL format")
+    
+    # Check scheme
+    if parsed.scheme.lower() in BLOCKED_SCHEMES:
+        raise ValueError(f"Scheme '{parsed.scheme}' not allowed")
+    
+    if parsed.scheme.lower() not in ['http', 'https']:
+        raise ValueError("Only HTTP/HTTPS allowed")
+    
+    # Resolve hostname to IP
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("Invalid hostname")
+    
+    # Prevent localhost bypass attempts
+    if hostname.lower() in ['localhost', '0.0.0.0', '0', 'broadcasthost']:
+        raise ValueError("Localhost not allowed")
+    
+    try:
+        # Get all IPs for hostname
+        addr_info = socket.getaddrinfo(hostname, None)
+        ips = set()
+        for info in addr_info:
+            ip_str = info[4][0]
+            try:
+                ip = ipaddress.ip_address(ip_str)
+                ips.add(ip)
+            except ValueError:
+                continue
+        
+        # Check each IP against blocked networks
+        for ip in ips:
+            for network in BLOCKED_NETWORKS:
+                if ip in network:
+                    raise ValueError(f"IP {ip} in blocked range {network}")
+    except socket.gaierror:
+        raise ValueError(f"Cannot resolve hostname: {hostname}")
+
+
 def _action_webhook(action: Dict[str, Any], payload: Dict[str, Any]):
-    """Send webhook HTTP request."""
+    """Send webhook HTTP request with SSRF protection."""
     import requests
+    
     url = action.get('url')
+    if not url:
+        raise ValueError("Webhook URL required")
+    
+    # SECURITY: Validate URL before making request
+    _validate_webhook_url(url)
+    
     method = action.get('method', 'POST').upper()
     headers = action.get('headers', {})
-    timeout = action.get('timeout', 30)
+    timeout = min(action.get('timeout', 30), 60)  # Max 60 seconds
     
     headers.setdefault('Content-Type', 'application/json')
     headers.setdefault('User-Agent', 'SONACIP-Automation/1.0')
     
     try:
         if method == 'POST':
-            response = requests.post(url, json=payload, headers=headers, timeout=timeout)
+            response = requests.post(url, json=payload, headers=headers, timeout=timeout, allow_redirects=False)
         elif method == 'GET':
-            response = requests.get(url, params=payload, headers=headers, timeout=timeout)
+            response = requests.get(url, params=payload, headers=headers, timeout=timeout, allow_redirects=False)
         else:
             raise ValueError(f"Unsupported webhook method: {method}")
         

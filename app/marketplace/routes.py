@@ -7,7 +7,7 @@ Marketplace routes
 from __future__ import annotations
 
 import os
-import uuid
+import secrets
 from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
@@ -31,6 +31,7 @@ LISTING_EXPIRY_DAYS = 30
 bp = Blueprint("marketplace", __name__, url_prefix="/marketplace")
 
 ALLOWED_IMAGE_EXT = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+MAX_IMAGE_SIZE_MB = 10
 
 
 def _allowed_image(filename):
@@ -38,22 +39,48 @@ def _allowed_image(filename):
 
 
 def _save_listing_image(file_storage):
+    """Save listing image with security checks."""
     if not file_storage or not file_storage.filename:
         return None
     if not _allowed_image(file_storage.filename):
         return None
-    upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, '..', 'uploads')), 'marketplace')
-    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Check file size
+    file_storage.seek(0, os.SEEK_END)
+    file_size = file_storage.tell()
+    file_storage.seek(0)
+    
+    if file_size > MAX_IMAGE_SIZE_MB * 1024 * 1024:
+        current_app.logger.warning(f"Image too large: {file_size} bytes")
+        return None
+    
+    if file_size == 0:
+        return None
+    
+    upload_base = os.path.abspath(os.path.join(
+        current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, '..', 'uploads')),
+        'marketplace'
+    ))
+    os.makedirs(upload_base, exist_ok=True, mode=0o755)
+    
     ext = file_storage.filename.rsplit('.', 1)[1].lower()
-    unique_name = f"{uuid.uuid4().hex}.{ext}"
-    filepath = os.path.join(upload_dir, unique_name)
+    # Security: Use secrets instead of uuid for filename
+    unique_name = f"{secrets.token_hex(16)}.{ext}"
+    filepath = os.path.abspath(os.path.join(upload_base, unique_name))
+    
+    # Prevent path traversal
+    if not filepath.startswith(upload_base):
+        current_app.logger.error("Path traversal attempt detected")
+        return None
+    
     try:
         img = Image.open(file_storage)
         if img.mode in ('RGBA', 'LA'):
             img = img.convert('RGB')
         img.thumbnail((600, 600))
         img.save(filepath, quality=50, optimize=True)
-    except Exception:
+    except Exception as e:
+        current_app.logger.error(f"Image processing failed: {e}")
         file_storage.seek(0)
         file_storage.save(filepath)
     return f"marketplace/{unique_name}"

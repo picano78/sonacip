@@ -3,6 +3,8 @@ Application Configuration
 Environment-based configuration for development and production
 """
 import os
+import secrets
+import warnings
 from datetime import timedelta
 
 
@@ -14,8 +16,19 @@ class Config:
     DEBUG = False
 
     # Secret key for session management and CSRF protection
-    # NOTE: Must be provided via environment variables only (no code defaults).
     SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        env = os.environ.get('FLASK_ENV', '').lower()
+        if env == 'production':
+            raise RuntimeError("SECRET_KEY must be set in production environment")
+        else:
+            # Development fallback
+            SECRET_KEY = secrets.token_hex(32)
+            warnings.warn(
+                "Using auto-generated SECRET_KEY for development. "
+                "Set SECRET_KEY env var for production.",
+                RuntimeWarning
+            )
 
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
@@ -116,8 +129,7 @@ class DevelopmentConfig(Config):
 
 
 class ProductionConfig(Config):
-    """Production configuration"""
-    # PRODUCTION SAFETY: DEBUG must NEVER be True
+    """Production configuration with strict validation"""
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() in ['true', 'on', '1']
@@ -128,8 +140,24 @@ class ProductionConfig(Config):
 
     @classmethod
     def validate_config(cls):
-        """Validate production configuration after app factory has run."""
-        pass
+        """Validate critical production settings."""
+        errors = []
+        
+        # SECRET_KEY validation
+        if not os.environ.get('SECRET_KEY'):
+            errors.append("SECRET_KEY must be set in production")
+        elif len(os.environ.get('SECRET_KEY', '')) < 32:
+            errors.append("SECRET_KEY must be at least 32 characters")
+        
+        # Database validation
+        db_url = os.environ.get('DATABASE_URL', '')
+        if not db_url:
+            errors.append("DATABASE_URL must be set in production")
+        elif 'sqlite' in db_url.lower():
+            errors.append("Production must use PostgreSQL, not SQLite")
+        
+        if errors:
+            raise RuntimeError("Production configuration errors:\n- " + "\n- ".join(errors))
 
 
 config = {

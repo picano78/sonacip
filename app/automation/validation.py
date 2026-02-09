@@ -2,6 +2,11 @@
 import json
 import re
 from typing import Any, Dict, Tuple
+from flask import current_app
+
+# Security: Allowed operators for condition evaluation
+ALLOWED_OPERATORS = {'==', '!=', '>', '>=', '<', '<=', 'contains', 'in'}
+ALLOWED_FIELD_PATTERN = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$')
 
 
 def evaluate_condition(condition_str: str, payload: Dict[str, Any]) -> bool:
@@ -48,46 +53,80 @@ def _evaluate_json_condition(condition: Dict[str, Any], payload: Dict[str, Any])
 
 
 def _match_rule(rule: Dict[str, Any], payload: Dict[str, Any]) -> bool:
-    """Match a single rule against payload."""
+    """Match a single rule against payload with security validation."""
     field = rule.get('field')
     operator = rule.get('op', '==')
     value = rule.get('value')
     
-    if not field:
+    if not field or not _validate_field(field):
         return False
     
-    actual = _get_nested_value(payload, field)
+    # Security: Validate operator is in allowed list
+    if operator not in ALLOWED_OPERATORS:
+        if current_app:
+            current_app.logger.warning(f"Invalid operator '{operator}' not in allowed list")
+        return False
     
-    if operator == '==':
-        return actual == value
-    elif operator == '!=':
-        return actual != value
-    elif operator == '>':
-        return float(actual) > float(value)
-    elif operator == '>=':
-        return float(actual) >= float(value)
-    elif operator == '<':
-        return float(actual) < float(value)
-    elif operator == '<=':
-        return float(actual) <= float(value)
-    elif operator == 'contains':
-        return value in str(actual)
-    elif operator == 'in':
-        return actual in value
+    actual = _safe_get(field, payload)
+    
+    try:
+        if operator == '==':
+            return actual == value
+        elif operator == '!=':
+            return actual != value
+        elif operator == '>':
+            return float(actual) > float(value)
+        elif operator == '>=':
+            return float(actual) >= float(value)
+        elif operator == '<':
+            return float(actual) < float(value)
+        elif operator == '<=':
+            return float(actual) <= float(value)
+        elif operator == 'contains':
+            return value in str(actual)
+        elif operator == 'in':
+            return actual in value
+    except (ValueError, TypeError, AttributeError) as e:
+        if current_app:
+            current_app.logger.warning(f"Rule matching failed: {e}")
+        return False
+    
     return False
 
 
 def _evaluate_simple_expression(expr: str, payload: Dict[str, Any]) -> bool:
-    """Evaluate simple string expression like 'status == completed'."""
-    # Match patterns like: field op value
+    """Evaluate simple string expression with security checks."""
+    # Validate expression length
+    if len(expr) > 500:
+        if current_app:
+            current_app.logger.warning("Expression too long, potential security risk")
+        return False
+    
+    # Check for dangerous patterns
+    DANGEROUS_PATTERNS = ['__', 'import', 'eval', 'exec', 'compile', '__builtins__', 'lambda', 'open', 'file']
+    expr_lower = expr.lower()
+    for pattern in DANGEROUS_PATTERNS:
+        if pattern in expr_lower:
+            if current_app:
+                current_app.logger.warning(f"Dangerous pattern '{pattern}' detected in expression")
+            return False
+    
+    # Match patterns like: field op value with field validation
     patterns = [
-        (r'(\w+(?:\.\w+)*)\s*==\s*["\']([^"\']+)["\']', lambda m: _get_nested_value(payload, m.group(1)) == m.group(2)),
-        (r'(\w+(?:\.\w+)*)\s*!=\s*["\']([^"\']+)["\']', lambda m: _get_nested_value(payload, m.group(1)) != m.group(2)),
-        (r'(\w+(?:\.\w+)*)\s*>=\s*(\d+(?:\.\d+)?)', lambda m: float(_get_nested_value(payload, m.group(1)) or 0) >= float(m.group(2))),
-        (r'(\w+(?:\.\w+)*)\s*<=\s*(\d+(?:\.\d+)?)', lambda m: float(_get_nested_value(payload, m.group(1)) or 0) <= float(m.group(2))),
-        (r'(\w+(?:\.\w+)*)\s*>\s*(\d+(?:\.\d+)?)', lambda m: float(_get_nested_value(payload, m.group(1)) or 0) > float(m.group(2))),
-        (r'(\w+(?:\.\w+)*)\s*<\s*(\d+(?:\.\d+)?)', lambda m: float(_get_nested_value(payload, m.group(1)) or 0) < float(m.group(2))),
-        (r'(\w+(?:\.\w+)*)\s+contains\s+["\']([^"\']+)["\']', lambda m: m.group(2) in str(_get_nested_value(payload, m.group(1)) or '')),
+        (r'(\w+(?:\.\w+)*)\s*==\s*["\']([^"\']+)["\']', 
+         lambda m: _safe_get(m.group(1), payload) == m.group(2) if _validate_field(m.group(1)) else False),
+        (r'(\w+(?:\.\w+)*)\s*!=\s*["\']([^"\']+)["\']', 
+         lambda m: _safe_get(m.group(1), payload) != m.group(2) if _validate_field(m.group(1)) else False),
+        (r'(\w+(?:\.\w+)*)\s*>=\s*(\d+(?:\.\d+)?)', 
+         lambda m: float(_safe_get(m.group(1), payload) or 0) >= float(m.group(2)) if _validate_field(m.group(1)) else False),
+        (r'(\w+(?:\.\w+)*)\s*<=\s*(\d+(?:\.\d+)?)', 
+         lambda m: float(_safe_get(m.group(1), payload) or 0) <= float(m.group(2)) if _validate_field(m.group(1)) else False),
+        (r'(\w+(?:\.\w+)*)\s*>\s*(\d+(?:\.\d+)?)', 
+         lambda m: float(_safe_get(m.group(1), payload) or 0) > float(m.group(2)) if _validate_field(m.group(1)) else False),
+        (r'(\w+(?:\.\w+)*)\s*<\s*(\d+(?:\.\d+)?)', 
+         lambda m: float(_safe_get(m.group(1), payload) or 0) < float(m.group(2)) if _validate_field(m.group(1)) else False),
+        (r'(\w+(?:\.\w+)*)\s+contains\s+["\']([^"\']+)["\']', 
+         lambda m: m.group(2) in str(_safe_get(m.group(1), payload) or '') if _validate_field(m.group(1)) else False),
     ]
     
     for pattern, evaluator in patterns:
@@ -95,21 +134,40 @@ def _evaluate_simple_expression(expr: str, payload: Dict[str, Any]) -> bool:
         if match:
             try:
                 return evaluator(match)
-            except (ValueError, TypeError, AttributeError):
+            except (ValueError, TypeError, AttributeError, KeyError) as e:
+                if current_app:
+                    current_app.logger.warning(f"Condition evaluation failed: {e}")
                 return False
     
     return False
 
 
-def _get_nested_value(data: Dict[str, Any], path: str) -> Any:
-    """Get nested value from dict using dot notation."""
-    keys = path.split('.')
-    value = data
-    for key in keys:
-        if isinstance(value, dict):
-            value = value.get(key)
-        else:
+def _validate_field(field: str) -> bool:
+    """Validate field name to prevent injection."""
+    if not field or not isinstance(field, str):
+        return False
+    return bool(ALLOWED_FIELD_PATTERN.match(field))
+
+
+def _safe_get(field: str, payload: Dict[str, Any]) -> Any:
+    """Safely get nested value with depth limit."""
+    MAX_DEPTH = 5
+    if not field or not isinstance(field, str):
+        return None
+    
+    parts = field.split('.')
+    if len(parts) > MAX_DEPTH:
+        if current_app:
+            current_app.logger.warning(f"Field depth {len(parts)} exceeds limit {MAX_DEPTH}")
+        return None
+    
+    value = payload
+    for part in parts:
+        if not isinstance(value, dict):
             return None
+        value = value.get(part)
+        if value is None:
+            break
     return value
 
 

@@ -7,6 +7,14 @@ from flask_login import current_user
 from datetime import datetime
 
 
+def escape_like(value: str) -> str:
+    """Escape special characters for SQL LIKE queries to prevent injection."""
+    if not value:
+        return value
+    # Escape backslash first, then wildcards
+    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+
+
 def check_feature_enabled(feature_key):
     if current_user and current_user.is_authenticated and current_user.is_admin():
         return True

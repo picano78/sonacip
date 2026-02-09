@@ -4,12 +4,13 @@ from app import db
 from app.models import Story, StoryView, User
 from datetime import datetime
 import os
-import uuid
+import secrets
 from werkzeug.utils import secure_filename
 
 bp = Blueprint('stories', __name__, url_prefix='/stories')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'webm'}
+MAX_FILE_SIZE_MB = 50
 
 
 @bp.before_request
@@ -25,11 +26,42 @@ def _allowed_file(filename):
 
 
 def _save_story_file(file):
+    """Save story file with security checks."""
+    if not file or not hasattr(file, 'filename') or not file.filename:
+        raise ValueError("Invalid file")
+    
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    
+    if file_size > MAX_FILE_SIZE_MB * 1024 * 1024:
+        raise ValueError(f"File too large (max {MAX_FILE_SIZE_MB}MB)")
+    
+    if file_size == 0:
+        raise ValueError("Empty file not allowed")
+    
+    # Get extension
+    if '.' not in file.filename:
+        raise ValueError("File must have an extension")
+    
     ext = file.filename.rsplit('.', 1)[1].lower()
-    unique_name = f"{uuid.uuid4().hex}.{ext}"
-    upload_dir = os.path.join(current_app.root_path, '..', 'uploads', 'stories')
-    os.makedirs(upload_dir, exist_ok=True)
-    filepath = os.path.join(upload_dir, unique_name)
+    if ext not in ALLOWED_EXTENSIONS:
+        raise ValueError(f"File extension '{ext}' not allowed")
+    
+    # Generate secure filename using secrets instead of uuid
+    unique_name = f"{secrets.token_hex(16)}.{ext}"
+    
+    # Secure path construction
+    upload_base = os.path.abspath(os.path.join(current_app.root_path, '..', 'uploads', 'stories'))
+    os.makedirs(upload_base, exist_ok=True, mode=0o755)
+    
+    filepath = os.path.abspath(os.path.join(upload_base, unique_name))
+    
+    # Prevent path traversal
+    if not filepath.startswith(upload_base):
+        raise ValueError("Path traversal detected")
+    
     file.save(filepath)
     return f"uploads/stories/{unique_name}"
 

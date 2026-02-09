@@ -11,6 +11,7 @@ from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm,
 from app.social.society_forms import SocietyInviteForm
 from app.social.utils import save_picture
 from app.social.feed_ranking import get_connection_ids, score_feed_posts
+from app.utils import escape_like
 from app.models import (
     User,
     Post,
@@ -814,13 +815,15 @@ def search():
     query = form.query.data or ''
     
     if query:
-        search = f"%{query}%"
+        # Security: Escape LIKE wildcards to prevent SQL injection
+        query_safe = escape_like(query)
+        search = f"%{query_safe}%"
         users_query = User.query.filter(
             or_(
-                User.username.ilike(search),
-                User.first_name.ilike(search),
-                User.last_name.ilike(search),
-                User.company_name.ilike(search)
+                User.username.ilike(search, escape='\\'),
+                User.first_name.ilike(search, escape='\\'),
+                User.last_name.ilike(search, escape='\\'),
+                User.company_name.ilike(search, escape='\\')
             )
         ).filter_by(is_active=True)
     else:

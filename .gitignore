@@ -32,6 +32,11 @@ instance/
 *.sqlite
 *.sqlite3
 sonacip.db
+*.db-*
+*.bak_*
+*.db.bak*
+sonacip.db*
+*.sqlite*
 
 # Logs
 logs/*

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db, csrf
 from app.models import FeePayment, SocietyFee, User
-from app.utils import admin_required, log_action
+from app.utils import admin_required, log_action, escape_like
 from datetime import datetime
 import os
 import json
@@ -194,10 +194,15 @@ def webhook():
 @bp.route('/receipt/<int:payment_id>')
 @login_required
 def receipt(payment_id):
-    fp = FeePayment.query.get_or_404(payment_id)
-    if fp.user_id != current_user.id and not current_user.is_admin():
-        flash('Accesso negato.', 'danger')
-        return redirect(url_for('payments.index'))
+    """View payment receipt with proper authorization."""
+    # Security: Fetch only if user has access (own payment or admin)
+    fp = FeePayment.query.filter_by(id=payment_id).filter(
+        db.or_(
+            FeePayment.user_id == current_user.id,
+            current_user.is_admin() == True
+        )
+    ).first_or_404()
+    
     fee = fp.fee
     amount_eur = fp.amount
     return render_template('payments/receipt.html', payment=fp, fee=fee, amount_eur=amount_eur)
@@ -216,8 +221,14 @@ def admin():
     if status_filter in ALLOWED_STATUSES:
         q = q.filter_by(status=status_filter)
     if user_filter:
+        # Security: Escape LIKE wildcards to prevent SQL injection
+        user_filter_safe = escape_like(user_filter)
         q = q.join(User, FeePayment.user_id == User.id).filter(
-            (User.username.ilike(f'%{user_filter}%')) | (User.first_name.ilike(f'%{user_filter}%')) | (User.last_name.ilike(f'%{user_filter}%'))
+            db.or_(
+                User.username.ilike(f'%{user_filter_safe}%', escape='\\'),
+                User.first_name.ilike(f'%{user_filter_safe}%', escape='\\'),
+                User.last_name.ilike(f'%{user_filter_safe}%', escape='\\')
+            )
         )
     if date_from:
         try:

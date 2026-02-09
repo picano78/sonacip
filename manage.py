@@ -24,7 +24,7 @@ def cmd_db_upgrade(_args) -> int:
     app = _create_app()
     migrations_dir = app.config.get("MIGRATIONS_DIR", "migrations")
     with app.app_context():
-        upgrade(directory=migrations_dir)
+        upgrade(directory=migrations_dir, revision="heads")
     return 0
 
 

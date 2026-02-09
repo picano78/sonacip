@@ -491,7 +491,7 @@ def _auto_upgrade_db(app: Flask) -> None:
         try:
             from flask_migrate import upgrade as migrate_upgrade
             with app.app_context():
-                migrate_upgrade(directory=migrate_dir)
+                migrate_upgrade(directory=migrate_dir, revision="heads")
             return True
         except Exception:
             try:

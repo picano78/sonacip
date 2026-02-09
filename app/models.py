@@ -10,24 +10,29 @@ from app import db
 from app.utils import check_permission
 
 
+def utc_now():
+    """Helper function for SQLAlchemy default timestamps."""
+    return datetime.now(timezone.utc)
+
+
 # Association tables for many-to-many relationships
 followers = db.Table('followers',
     db.Column('follower_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('followed_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+    db.Column('created_at', db.DateTime, default=utc_now)
 )
 
 post_likes = db.Table('post_likes',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+    db.Column('created_at', db.DateTime, default=utc_now)
 )
 
 event_athletes = db.Table('event_athletes',
     db.Column('event_id', db.Integer, db.ForeignKey('event.id'), primary_key=True),
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('status', db.String(20), default='pending'),  # pending, accepted, rejected
-    db.Column('created_at', db.DateTime, default=datetime.utcnow),
+    db.Column('created_at', db.DateTime, default=utc_now),
     db.Column('responded_at', db.DateTime)
 )
 
@@ -35,13 +40,13 @@ event_athletes = db.Table('event_athletes',
 society_calendar_event_staff = db.Table('society_calendar_event_staff',
     db.Column('event_id', db.Integer, db.ForeignKey('society_calendar_event.id'), primary_key=True),
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+    db.Column('created_at', db.DateTime, default=utc_now)
 )
 
 society_calendar_event_athletes = db.Table('society_calendar_event_athletes',
     db.Column('event_id', db.Integer, db.ForeignKey('society_calendar_event.id'), primary_key=True),
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+    db.Column('created_at', db.DateTime, default=utc_now)
 )
 
 
@@ -57,7 +62,7 @@ class SocietyCalendarAttendance(db.Model):
     status = db.Column(db.String(20), nullable=False, default='pending')  # pending, accepted, declined
     responded_at = db.Column(db.DateTime)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     __table_args__ = (
         db.UniqueConstraint('event_id', 'user_id', name='uq_society_calendar_attendance'),
@@ -74,7 +79,7 @@ class SocietyCalendarReminderSent(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey('society_calendar_event.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     kind = db.Column(db.String(50), nullable=False)  # e.g. '24h', '1h'
-    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    sent_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     __table_args__ = (
         db.UniqueConstraint('event_id', 'user_id', 'kind', name='uq_society_calendar_reminder_sent'),
@@ -132,9 +137,9 @@ class User(UserMixin, db.Model):
     email_confirmed = db.Column(db.Boolean, default=False)
     email_confirm_token = db.Column(db.String(128), index=True)
     email_confirm_sent_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    last_seen = db.Column(db.DateTime, default=utc_now)
     
     # Language preference
     language = db.Column(db.String(5), default='it')  # 'it' or 'en'
@@ -461,8 +466,8 @@ class Post(db.Model):
     likes_count = db.Column(db.Integer, default=0)
     comments_count = db.Column(db.Integer, default=0)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     comments = db.relationship('Comment', backref='post', lazy='dynamic',
@@ -497,9 +502,9 @@ class SocietyMembership(db.Model):
     status = db.Column(db.String(20), nullable=False, default='active')  # pending, active, rejected, revoked
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('memberships', lazy='dynamic'))
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('society_memberships', lazy='dynamic'))
@@ -528,7 +533,7 @@ class SocietyRolePermission(db.Model):
     effect = db.Column(db.String(10), nullable=False, default='allow')  # allow / deny
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id])
     permission = db.relationship('Permission', foreign_keys=[permission_id])
@@ -552,7 +557,7 @@ class Comment(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     
     def __repr__(self):
         return f'<Comment {self.id} on Post {self.post_id}>'
@@ -592,8 +597,8 @@ class Event(db.Model):
     # Status
     status = db.Column(db.String(20), default='scheduled')  # scheduled, ongoing, completed, cancelled
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships - convocated athletes
     convocated_athletes = db.relationship('User', secondary=event_athletes,
@@ -681,8 +686,8 @@ class SocietyCalendarEvent(db.Model):
 
     share_to_social = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     # Relationships
     society = db.relationship('Society', backref=db.backref('calendar_events', lazy='dynamic'))
@@ -736,7 +741,7 @@ class Facility(db.Model):
     color = db.Column(db.String(20), default='#0d6efd')  # default color for this facility
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('facilities', lazy='dynamic'))
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -764,7 +769,7 @@ class Notification(db.Model):
     
     # Status
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
     read_at = db.Column(db.DateTime)
     
     def mark_as_read(self):
@@ -791,7 +796,7 @@ class AuditLog(db.Model):
     entity_id = db.Column(db.Integer)  # ID of affected entity
     details = db.Column(db.Text)  # JSON or text details
     ip_address = db.Column(db.String(45))  # IPv4 or IPv6
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
     
     # Relationship
     user = db.relationship('User', backref='audit_logs')
@@ -815,7 +820,7 @@ class SocietyHealthSnapshot(db.Model):
     score = db.Column(db.Integer, default=0)  # 0-100
     details = db.Column(db.Text)  # JSON blob
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id])
 
@@ -835,7 +840,7 @@ class MaintenanceRun(db.Model):
     status = db.Column(db.String(20), default='running')  # running, success, failed
     summary = db.Column(db.Text)  # JSON
 
-    started_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    started_at = db.Column(db.DateTime, default=utc_now, index=True)
     finished_at = db.Column(db.DateTime)
 
     def __repr__(self):
@@ -853,7 +858,7 @@ class UserOnboardingStep(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
 
     step_key = db.Column(db.String(80), nullable=False, index=True)
-    completed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    completed_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -874,7 +879,7 @@ class SocietySuggestionDismissal(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
 
     key = db.Column(db.String(120), nullable=False, index=True)
-    dismissed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    dismissed_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -900,7 +905,7 @@ class SocietyInvite(db.Model):
     status = db.Column(db.String(20), nullable=False, default='pending')  # pending, accepted, rejected, revoked
 
     note = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
     responded_at = db.Column(db.DateTime)
 
     society = db.relationship('Society', foreign_keys=[society_id])
@@ -932,7 +937,7 @@ class Backup(db.Model):
     
     # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     notes = db.Column(db.Text)
     
     # Validation
@@ -960,7 +965,7 @@ class BackupSetting(db.Model):
     last_run_at = db.Column(db.DateTime)
     run_hour_utc = db.Column(db.Integer, default=2)  # 0-23 UTC
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -980,7 +985,7 @@ class AdsSetting(db.Model):
     default_duration_days = db.Column(db.Integer, default=7)
     default_views = db.Column(db.Integer, default=500)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1026,8 +1031,8 @@ class AdCampaign(db.Model):
     clicks_count = db.Column(db.Integer, default=0)
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     society = db.relationship('Society', foreign_keys=[society_id])
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -1059,7 +1064,7 @@ class AdCreative(db.Model):
     last_served_at = db.Column(db.DateTime)
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     campaign = db.relationship('AdCampaign', foreign_keys=[campaign_id], backref=db.backref('creatives', lazy='dynamic'))
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -1083,7 +1088,7 @@ class AdEvent(db.Model):
 
     ip = db.Column(db.String(80))
     user_agent = db.Column(db.String(300))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     campaign = db.relationship('AdCampaign', foreign_keys=[campaign_id])
     creative = db.relationship('AdCreative', foreign_keys=[creative_id])
@@ -1123,7 +1128,7 @@ class SocialSetting(db.Model):
     weight_automation = db.Column(db.Float, default=10.0)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1147,7 +1152,7 @@ class StorageSetting(db.Model):
     max_video_mb = db.Column(db.Integer, default=64)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1172,7 +1177,7 @@ class AppearanceSetting(db.Model):
     layout_style = db.Column(db.String(50), default='standard')
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     society = db.relationship('Society', backref=db.backref('appearance_settings', lazy='dynamic'))
     updater = db.relationship('User', foreign_keys=[updated_by])
@@ -1194,7 +1199,7 @@ class PrivacySetting(db.Model):
     cookie_url = db.Column(db.String(255))
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1218,7 +1223,7 @@ class SiteCustomization(db.Model):
     custom_css = db.Column(db.Text)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1242,7 +1247,7 @@ class PageCustomization(db.Model):
     body_html = db.Column(db.Text)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1267,7 +1272,7 @@ class CustomizationKV(db.Model):
     value_json = db.Column(db.Text, nullable=False, default='{}')
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1302,7 +1307,7 @@ class SmtpSetting(db.Model):
     default_sender = db.Column(db.String(255), default='noreply@sonacip.it')
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1326,7 +1331,7 @@ class EnterpriseSSOSetting(db.Model):
     scopes = db.Column(db.String(255), default='openid email profile')
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1347,7 +1352,7 @@ class WhatsappSetting(db.Model):
     from_number = db.Column(db.String(50))  # optional sender identifier
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1369,7 +1374,7 @@ class WhatsappTemplate(db.Model):
     category = db.Column(db.String(50), default='utility')
     body_preview = db.Column(db.String(500))
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
 
 class WhatsappOptIn(db.Model):
@@ -1388,8 +1393,8 @@ class WhatsappOptIn(db.Model):
     opted_out_at = db.Column(db.DateTime)
     source = db.Column(db.String(50), default='user')
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     society = db.relationship('Society', foreign_keys=[society_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -1416,7 +1421,7 @@ class WhatsappMessageLog(db.Model):
     provider = db.Column(db.String(50))
     provider_response = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
     sent_at = db.Column(db.DateTime)
 
     society = db.relationship('Society', foreign_keys=[society_id])
@@ -1437,7 +1442,7 @@ class Message(db.Model):
     
     # Status
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
     read_at = db.Column(db.DateTime)
     
     # Relationships
@@ -1464,7 +1469,7 @@ class MedicalCertificate(db.Model):
     notes = db.Column(db.Text)
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -1496,7 +1501,7 @@ class SocietyFee(db.Model):
     paid_at = db.Column(db.DateTime)
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -1514,7 +1519,7 @@ class MedicalCertificateReminderSent(db.Model):
     certificate_id = db.Column(db.Integer, db.ForeignKey('medical_certificate.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     kind = db.Column(db.String(50), nullable=False)  # e.g. '14d', '7d', '1d'
-    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    sent_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     __table_args__ = (
         db.UniqueConstraint('certificate_id', 'user_id', 'kind', name='uq_medical_certificate_reminder_sent'),
@@ -1529,7 +1534,7 @@ class SocietyFeeReminderSent(db.Model):
     fee_id = db.Column(db.Integer, db.ForeignKey('society_fee.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     kind = db.Column(db.String(50), nullable=False)  # e.g. '7d', '1d'
-    sent_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    sent_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     __table_args__ = (
         db.UniqueConstraint('fee_id', 'user_id', 'kind', name='uq_society_fee_reminder_sent'),
@@ -1548,7 +1553,7 @@ class CRMPipeline(db.Model):
     name = db.Column(db.String(120), nullable=False, default='Pipeline')
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id], backref=db.backref('crm_pipeline', uselist=False))
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -1577,7 +1582,7 @@ class CRMPipelineStage(db.Model):
     is_lost = db.Column(db.Boolean, default=False)
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     pipeline = db.relationship('CRMPipeline', foreign_keys=[pipeline_id], backref=db.backref('stages', lazy='dynamic'))
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -1623,8 +1628,8 @@ class Contact(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     society = db.relationship('Society', foreign_keys=[society_id], backref='crm_contacts')
@@ -1676,8 +1681,8 @@ class Opportunity(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     contact = db.relationship('Contact', backref='opportunities')
@@ -1701,7 +1706,7 @@ class CRMActivity(db.Model):
     description = db.Column(db.Text)
     
     # Date and completion
-    activity_date = db.Column(db.Date, default=datetime.utcnow)
+    activity_date = db.Column(db.Date, default=utc_now)
     completed = db.Column(db.Boolean, default=False)
     
     # Related records
@@ -1712,8 +1717,8 @@ class CRMActivity(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     contact = db.relationship('Contact', backref='activities')
@@ -1748,8 +1753,8 @@ class Role(db.Model):
     is_system = db.Column(db.Boolean, default=False)  # System roles cannot be deleted
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     def __repr__(self):
         return f'<Role {self.name}>'
@@ -1759,7 +1764,7 @@ class Role(db.Model):
 role_permissions = db.Table('role_permissions',
     db.Column('role_id', db.Integer, db.ForeignKey('role.id'), primary_key=True),
     db.Column('permission_id', db.Integer, db.ForeignKey('permission.id'), primary_key=True),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+    db.Column('created_at', db.DateTime, default=utc_now)
 )
 
 
@@ -1779,7 +1784,7 @@ class Permission(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     
     # Relationships
     roles = db.relationship('Role', secondary=role_permissions,
@@ -1799,7 +1804,7 @@ class UserPermissionOverride(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     permission_id = db.Column(db.Integer, db.ForeignKey('permission.id'), nullable=False)
     effect = db.Column(db.String(10), default='allow')  # allow or deny
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     permission = db.relationship('Permission', backref=db.backref('user_overrides', lazy='dynamic'))
 
@@ -1847,8 +1852,8 @@ class Plan(db.Model):
     display_order = db.Column(db.Integer, default=0)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     def __repr__(self):
         return f'<Plan {self.name}>'
@@ -1870,7 +1875,7 @@ class Subscription(db.Model):
     billing_cycle = db.Column(db.String(20), default='monthly')  # monthly, yearly
     
     # Dates
-    start_date = db.Column(db.DateTime, default=datetime.utcnow)
+    start_date = db.Column(db.DateTime, default=utc_now)
     end_date = db.Column(db.DateTime)
     trial_end_date = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
@@ -1889,8 +1894,8 @@ class Subscription(db.Model):
     auto_renew = db.Column(db.Boolean, default=True)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     user = db.relationship('User', backref=db.backref('subscriptions', lazy='dynamic'))
@@ -1939,8 +1944,8 @@ class Payment(db.Model):
     payment_metadata = db.Column(db.Text)  # JSON metadata (renamed from 'metadata' to avoid SQLAlchemy reserved word)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     user = db.relationship('User', backref='payments')
@@ -1964,7 +1969,7 @@ class PlatformFeeSetting(db.Model):
     currency = db.Column(db.String(3), default='EUR')
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -1989,7 +1994,7 @@ class PlatformTransaction(db.Model):
     currency = db.Column(db.String(3), default='EUR')
     status = db.Column(db.String(20), default='collected')  # collected, refunded
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     society = db.relationship('Society', foreign_keys=[society_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -2022,7 +2027,7 @@ class Coupon(db.Model):
     plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'))
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     plan = db.relationship('Plan', foreign_keys=[plan_id])
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -2042,7 +2047,7 @@ class CouponRedemption(db.Model):
     subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'))
     payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'))
 
-    redeemed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    redeemed_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     coupon = db.relationship('Coupon', foreign_keys=[coupon_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -2076,7 +2081,7 @@ class AddOn(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     display_order = db.Column(db.Integer, default=0)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     def __repr__(self):
         return f"<AddOn {self.slug} feature={self.feature_key}>"
@@ -2098,11 +2103,11 @@ class AddOnEntitlement(db.Model):
     payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), index=True)
 
     status = db.Column(db.String(20), default='active')  # active, revoked, expired
-    start_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    start_date = db.Column(db.DateTime, default=utc_now, index=True)
     end_date = db.Column(db.DateTime)
 
     source = db.Column(db.String(50), default='manual')  # manual, stripe, local
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     addon = db.relationship('AddOn', foreign_keys=[addon_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -2155,8 +2160,8 @@ class Society(db.Model):
     total_staff = db.Column(db.Integer, default=0)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     user = db.relationship('User', foreign_keys=[id], backref=db.backref('society_profile', uselist=False))
@@ -2193,8 +2198,8 @@ class Template(db.Model):
     usage_count = db.Column(db.Integer, default=0)
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     def __repr__(self):
         return f'<Template {self.name}>'
@@ -2219,7 +2224,7 @@ class MarketplacePackage(db.Model):
     display_order = db.Column(db.Integer, default=0)
 
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     creator = db.relationship('User', foreign_keys=[created_by])
 
@@ -2233,7 +2238,7 @@ class MarketplacePackageItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     package_id = db.Column(db.Integer, db.ForeignKey('marketplace_package.id'), nullable=False, index=True)
     template_id = db.Column(db.Integer, db.ForeignKey('template.id'), nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     package = db.relationship('MarketplacePackage', foreign_keys=[package_id], backref=db.backref('items', lazy='dynamic', cascade='all, delete-orphan'))
     template = db.relationship('Template', foreign_keys=[template_id])
@@ -2251,7 +2256,7 @@ class MarketplacePurchase(db.Model):
 
     status = db.Column(db.String(20), default='pending')  # pending, completed, failed
     installed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
 
     package = db.relationship('MarketplacePackage', foreign_keys=[package_id])
     user = db.relationship('User', foreign_keys=[user_id])
@@ -2310,8 +2315,8 @@ class Task(db.Model):
     
     # Metadata
     completed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     creator = db.relationship('User', foreign_keys=[created_by], backref='tasks_created')
@@ -2345,8 +2350,8 @@ class Tournament(db.Model):
     linked_planner_event_id = db.Column(db.Integer, db.ForeignKey('event.id'))
     linked_calendar_event_id = db.Column(db.Integer, db.ForeignKey('society_calendar_event.id'))
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     society = db.relationship('Society', backref=db.backref('tournaments', lazy='dynamic'))
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -2487,8 +2492,8 @@ class Project(db.Model):
     spent = db.Column(db.Float, default=0)
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     # Relationships
     tasks = db.relationship('Task', backref='project', lazy='dynamic')
@@ -2515,11 +2520,11 @@ class Analytics(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     
     # Time dimensions
-    recorded_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    recorded_at = db.Column(db.DateTime, default=utc_now, index=True)
     period = db.Column(db.String(20))  # hourly, daily, weekly, monthly, yearly
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     
     def __repr__(self):
         return f'<Analytics {self.metric_name}: {self.metric_value}>'
@@ -2560,8 +2565,8 @@ class Automation(db.Model):
     max_executions = db.Column(db.Integer)  # Rate limiting
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     def __repr__(self):
         return f'<Automation {self.name}>'
@@ -2580,8 +2585,8 @@ class AutomationRule(db.Model):
     max_retries = db.Column(db.Integer, default=3)
     retry_delay = db.Column(db.Integer, default=60)  # seconds
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     creator = db.relationship('User', foreign_keys=[created_by])
 
@@ -2620,7 +2625,7 @@ class AutomationRun(db.Model):
     retry_count = db.Column(db.Integer, default=0)
     next_retry_at = db.Column(db.DateTime)
     completed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     rule = db.relationship('AutomationRule', backref='runs')
 
@@ -2654,8 +2659,8 @@ class Team(db.Model):
     member_count = db.Column(db.Integer, default=0)
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     def __repr__(self):
         return f'<Team {self.name}>'
@@ -2676,7 +2681,7 @@ class DashboardTemplate(db.Model):
     widgets = db.Column(db.Text, nullable=False)  # JSON array
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -2711,8 +2716,8 @@ class Dashboard(db.Model):
     refresh_interval = db.Column(db.Integer, default=300)  # seconds
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     def get_widgets(self):
         import json
@@ -2765,8 +2770,8 @@ class Goal(db.Model):
     status = db.Column(db.String(20), default='in_progress')  # in_progress, achieved, at_risk, missed
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     def __repr__(self):
         return f'<Goal {self.title}>'
@@ -2794,8 +2799,8 @@ class Career(db.Model):
     description = db.Column(db.Text)
     skills = db.Column(db.Text)  # comma-separated skills
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     user = db.relationship('User', backref=db.backref('careers', lazy='dynamic', order_by='Career.start_date.desc()'))
     
@@ -2824,8 +2829,8 @@ class Education(db.Model):
     activities = db.Column(db.Text)
     description = db.Column(db.Text)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     user = db.relationship('User', backref=db.backref('educations', lazy='dynamic', order_by='Education.start_year.desc()'))
     
@@ -2846,7 +2851,7 @@ class Skill(db.Model):
     category = db.Column(db.String(50))  # sport, coaching, management, technical
     endorsement_count = db.Column(db.Integer, default=0)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     
     user = db.relationship('User', backref=db.backref('skills', lazy='dynamic', order_by='Skill.endorsement_count.desc()'))
     
@@ -2863,7 +2868,7 @@ class SkillEndorsement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     skill_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=False)
     endorsed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     
     skill = db.relationship('Skill', backref=db.backref('endorsements', lazy='dynamic'))
     endorsed_by = db.relationship('User', backref=db.backref('given_endorsements', lazy='dynamic'))
@@ -2882,8 +2887,8 @@ class Connection(db.Model):
     status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected, blocked
     message = db.Column(db.Text)  # optional connection request message
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     requester = db.relationship('User', foreign_keys=[requester_id], backref=db.backref('sent_connections', lazy='dynamic'))
     addressee = db.relationship('User', foreign_keys=[addressee_id], backref=db.backref('received_connections', lazy='dynamic'))
@@ -2908,8 +2913,8 @@ class ProfileSection(db.Model):
     
     section_type = db.Column(db.String(50))  # career, education, skills, about, contact
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
 
 class ModerationRule(db.Model):
@@ -2931,8 +2936,8 @@ class ModerationRule(db.Model):
     
     # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
     def __repr__(self):
         return f'<ModerationRule {self.name}>'
@@ -2965,8 +2970,8 @@ class MarketplaceListing(db.Model):
     is_promoted = db.Column(db.Boolean, default=False, index=True)
     promotion_expires_at = db.Column(db.DateTime)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     seller = db.relationship('User', foreign_keys=[user_id], backref=db.backref('marketplace_listings', lazy='dynamic'))
     society = db.relationship('Society', foreign_keys=[society_id])
@@ -3007,7 +3012,7 @@ class PlatformFeature(db.Model):
     is_premium = db.Column(db.Boolean, default=False)
     is_enabled = db.Column(db.Boolean, default=True)
     display_order = db.Column(db.Integer, default=0)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     def __repr__(self):
@@ -3029,8 +3034,8 @@ class PromotionTier(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     display_order = db.Column(db.Integer, default=0)
     stripe_price_id = db.Column(db.String(120))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     def __repr__(self):
@@ -3052,7 +3057,7 @@ class ListingPromotion(db.Model):
     amount_paid = db.Column(db.Float, default=0)
     currency = db.Column(db.String(3), default='EUR')
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     listing = db.relationship('MarketplaceListing', backref=db.backref('promotions', lazy='dynamic'))
     tier = db.relationship('PromotionTier')
@@ -3086,7 +3091,7 @@ class PlatformPaymentSetting(db.Model):
     notes = db.Column(db.Text)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -3113,7 +3118,7 @@ class BroadcastMessage(db.Model):
     total_recipients = db.Column(db.Integer, default=0)
     total_read = db.Column(db.Integer, default=0)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     sent_at = db.Column(db.DateTime)
 
     sender = db.relationship('User', foreign_keys=[sender_id])
@@ -3159,7 +3164,7 @@ class EmailConfirmationSetting(db.Model):
     auto_confirm_existing = db.Column(db.Boolean, default=True)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     updater = db.relationship('User', foreign_keys=[updated_by])
 
@@ -3176,7 +3181,7 @@ class PushSubscription(db.Model):
     endpoint = db.Column(db.Text, nullable=False)
     p256dh_key = db.Column(db.String(255))
     auth_key = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     is_active = db.Column(db.Boolean, default=True)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('push_subscriptions', lazy='dynamic'))
@@ -3202,8 +3207,8 @@ class Group(db.Model):
     cover_image = db.Column(db.String(255))
     is_private = db.Column(db.Boolean, default=False)
     max_members = db.Column(db.Integer, default=100)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     creator = db.relationship('User', foreign_keys=[creator_id], backref=db.backref('created_groups', lazy='dynamic'))
     members = db.relationship('GroupMembership', backref='group', lazy='dynamic', cascade='all, delete-orphan')
@@ -3220,7 +3225,7 @@ class GroupMembership(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     role = db.Column(db.String(20), default='member')
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at = db.Column(db.DateTime, default=utc_now)
     is_muted = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('group_memberships', lazy='dynamic'))
@@ -3242,7 +3247,7 @@ class GroupMessage(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     content = db.Column(db.Text, nullable=False)
     image = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     group = db.relationship('Group', foreign_keys=[group_id], backref=db.backref('messages', lazy='dynamic'))
     user = db.relationship('User', foreign_keys=[user_id])
@@ -3261,7 +3266,7 @@ class Story(db.Model):
     media_type = db.Column(db.String(20), default='image')
     caption = db.Column(db.Text)
     background_color = db.Column(db.String(20), default='#1877f2')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     expires_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc) + timedelta(hours=24))
     views_count = db.Column(db.Integer, default=0)
 
@@ -3286,7 +3291,7 @@ class StoryView(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     story_id = db.Column(db.Integer, db.ForeignKey('story.id'), nullable=False, index=True)
     viewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    viewed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    viewed_at = db.Column(db.DateTime, default=utc_now)
 
     story = db.relationship('Story', foreign_keys=[story_id], backref=db.backref('views', lazy='dynamic'))
     viewer = db.relationship('User', foreign_keys=[viewer_id])
@@ -3311,7 +3316,7 @@ class Poll(db.Model):
     is_anonymous = db.Column(db.Boolean, default=False)
     multiple_choice = db.Column(db.Boolean, default=False)
     closes_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     is_active = db.Column(db.Boolean, default=True)
 
     options = db.relationship('PollOption', backref='poll', lazy='dynamic', cascade='all, delete-orphan')
@@ -3343,7 +3348,7 @@ class PollVote(db.Model):
     poll_id = db.Column(db.Integer, db.ForeignKey('poll.id'), nullable=False, index=True)
     option_id = db.Column(db.Integer, db.ForeignKey('poll_option.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    voted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    voted_at = db.Column(db.DateTime, default=utc_now)
 
     poll = db.relationship('Poll', foreign_keys=[poll_id], backref=db.backref('votes', lazy='dynamic'))
     option = db.relationship('PollOption', foreign_keys=[option_id], backref=db.backref('votes', lazy='dynamic'))
@@ -3371,7 +3376,7 @@ class AthleteStat(db.Model):
     metrics = db.Column(db.Text)
     notes = db.Column(db.Text)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('athlete_stats', lazy='dynamic'))
     creator = db.relationship('User', foreign_keys=[created_by])
@@ -3392,7 +3397,7 @@ class StatTemplate(db.Model):
     society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
     is_global = db.Column(db.Boolean, default=False)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     creator = db.relationship('User', foreign_keys=[created_by])
 
@@ -3410,7 +3415,7 @@ class DocumentFolder(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('document_folder.id'), nullable=True, index=True)
     society_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     children = db.relationship('DocumentFolder', backref=db.backref('parent', remote_side='DocumentFolder.id'), lazy='dynamic')
     documents = db.relationship('Document', backref='folder', lazy='dynamic')
@@ -3436,8 +3441,8 @@ class Document(db.Model):
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     is_public = db.Column(db.Boolean, default=False)
     download_count = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
     uploader = db.relationship('User', foreign_keys=[uploaded_by], backref=db.backref('uploaded_documents', lazy='dynamic'))
 
@@ -3459,7 +3464,7 @@ class Badge(db.Model):
     requirement_value = db.Column(db.Integer, default=1)
     points = db.Column(db.Integer, default=10)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     def __repr__(self):
         return f'<Badge {self.name}>'
@@ -3472,7 +3477,7 @@ class UserBadge(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     badge_id = db.Column(db.Integer, db.ForeignKey('badge.id'), nullable=False, index=True)
-    earned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    earned_at = db.Column(db.DateTime, default=utc_now)
     is_notified = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('badges', lazy='dynamic'))
@@ -3558,7 +3563,7 @@ class FeePayment(db.Model):
     stripe_receipt_url = db.Column(db.String(500), nullable=True)
     status = db.Column(db.String(20), default='pending')
     paid_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
     notes = db.Column(db.Text)
 
     fee = db.relationship('SocietyFee', foreign_keys=[fee_id], backref=db.backref('payments', lazy='dynamic'))
@@ -3577,7 +3582,7 @@ class ContactMessage(db.Model):
     subject = db.Column(db.String(50), nullable=False)
     message = db.Column(db.Text, nullable=False)
     read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utc_now)
 
     def __repr__(self):
         return f'<ContactMessage {self.id} from={self.email}>'

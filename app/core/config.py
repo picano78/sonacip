@@ -3,6 +3,7 @@ Application Configuration
 Environment-based configuration for development and production
 """
 import os
+import secrets
 from datetime import timedelta
 
 
@@ -14,8 +15,11 @@ class Config:
     DEBUG = False
 
     # Secret key for session management and CSRF protection
-    # NOTE: Must be provided via environment variables only (no code defaults).
+    # Development: auto-generate if missing
+    # Production: must be explicitly set via environment variable
     SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY and os.environ.get('FLASK_ENV') != 'production':
+        SECRET_KEY = secrets.token_hex(32)
 
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
@@ -129,7 +133,10 @@ class ProductionConfig(Config):
     @classmethod
     def validate_config(cls):
         """Validate production configuration after app factory has run."""
-        pass
+        if not os.environ.get('SECRET_KEY'):
+            raise RuntimeError("SECRET_KEY must be set in production environment")
+        if not os.environ.get('DATABASE_URL') or 'sqlite' in os.environ.get('DATABASE_URL', ''):
+            raise RuntimeError("Production must use PostgreSQL, not SQLite")
 
 
 config = {

@@ -14,7 +14,7 @@ from app.auth.forms import (
 )
 from app.models import User, AuditLog, Subscription, Plan, Dashboard, DashboardTemplate, Society, Role, EnterpriseSSOSetting, EmailConfirmationSetting
 from app.auth.email_confirm import is_email_confirmation_required, send_confirmation_email, can_resend, verify_token, get_confirmation_settings
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import secrets
 
@@ -244,7 +244,7 @@ def login():
 
         login_user(user, remember=form.remember_me.data)
         try:
-            user.last_seen = datetime.utcnow()
+            user.last_seen = datetime.now(timezone.utc)
             _safe_commit("auth.login:last_seen")
         except Exception:
             try:
@@ -368,7 +368,7 @@ def sso_callback():
         return redirect(url_for('auth.login'))
 
     login_user(user, remember=True)
-    user.last_seen = datetime.utcnow()
+    user.last_seen = datetime.now(timezone.utc)
     _safe_commit("auth.sso:last_seen")
 
     try:
@@ -484,7 +484,7 @@ def register():
                             plan_id=free_plan.id,
                             status='active',
                             billing_cycle='monthly',
-                            start_date=datetime.utcnow(),
+                            start_date=datetime.now(timezone.utc),
                             amount=0,
                             auto_renew=False,
                         )
@@ -654,7 +654,7 @@ def register_society():
                         plan_id=free_plan.id,
                         status='active',
                         billing_cycle='monthly',
-                        start_date=datetime.utcnow(),
+                        start_date=datetime.now(timezone.utc),
                         amount=0,
                         auto_renew=False
                     )

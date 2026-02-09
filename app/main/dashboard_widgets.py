@@ -143,7 +143,7 @@ def _render_upcoming_events(user):
     from app.models import Event
     from datetime import datetime
     try:
-        events = Event.query.filter(Event.start_date >= datetime.utcnow()).order_by(Event.start_date.asc()).limit(5).all()
+        events = Event.query.filter(Event.start_date >= datetime.now(timezone.utc)).order_by(Event.start_date.asc()).limit(5).all()
     except Exception:
         events = []
     items = ''
@@ -255,7 +255,7 @@ def _render_stats_summary(user):
 
 def _render_calendar_mini(user):
     from datetime import datetime, timedelta
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     start = today - timedelta(days=today.weekday())
     days_html = ''
     day_names = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']

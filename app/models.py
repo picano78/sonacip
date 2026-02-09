@@ -2,7 +2,7 @@
 Database Models
 All SQLAlchemy models for SONACIP platform
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -387,7 +387,7 @@ class User(UserMixin, db.Model):
         # 2) Add-on entitlements (paid add-ons can unlock features even if the plan doesn't)
         try:
             from app.models import AddOnEntitlement
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             scope = self.get_primary_society()
             q = AddOnEntitlement.query.filter_by(feature_key=feature_name, status='active')
             if scope:
@@ -620,7 +620,7 @@ class Event(db.Model):
                     event_athletes.c.event_id == self.id,
                     event_athletes.c.user_id == user_id
                 )
-            ).values(status=status, responded_at=datetime.utcnow())
+            ).values(status=status, responded_at=datetime.now(timezone.utc))
         )
         db.session.commit()
     
@@ -770,7 +770,7 @@ class Notification(db.Model):
     def mark_as_read(self):
         """Mark notification as read"""
         self.is_read = True
-        self.read_at = datetime.utcnow()
+        self.read_at = datetime.now(timezone.utc)
         db.session.commit()
     
     def __repr__(self):
@@ -1899,11 +1899,11 @@ class Subscription(db.Model):
     
     def is_active(self):
         """Check if subscription is currently active"""
-        return self.status == 'active' and (not self.end_date or self.end_date > datetime.utcnow())
+        return self.status == 'active' and (not self.end_date or self.end_date > datetime.now(timezone.utc))
     
     def is_trial(self):
         """Check if subscription is in trial period"""
-        return self.status == 'trial' and (not self.trial_end_date or self.trial_end_date > datetime.utcnow())
+        return self.status == 'trial' and (not self.trial_end_date or self.trial_end_date > datetime.now(timezone.utc))
     
     def __repr__(self):
         return f'<Subscription {self.id}: User {self.user_id} - Plan {self.plan_id}>'
@@ -3262,14 +3262,14 @@ class Story(db.Model):
     caption = db.Column(db.Text)
     background_color = db.Column(db.String(20), default='#1877f2')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    expires_at = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=24))
+    expires_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc) + timedelta(hours=24))
     views_count = db.Column(db.Integer, default=0)
 
     author = db.relationship('User', foreign_keys=[user_id], backref=db.backref('stories', lazy='dynamic'))
 
     @property
     def is_expired(self):
-        return datetime.utcnow() >= self.expires_at if self.expires_at else False
+        return datetime.now(timezone.utc) >= self.expires_at if self.expires_at else False
 
     @property
     def view_count(self):

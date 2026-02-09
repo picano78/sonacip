@@ -1,6 +1,6 @@
 import secrets
 import smtplib
-from datetime import datetime
+from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -40,7 +40,7 @@ def is_email_confirmation_required():
 def generate_confirm_token(user):
     token = secrets.token_urlsafe(48)
     user.email_confirm_token = token
-    user.email_confirm_sent_at = datetime.utcnow()
+    user.email_confirm_sent_at = datetime.now(timezone.utc)
     try:
         db.session.commit()
     except Exception:
@@ -135,7 +135,7 @@ def can_resend(user):
         return False, "Email già confermata"
 
     if user.email_confirm_sent_at:
-        elapsed = (datetime.utcnow() - user.email_confirm_sent_at).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - user.email_confirm_sent_at).total_seconds()
         if elapsed < 60:
             return False, "Attendi almeno 60 secondi prima di richiedere un nuovo invio"
 
@@ -158,7 +158,7 @@ def verify_token(token):
     expiry_hours = setting.token_expiry_hours or 48
 
     if user.email_confirm_sent_at:
-        elapsed = (datetime.utcnow() - user.email_confirm_sent_at).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - user.email_confirm_sent_at).total_seconds()
         if elapsed > expiry_hours * 3600:
             return None, "Il link di conferma è scaduto. Richiedi un nuovo invio."
 

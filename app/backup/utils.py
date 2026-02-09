@@ -5,7 +5,7 @@ import os
 import shutil
 import zipfile
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import current_app
 from app import db
 from app.models import Backup as BackupModel, BackupSetting
@@ -19,7 +19,7 @@ def create_backup(created_by_id, backup_type='full', notes=None):
     Returns: Backup model instance or None if failed
     """
     try:
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
         backup_filename = f'sonacip_backup_{backup_type}_{timestamp}.zip'
         backup_dir = current_app.config.get('BACKUP_FOLDER') or os.path.join(current_app.root_path, '..', 'backups')
         backup_path = os.path.join(backup_dir, backup_filename)
@@ -113,7 +113,7 @@ def get_backup_settings(create_if_missing=True):
 def run_scheduled_backup_if_due(now=None):
     """Run automated backup if enabled and schedule is due. Returns bool indicating execution."""
     from datetime import datetime
-    now = now or datetime.utcnow()
+    now = now or datetime.now(timezone.utc)
     settings = get_backup_settings(create_if_missing=False)
     if not settings or not settings.auto_enabled:
         return False
@@ -151,7 +151,7 @@ def cleanup_old_backups(retention_days):
     """Delete backups older than retention_days"""
     if not retention_days or retention_days <= 0:
         return 0
-    cutoff = datetime.utcnow() - timedelta(days=retention_days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
     old_backups = BackupModel.query.filter(BackupModel.created_at < cutoff).all()
     count = 0
     for b in old_backups:
@@ -207,7 +207,7 @@ def restore_backup(backup_id):
                 
                 # Create backup of current database before restoring
                 if os.path.exists(db_path):
-                    backup_current = f"{db_path}.before_restore_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                    backup_current = f"{db_path}.before_restore_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
                     shutil.copy2(db_path, backup_current)
                 
                 # Restore database
@@ -220,7 +220,7 @@ def restore_backup(backup_id):
                 
                 # Backup current uploads
                 if os.path.exists(uploads_folder):
-                    backup_uploads = f"{uploads_folder}_before_restore_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                    backup_uploads = f"{uploads_folder}_before_restore_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
                     shutil.copytree(uploads_folder, backup_uploads, dirs_exist_ok=True)
                     # Remove old uploads
                     shutil.rmtree(uploads_folder)

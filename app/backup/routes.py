@@ -12,7 +12,7 @@ from app.backup.utils import (
 )
 from app.models import Backup, AuditLog, BackupSetting
 from app.admin.utils import admin_required
-from datetime import datetime
+from datetime import datetime, timezone
 
 bp = Blueprint('backup', __name__, url_prefix='/backup')
 
@@ -92,7 +92,7 @@ def save_settings():
     settings.retention_days = request.form.get('retention_days', type=int) or 30
     settings.run_hour_utc = request.form.get('run_hour_utc', type=int) or 2
     settings.updated_by = current_user.id
-    settings.updated_at = datetime.utcnow()
+    settings.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     flash('Impostazioni backup aggiornate.', 'success')
     return redirect(url_for('backup.index'))
@@ -313,10 +313,10 @@ def upload_restore():
 @admin_required
 def cleanup_old():
     """Delete backups older than X days"""
-    from datetime import datetime, timedelta
+    from datetime import datetime, timezone, timedelta
     
     days = request.form.get('days', 30, type=int)
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     old_backups = Backup.query.filter(Backup.created_at < cutoff_date).all()
     

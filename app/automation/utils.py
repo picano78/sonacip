@@ -2,7 +2,7 @@
 import json
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from flask import current_app
 from app import db, mail
@@ -27,7 +27,7 @@ def execute_automations(trigger_type, society_id=None, payload=None):
     for auto in automations:
         try:
             auto.execution_count = (auto.execution_count or 0) + 1
-            auto.last_executed_at = datetime.utcnow()
+            auto.last_executed_at = datetime.now(timezone.utc)
             auto.success_count = (auto.success_count or 0) + 1
             executed.append(auto)
         except Exception as exc:
@@ -59,7 +59,7 @@ def execute_rules(event_type: str, payload: Dict[str, Any] = None):
                     rule_id=rule.id,
                     status='skipped',
                     payload=json.dumps(payload),
-                    completed_at=datetime.utcnow()
+                    completed_at=datetime.now(timezone.utc)
                 )
                 db.session.add(run)
                 executed_runs.append(run)
@@ -77,7 +77,7 @@ def execute_rules(event_type: str, payload: Dict[str, Any] = None):
         except Exception as exc:
             run.status = 'failed'
             run.error_message = f'Invalid JSON: {str(exc)}'
-            run.completed_at = datetime.utcnow()
+            run.completed_at = datetime.now(timezone.utc)
             db.session.add(run)
             executed_runs.append(run)
             current_app.logger.error(
@@ -89,11 +89,11 @@ def execute_rules(event_type: str, payload: Dict[str, Any] = None):
         try:
             normalized_actions = actions if isinstance(actions, list) else [actions] if actions else []
             _apply_actions_with_retry(rule, normalized_actions, payload, run)
-            run.completed_at = datetime.utcnow()
+            run.completed_at = datetime.now(timezone.utc)
         except Exception as exc:
             run.status = 'failed'
             run.error_message = str(exc)
-            run.completed_at = datetime.utcnow()
+            run.completed_at = datetime.now(timezone.utc)
             current_app.logger.error(
                 f"Action execution failed for rule {rule.id}: {exc}",
                 extra={
@@ -127,7 +127,7 @@ def _apply_actions_with_retry(rule: AutomationRule, actions: List[Dict[str, Any]
                 delay = base_delay * (2 ** attempt)
                 run.retry_count = attempt + 1
                 run.status = 'retrying'
-                run.next_retry_at = datetime.utcnow() + timedelta(seconds=delay)
+                run.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
                 run.error_message = f"Attempt {attempt + 1} failed: {str(exc)}"
                 db.session.flush()
                 

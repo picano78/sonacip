@@ -1,5 +1,5 @@
 """Tournament routes implementing multi-format tournaments with scheduling, scoring, standings."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
 import random
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, current_app
@@ -73,7 +73,7 @@ def _post_kwargs_for_tournament(tournament: Tournament, audience_override: str |
 def _recent_duplicate_post(user_id: int, post_type: str, content: str, minutes: int = 10) -> bool:
     """Best-effort dedupe to avoid double-posting the same message."""
     try:
-        since = datetime.utcnow() - timedelta(minutes=minutes)
+        since = datetime.now(timezone.utc) - timedelta(minutes=minutes)
         exists = (
             Post.query.filter_by(user_id=user_id, post_type=post_type)
             .filter(Post.content == content, Post.created_at >= since)
@@ -671,7 +671,7 @@ def generate_schedule(tournament_id):
     except Exception:
         base_date = None
     if not base_date:
-        base_date = datetime.utcnow().replace(hour=18, minute=0, second=0, microsecond=0)
+        base_date = datetime.now(timezone.utc).replace(hour=18, minute=0, second=0, microsecond=0)
     else:
         base_date = base_date.replace(hour=18, minute=0, second=0, microsecond=0)
     if interval_days <= 0:

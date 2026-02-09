@@ -2,7 +2,7 @@
 Storage helpers for pluggable media backends and lightweight assets.
 """
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Tuple
 import shutil
 import subprocess
@@ -67,7 +67,7 @@ def save_image_light(form_picture, folder: str = 'posts', size: Tuple[int, int] 
 
     original_name = secure_filename(form_picture.filename or 'image')
     name, _ext = os.path.splitext(original_name)
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
 
     target_ext = (settings.preferred_image_format or 'webp').lower().replace('.', '')
     filename = f"{name}_{timestamp}.{target_ext}"
@@ -93,7 +93,7 @@ def save_video_light(form_file, folder: str = 'posts') -> str:
     upload_folder = ensure_subfolder(folder)
     original_name = secure_filename(form_file.filename or 'video')
     name, _ext = os.path.splitext(original_name)
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
     filename = f"{name}_{timestamp}.{settings.preferred_video_format or 'mp4'}"
     file_path = os.path.join(upload_folder, filename)
 
@@ -134,7 +134,7 @@ def save_binary(form_file, folder: str = 'posts') -> str:
     upload_folder = ensure_subfolder(folder)
     original_name = secure_filename(form_file.filename or 'file')
     name, ext = os.path.splitext(original_name)
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')
     filename = f"{name}_{timestamp}{ext or ''}"
     file_path = os.path.join(upload_folder, filename)
     form_file.save(file_path)

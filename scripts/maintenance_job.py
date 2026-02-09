@@ -88,7 +88,7 @@ def main() -> int:
     with app.app_context():
         run_row = None
         try:
-            run_row = MaintenanceRun(run_type="maintenance", status="running", summary=None, started_at=datetime.utcnow())
+            run_row = MaintenanceRun(run_type="maintenance", status="running", summary=None, started_at=datetime.now(timezone.utc))
             db.session.add(run_row)
             db.session.commit()
         except Exception:
@@ -154,7 +154,7 @@ def main() -> int:
                                     event_id=ev.id,
                                     user_id=u.id,
                                     kind=kind,
-                                    sent_at=datetime.utcnow(),
+                                    sent_at=datetime.now(timezone.utc),
                                 )
                             )
                             calendar_sent += 1
@@ -216,7 +216,7 @@ def main() -> int:
                             certificate_id=c.id,
                             user_id=c.user_id,
                             kind=kind,
-                            sent_at=datetime.utcnow(),
+                            sent_at=datetime.now(timezone.utc),
                         )
                     )
                     try:
@@ -261,7 +261,7 @@ def main() -> int:
                             fee_id=f.id,
                             user_id=f.user_id,
                             kind=kind,
-                            sent_at=datetime.utcnow(),
+                            sent_at=datetime.now(timezone.utc),
                         )
                     )
                     try:
@@ -275,8 +275,8 @@ def main() -> int:
             # --------------------------------------------------------------
             if run_retention:
                 try:
-                    week_key = datetime.utcnow().strftime("%G-W%V")  # ISO week
-                    cutoff_dt = datetime.utcnow() - timedelta(days=7)
+                    week_key = datetime.now(timezone.utc).strftime("%G-W%V")  # ISO week
+                    cutoff_dt = datetime.now(timezone.utc) - timedelta(days=7)
                     societies = Society.query.all()
 
                     for s in societies:
@@ -309,7 +309,7 @@ def main() -> int:
                                 week_key=week_key,
                                 score=score,
                                 details=json.dumps(details),
-                                created_at=datetime.utcnow(),
+                                created_at=datetime.now(timezone.utc),
                             )
                         )
                         health_created += 1
@@ -323,7 +323,7 @@ def main() -> int:
             # Ads maintenance (retention): delete old ad events
             # --------------------------------------------------------------
             try:
-                cutoff = datetime.utcnow() - timedelta(days=90)
+                cutoff = datetime.now(timezone.utc) - timedelta(days=90)
                 ads_events_deleted = AdEvent.query.filter(AdEvent.created_at < cutoff).delete()
                 db.session.commit()
             except Exception:
@@ -334,7 +334,7 @@ def main() -> int:
             try:
                 if run_row:
                     run_row.status = "failed"
-                    run_row.finished_at = datetime.utcnow()
+                    run_row.finished_at = datetime.now(timezone.utc)
                     db.session.add(run_row)
                     db.session.commit()
             except Exception:
@@ -345,7 +345,7 @@ def main() -> int:
         try:
             if run_row:
                 run_row.status = "success"
-                run_row.finished_at = datetime.utcnow()
+                run_row.finished_at = datetime.now(timezone.utc)
                 run_row.summary = json.dumps(
                     {
                         "calendar_reminders_sent": calendar_sent,

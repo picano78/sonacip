@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from app.models import Story, StoryView, User
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import uuid
 from werkzeug.utils import secure_filename
@@ -44,7 +44,7 @@ def _get_media_type(filename):
 @bp.route('/')
 @login_required
 def feed():
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     active_stories = Story.query.filter(Story.expires_at > now).order_by(Story.created_at.desc()).all()
 
     users_with_stories = {}
@@ -105,7 +105,7 @@ def view_story(story_id):
         db.session.commit()
 
     time_ago = ''
-    diff = datetime.utcnow() - story.created_at
+    diff = datetime.now(timezone.utc) - story.created_at
     if diff.total_seconds() < 60:
         time_ago = 'adesso'
     elif diff.total_seconds() < 3600:
@@ -131,7 +131,7 @@ def view_story(story_id):
 @bp.route('/user/<int:user_id>')
 @login_required
 def user_stories(user_id):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     stories = Story.query.filter(
         Story.user_id == user_id,
         Story.expires_at > now
@@ -168,7 +168,7 @@ def cleanup():
         flash('Accesso negato.', 'danger')
         return redirect(url_for('stories.feed'))
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expired = Story.query.filter(Story.expires_at <= now).all()
     count = len(expired)
     for s in expired:

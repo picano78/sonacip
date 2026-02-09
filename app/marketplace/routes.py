@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -70,7 +70,7 @@ def _delete_listing_image(relative_path):
 
 
 def _expire_old_listings():
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expired = MarketplaceListing.query.filter(
         MarketplaceListing.status == 'active',
         MarketplaceListing.expires_at.isnot(None),
@@ -204,7 +204,7 @@ def create_listing():
             image_2=images.get("image_2"),
             image_3=images.get("image_3"),
             image_4=images.get("image_4"),
-            expires_at=datetime.utcnow() + timedelta(days=LISTING_EXPIRY_DAYS),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=LISTING_EXPIRY_DAYS),
         )
         db.session.add(listing)
         db.session.commit()
@@ -321,7 +321,7 @@ def renew_listing(listing_id):
         abort(403)
     if listing.status == 'expired':
         listing.status = 'active'
-    listing.expires_at = datetime.utcnow() + timedelta(days=LISTING_EXPIRY_DAYS)
+    listing.expires_at = datetime.now(timezone.utc) + timedelta(days=LISTING_EXPIRY_DAYS)
     db.session.commit()
     flash("Annuncio rinnovato per altri 60 giorni.", "success")
     return redirect(url_for("marketplace.my_listings"))
@@ -380,7 +380,7 @@ def pay_promotion(listing_id, tier_id):
         status='pending',
         amount_paid=tier.price,
         currency=tier.currency or 'EUR',
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(promotion)
     db.session.commit()
@@ -429,7 +429,7 @@ def promotion_success(promotion_id):
 
 
 def _activate_promotion(promotion):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     tier = PromotionTier.query.get(promotion.tier_id)
     duration = tier.duration_days if tier else 7
 
@@ -513,7 +513,7 @@ def buy(package_id: int):
         user_id=current_user.id,
         society_id=scope_society_id,
         status="pending" if (pkg.price_one_time or 0) > 0 else "completed",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(purchase)
     db.session.commit()
@@ -549,9 +549,9 @@ def buy(package_id: int):
         currency=(pkg.currency or "EUR"),
         status="completed",
         payment_method="manual",
-        payment_date=datetime.utcnow(),
+        payment_date=datetime.now(timezone.utc),
         description=f"Marketplace: {pkg.name}",
-        transaction_id=f"LOCAL_MKT_{pkg.id}_{datetime.utcnow().timestamp()}",
+        transaction_id=f"LOCAL_MKT_{pkg.id}_{datetime.now(timezone.utc).timestamp()}",
         gateway="local",
     )
     db.session.add(payment)
@@ -635,7 +635,7 @@ def admin_packages():
             is_active=True,
             display_order=display_order,
             created_by=current_user.id,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         db.session.add(pkg)
         db.session.flush()
@@ -653,7 +653,7 @@ def admin_packages():
         if ids:
             templates = Template.query.filter(Template.id.in_(ids)).all()
             for t in templates:
-                db.session.add(MarketplacePackageItem(package_id=pkg.id, template_id=t.id, created_at=datetime.utcnow()))
+                db.session.add(MarketplacePackageItem(package_id=pkg.id, template_id=t.id, created_at=datetime.now(timezone.utc)))
 
         db.session.commit()
         log_action("marketplace_package_create", "MarketplacePackage", pkg.id, f"slug={slug}")

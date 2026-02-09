@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -26,7 +26,7 @@ def make_token(creative: AdCreative, placement: str, society_id: int | None, use
         "placement": placement,
         "society_id": society_id,
         "user_id": user_id,
-        "ts": int(datetime.utcnow().timestamp()),
+        "ts": int(datetime.now(timezone.utc).timestamp()),
     }
     return _serializer().dumps(payload)
 
@@ -52,7 +52,7 @@ def _is_safe_redirect(url: str) -> bool:
 
 
 def _eligible_creatives(placement: str, society_id: int | None) -> list[AdCreative]:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     q = (
         AdCreative.query.join(AdCampaign, AdCreative.campaign_id == AdCampaign.id)
         .filter(
@@ -128,7 +128,7 @@ def choose_creative(placement: str, society_id: int | None, user_id: int | None)
         pass
 
     try:
-        best.last_served_at = datetime.utcnow()
+        best.last_served_at = datetime.now(timezone.utc)
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -149,7 +149,7 @@ def log_event(kind: str, creative: AdCreative, placement: str, society_id: int |
             user_id=user_id,
             ip=(ip or "")[:80],
             user_agent=ua,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     )
 

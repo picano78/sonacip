@@ -9,7 +9,7 @@ from app.models import Task, Project, User, Team
 from app.utils import permission_required, check_permission
 from app.models import Event
 from app.automation.utils import execute_automations, execute_rules
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 bp = Blueprint('tasks', __name__, url_prefix='/tasks')
@@ -282,7 +282,7 @@ def update_task(task_id):
     if 'status' in request.json:
         task.status = request.json['status']
         if request.json['status'] == 'done' and not task.completed_at:
-            task.completed_at = datetime.utcnow()
+            task.completed_at = datetime.now(timezone.utc)
     
     if 'priority' in request.json:
         task.priority = request.json['priority']
@@ -296,7 +296,7 @@ def update_task(task_id):
     if 'position' in request.json:
         task.position = request.json['position']
     
-    task.updated_at = datetime.utcnow()
+    task.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
     # Fire automations for task updates

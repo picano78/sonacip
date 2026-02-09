@@ -5,7 +5,7 @@ This is intentionally deterministic: safe to run multiple times.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def seed_defaults(app) -> dict:
@@ -120,7 +120,7 @@ def seed_defaults(app) -> dict:
                     action=action,
                     description=description,
                     is_active=True,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                 )
                 db.session.add(p)
                 db.session.flush()
@@ -222,8 +222,8 @@ def seed_defaults(app) -> dict:
                 has_api_access=False,
                 has_white_label=False,
                 has_priority_support=False,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
             )
             db.session.add(free_plan)
             summary["plans_created"] += 1
@@ -231,7 +231,7 @@ def seed_defaults(app) -> dict:
             # Ensure CRM is available out-of-the-box even on older DBs.
             if free_plan.has_crm is False:
                 free_plan.has_crm = True
-                free_plan.updated_at = datetime.utcnow()
+                free_plan.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         # ---------------------------------------------------------------------
@@ -323,7 +323,7 @@ def seed_defaults(app) -> dict:
                     is_active=True,
                     autopilot=True,
                     created_by=None,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                 )
                 db.session.add(camp)
                 db.session.flush()
@@ -339,7 +339,7 @@ def seed_defaults(app) -> dict:
                         is_active=True,
                         weight=100,
                         created_by=None,
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(timezone.utc),
                     )
                 )
                 db.session.commit()
@@ -364,7 +364,7 @@ def seed_defaults(app) -> dict:
                     is_active=True,
                     max_retries=3,
                     retry_delay=60,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                 )
             )
             db.session.commit()

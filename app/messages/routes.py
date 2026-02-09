@@ -1,7 +1,7 @@
 """Direct messages routes - Internal messaging system"""
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import or_, and_, func
 from app import db
 from app.messages.forms import MessageForm
@@ -76,7 +76,7 @@ def chat(user_id):
         Message.sender_id == user_id,
         Message.recipient_id == current_user.id,
         Message.is_read == False
-    ).update({'is_read': True, 'read_at': datetime.utcnow()})
+    ).update({'is_read': True, 'read_at': datetime.now(timezone.utc)})
     db.session.commit()
     
     conversations = get_conversations()

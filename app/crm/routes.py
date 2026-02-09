@@ -34,7 +34,7 @@ from app.models import (
 )
 from app.notifications.utils import create_notification
 from app.utils import permission_required, check_permission, feature_required, get_active_society_id
-from datetime import datetime
+from datetime import datetime, timezone
 from app.utils import log_action
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_, func
@@ -84,16 +84,16 @@ def pay_fee(fee_id: int):
         currency=(fee.currency or 'EUR'),
         status='completed',
         payment_method='manual',
-        payment_date=datetime.utcnow(),
+        payment_date=datetime.now(timezone.utc),
         description=f'Fee payment (SocietyFee #{fee.id})',
-        transaction_id=f'LOCAL_FEE_{fee.id}_{datetime.utcnow().timestamp()}',
+        transaction_id=f'LOCAL_FEE_{fee.id}_{datetime.now(timezone.utc).timestamp()}',
         gateway='local',
     )
     db.session.add(payment)
     db.session.flush()
 
     fee.status = 'paid'
-    fee.paid_at = datetime.utcnow()
+    fee.paid_at = datetime.now(timezone.utc)
     db.session.add(fee)
 
     settings = PlatformFeeSetting.query.first()
@@ -118,7 +118,7 @@ def pay_fee(fee_id: int):
             net_amount=net,
             currency=(fee.currency or 'EUR'),
             status='collected',
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     )
     db.session.commit()
@@ -187,7 +187,7 @@ def index():
 
         upcoming_events = (
             Event.query
-            .filter(Event.start_date >= datetime.utcnow())
+            .filter(Event.start_date >= datetime.now(timezone.utc))
             .order_by(Event.start_date.asc())
             .limit(5)
             .all()
@@ -370,7 +370,7 @@ def member_add():
             existing.status = 'active'
             existing.role_name = role_name
             existing.updated_by = current_user.id
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = datetime.now(timezone.utc)
         else:
             membership = SocietyMembership(
                 society_id=scope_id,
@@ -378,7 +378,7 @@ def member_add():
                 role_name=role_name,
                 status='active',
                 created_by=current_user.id,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             db.session.add(membership)
 
@@ -472,7 +472,7 @@ def member_role_update(membership_id):
 
     membership.role_name = new_role
     membership.updated_by = current_user.id
-    membership.updated_at = datetime.utcnow()
+    membership.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     log_action('member_role_update', 'SocietyMembership', membership.id, f'role={new_role}', society_id=membership.society_id)
     flash('Ruolo aggiornato.', 'success')
@@ -491,7 +491,7 @@ def member_remove(membership_id):
 
     membership.status = 'revoked'
     membership.updated_by = current_user.id
-    membership.updated_at = datetime.utcnow()
+    membership.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     log_action('member_remove', 'SocietyMembership', membership.id, 'status=revoked', society_id=membership.society_id)
     flash('Membro rimosso dalla società.', 'success')
@@ -532,9 +532,9 @@ def member_fee_create(membership_id):
         currency='EUR',
         due_on=form.due_on.data,
         status=form.status.data,
-        paid_at=datetime.utcnow() if form.status.data == 'paid' else None,
+        paid_at=datetime.now(timezone.utc) if form.status.data == 'paid' else None,
         created_by=current_user.id,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(fee)
     db.session.commit()
@@ -570,7 +570,7 @@ def member_certificate_create(membership_id):
         status=form.status.data,
         notes=form.notes.data,
         created_by=current_user.id,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(cert)
     db.session.commit()
@@ -598,7 +598,7 @@ def convocations():
         .with_entities(SocietyMembership.user_id).all()
     ]
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     events = (
         Event.query
         .filter(Event.start_date >= now)
@@ -708,7 +708,7 @@ def reminders_run():
                 link=url_for('crm.my_fees'),
             )
             db.session.add(MedicalCertificateReminderSent(
-                certificate_id=cert.id, user_id=cert.user_id, kind=kind, sent_at=datetime.utcnow()
+                certificate_id=cert.id, user_id=cert.user_id, kind=kind, sent_at=datetime.now(timezone.utc)
             ))
             sent_count += 1
 
@@ -733,7 +733,7 @@ def reminders_run():
             link=url_for('crm.my_fees'),
         )
         db.session.add(SocietyFeeReminderSent(
-            fee_id=fee.id, user_id=fee.user_id, kind=kind, sent_at=datetime.utcnow()
+            fee_id=fee.id, user_id=fee.user_id, kind=kind, sent_at=datetime.now(timezone.utc)
         ))
         sent_count += 1
 
@@ -840,7 +840,7 @@ def edit_contact(contact_id):
         contact.address = form.address.data
         contact.city = form.city.data
         contact.postal_code = form.postal_code.data
-        contact.updated_at = datetime.utcnow()
+        contact.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         flash('Contatto aggiornato!', 'success')
         return redirect(url_for('crm.contact_detail', contact_id=contact_id))
@@ -871,7 +871,7 @@ def new_activity():
             activity_type=form.activity_type.data,
             subject=form.subject.data,
             description=form.description.data,
-            activity_date=form.activity_date.data or datetime.utcnow(),
+            activity_date=form.activity_date.data or datetime.now(timezone.utc),
             completed=form.completed.data,
             contact_id=form.contact_id.data if form.contact_id.data != 0 else None,
             opportunity_id=None,
@@ -982,7 +982,7 @@ def compliance_certificate_new():
         status=form.status.data,
         notes=form.notes.data,
         created_by=current_user.id,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(cert)
     db.session.commit()
@@ -1063,9 +1063,9 @@ def compliance_fee_new():
         currency='EUR',
         due_on=form.due_on.data,
         status=form.status.data,
-        paid_at=datetime.utcnow() if form.status.data == 'paid' else None,
+        paid_at=datetime.now(timezone.utc) if form.status.data == 'paid' else None,
         created_by=current_user.id,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.session.add(fee)
     db.session.commit()
@@ -1114,7 +1114,7 @@ def compliance_fee_update(fee_id):
         pass
 
     fee.status = status
-    fee.paid_at = datetime.utcnow() if status == 'paid' else None
+    fee.paid_at = datetime.now(timezone.utc) if status == 'paid' else None
     db.session.commit()
     log_action('update_society_fee', 'SocietyFee', fee.id, f'status={status}', society_id=scope_id)
     flash('Quota aggiornata.', 'success')
@@ -1183,7 +1183,7 @@ def compliance_certificate_remind(cert_id):
         "kind": kind,
     }
     execute_rules("medical_certificate.expiring", payload=payload)
-    db.session.add(MedicalCertificateReminderSent(certificate_id=cert.id, user_id=cert.user_id, kind=kind, sent_at=datetime.utcnow()))
+    db.session.add(MedicalCertificateReminderSent(certificate_id=cert.id, user_id=cert.user_id, kind=kind, sent_at=datetime.now(timezone.utc)))
     db.session.commit()
     log_action('manual_certificate_reminder', 'MedicalCertificate', cert.id, 'manual reminder sent', society_id=scope_id)
     flash('Promemoria inviato.', 'success')
@@ -1225,7 +1225,7 @@ def compliance_fee_remind(fee_id):
         "kind": kind,
     }
     execute_rules("fee.due", payload=payload)
-    db.session.add(SocietyFeeReminderSent(fee_id=fee.id, user_id=fee.user_id, kind=kind, sent_at=datetime.utcnow()))
+    db.session.add(SocietyFeeReminderSent(fee_id=fee.id, user_id=fee.user_id, kind=kind, sent_at=datetime.now(timezone.utc)))
     db.session.commit()
     log_action('manual_fee_reminder', 'SocietyFee', fee.id, 'manual reminder sent', society_id=scope_id)
     flash('Sollecito inviato.', 'success')

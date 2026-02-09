@@ -101,7 +101,7 @@ def healthz():
     return {
         "status": status,
         "db": "ok" if db_ok else "error",
-        "ts": datetime.utcnow().isoformat() + "Z",
+        "ts": datetime.now(timezone.utc).isoformat() + "Z",
     }, code
 
 

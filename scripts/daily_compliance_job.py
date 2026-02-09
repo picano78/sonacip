@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 
 def _parse_days(value: str, default: int) -> int:
@@ -87,7 +87,7 @@ def main() -> int:
                 "kind": kind,
             }
             execute_rules("medical_certificate.expiring", payload=payload)
-            db.session.add(MedicalCertificateReminderSent(certificate_id=c.id, user_id=c.user_id, kind=kind, sent_at=datetime.utcnow()))
+            db.session.add(MedicalCertificateReminderSent(certificate_id=c.id, user_id=c.user_id, kind=kind, sent_at=datetime.now(timezone.utc)))
             db.session.commit()
             sent += 1
 
@@ -125,7 +125,7 @@ def main() -> int:
                 "kind": kind,
             }
             execute_rules("fee.due", payload=payload)
-            db.session.add(SocietyFeeReminderSent(fee_id=f.id, user_id=f.user_id, kind=kind, sent_at=datetime.utcnow()))
+            db.session.add(SocietyFeeReminderSent(fee_id=f.id, user_id=f.user_id, kind=kind, sent_at=datetime.now(timezone.utc)))
             db.session.commit()
             sent += 1
 

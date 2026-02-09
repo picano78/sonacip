@@ -11,7 +11,7 @@ from app.models import (
     Task, Project, Subscription, Payment
 )
 from app.utils import admin_required, permission_required
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 bp = Blueprint('analytics', __name__, url_prefix='/analytics')
@@ -25,7 +25,7 @@ def dashboard():
     
     # Time range
     days = int(request.args.get('days', 30))
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     # User analytics
     user_stats = get_user_analytics(start_date)
@@ -93,7 +93,7 @@ def social_analytics():
     
     # Top posts
     top_posts = Post.query.filter(
-        Post.created_at >= datetime.utcnow() - timedelta(days=30)
+        Post.created_at >= datetime.now(timezone.utc) - timedelta(days=30)
     ).order_by(desc(Post.likes_count)).limit(10).all()
     
     # User growth
@@ -186,7 +186,7 @@ def get_user_analytics(start_date):
     ).group_by(User.role).all()
     
     # Growth rate
-    previous_period = datetime.utcnow() - timedelta(days=60)
+    previous_period = datetime.now(timezone.utc) - timedelta(days=60)
     previous_users = User.query.filter(User.created_at < start_date, User.created_at >= previous_period).count()
     growth_rate = ((new_users - previous_users) / previous_users * 100) if previous_users > 0 else 0
     
@@ -257,7 +257,7 @@ def get_task_analytics(start_date):
     completed_tasks = Task.query.filter_by(status='done').count()
     overdue_tasks = Task.query.filter(
         Task.status != 'done',
-        Task.due_date < datetime.utcnow()
+        Task.due_date < datetime.now(timezone.utc)
     ).count()
     
     # Completion rate

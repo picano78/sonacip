@@ -1,7 +1,7 @@
 """Feed ranking helpers shared by feed and admin preview."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable
 
 from sqlalchemy import or_
@@ -49,13 +49,13 @@ def _engagement_score(post: Post, settings: SocialSetting | None) -> float:
             boosted_types = []
             muted_types = []
 
-    age_hours = max((datetime.utcnow() - post.created_at).total_seconds() / 3600, 0.1)
+    age_hours = max((datetime.now(timezone.utc) - post.created_at).total_seconds() / 3600, 0.1)
     recency = max(0, 48 - age_hours) / 48
     base_engagement = (post.likes_count * 2) + (post.comments_count * 3)
     score = (base_engagement * _get_setting(settings, 'weight_engagement', 1.0))
     score += (recency * 5 * _get_setting(settings, 'weight_recency', 1.0))
 
-    if post.is_promoted and post.promotion_ends_at and post.promotion_ends_at > datetime.utcnow():
+    if post.is_promoted and post.promotion_ends_at and post.promotion_ends_at > datetime.now(timezone.utc):
         score += _get_setting(settings, 'weight_promoted', 20.0)
     if post.is_promoted and settings and settings.boost_official:
         score += 5

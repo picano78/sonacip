@@ -6,7 +6,7 @@ Populates the database with sample users for testing
 from app import create_app
 from app import db
 from app.models import User, Subscription, Plan, Role
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 app = create_app()
 
@@ -57,8 +57,8 @@ with app.app_context():
                 plan_id=basic_plan.id,
                 status='active',
                 billing_cycle='monthly',
-                start_date=datetime.utcnow(),
-                next_billing_date=datetime.utcnow() + timedelta(days=30),
+                start_date=datetime.now(timezone.utc),
+                next_billing_date=datetime.now(timezone.utc) + timedelta(days=30),
                 amount=basic_plan.price_monthly,
                 auto_renew=True
             )

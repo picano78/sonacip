@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import stripe
@@ -200,7 +200,7 @@ def _upsert_payment_from_checkout_session(session_obj: Any, status: str, *, user
     amount_total = session_obj.get("amount_total") or 0
     currency = (session_obj.get("currency") or "eur").upper()
     created = session_obj.get("created")
-    created_dt = datetime.utcfromtimestamp(created) if created else datetime.utcnow()
+    created_dt = datetime.fromtimestamp(created, tz=timezone.utc) if created else datetime.now(timezone.utc)
     amount_eur = round(float(amount_total) / 100.0, 2)
 
     payload = json.dumps({"checkout_session": session_obj})
@@ -250,7 +250,7 @@ def _upsert_payment_from_invoice(invoice: Any, status: str, subscription: Subscr
     amount_paid = getattr(invoice, "amount_paid", None)
     currency = getattr(invoice, "currency", None) or "eur"
     created = getattr(invoice, "created", None)
-    created_dt = datetime.utcfromtimestamp(created) if created else datetime.utcnow()
+    created_dt = datetime.fromtimestamp(created, tz=timezone.utc) if created else datetime.now(timezone.utc)
 
     if amount_paid is None:
         # fallback to total
@@ -293,7 +293,7 @@ def apply_subscription_from_webhook(stripe_sub: Any, subscription: Subscription)
     try:
         pe = getattr(stripe_sub, "current_period_end", None) or stripe_sub.get("current_period_end")
         if pe:
-            period_end = datetime.utcfromtimestamp(int(pe))
+            period_end = datetime.fromtimestamp(int(pe), tz=timezone.utc)
     except Exception:
         period_end = None
     subscription.current_period_end = period_end
@@ -340,9 +340,9 @@ def handle_stripe_event(event: Any) -> None:
                         payment_id=p.id,
                         status="active",
                         source="stripe",
-                        start_date=datetime.utcnow(),
+                        start_date=datetime.now(timezone.utc),
                         end_date=None,
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(timezone.utc),
                     )
                 )
             db.session.commit()
@@ -390,7 +390,7 @@ def handle_stripe_event(event: Any) -> None:
                 society_id=fee.society_id,
             )
             fee.status = "paid"
-            fee.paid_at = datetime.utcnow()
+            fee.paid_at = datetime.now(timezone.utc)
             db.session.add(fee)
 
             gross = float(p.amount or 0)
@@ -409,7 +409,7 @@ def handle_stripe_event(event: Any) -> None:
                         net_amount=net,
                         currency=(p.currency or "EUR"),
                         status="collected",
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(timezone.utc),
                     )
                 )
             db.session.commit()
@@ -466,7 +466,7 @@ def handle_stripe_event(event: Any) -> None:
         if stripe_sub:
             apply_subscription_from_webhook(stripe_sub, local_sub)
         local_sub.status = "active"
-        local_sub.start_date = datetime.utcnow()
+        local_sub.start_date = datetime.now(timezone.utc)
         db.session.add(local_sub)
         db.session.commit()
         return
@@ -508,7 +508,7 @@ def handle_stripe_event(event: Any) -> None:
         local_sub = Subscription.query.filter_by(stripe_subscription_id=stripe_sub_id).first() if stripe_sub_id else None
         if local_sub:
             local_sub.status = "cancelled"
-            local_sub.cancelled_at = datetime.utcnow()
+            local_sub.cancelled_at = datetime.now(timezone.utc)
             local_sub.auto_renew = False
             db.session.add(local_sub)
             db.session.commit()

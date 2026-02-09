@@ -79,8 +79,9 @@ def save_image_light(form_picture, folder: str = 'posts', size: Tuple[int, int] 
             img = img.convert('RGB')
         img.thumbnail(size)
         img.save(file_path, format=target_ext.upper(), quality=settings.image_quality or 75, optimize=True)
-    except Exception:
+    except (IOError, OSError, ValueError) as e:
         # Fallback to raw save if conversion fails
+        current_app.logger.warning(f"Image optimization failed, using raw save: {e}")
         form_picture.save(file_path)
 
     return os.path.join(folder, filename)
@@ -118,8 +119,9 @@ def save_video_light(form_file, folder: str = 'posts') -> str:
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             os.remove(tmp_input)
             return os.path.join(folder, filename)
-        except Exception:
+        except (subprocess.CalledProcessError, OSError) as e:
             # fallback to raw save
+            current_app.logger.warning(f"FFmpeg compression failed: {e}")
             pass
 
     # Fallback when ffmpeg missing or fails

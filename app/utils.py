@@ -15,7 +15,8 @@ def check_feature_enabled(feature_key):
         pf = PlatformFeature.query.filter_by(key=feature_key).first()
         if pf and not pf.is_enabled:
             return False
-    except Exception:
+    except (ImportError, AttributeError) as e:
+        current_app.logger.debug(f"Feature check failed: {e}")
         pass
     return True
 
@@ -97,7 +98,8 @@ def check_permission(user, resource, action, society_id=None):
             return False
         try:
             from app.models import Permission, SocietyRolePermission
-        except Exception:
+        except (ImportError, AttributeError) as e:
+            current_app.logger.warning(f"Permission check failed: {e}")
             return False
 
         perm = Permission.query.filter_by(resource=resource, action=action).first()
@@ -107,7 +109,8 @@ def check_permission(user, resource, action, society_id=None):
         role_name = None
         try:
             role_name = user.get_society_role(society_id)
-        except Exception:
+        except (AttributeError, ValueError) as e:
+            current_app.logger.warning(f"Failed to get society role: {e}")
             role_name = None
 
         def _default_allows(rn: str | None) -> bool:

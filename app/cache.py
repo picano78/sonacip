@@ -73,7 +73,8 @@ class RedisBackedCache(SimpleCache):
             if cached_bytes:
                 try:
                     return json.loads(cached_bytes)
-                except Exception:
+                except (json.JSONDecodeError, TypeError) as e:
+                    current_app.logger.debug(f"Cache JSON decode failed: {e}")
                     pass  # Fallback to in-memory payloads
         return super().get(key)
 

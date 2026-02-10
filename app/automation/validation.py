@@ -106,6 +106,9 @@ def _evaluate_simple_expression(expr: str, payload: Dict[str, Any]) -> bool:
         (r'(\w+(?:\.\w+)*)\s*>\s*(\d+(?:\.\d+)?)', lambda m: float(_safe_get_nested(m.group(1), payload) or 0) > float(m.group(2)) if _validate_field_path(m.group(1)) else False),
         (r'(\w+(?:\.\w+)*)\s*<=\s*(\d+(?:\.\d+)?)', lambda m: float(_safe_get_nested(m.group(1), payload) or 0) <= float(m.group(2)) if _validate_field_path(m.group(1)) else False),
         (r'(\w+(?:\.\w+)*)\s*<\s*(\d+(?:\.\d+)?)', lambda m: float(_safe_get_nested(m.group(1), payload) or 0) < float(m.group(2)) if _validate_field_path(m.group(1)) else False),
+        (r'(\w+(?:\.\w+)*)\s+contains\s+["\']([^"\']+)["\']', lambda m: (m.group(2) in str(_safe_get_nested(m.group(1), payload) or "")) if _validate_field_path(m.group(1)) else False),
+        # Accept JSON array literal: status in ["a","b"]
+        (r'(\w+(?:\.\w+)*)\s+in\s+(\[[^\]]*\])', lambda m: _safe_get_nested(m.group(1), payload) in (json.loads(m.group(2)) if len(m.group(2)) <= 200 else []) if _validate_field_path(m.group(1)) else False),
     ]
     
     for pattern, evaluator in patterns:

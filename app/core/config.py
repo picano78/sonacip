@@ -139,8 +139,24 @@ class ProductionConfig(Config):
             raise RuntimeError("Production must use PostgreSQL, not SQLite")
 
 
+class TestingConfig(Config):
+    """Testing configuration (used under pytest)."""
+    TESTING = True
+    DEBUG = False
+
+    # Use in-memory SQLite for isolated tests
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+
+    # Avoid CSRF in unit tests
+    WTF_CSRF_ENABLED = False
+
+    # Use in-memory rate limit storage
+    RATELIMIT_STORAGE_URI = 'memory://'
+
+
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
+    'testing': TestingConfig,
     'default': ProductionConfig
 }

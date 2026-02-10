@@ -4,6 +4,7 @@ Comprehensive test suite for automation system.
 import pytest  # type: ignore
 import json
 from datetime import datetime
+from sqlalchemy import text
 from app import create_app
 from app import db
 from app.models import User, Role, AutomationRule, AutomationRun, Notification, Post, Task
@@ -41,6 +42,13 @@ def app():
         yield app
         
         db.session.remove()
+        # SQLite may enforce FK constraints on DROP TABLE when cycles exist.
+        # Disable FK checks for teardown to keep tests isolated.
+        try:
+            db.session.execute(text("PRAGMA foreign_keys=OFF"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
         db.drop_all()
 
 

@@ -245,6 +245,9 @@ def _normalize_sqlite_db(app: Flask) -> None:
     uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
     if not uri.startswith("sqlite:"):
         return
+    # Never rewrite in-memory SQLite (used for tests).
+    if app.config.get("TESTING") or ":memory:" in uri:
+        return
 
     # Extract path (best-effort) from sqlite URL.
     db_path = None
@@ -570,7 +573,14 @@ def create_app(config_name: str | None = None) -> Flask:
     app = Flask(__name__)
 
     if config_name is None:
-        config_name = os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or 'development'
+        # When running tests under pytest, default to the dedicated TestingConfig.
+        # This prevents auto-upgrades/seeding from polluting unit tests and ensures
+        # the DB URI is set before SQLAlchemy initializes.
+        import sys
+        if os.environ.get("PYTEST_CURRENT_TEST") is not None or "pytest" in sys.modules:
+            config_name = 'testing'
+        else:
+            config_name = os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or 'development'
 
     if config_name not in config:
         config_name = 'development'
@@ -611,10 +621,10 @@ def create_app(config_name: str | None = None) -> Flask:
     limiter.init_app(app)
     oauth.init_app(app)
 
-    # Keep schema aligned automatically (production SQLite).
-    _auto_upgrade_db(app)
-
-    _auto_seed(app)
+    # Keep schema aligned automatically (production/dev). Skip in tests.
+    if not app.config.get("TESTING"):
+        _auto_upgrade_db(app)
+        _auto_seed(app)
 
     login_manager.login_view = 'auth.login'
 

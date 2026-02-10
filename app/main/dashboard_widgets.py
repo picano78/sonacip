@@ -99,6 +99,9 @@ def get_widget_info(widget_key):
 
 def render_widget(widget_key, user):
     try:
+        # Backward compatibility: previously saved layouts may reference removed widgets.
+        if widget_key in ('leaderboard_mini',):
+            return ''
         renderer = _RENDERERS.get(widget_key)
         if renderer:
             return renderer(user)

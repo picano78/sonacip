@@ -591,6 +591,12 @@ def create_app(config_name: str | None = None) -> Flask:
     _ensure_secret_key(app)
     _normalize_sqlite_db(app)
 
+    # Safety log: show effective DB target at startup
+    try:
+        print("Database connected to:", app.config.get("SQLALCHEMY_DATABASE_URI"))
+    except Exception:
+        pass
+
     if hasattr(config_class, 'validate_config'):
         config_class.validate_config()
 

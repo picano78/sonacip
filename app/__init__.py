@@ -588,6 +588,16 @@ def create_app(config_name: str | None = None) -> Flask:
     config_class = config[config_name]
     app.config.from_object(config_class)
 
+    # Ensure DB URI is resolved *after* dotenv is loaded.
+    # Config class attributes are evaluated at import time, so relying on them
+    # would ignore `.env` values loaded at runtime.
+    if not app.config.get("TESTING"):
+        db_uri = os.environ.get("DATABASE_URL", "sqlite:///sonacip.db")
+        if db_uri.startswith("postgres://"):
+            db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
+        app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
     _ensure_secret_key(app)
     _normalize_sqlite_db(app)
 

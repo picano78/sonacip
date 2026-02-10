@@ -245,6 +245,9 @@ def _normalize_sqlite_db(app: Flask) -> None:
     uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
     if not uri.startswith("sqlite:"):
         return
+    # Never rewrite in-memory SQLite (used for tests).
+    if app.config.get("TESTING") or ":memory:" in uri:
+        return
 
     # Extract path (best-effort) from sqlite URL.
     db_path = None

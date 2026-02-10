@@ -1,7 +1,7 @@
 """
 Main routes
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, current_app, Response
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 from app import db
@@ -18,6 +18,93 @@ def _page_sections(slug):
         return get_page_config(slug)
     except Exception:
         return []
+
+
+@bp.route("/manifest.json")
+def manifest():
+    """
+    Dynamic PWA manifest.
+
+    This allows the super admin to change the app icon from the admin panel
+    without rebuilding static files.
+    """
+    import json as _json
+
+    appearance = None
+    site = None
+    try:
+        from app.models import AppearanceSetting, SiteCustomization
+
+        appearance = AppearanceSetting.query.filter_by(scope="global").order_by(AppearanceSetting.id.desc()).first()
+        site = SiteCustomization.query.order_by(SiteCustomization.id.desc()).first()
+    except Exception:
+        appearance = None
+        site = None
+
+    brand = (getattr(site, "navbar_brand_text", None) or "SONACIP").strip() if site else "SONACIP"
+    theme_color = (getattr(appearance, "primary_color", None) or "#1877f2").strip() if appearance else "#1877f2"
+
+    icon_url = None
+    if appearance:
+        icon_url = getattr(appearance, "app_icon_url", None) or getattr(appearance, "favicon_url", None)
+    # Fallback to bundled icons
+    if not icon_url:
+        icon_url = url_for("static", filename="icons/icon-512x512.png")
+
+    def _guess_mime(src: str) -> str:
+        s = (src or "").split("?", 1)[0].lower()
+        if s.endswith(".svg"):
+            return "image/svg+xml"
+        if s.endswith(".webp"):
+            return "image/webp"
+        if s.endswith(".jpg") or s.endswith(".jpeg"):
+            return "image/jpeg"
+        return "image/png"
+
+    icon_type = _guess_mime(icon_url)
+    icon_192 = icon_url or url_for("static", filename="icons/icon-192x192.png")
+    icon_512 = icon_url or url_for("static", filename="icons/icon-512x512.png")
+    icon_apple = icon_url or url_for("static", filename="icons/apple-touch-icon.png")
+
+    data = {
+        "name": f"{brand} - Piattaforma Sport Dilettantistico",
+        "short_name": brand,
+        "description": "Piattaforma per la gestione dello sport dilettantistico: società, atleti, eventi e tornei.",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": theme_color,
+        "orientation": "any",
+        "id": "/",
+        "lang": "it",
+        "dir": "ltr",
+        "prefer_related_applications": False,
+        "icons": [
+            {"src": icon_192, "sizes": "192x192", "type": icon_type, "purpose": "any"},
+            {"src": icon_192, "sizes": "192x192", "type": icon_type, "purpose": "maskable"},
+            {"src": icon_512, "sizes": "512x512", "type": icon_type, "purpose": "any"},
+            {"src": icon_512, "sizes": "512x512", "type": icon_type, "purpose": "maskable"},
+            {"src": icon_apple, "sizes": "180x180", "type": icon_type, "purpose": "any"},
+        ],
+        "shortcuts": [
+            {"name": "Feed", "short_name": "Feed", "description": "Vedi il feed social", "url": "/social/feed",
+             "icons": [{"src": icon_192, "sizes": "192x192"}]},
+            {"name": "Messaggi", "short_name": "Messaggi", "description": "Apri i messaggi", "url": "/messages/",
+             "icons": [{"src": icon_192, "sizes": "192x192"}]},
+            {"name": "Calendario", "short_name": "Calendario", "description": "Vedi il planner eventi", "url": "/scheduler/",
+             "icons": [{"src": icon_192, "sizes": "192x192"}]},
+            {"name": "Profilo", "short_name": "Profilo", "description": "Vai al tuo profilo", "url": "/social/profile",
+             "icons": [{"src": icon_192, "sizes": "192x192"}]},
+        ],
+        "categories": ["sports", "social", "lifestyle"],
+        "share_target": {"action": "/social/create_post", "method": "GET", "params": {"text": "content"}},
+    }
+
+    body = _json.dumps(data, ensure_ascii=False)
+    resp = Response(body, mimetype="application/manifest+json")
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return resp
 
 
 @bp.route('/')

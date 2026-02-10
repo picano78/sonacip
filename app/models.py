@@ -1174,6 +1174,8 @@ class AppearanceSetting(db.Model):
     font_family = db.Column(db.String(100), default='Inter, system-ui, -apple-system, sans-serif')
     logo_url = db.Column(db.String(255))
     favicon_url = db.Column(db.String(255))
+    # PWA / mobile app icon (used for manifest + iOS home screen icon)
+    app_icon_url = db.Column(db.String(255))
     layout_style = db.Column(db.String(50), default='standard')
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))

@@ -354,29 +354,7 @@
     </div>
   </section>
 
-  <div class="container">
-    <div class="stats-bar d-flex flex-wrap justify-content-center">
-      <div class="stat-counter flex-fill">
-        <div class="count" data-target="{{ landing_stats.users|default(0) }}">{{ landing_stats.users|default(0) }}</div>
-        <div class="label">Utenti Registrati</div>
-      </div>
-      <div class="stat-divider d-none d-md-block"></div>
-      <div class="stat-counter flex-fill">
-        <div class="count" data-target="{{ landing_stats.societies|default(0) }}">{{ landing_stats.societies|default(0) }}</div>
-        <div class="label">Società Sportive</div>
-      </div>
-      <div class="stat-divider d-none d-md-block"></div>
-      <div class="stat-counter flex-fill">
-        <div class="count" data-target="{{ landing_stats.events|default(0) }}">{{ landing_stats.events|default(0) }}</div>
-        <div class="label">Eventi Creati</div>
-      </div>
-      <div class="stat-divider d-none d-md-block"></div>
-      <div class="stat-counter flex-fill">
-        <div class="count" data-target="{{ landing_stats.posts|default(0) }}">{{ landing_stats.posts|default(0) }}</div>
-        <div class="label">Post Condivisi</div>
-      </div>
-    </div>
-  </div>
+  {# Stats counters removed on request (keep landing page clean). #}
 
   <section class="section-padding">
     <div class="container">

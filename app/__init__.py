@@ -588,8 +588,166 @@ def create_app(config_name: str | None = None) -> Flask:
     config_class = config[config_name]
     app.config.from_object(config_class)
 
+    # Ensure DB URI is resolved *after* dotenv is loaded.
+    # Config class attributes are evaluated at import time, so relying on them
+    # would ignore `.env` values loaded at runtime.
+    #
+    # Production safety: if DATABASE_URL points to PostgreSQL but the server is
+    # temporarily unreachable, fall back to an existing SQLite DB (if present)
+    # so the site can still function during transient outages/misconfig.
+    if not app.config.get("TESTING"):
+        base_dir = app.config.get("BASE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+        sqlite_file = os.path.join(str(base_dir), "sonacip.db")
+        sqlite_fallback = f"sqlite:///{sqlite_file}" if os.path.exists(sqlite_file) else "sqlite:///sonacip.db"
+
+        db_uri = os.environ.get("DATABASE_URL", sqlite_fallback)
+        if db_uri.startswith("postgres://"):
+            db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+
+        # Detect "production-like" mode to avoid running half-broken.
+        is_production = (
+            (config_name == "production")
+            or (os.environ.get("APP_ENV") == "production")
+            or (os.environ.get("FLASK_ENV") == "production")
+        )
+
+        def _try_bootstrap_postgres_database(pg_url: str) -> bool:
+            """
+            Best-effort: if the target DB does not exist, attempt to create it.
+
+            This helps first-boot deployments where PostgreSQL is installed but the
+            database wasn't created yet.
+            """
+            try:
+                from sqlalchemy.engine import make_url
+                from sqlalchemy import create_engine, text
+            except Exception:
+                return False
+
+            try:
+                u = make_url(pg_url)
+            except Exception:
+                return False
+
+            db_name = (u.database or "").strip()
+            if not db_name:
+                return False
+
+            # Only allow simple identifiers for auto-create (safety).
+            import re
+
+            if not re.match(r"^[a-zA-Z0-9_]+$", db_name):
+                return False
+
+            admin_db = os.environ.get("PG_ADMIN_DB", "postgres")
+            try:
+                admin_url = u.set(database=admin_db)
+            except Exception:
+                return False
+
+            try:
+                eng = create_engine(
+                    admin_url.render_as_string(hide_password=False),
+                    pool_pre_ping=True,
+                    connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
+                )
+                with eng.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+                    conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                return True
+            except Exception:
+                # Already exists or no privileges / server down.
+                return False
+
+        # Best-effort connectivity probe for PostgreSQL only.
+        if db_uri.startswith("postgresql"):
+            probe_ok = False
+            last_exc: Exception | None = None
+            try:
+                from sqlalchemy import create_engine, text
+
+                eng = create_engine(
+                    db_uri,
+                    pool_pre_ping=True,
+                    connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
+                )
+                with eng.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                probe_ok = True
+            except Exception as exc:
+                last_exc = exc
+                # If this is a brand-new install and the DB is missing, try to create it.
+                try:
+                    msg = str(exc).lower()
+                except Exception:
+                    msg = ""
+                try:
+                    # Some drivers say: "database \"sonacipdb\" does not exist"
+                    missing_db = ("does not exist" in msg and "database" in msg) or ("invalidcatalogname" in msg)
+                except Exception:
+                    missing_db = False
+
+                if missing_db and _try_bootstrap_postgres_database(db_uri):
+                    # Re-probe after creating DB
+                    try:
+                        from sqlalchemy import create_engine, text
+
+                        eng = create_engine(
+                            db_uri,
+                            pool_pre_ping=True,
+                            connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
+                        )
+                        with eng.connect() as conn:
+                            conn.execute(text("SELECT 1"))
+                        probe_ok = True
+                        last_exc = None
+                    except Exception as exc2:
+                        last_exc = exc2
+
+            # If we are in production, do not continue in a degraded state:
+            # fail fast so the service restarts and logs the real cause.
+            if is_production and not probe_ok:
+                raise RuntimeError(
+                    "PostgreSQL is unreachable/misconfigured. "
+                    "Fix DATABASE_URL/permissions/migrations before going live."
+                ) from last_exc
+            # Non-production: if PostgreSQL is down and a legacy SQLite DB exists, keep the app usable.
+            if (not probe_ok) and sqlite_fallback.startswith("sqlite:") and (
+                sqlite_fallback != "sqlite:///sonacip.db" or os.path.exists(sqlite_file)
+            ):
+                try:
+                    app.logger.exception("PostgreSQL unreachable; falling back to SQLite")
+                except Exception:
+                    pass
+                db_uri = sqlite_fallback
+            elif not probe_ok:
+                try:
+                    app.logger.exception("PostgreSQL unreachable; no SQLite fallback found")
+                except Exception:
+                    pass
+
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
+        app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
     _ensure_secret_key(app)
     _normalize_sqlite_db(app)
+
+    # Safety log: show effective DB target at startup (do not leak passwords)
+    try:
+        from sqlalchemy.engine import make_url
+
+        raw = app.config.get("SQLALCHEMY_DATABASE_URI")
+        safe = raw
+        try:
+            safe = make_url(raw).render_as_string(hide_password=True) if raw else raw
+        except Exception:
+            # Fallback: strip password in basic "user:pass@" pattern
+            import re
+
+            if isinstance(raw, str):
+                safe = re.sub(r"://([^:/@]+):([^@]+)@", r"://\1:***@", raw)
+        print("Database connected to:", safe)
+    except Exception:
+        pass
 
     if hasattr(config_class, 'validate_config'):
         config_class.validate_config()

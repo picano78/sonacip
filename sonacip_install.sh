@@ -114,6 +114,36 @@ set -a
 . "$ENV_FILE"
 set +a
 
+echo "[5/10] Setup PostgreSQL (idempotente)..."
+# Install/enable PostgreSQL if missing (Ubuntu 24.04 compatible)
+if ! command -v psql >/dev/null 2>&1; then
+  echo "PostgreSQL non trovato: installazione..."
+  apt-get update -y
+  apt-get install -y --no-install-recommends postgresql postgresql-contrib
+fi
+systemctl enable --now postgresql >/dev/null 2>&1 || true
+
+# Ensure DATABASE_URL exists (do not overwrite if already set)
+if ! grep -qE '^DATABASE_URL=' "$ENV_FILE"; then
+  printf '%s\n' "DATABASE_URL=postgresql://sonacipuser:SonacipStrongPass123@localhost/sonacipdb" >> "$ENV_FILE"
+  chown "$APP_USER":"$APP_USER" "$ENV_FILE"
+fi
+# Ensure current shell has DATABASE_URL (needed for migrations/seed now).
+DATABASE_URL="${DATABASE_URL:-postgresql://sonacipuser:SonacipStrongPass123@localhost/sonacipdb}"
+export DATABASE_URL
+
+# Create DB/user safely (no DO blocks; safe to re-run)
+echo "Verifica database sonacipdb..."
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='sonacipdb'" | grep -q 1 || \
+  sudo -u postgres createdb sonacipdb
+
+echo "Verifica utente sonacipuser..."
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='sonacipuser'" | grep -q 1 || \
+  sudo -u postgres psql -c "CREATE USER sonacipuser WITH PASSWORD 'SonacipStrongPass123'"
+
+echo "Concessione privilegi..."
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sonacipdb TO sonacipuser"
+
 # Defaults match app/core/config.py if not specified in .env
 STORAGE_ROOT="${STORAGE_LOCAL_PATH:-$APP_DIR/uploads}"
 BACKUP_DIR="${BACKUP_FOLDER:-$APP_DIR/backups}"
@@ -184,11 +214,24 @@ if [[ -n "$SONACIP_DOMAIN" && -n "$SONACIP_LETSENCRYPT_EMAIL" ]]; then
   echo "Richiesta certificato Let's Encrypt per: $SONACIP_DOMAIN"
   SSL_CERT="/etc/letsencrypt/live/$SONACIP_DOMAIN/fullchain.pem"
   SSL_KEY="/etc/letsencrypt/live/$SONACIP_DOMAIN/privkey.pem"
-  certbot certonly --webroot -w "$LE_WEBROOT" \
-    -d "$SONACIP_DOMAIN" \
-    --agree-tos --non-interactive --email "$SONACIP_LETSENCRYPT_EMAIL" \
-    --keep-until-expiring
-  systemctl enable certbot.timer || true
+  if certbot certonly --webroot -w "$LE_WEBROOT" \
+      -d "$SONACIP_DOMAIN" \
+      --agree-tos --non-interactive --email "$SONACIP_LETSENCRYPT_EMAIL" \
+      --keep-until-expiring; then
+    systemctl enable certbot.timer || true
+  else
+    echo "Let’s Encrypt non disponibile (es. rate limit). Fallback a certificato self-signed."
+    SSL_CERT="/etc/ssl/sonacip/fullchain.pem"
+    SSL_KEY="/etc/ssl/sonacip/privkey.pem"
+    install -d -m 0755 /etc/ssl/sonacip
+    if [[ ! -f "$SSL_CERT" || ! -f "$SSL_KEY" ]]; then
+      CN="${SONACIP_DOMAIN:-localhost}"
+      openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+        -subj "/CN=$CN" \
+        -keyout "$SSL_KEY" -out "$SSL_CERT"
+      chmod 0600 "$SSL_KEY"
+    fi
+  fi
 else
   echo "SSL: uso certificato self-signed (imposta SONACIP_DOMAIN + SONACIP_LETSENCRYPT_EMAIL per Let's Encrypt)."
   install -d -m 0755 /etc/ssl/sonacip

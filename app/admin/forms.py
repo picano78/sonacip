@@ -132,6 +132,8 @@ class AppearanceSettingsForm(FlaskForm):
     logo_upload = FileField('Carica logo', validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Solo immagini!')])
     logo_url = StringField('Logo URL', validators=[Optional(), URL()])
     favicon_url = StringField('Favicon URL', validators=[Optional(), URL()])
+    app_icon_upload = FileField('Carica icona app', validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'webp'], 'Solo immagini!')])
+    app_icon_url = StringField('Icona app URL', validators=[Optional(), URL()])
     layout_style = StringField('Layout', validators=[Optional(), Length(max=50)])
 
 

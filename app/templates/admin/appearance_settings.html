@@ -246,7 +246,7 @@
                 </div>
 
                 <div class="color-card">
-                    <h5 class="mb-4"><i class="bi bi-image text-primary"></i> Logo e Favicon</h5>
+                    <h5 class="mb-4"><i class="bi bi-image text-primary"></i> Logo, Favicon e Icona App</h5>
                     
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -271,6 +271,24 @@
                             <label class="form-label fw-semibold">URL Favicon</label>
                             {{ form.favicon_url(class='form-control', placeholder='https://esempio.com/favicon.ico') }}
                             <small class="text-muted">Icona che appare nella tab del browser</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Icona App (PWA) (caricamento)</label>
+                            <div class="upload-zone mb-2" onclick="document.getElementById('app_icon_upload').click()">
+                                <i class="bi bi-phone"></i>
+                                <div class="fw-semibold">Carica icona app</div>
+                                <div class="text-muted" style="font-size:0.85rem;">PNG/JPG/WEBP - consigliato 512x512</div>
+                            </div>
+                            {{ form.app_icon_upload(class='form-control d-none', id='app_icon_upload') }}
+                            {% if settings and settings.app_icon_url %}
+                                <img src="{{ settings.app_icon_url }}" alt="Icona app attuale" class="current-logo" style="max-width: 120px; height:auto; border-radius:16px;">
+                            {% endif %}
+                            <small class="text-muted d-block">Se impostata, verrà usata per l’icona dell’app installabile (Android/iPhone).</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">URL Icona App (PWA)</label>
+                            {{ form.app_icon_url(class='form-control', placeholder='https://esempio.com/app-icon-512.png') }}
+                            <small class="text-muted">URL dell’icona usata nel manifest (consigliato PNG 512x512)</small>
                         </div>
                     </div>
                 </div>

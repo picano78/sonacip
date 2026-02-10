@@ -23,8 +23,15 @@ class Config:
         SECRET_KEY = secrets.token_hex(32)
 
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        f'sqlite:///{os.path.join(BASE_DIR, "sonacip.db")}'
+    # Prefer DATABASE_URL (PostgreSQL on VPS), fallback to local SQLite.
+    # Keep this dead-simple so no code switch is required.
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        "DATABASE_URL",
+        "sqlite:///sonacip.db",
+    )
+    # Backward compatibility: some platforms still use the old `postgres://` scheme.
+    if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Session configuration

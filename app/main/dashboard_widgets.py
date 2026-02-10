@@ -68,13 +68,6 @@ WIDGET_REGISTRY = [
         'category': 'documenti',
     },
     {
-        'key': 'leaderboard_mini',
-        'name': 'Classifica',
-        'description': 'Top 5 utenti per punti gamification',
-        'icon': 'bi-trophy-fill',
-        'category': 'gamification',
-    },
-    {
         'key': 'weather',
         'name': 'Meteo',
         'description': 'Widget meteo decorativo',
@@ -90,7 +83,7 @@ WIDGET_REGISTRY = [
     },
 ]
 
-DEFAULT_WIDGETS = ['quick_links', 'stats_summary', 'notifications_widget', 'feed_preview', 'upcoming_events', 'leaderboard_mini']
+DEFAULT_WIDGETS = ['quick_links', 'stats_summary', 'notifications_widget', 'feed_preview', 'upcoming_events']
 
 
 def get_widget_registry():
@@ -331,31 +324,6 @@ def _render_documents_recent(user):
     </div>'''
 
 
-def _render_leaderboard_mini(user):
-    from app.gamification.engine import get_leaderboard, get_level
-    entries = get_leaderboard(limit=5)
-    rows = ''
-    for i, (up, u) in enumerate(entries, 1):
-        medal = ''
-        if i == 1: medal = '<i class="bi bi-trophy-fill text-warning"></i> '
-        elif i == 2: medal = '<i class="bi bi-trophy-fill" style="color:#aaa"></i> '
-        elif i == 3: medal = '<i class="bi bi-trophy-fill" style="color:#cd7f32"></i> '
-        name = u.get_full_name()
-        rows += f'''<div class="list-group-item d-flex justify-content-between align-items-center">
-            <span class="small">{medal}{i}. {name}</span>
-            <span class="badge bg-primary">{up.total_points} pt</span>
-        </div>'''
-    if not rows:
-        rows = '<div class="list-group-item text-muted small">Nessun dato disponibile.</div>'
-    return f'''<div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <strong><i class="bi bi-trophy-fill me-1"></i> Classifica</strong>
-            <a href="{url_for('gamification.leaderboard')}" class="btn btn-sm btn-outline-primary">Completa</a>
-        </div>
-        <div class="list-group list-group-flush">{rows}</div>
-    </div>'''
-
-
 def _render_weather(user):
     return '''<div class="card h-100">
         <div class="card-header"><strong><i class="bi bi-cloud-sun-fill me-1"></i> Meteo</strong></div>
@@ -406,7 +374,6 @@ _RENDERERS = {
     'my_groups': _render_my_groups,
     'polls_active': _render_polls_active,
     'documents_recent': _render_documents_recent,
-    'leaderboard_mini': _render_leaderboard_mini,
     'weather': _render_weather,
     'quick_links': _render_quick_links,
 }

@@ -297,61 +297,8 @@ def template_create():
 @bp.route('/leaderboard')
 @login_required
 def leaderboard():
-    sport_filter = request.args.get('sport', '')
-    season_filter = request.args.get('season', '')
-    metric_filter = request.args.get('metric', 'gol')
-
-    scope_id = get_active_society_id(current_user)
-    q = AthleteStat.query
-    if scope_id:
-        member_ids = [m.user_id for m in SocietyMembership.query.filter_by(society_id=scope_id, status='active').all()]
-        if member_ids:
-            q = q.filter(AthleteStat.user_id.in_(member_ids))
-        else:
-            q = q.filter(AthleteStat.id < 0)
-    if sport_filter:
-        q = q.filter_by(sport_type=sport_filter)
-    if season_filter:
-        q = q.filter_by(season=season_filter)
-
-    all_stats = q.all()
-
-    sports = sorted(set(s.sport_type for s in all_stats if s.sport_type))
-    seasons = sorted(set(s.season for s in all_stats if s.season), reverse=True)
-
-    athlete_totals = {}
-    for s in all_stats:
-        metrics = _parse_metrics(s)
-        val = metrics.get(metric_filter, 0)
-        try:
-            val = float(val)
-        except (ValueError, TypeError):
-            val = 0
-        if s.user_id not in athlete_totals:
-            athlete_totals[s.user_id] = 0
-        athlete_totals[s.user_id] += val
-
-    ranked = sorted(athlete_totals.items(), key=lambda x: x[1], reverse=True)
-    leaderboard_data = []
-    for rank, (uid, total) in enumerate(ranked, 1):
-        u = User.query.get(uid)
-        if u:
-            leaderboard_data.append({'rank': rank, 'user': u, 'value': total})
-
-    available_metrics = set()
-    for s in all_stats:
-        m = _parse_metrics(s)
-        available_metrics.update(m.keys())
-    available_metrics = sorted(available_metrics)
-
-    return render_template('stats/leaderboard.html',
-                           leaderboard=leaderboard_data,
-                           sports=sports,
-                           seasons=seasons,
-                           available_metrics=available_metrics,
-                           current_sport=sport_filter,
-                           current_season=season_filter,
-                           current_metric=metric_filter)
+    flash('La classifica è stata rimossa.', 'info')
+    return redirect(url_for('stats.index'))
 
 
 @bp.route('/api/chart-data/<int:user_id>')

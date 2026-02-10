@@ -20,7 +20,7 @@ def _check_feature():
 def index():
     from app.gamification.engine import (
         get_or_create_user_points, get_level, get_level_progress,
-        get_next_level_points, get_leaderboard, check_and_award_badges
+        get_next_level_points, check_and_award_badges
     )
     from app.models import UserBadge, Badge
 
@@ -41,12 +41,10 @@ def index():
     except Exception:
         pass
 
-    leaderboard = get_leaderboard(limit=10)
-
     return render_template('gamification/index.html',
         user_points=up, level=level, progress=progress,
         next_lvl_pts=next_lvl_pts, points=points,
-        recent_badges=recent_badges, leaderboard=leaderboard)
+        recent_badges=recent_badges)
 
 
 @bp.route('/badges')
@@ -81,10 +79,8 @@ def badges():
 @bp.route('/leaderboard')
 @login_required
 def leaderboard():
-    from app.gamification.engine import get_leaderboard, get_level
-    entries = get_leaderboard(limit=50)
-    return render_template('gamification/leaderboard.html',
-        entries=entries, get_level=get_level)
+    flash('La classifica è stata rimossa.', 'info')
+    return redirect(url_for('gamification.index'))
 
 
 @bp.route('/profile/<int:user_id>')

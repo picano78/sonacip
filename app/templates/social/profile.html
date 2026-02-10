@@ -599,6 +599,15 @@
                         </form>
                         {% endif %}
 
+                        {% if is_member_of_society %}
+                        <form method="POST" action="{{ url_for('social.society_leave', society_id=user.id) }}" class="d-inline" onsubmit="return confirm('Vuoi abbandonare questa società?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-outline">
+                                <i class="bi bi-door-open"></i> Abbandona
+                            </button>
+                        </form>
+                        {% endif %}
+
                         {% if connection_status == 'connected' %}
                         <span class="conn-status-badge connected"><i class="bi bi-check-circle me-1"></i>Connesso</span>
                         <form method="POST" action="{{ url_for('social.remove_connection', user_id=user.id) }}" class="d-inline">

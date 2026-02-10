@@ -369,7 +369,7 @@ def create_post():
             post_type='official' if current_user.is_society() else 'personal',
         )
         
-        if form.image.data:
+        if has_media_file:
             try:
                 image_file = save_picture(form.image.data, folder='posts', size=(800, 800))
                 post.image = image_file
@@ -679,6 +679,19 @@ def profile(user_id):
     pending_connections = []
     if current_user.is_authenticated and current_user.id == user.id:
         pending_connections = Connection.query.filter_by(addressee_id=user.id, status='pending').all()
+
+    # Membership info (for "leave society" action on society profiles)
+    is_member_of_society = False
+    member_role_name = None
+    if user.is_society() and current_user.is_authenticated and current_user.id != user.id:
+        try:
+            m = SocietyMembership.query.filter_by(society_id=user.id, user_id=current_user.id, status='active').first()
+            if m:
+                is_member_of_society = True
+                member_role_name = m.role_name
+        except Exception:
+            is_member_of_society = False
+            member_role_name = None
     
     return render_template('social/profile.html',
                          user=user,
@@ -692,7 +705,9 @@ def profile(user_id):
                          user_skills=user_skills,
                          connections_count=connections_count,
                          connection_status=connection_status,
-                         pending_connections=pending_connections)
+                         pending_connections=pending_connections,
+                         is_member_of_society=is_member_of_society,
+                         member_role_name=member_role_name)
 
 
 @bp.route('/profile/edit', methods=['GET', 'POST'])
@@ -1320,7 +1335,7 @@ def society_set_member_role(user_id):
         return redirect(url_for('social.society_dashboard'))
 
     role_name = (request.form.get('role_name') or '').strip()
-    if role_name not in ('atleta', 'coach', 'staff', 'dirigente'):
+    if role_name not in ('atleta', 'coach', 'staff', 'dirigente', 'appassionato'):
         flash('Ruolo non valido.', 'danger')
         return redirect(url_for('social.society_dashboard'))
 
@@ -1349,6 +1364,11 @@ def society_set_member_role(user_id):
         member.society_id = society.id
         member.athlete_society_id = None
         member.staff_role = 'dirigente'
+    elif role_name == 'appassionato':
+        member.role = 'appassionato'
+        member.society_id = None
+        member.athlete_society_id = None
+        member.staff_role = None
     else:
         member.role = 'staff'
         member.society_id = society.id
@@ -1411,6 +1431,47 @@ def society_remove_member(user_id):
     log_action('society_member_remove', 'User', member.id, 'removed', society_id=society.id)
     flash('Membro rimosso.', 'success')
     return redirect(url_for('social.society_dashboard'))
+
+
+@bp.route('/society/leave/<int:society_id>', methods=['POST'])
+@login_required
+def society_leave(society_id: int):
+    """Allow a member to leave a society (deactivate membership)."""
+    # Society owners cannot leave their own society via this endpoint.
+    try:
+        if current_user.is_society() and current_user.get_primary_society() and int(current_user.get_primary_society().id) == int(society_id):
+            flash('Non puoi abbandonare la tua società.', 'warning')
+            return redirect(url_for('social.society_dashboard'))
+    except Exception:
+        pass
+
+    membership = SocietyMembership.query.filter_by(society_id=society_id, user_id=current_user.id, status='active').first()
+    if not membership:
+        flash('Non risulti membro di questa società.', 'info')
+        return redirect(url_for('main.dashboard'))
+
+    membership.status = 'inactive'
+    membership.updated_by = current_user.id
+
+    # Clear legacy links if they match this society
+    if getattr(current_user, 'society_id', None) == society_id:
+        current_user.society_id = None
+    if getattr(current_user, 'athlete_society_id', None) == society_id:
+        current_user.athlete_society_id = None
+    current_user.staff_role = None
+
+    # If the user has no other active memberships, keep appassionato role.
+    try:
+        from app.models import SocietyMembership as SM
+        still_active = SM.query.filter(SM.user_id == current_user.id, SM.status == 'active').count()
+        if still_active == 0 and not current_user.is_society():
+            current_user.role = 'appassionato'
+    except Exception:
+        pass
+
+    db.session.commit()
+    flash('Hai abbandonato la società.', 'success')
+    return redirect(url_for('main.dashboard'))
 
 
 @bp.route('/invites')

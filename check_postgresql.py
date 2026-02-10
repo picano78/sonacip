@@ -358,16 +358,22 @@ def print_setup_instructions():
 
 2. Crea database e utente:
    sudo -u postgres psql
-   CREATE USER sonacip WITH PASSWORD 'tua_password_sicura';
+   CREATE USER sonacip WITH PASSWORD 'tua_password_sicura';  -- ⚠ Cambia con password forte!
    CREATE DATABASE sonacip OWNER sonacip;
    GRANT ALL PRIVILEGES ON DATABASE sonacip TO sonacip;
    \\q
 
 3. Configura DATABASE_URL nel file .env:
    DATABASE_URL=postgresql://sonacip:tua_password_sicura@localhost:5432/sonacip
+   
+   ⚠ IMPORTANTE:
+   - Sostituisci 'tua_password_sicura' con una password forte e unica
+   - Il file .env contiene credenziali sensibili: NON committarlo su git
+   - Assicurati che .env sia in .gitignore
 
 4. Inizializza il database:
-   python init_db.py
+   python manage.py db upgrade
+   python manage.py seed
 
 5. Verifica l'installazione:
    python check_postgresql.py

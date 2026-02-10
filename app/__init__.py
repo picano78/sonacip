@@ -604,6 +604,13 @@ def create_app(config_name: str | None = None) -> Flask:
         if db_uri.startswith("postgres://"):
             db_uri = db_uri.replace("postgres://", "postgresql://", 1)
 
+        # Detect "production-like" mode to avoid running half-broken.
+        is_production = (
+            (config_name == "production")
+            or (os.environ.get("APP_ENV") == "production")
+            or (os.environ.get("FLASK_ENV") == "production")
+        )
+
         def _try_bootstrap_postgres_database(pg_url: str) -> bool:
             """
             Best-effort: if the target DB does not exist, attempt to create it.
@@ -690,8 +697,18 @@ def create_app(config_name: str | None = None) -> Flask:
                     except Exception:
                         pass
 
-                # If a legacy SQLite DB exists, keep the app usable.
-                if sqlite_fallback.startswith("sqlite:") and (sqlite_fallback != "sqlite:///sonacip.db" or os.path.exists(sqlite_file)):
+                # If we are in production, do not continue in a degraded state:
+                # fail fast so the service restarts and logs the real cause.
+                if is_production:
+                    raise RuntimeError(
+                        "PostgreSQL is unreachable/misconfigured. "
+                        "Fix DATABASE_URL/permissions/migrations before going live."
+                    ) from exc
+
+                # Non-production: if a legacy SQLite DB exists, keep the app usable.
+                if sqlite_fallback.startswith("sqlite:") and (
+                    sqlite_fallback != "sqlite:///sonacip.db" or os.path.exists(sqlite_file)
+                ):
                     try:
                         app.logger.exception("PostgreSQL unreachable; falling back to SQLite")
                     except Exception:
@@ -709,9 +726,21 @@ def create_app(config_name: str | None = None) -> Flask:
     _ensure_secret_key(app)
     _normalize_sqlite_db(app)
 
-    # Safety log: show effective DB target at startup
+    # Safety log: show effective DB target at startup (do not leak passwords)
     try:
-        print("Database connected to:", app.config.get("SQLALCHEMY_DATABASE_URI"))
+        from sqlalchemy.engine import make_url
+
+        raw = app.config.get("SQLALCHEMY_DATABASE_URI")
+        safe = raw
+        try:
+            safe = make_url(raw).render_as_string(hide_password=True) if raw else raw
+        except Exception:
+            # Fallback: strip password in basic "user:pass@" pattern
+            import re
+
+            if isinstance(raw, str):
+                safe = re.sub(r"://([^:/@]+):([^@]+)@", r"://\1:***@", raw)
+        print("Database connected to:", safe)
     except Exception:
         pass
 

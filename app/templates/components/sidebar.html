@@ -47,7 +47,7 @@
                                 </a>
                             </li>
                         {% elif item_id == 'planner' %}
-                            {% if feature_enabled('planner') %}
+                            {% if feature_enabled('planner') and can('calendar', 'view') %}
                             <li class="sidebar-item">
                                 <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner" title="Planner">
                                     <i class="bi bi-calendar-check"></i>
@@ -56,7 +56,7 @@
                             </li>
                             {% endif %}
                         {% elif item_id == 'calendario' %}
-                            {% if feature_enabled('planner') %}
+                            {% if feature_enabled('planner') and can('calendar', 'view') %}
                             <li class="sidebar-item">
                                 <a href="{{ url_for('calendar.index') }}" class="sidebar-link" data-tooltip="Calendario Società" title="Calendario Società">
                                     <i class="bi bi-calendar3-range"></i>
@@ -209,7 +209,7 @@
                     <span class="sidebar-text">Cruscotto</span>
                 </a>
             </li>
-            {% if feature_enabled('planner') %}
+            {% if feature_enabled('planner') and can('calendar', 'view') %}
             <li class="sidebar-item">
                 <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner" title="Planner">
                     <i class="bi bi-calendar-check"></i>

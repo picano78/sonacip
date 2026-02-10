@@ -91,6 +91,22 @@ def check_permission(user, resource, action, society_id=None):
     if user.is_admin():
         return True
 
+    # Global safe defaults for authenticated users (non society-scoped).
+    # Social interactions should work for "generic" users too.
+    if resource == 'social' and action in {'comment', 'post'}:
+        return True
+
+    # For society-scoped resources, require a resolvable society scope.
+    SOCIETY_REQUIRED = {"crm", "calendar", "tournaments", "tasks", "society"}
+    if society_id is None and resource in SOCIETY_REQUIRED:
+        try:
+            s = user.get_primary_society()
+            society_id = s.id if s else None
+        except Exception:
+            society_id = None
+        if society_id is None:
+            return False
+
     # When scope is provided, resolve society membership + per-society overrides.
     if society_id:
         # Must be in scope
@@ -347,6 +363,13 @@ def permission_required(resource, action, society_id_param=None, society_id_func
                 scope_id = kwargs.get(society_id_param)
             elif society_id_func:
                 scope_id = society_id_func(*args, **kwargs)
+            else:
+                # Auto-infer scope for society-required resources to keep routes and UI consistent.
+                if resource in {"crm", "calendar", "tournaments", "tasks", "society"}:
+                    try:
+                        scope_id = get_active_society_id(current_user)
+                    except Exception:
+                        scope_id = None
 
             if not check_permission(current_user, resource, action, scope_id):
                 if current_app:

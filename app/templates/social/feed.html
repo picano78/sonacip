@@ -8,7 +8,9 @@
                 <div class="fw-semibold mb-2">Azioni rapide</div>
                 <div class="d-flex flex-wrap gap-2">
                     <a class="btn btn-sm btn-outline-dark" href="{{ url_for('marketplace.index') }}"><i class="bi bi-shop-window"></i> Marketplace</a>
-                    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('calendar.index') }}"><i class="bi bi-calendar-event"></i> Eventi</a>
+                    {% if can('events', 'view') %}
+                    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('events.index') }}"><i class="bi bi-calendar-event"></i> Eventi</a>
+                    {% endif %}
                     <a class="btn btn-sm btn-outline-dark" href="{{ url_for('tournaments.list_tournaments') }}"><i class="bi bi-trophy"></i> Tornei</a>
                     <a class="btn btn-sm btn-outline-dark" href="{{ url_for('messages.inbox') }}"><i class="bi bi-chat"></i> Messaggi</a>
                 </div>
@@ -23,28 +25,34 @@
                         <div class="small text-muted">Racconta cosa sta succedendo adesso</div>
                     </div>
                 </div>
-                <form method="POST" action="{{ url_for('social.create_post') }}" enctype="multipart/form-data">
-                    {{ form.hidden_tag() }}
-                    {{ form.content(class="form-control mb-3", rows="3", placeholder="Cosa vuoi condividere?") }}
-                    <div class="row g-2 align-items-center mb-2">
-                        {% if feature_enabled('photos') and (not social_settings or social_settings.allow_photos) %}
-                        <div class="col">
-                            {{ form.image(class="form-control") }}
-                        </div>
-                        {% endif %}
-                        <div class="col-auto">
-                            <div class="form-check mb-0">
-                                {{ form.is_public(class="form-check-input") }}
-                                {{ form.is_public.label(class="form-check-label") }}
+                {% if can('social', 'post') %}
+                    <form method="POST" action="{{ url_for('social.create_post') }}" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        {{ form.content(class="form-control mb-3", rows="3", placeholder="Cosa vuoi condividere?") }}
+                        <div class="row g-2 align-items-center mb-2">
+                            {% if feature_enabled('photos') and (not social_settings or social_settings.allow_photos) %}
+                            <div class="col">
+                                {{ form.image(class="form-control") }}
+                            </div>
+                            {% endif %}
+                            <div class="col-auto">
+                                <div class="form-check mb-0">
+                                    {{ form.is_public(class="form-check-input") }}
+                                    {{ form.is_public.label(class="form-check-label") }}
+                                </div>
                             </div>
                         </div>
+                        <div class="d-flex justify-content-end align-items-center">
+                            <button type="submit" class="btn btn-dark">
+                                <i class="bi bi-send"></i> Pubblica
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-info mb-0">
+                        Non hai i permessi per pubblicare post.
                     </div>
-                    <div class="d-flex justify-content-end align-items-center">
-                        <button type="submit" class="btn btn-dark">
-                            <i class="bi bi-send"></i> Pubblica
-                        </button>
-                    </div>
-                </form>
+                {% endif %}
             </div>
             <div id="feed-posts">
             {% if posts %}

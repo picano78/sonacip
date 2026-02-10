@@ -9,6 +9,13 @@ from sqlalchemy import or_
 from app.models import Connection, Post, SocialSetting, User
 
 
+def _is_aware(dt) -> bool:
+    try:
+        return dt is not None and dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None
+    except Exception:
+        return False
+
+
 def get_connection_ids(user: User) -> set[int]:
     try:
         connections = Connection.query.filter(
@@ -49,13 +56,36 @@ def _engagement_score(post: Post, settings: SocialSetting | None) -> float:
             boosted_types = []
             muted_types = []
 
-    age_hours = max((datetime.now(timezone.utc) - post.created_at).total_seconds() / 3600, 0.1)
+    # created_at can be naive depending on DB/backend; avoid aware/naive subtraction.
+    created_at = getattr(post, "created_at", None)
+    if created_at is None:
+        age_hours = 9999.0
+    else:
+        if _is_aware(created_at):
+            now = datetime.now(timezone.utc)
+            try:
+                created_norm = created_at.astimezone(timezone.utc)
+            except Exception:
+                created_norm = created_at
+            age_hours = max((now - created_norm).total_seconds() / 3600, 0.1)
+        else:
+            now = datetime.utcnow()
+            age_hours = max((now - created_at).total_seconds() / 3600, 0.1)
     recency = max(0, 48 - age_hours) / 48
     base_engagement = (post.likes_count * 2) + (post.comments_count * 3)
     score = (base_engagement * _get_setting(settings, 'weight_engagement', 1.0))
     score += (recency * 5 * _get_setting(settings, 'weight_recency', 1.0))
 
-    if post.is_promoted and post.promotion_ends_at and post.promotion_ends_at > datetime.now(timezone.utc):
+    promo_end = getattr(post, "promotion_ends_at", None)
+    if post.is_promoted and promo_end:
+        if _is_aware(promo_end):
+            is_active_promo = promo_end > datetime.now(timezone.utc)
+        else:
+            is_active_promo = promo_end > datetime.utcnow()
+    else:
+        is_active_promo = False
+
+    if is_active_promo:
         score += _get_setting(settings, 'weight_promoted', 20.0)
     if post.is_promoted and settings and settings.boost_official:
         score += 5

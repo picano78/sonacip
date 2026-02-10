@@ -573,7 +573,8 @@ def create_app(config_name: str | None = None) -> Flask:
         # When running tests under pytest, default to the dedicated TestingConfig.
         # This prevents auto-upgrades/seeding from polluting unit tests and ensures
         # the DB URI is set before SQLAlchemy initializes.
-        if os.environ.get("PYTEST_CURRENT_TEST") is not None:
+        import sys
+        if os.environ.get("PYTEST_CURRENT_TEST") is not None or "pytest" in sys.modules:
             config_name = 'testing'
         else:
             config_name = os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or 'development'

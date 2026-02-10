@@ -5,6 +5,7 @@ Environment-based configuration for development and production
 import os
 import secrets
 from datetime import timedelta
+from sqlalchemy.pool import StaticPool
 
 
 class Config:
@@ -146,6 +147,10 @@ class TestingConfig(Config):
 
     # Use in-memory SQLite for isolated tests
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "connect_args": {"check_same_thread": False},
+        "poolclass": StaticPool,
+    }
 
     # Avoid CSRF in unit tests
     WTF_CSRF_ENABLED = False

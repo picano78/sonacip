@@ -31,8 +31,17 @@
               {{ form.capacity(class="form-control") }}
             </div>
             <div class="mb-2">
-              <label class="form-label">Colore (es. #0d6efd)</label>
-              {{ form.color(class="form-control") }}
+              <label class="form-label">Colore</label>
+              <div class="d-flex align-items-center gap-2">
+                {{ form.color(class="form-control form-control-color", type="color", value=(form.color.data or '#0d6efd')) }}
+                <input type="text" class="form-control" style="max-width:140px;" id="facilityColorHex" value="{{ form.color.data or '#0d6efd' }}" placeholder="#0d6efd">
+              </div>
+              <div class="mt-2 d-flex flex-wrap gap-2" id="facilityColorSwatches">
+                {% for c in ['#1877f2','#20c997','#ffc107','#dc3545','#6f42c1','#0dcaf0','#198754','#fd7e14','#6c757d','#212529'] %}
+                  <button type="button" class="btn p-0 border rounded" style="width:26px;height:26px;background:{{ c }};" data-color="{{ c }}" title="{{ c }}"></button>
+                {% endfor %}
+              </div>
+              <div class="form-text">Scegli un colore per distinguere la risorsa nel calendario.</div>
             </div>
             <button class="btn btn-primary" type="submit">Crea</button>
           </form>
@@ -66,5 +75,37 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-control-color{width:3.2rem; padding:0.2rem; height:2.4rem;}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const colorInput = document.querySelector('input[name=\"color\"]');
+    const hexInput = document.getElementById('facilityColorHex');
+    const swatches = document.getElementById('facilityColorSwatches');
+    if (!colorInput || !hexInput || !swatches) return;
+
+    function setColor(val) {
+      if (!val) return;
+      if (!val.startsWith('#')) val = '#' + val;
+      colorInput.value = val;
+      hexInput.value = val;
+    }
+
+    colorInput.addEventListener('input', () => setColor(colorInput.value));
+    hexInput.addEventListener('input', () => setColor(hexInput.value));
+    swatches.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-color]');
+      if (!btn) return;
+      setColor(btn.getAttribute('data-color'));
+    });
+  })();
+</script>
 {% endblock %}
 

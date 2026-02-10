@@ -2,7 +2,7 @@
 Social routes
 Profiles, feed, posts, follows, likes, comments
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, abort
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
@@ -70,6 +70,12 @@ def _build_feed_page(user, page, per_page, settings, admin_access, scope_id, cac
     def is_visible(p: Post) -> bool:
         if admin_access:
             return True
+        # Never show super admin content to non-admins.
+        try:
+            if p.author and p.author.is_admin():
+                return False
+        except Exception:
+            pass
         if p.user_id == user.id:
             return True
         if (p.audience or 'public') == 'public':
@@ -155,6 +161,11 @@ def feed():
     admin_access = check_permission(current_user, 'admin', 'access')
     scope_id = get_active_society_id(current_user)
     posts, total = _build_feed_page(current_user, page, per_page, settings, admin_access, scope_id, cache, cache_ttl)
+    followed_ids = set()
+    try:
+        followed_ids = {u.id for u in current_user.followed.all()}
+    except Exception:
+        followed_ids = set()
 
     # Autopilot banners (Facebook-like): pick creatives for placements.
     ad = None
@@ -212,6 +223,7 @@ def feed():
                          pagination=pagination,
                          form=form,
                          social_settings=settings,
+                         followed_ids=followed_ids,
                          ad=ad,
                          ad_token=ad_token,
                          sidebar_ad=sidebar_ad,
@@ -231,11 +243,16 @@ def feed_posts():
     admin_access = check_permission(current_user, 'admin', 'access')
     scope_id = get_active_society_id(current_user)
     posts, _total = _build_feed_page(current_user, page, per_page, settings, admin_access, scope_id, cache, cache_ttl)
+    followed_ids = set()
+    try:
+        followed_ids = {u.id for u in current_user.followed.all()}
+    except Exception:
+        followed_ids = set()
 
     if not posts:
         return ''
 
-    return render_template('social/feed_partial.html', posts=posts)
+    return render_template('social/feed_partial.html', posts=posts, followed_ids=followed_ids)
 
 
 @bp.route('/feed/updates')
@@ -273,6 +290,12 @@ def feed_updates():
     def is_visible(p: Post) -> bool:
         if admin_access:
             return True
+        # Never show super admin content to non-admins.
+        try:
+            if p.author and p.author.is_admin():
+                return False
+        except Exception:
+            pass
         if p.user_id == current_user.id:
             return True
         if (p.audience or 'public') == 'public':
@@ -300,7 +323,7 @@ def feed_updates():
     if not posts:
         return ''
 
-    return render_template('social/feed_partial.html', posts=posts)
+    return render_template('social/feed_partial.html', posts=posts, followed_ids=followed_ids)
 
 
 @bp.route('/post/create', methods=['POST'])
@@ -347,8 +370,20 @@ def create_post():
         )
         
         if form.image.data:
-            image_file = save_picture(form.image.data, folder='posts', size=(800, 800))
-            post.image = image_file
+            try:
+                image_file = save_picture(form.image.data, folder='posts', size=(800, 800))
+                post.image = image_file
+            except Exception:
+                try:
+                    current_app.logger.exception("Post media save failed; continuing without media")
+                except Exception:
+                    pass
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                # Continue: publish the text-only post.
+                post.image = None
         
         db.session.add(post)
         db.session.commit()
@@ -723,29 +758,47 @@ def upload_avatar():
 def follow(user_id):
     """Follow a user/society"""
     user = User.query.get_or_404(user_id)
+
+    # Super admin profiles must not be visible/followable by others.
+    try:
+        if user.is_admin() and not current_user.is_admin():
+            abort(404)
+    except Exception:
+        pass
     
     if user.id == current_user.id:
         flash('Non puoi seguire te stesso.', 'warning')
         return redirect(url_for('social.profile', user_id=user_id))
     
-    if current_user.is_following(user):
-        flash('Stai già seguendo questo utente.', 'info')
-    else:
-        current_user.follow(user)
-        db.session.commit()
-        
-        # Create notification
-        notification = Notification(
-            user_id=user.id,
-            title='Nuovo follower',
-            message=f'{current_user.get_full_name()} ha iniziato a seguirti',
-            notification_type='social',
-            link=url_for('social.profile', user_id=current_user.id)
-        )
-        db.session.add(notification)
-        db.session.commit()
-        
-        flash(f'Ora segui {user.get_full_name()}!', 'success')
+    try:
+        if current_user.is_following(user):
+            flash('Stai già seguendo questo utente.', 'info')
+        else:
+            current_user.follow(user)
+            # Create notification (best-effort; do not fail follow if notification fails)
+            try:
+                notification = Notification(
+                    user_id=user.id,
+                    title='Nuovo follower',
+                    message=f'{current_user.get_full_name()} ha iniziato a seguirti',
+                    notification_type='social',
+                    link=url_for('social.profile', user_id=current_user.id)
+                )
+                db.session.add(notification)
+            except Exception:
+                try:
+                    current_app.logger.exception("Follow notification creation failed (non-fatal)")
+                except Exception:
+                    pass
+            db.session.commit()
+            flash(f'Ora segui {user.get_full_name()}!', 'success')
+    except Exception:
+        db.session.rollback()
+        try:
+            current_app.logger.exception("Follow failed")
+        except Exception:
+            pass
+        flash('Impossibile seguire questo profilo in questo momento.', 'danger')
     
     return redirect(request.referrer or url_for('social.profile', user_id=user_id))
 
@@ -755,13 +808,28 @@ def follow(user_id):
 def unfollow(user_id):
     """Unfollow a user/society"""
     user = User.query.get_or_404(user_id)
+
+    # Super admin profiles must not be visible/followable by others.
+    try:
+        if user.is_admin() and not current_user.is_admin():
+            abort(404)
+    except Exception:
+        pass
     
-    if not current_user.is_following(user):
-        flash('Non stai seguendo questo utente.', 'info')
-    else:
-        current_user.unfollow(user)
-        db.session.commit()
-        flash(f'Hai smesso di seguire {user.get_full_name()}.', 'success')
+    try:
+        if not current_user.is_following(user):
+            flash('Non stai seguendo questo utente.', 'info')
+        else:
+            current_user.unfollow(user)
+            db.session.commit()
+            flash(f'Hai smesso di seguire {user.get_full_name()}.', 'success')
+    except Exception:
+        db.session.rollback()
+        try:
+            current_app.logger.exception("Unfollow failed")
+        except Exception:
+            pass
+        flash('Impossibile aggiornare il follow in questo momento.', 'danger')
     
     return redirect(request.referrer or url_for('social.profile', user_id=user_id))
 
@@ -1441,9 +1509,13 @@ def explore():
     societies = sorted(societies, key=lambda u: u.followers.count(), reverse=True)[:20]
     
     # Get recent posts
-    recent_posts = Post.query.filter_by(is_public=True).order_by(
-        Post.created_at.desc()
-    ).limit(10).all()
+    recent_posts = Post.query.filter_by(is_public=True).order_by(Post.created_at.desc()).limit(15).all()
+    if not current_user.is_admin():
+        try:
+            recent_posts = [p for p in recent_posts if not (p.author and p.author.is_admin())]
+        except Exception:
+            pass
+    recent_posts = recent_posts[:10]
     
     return render_template('social/explore.html',
                          societies=societies,

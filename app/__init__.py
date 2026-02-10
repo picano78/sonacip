@@ -692,7 +692,8 @@ def create_app(config_name: str | None = None) -> Flask:
     def _error_page(template: str, code: int, fallback_title: str, fallback_msg: str):
         try:
             return _rt(template), code
-        except Exception:
+        except Exception as template_err:
+            app.logger.error(f"Failed to render error template {template}: {template_err}")
             return (
                 f"<!doctype html><html lang='it'><head><meta charset='utf-8'>"
                 f"<meta name='viewport' content='width=device-width, initial-scale=1'>"
@@ -715,6 +716,34 @@ def create_app(config_name: str | None = None) -> Flask:
 
     @app.errorhandler(InternalServerError)
     def handle_internal_server_error(err: InternalServerError):
+        # Log dettagliato dell'errore per il debugging
+        try:
+            from flask_login import current_user
+            user_info = f"User ID: {current_user.id}" if current_user and current_user.is_authenticated else "Anonymous"
+            app.logger.error(
+                f"500 Internal Server Error - {request.method} {request.url} - {user_info} - IP: {request.remote_addr}"
+            )
+            app.logger.exception("Dettagli dell'errore 500:")
+        except Exception:
+            app.logger.exception("500 Internal Server Error (failed to log context):")
+        
+        if _wants_json():
+            return {"error": "internal_server_error"}, 500
+        return _error_page("errors/500.html", 500, "Errore del server", "Riprova tra qualche istante.")
+
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(err: Exception):
+        """Cattura tutte le eccezioni non gestite e le logga."""
+        try:
+            from flask_login import current_user
+            user_info = f"User ID: {current_user.id}" if current_user and current_user.is_authenticated else "Anonymous"
+            app.logger.error(
+                f"Unhandled Exception - {request.method} {request.url} - {user_info} - IP: {request.remote_addr}"
+            )
+            app.logger.exception(f"Tipo eccezione: {type(err).__name__} - Dettagli:")
+        except Exception:
+            app.logger.exception("Unhandled Exception (failed to log context):")
+        
         if _wants_json():
             return {"error": "internal_server_error"}, 500
         return _error_page("errors/500.html", 500, "Errore del server", "Riprova tra qualche istante.")
@@ -827,6 +856,7 @@ def create_app(config_name: str | None = None) -> Flask:
 
         except Exception:
             # DB not initialized yet or models unavailable: keep templates functional.
+            app.logger.warning("Platform context injection failed (DB may not be initialized yet)", exc_info=True)
             def _get_unread_notifications_count():
                 return 0
 

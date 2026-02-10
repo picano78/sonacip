@@ -90,7 +90,7 @@ def contact():
 def healthz():
     """Health check for uptime monitoring (DB + basic app checks)."""
     from sqlalchemy import text
-    from datetime import datetime
+    from datetime import datetime, timezone
     try:
         db.session.execute(text("SELECT 1"))
         db_ok = True
@@ -597,7 +597,7 @@ def search_suggestions():
                 'text': e.title,
                 'sub': e.start_date.strftime('%d/%m/%Y') if e.start_date else '',
                 'icon': 'bi-calendar-event-fill',
-                'url': url_for('events.event_detail', event_id=e.id),
+                'url': url_for('events.detail', event_id=e.id),
                 'avatar': None
             })
 

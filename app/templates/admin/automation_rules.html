@@ -66,6 +66,7 @@
                                 </a>
                                 <form method="POST" action="{{ url_for('admin.delete_automation_rule', rule_id=rule.id) }}" 
                                       style="display:inline;" onsubmit="return confirm('Eliminare questa regola?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-danger" title="Elimina">
                                         <i class="fas fa-trash"></i>
                                     </button>

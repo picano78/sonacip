@@ -400,9 +400,26 @@ def timeago(date):
     """
     if not date:
         return ""
-    
-    now = datetime.now(timezone.utc)
-    diff = now - date
+
+    # Normalize naive/aware datetimes to avoid TypeError on subtraction.
+    # - If `date` is naive, assume it's UTC naive.
+    # - If `date` is aware, convert to UTC.
+    try:
+        is_aware = date.tzinfo is not None and date.tzinfo.utcoffset(date) is not None
+    except Exception:
+        is_aware = False
+
+    if is_aware:
+        now = datetime.now(timezone.utc)
+        try:
+            date_norm = date.astimezone(timezone.utc)
+        except Exception:
+            date_norm = date
+    else:
+        now = datetime.utcnow()
+        date_norm = date
+
+    diff = now - date_norm
     
     seconds = diff.total_seconds()
     if seconds < 0:

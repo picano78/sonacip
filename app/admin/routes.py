@@ -188,6 +188,17 @@ def appearance_settings():
         else:
             settings.logo_url = form.logo_url.data or None
         settings.favicon_url = form.favicon_url.data or None
+        # PWA / app icon
+        if getattr(form, "app_icon_upload", None) is not None and form.app_icon_upload.data:
+            try:
+                saved_path = save_picture(form.app_icon_upload.data, folder='icons', size=(512, 512))
+                settings.app_icon_url = url_for('static', filename='uploads/' + saved_path)
+            except Exception:
+                if current_app:
+                    current_app.logger.exception('App icon upload failed')
+                flash('Caricamento icona app non riuscito.', 'danger')
+        else:
+            settings.app_icon_url = (form.app_icon_url.data or None) if hasattr(form, "app_icon_url") else getattr(settings, "app_icon_url", None)
         settings.layout_style = form.layout_style.data or settings.layout_style
         settings.updated_by = current_user.id
         settings.updated_at = datetime.now(timezone.utc)

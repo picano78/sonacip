@@ -148,8 +148,8 @@ def test_error_handler_preserves_user_friendly_messages(app, client):
             assert b"Errore del Server" in response.data or b"internal_server_error" in response.data
 
 
-def test_unexpected_error_json_includes_type(app, client):
-    """Test that unexpected errors return type in JSON response."""
+def test_unexpected_error_json_response(app, client):
+    """Test that unexpected errors return consistent JSON response without leaking exception type."""
     with app.app_context():
         @app.route('/test_unexpected_json_logging')
         def test_unexpected_json():
@@ -162,10 +162,11 @@ def test_unexpected_error_json_includes_type(app, client):
                                 headers={'Accept': 'application/json'})
             
             assert response.status_code == 500
-            # Should include error type in JSON response
+            # Should return generic error without exposing exception type
             data = response.get_json()
             if data:
                 assert 'error' in data
-                # May include type information
-                assert data.get('error') == 'internal_server_error' or 'type' in data
+                assert data.get('error') == 'internal_server_error'
+                # Should NOT include type to avoid information leakage
+                assert 'type' not in data or data.get('type') is None
 

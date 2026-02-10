@@ -745,7 +745,7 @@ def create_app(config_name: str | None = None) -> Flask:
             app.logger.exception("Unhandled Exception (failed to log context):")
         
         if _wants_json():
-            return {"error": "internal_server_error", "type": type(err).__name__}, 500
+            return {"error": "internal_server_error"}, 500
         return _error_page("errors/500.html", 500, "Errore del server", "Riprova tra qualche istante.")
 
     @login_manager.user_loader

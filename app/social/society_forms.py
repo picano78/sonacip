@@ -15,6 +15,7 @@ class SocietyInviteForm(FlaskForm):
             ('coach', 'Coach'),
             ('staff', 'Staff'),
             ('dirigente', 'Dirigente'),
+            ('appassionato', 'Appassionato'),
         ],
         validators=[DataRequired()],
     )

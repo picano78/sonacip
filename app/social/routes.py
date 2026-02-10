@@ -332,80 +332,89 @@ def feed_updates():
 @limiter.limit("20 per hour")
 def create_post():
     """Create a new post"""
-    form = PostForm()
-    settings = SocialSetting.query.first()
-    if settings and not settings.feed_enabled and not check_permission(current_user, 'admin', 'access'):
-        flash('Pubblicazione disabilitata dall\'amministratore.', 'warning')
-        return redirect(url_for('social.feed'))
-    
-    if form.validate_on_submit():
-        has_media_file = form.image.data and hasattr(form.image.data, 'filename') and form.image.data.filename
-        if has_media_file and settings:
-            fname = (form.image.data.filename or '').lower()
-            is_video = fname.endswith(('.mp4', '.mov', '.avi', '.webm', '.mkv'))
-            is_photo = not is_video
-            if is_photo and not getattr(settings, 'allow_photos', True):
-                flash('La pubblicazione di foto è stata disabilitata dall\'amministratore.', 'warning')
-                return redirect(url_for('social.feed'))
-            if is_video and not getattr(settings, 'allow_videos', True):
-                flash('La pubblicazione di video è stata disabilitata dall\'amministratore.', 'warning')
-                return redirect(url_for('social.feed'))
-
-        audience = 'public' if form.is_public.data else 'followers'
-        society_id = None
-        if current_user.is_society():
-            audience = 'public' if form.is_public.data else 'society'
-            try:
-                society_id = get_active_society_id(current_user)
-            except Exception:
-                society_id = None
-
-        post = Post(
-            user_id=current_user.id,
-            content=form.content.data,
-            is_public=form.is_public.data,
-            audience=audience,
-            society_id=society_id,
-            post_type='official' if current_user.is_society() else 'personal',
-        )
+    try:
+        form = PostForm()
+        settings = SocialSetting.query.first()
+        if settings and not settings.feed_enabled and not check_permission(current_user, 'admin', 'access'):
+            flash('Pubblicazione disabilitata dall\'amministratore.', 'warning')
+            return redirect(url_for('social.feed'))
         
-        if has_media_file:
-            try:
-                image_file = save_picture(form.image.data, folder='posts', size=(800, 800))
-                post.image = image_file
-            except Exception:
-                try:
-                    current_app.logger.exception("Post media save failed; continuing without media")
-                except Exception:
-                    pass
-                try:
-                    db.session.rollback()
-                except Exception:
-                    pass
-                # Continue: publish the text-only post.
-                post.image = None
-        
-        db.session.add(post)
-        db.session.commit()
+        if form.validate_on_submit():
+            has_media_file = form.image.data and hasattr(form.image.data, 'filename') and form.image.data.filename
+            if has_media_file and settings:
+                fname = (form.image.data.filename or '').lower()
+                is_video = fname.endswith(('.mp4', '.mov', '.avi', '.webm', '.mkv'))
+                is_photo = not is_video
+                if is_photo and not getattr(settings, 'allow_photos', True):
+                    flash('La pubblicazione di foto è stata disabilitata dall\'amministratore.', 'warning')
+                    return redirect(url_for('social.feed'))
+                if is_video and not getattr(settings, 'allow_videos', True):
+                    flash('La pubblicazione di video è stata disabilitata dall\'amministratore.', 'warning')
+                    return redirect(url_for('social.feed'))
 
-        try:
-            log_action(
-                'post_create',
-                'Post',
-                post.id,
-                f'post_type={post.post_type} audience={post.audience}',
-                society_id=post.society_id,
+            audience = 'public' if form.is_public.data else 'followers'
+            society_id = None
+            if current_user.is_society():
+                audience = 'public' if form.is_public.data else 'society'
+                try:
+                    society_id = get_active_society_id(current_user)
+                except Exception:
+                    society_id = None
+
+            post = Post(
+                user_id=current_user.id,
+                content=form.content.data,
+                is_public=form.is_public.data,
+                audience=audience,
+                society_id=society_id,
+                post_type='official' if current_user.is_society() else 'personal',
             )
+            
+            if has_media_file:
+                try:
+                    image_file = save_picture(form.image.data, folder='posts', size=(800, 800))
+                    post.image = image_file
+                except Exception:
+                    try:
+                        current_app.logger.exception("Post media save failed; continuing without media")
+                    except Exception:
+                        pass
+                    try:
+                        db.session.rollback()
+                    except Exception:
+                        pass
+                    # Continue: publish the text-only post.
+                    post.image = None
+            
+            db.session.add(post)
+            db.session.commit()
+
+            try:
+                log_action(
+                    'post_create',
+                    'Post',
+                    post.id,
+                    f'post_type={post.post_type} audience={post.audience}',
+                    society_id=post.society_id,
+                )
+            except Exception:
+                pass
+            
+            flash('Post pubblicato!', 'success')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f'{error}', 'danger')
+        
+        return redirect(url_for('social.feed'))
+    except Exception:
+        db.session.rollback()
+        try:
+            current_app.logger.exception("Create post failed (handled)")
         except Exception:
             pass
-        
-        flash('Post pubblicato!', 'success')
-    else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(f'{error}', 'danger')
-    
-    return redirect(url_for('social.feed'))
+        flash('Impossibile pubblicare il post in questo momento.', 'danger')
+        return redirect(url_for('social.feed'))
 
 
 @bp.route('/post/<int:post_id>')
@@ -1266,7 +1275,7 @@ def society_permissions():
         flash('Profilo società non trovato.', 'warning')
         return redirect(url_for('social.feed'))
 
-    managed_roles = ['dirigente', 'coach', 'staff', 'atleta']
+    managed_roles = ['dirigente', 'coach', 'staff', 'atleta', 'appassionato']
     managed_perms = Permission.query.filter(
         Permission.resource.in_(['social', 'events', 'calendar', 'crm', 'tasks', 'tournaments', 'society', 'users'])
     ).order_by(Permission.resource.asc(), Permission.action.asc()).all()

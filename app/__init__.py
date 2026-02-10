@@ -776,6 +776,12 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.core.bootstrap import discover_and_register_modules
     _register_blueprints(app)
     discover_and_register_modules(app, strict=False)
+    # External drop-in plugins (filesystem-based)
+    try:
+        from app.core.plugins import load_external_plugins
+        load_external_plugins(app)
+    except Exception:
+        app.logger.exception("External plugins load failed (non-fatal)")
 
     @app.context_processor
     def inject_platform_context():

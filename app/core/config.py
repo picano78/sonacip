@@ -58,6 +58,14 @@ class Config:
     # Plug-in modules folder (safe discovery)
     MODULES_FOLDER = os.environ.get('MODULES_FOLDER') or os.path.join(BASE_DIR, 'app', 'modules')
 
+    # External plugins folder (drop-in plugins, not part of core package)
+    # Each plugin lives in: PLUGINS_FOLDER/<plugin_id>/
+    # and must provide a plugin.py with `register(app)` function.
+    PLUGINS_FOLDER = os.environ.get('PLUGINS_FOLDER') or os.path.join(BASE_DIR, 'plugins')
+    # Allow/deny lists (comma-separated plugin IDs)
+    PLUGINS_ALLOWLIST = os.environ.get('PLUGINS_ALLOWLIST')  # e.g. "hello_world,calendar_ext"
+    PLUGINS_BLOCKLIST = os.environ.get('PLUGINS_BLOCKLIST')  # e.g. "broken_plugin"
+
     # Backup configuration (production: use env var for custom path)
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or os.path.join(BASE_DIR, 'backups')
 

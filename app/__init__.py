@@ -591,10 +591,45 @@ def create_app(config_name: str | None = None) -> Flask:
     # Ensure DB URI is resolved *after* dotenv is loaded.
     # Config class attributes are evaluated at import time, so relying on them
     # would ignore `.env` values loaded at runtime.
+    #
+    # Production safety: if DATABASE_URL points to PostgreSQL but the server is
+    # temporarily unreachable, fall back to an existing SQLite DB (if present)
+    # so the site can still function during transient outages/misconfig.
     if not app.config.get("TESTING"):
-        db_uri = os.environ.get("DATABASE_URL", "sqlite:///sonacip.db")
+        base_dir = app.config.get("BASE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+        sqlite_file = os.path.join(str(base_dir), "sonacip.db")
+        sqlite_fallback = f"sqlite:///{sqlite_file}" if os.path.exists(sqlite_file) else "sqlite:///sonacip.db"
+
+        db_uri = os.environ.get("DATABASE_URL", sqlite_fallback)
         if db_uri.startswith("postgres://"):
             db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+
+        # Best-effort connectivity probe for PostgreSQL only.
+        if db_uri.startswith("postgresql"):
+            try:
+                from sqlalchemy import create_engine, text
+
+                eng = create_engine(
+                    db_uri,
+                    pool_pre_ping=True,
+                    connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
+                )
+                with eng.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+            except Exception:
+                # If a legacy SQLite DB exists, keep the app usable.
+                if sqlite_fallback.startswith("sqlite:") and (sqlite_fallback != "sqlite:///sonacip.db" or os.path.exists(sqlite_file)):
+                    try:
+                        app.logger.exception("PostgreSQL unreachable; falling back to SQLite")
+                    except Exception:
+                        pass
+                    db_uri = sqlite_fallback
+                else:
+                    try:
+                        app.logger.exception("PostgreSQL unreachable; no SQLite fallback found")
+                    except Exception:
+                        pass
+
         app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 

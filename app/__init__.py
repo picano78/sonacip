@@ -604,6 +604,53 @@ def create_app(config_name: str | None = None) -> Flask:
         if db_uri.startswith("postgres://"):
             db_uri = db_uri.replace("postgres://", "postgresql://", 1)
 
+        def _try_bootstrap_postgres_database(pg_url: str) -> bool:
+            """
+            Best-effort: if the target DB does not exist, attempt to create it.
+
+            This helps first-boot deployments where PostgreSQL is installed but the
+            database wasn't created yet.
+            """
+            try:
+                from sqlalchemy.engine import make_url
+                from sqlalchemy import create_engine, text
+            except Exception:
+                return False
+
+            try:
+                u = make_url(pg_url)
+            except Exception:
+                return False
+
+            db_name = (u.database or "").strip()
+            if not db_name:
+                return False
+
+            # Only allow simple identifiers for auto-create (safety).
+            import re
+
+            if not re.match(r"^[a-zA-Z0-9_]+$", db_name):
+                return False
+
+            admin_db = os.environ.get("PG_ADMIN_DB", "postgres")
+            try:
+                admin_url = u.set(database=admin_db)
+            except Exception:
+                return False
+
+            try:
+                eng = create_engine(
+                    admin_url.render_as_string(hide_password=False),
+                    pool_pre_ping=True,
+                    connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
+                )
+                with eng.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+                    conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+                return True
+            except Exception:
+                # Already exists or no privileges / server down.
+                return False
+
         # Best-effort connectivity probe for PostgreSQL only.
         if db_uri.startswith("postgresql"):
             try:
@@ -616,7 +663,33 @@ def create_app(config_name: str | None = None) -> Flask:
                 )
                 with eng.connect() as conn:
                     conn.execute(text("SELECT 1"))
-            except Exception:
+            except Exception as exc:
+                # If this is a brand-new install and the DB is missing, try to create it.
+                try:
+                    msg = str(exc).lower()
+                except Exception:
+                    msg = ""
+                try:
+                    # Some drivers say: "database \"sonacipdb\" does not exist"
+                    missing_db = ("does not exist" in msg and "database" in msg) or ("invalidcatalogname" in msg)
+                except Exception:
+                    missing_db = False
+
+                if missing_db and _try_bootstrap_postgres_database(db_uri):
+                    # Re-probe after creating DB
+                    try:
+                        from sqlalchemy import create_engine, text
+
+                        eng = create_engine(
+                            db_uri,
+                            pool_pre_ping=True,
+                            connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
+                        )
+                        with eng.connect() as conn:
+                            conn.execute(text("SELECT 1"))
+                    except Exception:
+                        pass
+
                 # If a legacy SQLite DB exists, keep the app usable.
                 if sqlite_fallback.startswith("sqlite:") and (sqlite_fallback != "sqlite:///sonacip.db" or os.path.exists(sqlite_file)):
                     try:

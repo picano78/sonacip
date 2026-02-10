@@ -168,5 +168,5 @@ def test_unexpected_error_json_response(app, client):
                 assert 'error' in data
                 assert data.get('error') == 'internal_server_error'
                 # Should NOT include type to avoid information leakage
-                assert 'type' not in data or data.get('type') is None
+                assert 'type' not in data
 

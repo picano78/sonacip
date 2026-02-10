@@ -857,7 +857,6 @@ def create_app(config_name: str | None = None) -> Flask:
         except Exception:
             # DB not initialized yet or models unavailable: keep templates functional.
             app.logger.warning("Platform context injection failed (DB may not be initialized yet)", exc_info=True)
-            
             def _get_unread_notifications_count():
                 return 0
 

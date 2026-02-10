@@ -90,7 +90,7 @@ def contact():
 def healthz():
     """Health check for uptime monitoring (DB + basic app checks)."""
     from sqlalchemy import text
-    from datetime import datetime
+    from datetime import datetime, timezone
     try:
         db.session.execute(text("SELECT 1"))
         db_ok = True

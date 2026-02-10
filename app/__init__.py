@@ -731,6 +731,18 @@ def create_app(config_name: str | None = None) -> Flask:
     app.template_filter('timeago')(timeago)
     app.template_filter('datetime_format')(datetime_format)
     app.template_filter('strftime')(datetime_format)
+    # JSON helper for admin templates (safe).
+    def _fromjson(val):
+        import json as _json
+        if val is None:
+            return None
+        if isinstance(val, (dict, list)):
+            return val
+        try:
+            return _json.loads(val)
+        except Exception:
+            return []
+    app.template_filter('fromjson')(_fromjson)
 
     from app.core.bootstrap import discover_and_register_modules
     _register_blueprints(app)

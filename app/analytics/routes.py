@@ -3,6 +3,7 @@ Analytics and Business Intelligence Routes
 Power BI / Tableau level insights
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Response
 from flask_login import login_required, current_user
 from sqlalchemy import func, desc, and_, or_
 from app import db
@@ -440,34 +441,114 @@ def get_time_tracking_stats():
 
 def export_user_data():
     """Export user data"""
-    return {}  # Placeholder
+    users = User.query.order_by(User.id.asc()).limit(1000).all()
+    return [
+        {
+            "id": u.id,
+            "email": u.email,
+            "username": u.username,
+            "role": u.role,
+            "created_at": (u.created_at.isoformat() if u.created_at else None),
+        }
+        for u in users
+    ]
 
 
 def export_crm_data():
     """Export CRM data"""
-    return {}  # Placeholder
+    # Keep it minimal/safe
+    contacts = Contact.query.order_by(Contact.id.asc()).limit(1000).all()
+    return [
+        {
+            "id": c.id,
+            "name": getattr(c, "name", None),
+            "email": getattr(c, "email", None),
+            "phone": getattr(c, "phone", None),
+            "created_at": (c.created_at.isoformat() if getattr(c, "created_at", None) else None),
+        }
+        for c in contacts
+    ]
 
 
 def export_social_data():
     """Export social data"""
-    return {}  # Placeholder
+    posts = Post.query.order_by(Post.id.desc()).limit(1000).all()
+    return [
+        {
+            "id": p.id,
+            "user_id": p.user_id,
+            "created_at": (p.created_at.isoformat() if p.created_at else None),
+            "audience": getattr(p, "audience", None),
+            "content": (p.content or "")[:500],
+        }
+        for p in posts
+    ]
 
 
 def export_task_data():
     """Export task data"""
-    return {}  # Placeholder
+    tasks = Task.query.order_by(Task.id.desc()).limit(1000).all()
+    return [
+        {
+            "id": t.id,
+            "title": getattr(t, "title", None),
+            "status": getattr(t, "status", None),
+            "assigned_to": getattr(t, "assigned_to", None),
+            "due_date": (t.due_date.isoformat() if getattr(t, "due_date", None) else None),
+            "created_at": (t.created_at.isoformat() if getattr(t, "created_at", None) else None),
+        }
+        for t in tasks
+    ]
 
 
 def send_csv_export(data, category):
     """Send CSV export"""
-    pass  # Placeholder
+    import csv
+    import io
+    # Normalize to a list of dicts
+    rows = []
+    if isinstance(data, dict):
+        # If placeholder dict, export key/value rows
+        rows = [{"key": k, "value": v} for k, v in data.items()]
+    elif isinstance(data, list):
+        rows = data
+    else:
+        rows = [{"value": str(data)}]
+
+    output = io.StringIO()
+    if not rows:
+        writer = csv.writer(output)
+        writer.writerow(["empty"])
+    else:
+        # If list of dicts, use dict keys as header
+        if isinstance(rows[0], dict):
+            fieldnames = sorted({k for r in rows if isinstance(r, dict) for k in r.keys()})
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            for r in rows:
+                writer.writerow({k: r.get(k) for k in fieldnames})
+        else:
+            writer = csv.writer(output)
+            for r in rows:
+                writer.writerow([r])
+
+    csv_text = output.getvalue()
+    filename = f"sonacip_export_{category}.csv"
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 def send_excel_export(data, category):
     """Send Excel export"""
-    pass  # Placeholder
+    # Keep dependencies light: fall back to CSV.
+    flash("Export Excel non disponibile: scaricato CSV.", "warning")
+    return send_csv_export(data, category)
 
 
 def send_pdf_export(data, category):
     """Send PDF export"""
-    pass  # Placeholder
+    flash("Export PDF non disponibile: scaricato CSV.", "warning")
+    return send_csv_export(data, category)

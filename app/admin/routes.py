@@ -1677,7 +1677,7 @@ def stats():
         top_posters = db.session.query(
             User,
             func.count(Post.id).label('post_count')
-        ).join(Post).group_by(User.id).order_by(desc('post_count')).limit(10).all()
+        ).join(Post, Post.user_id == User.id).group_by(User.id).order_by(desc('post_count')).limit(10).all()
     except Exception as e:
         print(f"Error fetching top posters: {e}")
     

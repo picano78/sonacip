@@ -660,6 +660,8 @@ def create_app(config_name: str | None = None) -> Flask:
 
         # Best-effort connectivity probe for PostgreSQL only.
         if db_uri.startswith("postgresql"):
+            probe_ok = False
+            last_exc: Exception | None = None
             try:
                 from sqlalchemy import create_engine, text
 
@@ -670,7 +672,9 @@ def create_app(config_name: str | None = None) -> Flask:
                 )
                 with eng.connect() as conn:
                     conn.execute(text("SELECT 1"))
+                probe_ok = True
             except Exception as exc:
+                last_exc = exc
                 # If this is a brand-new install and the DB is missing, try to create it.
                 try:
                     msg = str(exc).lower()
@@ -694,31 +698,32 @@ def create_app(config_name: str | None = None) -> Flask:
                         )
                         with eng.connect() as conn:
                             conn.execute(text("SELECT 1"))
-                    except Exception:
-                        pass
+                        probe_ok = True
+                        last_exc = None
+                    except Exception as exc2:
+                        last_exc = exc2
 
-                # If we are in production, do not continue in a degraded state:
-                # fail fast so the service restarts and logs the real cause.
-                if is_production:
-                    raise RuntimeError(
-                        "PostgreSQL is unreachable/misconfigured. "
-                        "Fix DATABASE_URL/permissions/migrations before going live."
-                    ) from exc
-
-                # Non-production: if a legacy SQLite DB exists, keep the app usable.
-                if sqlite_fallback.startswith("sqlite:") and (
-                    sqlite_fallback != "sqlite:///sonacip.db" or os.path.exists(sqlite_file)
-                ):
-                    try:
-                        app.logger.exception("PostgreSQL unreachable; falling back to SQLite")
-                    except Exception:
-                        pass
-                    db_uri = sqlite_fallback
-                else:
-                    try:
-                        app.logger.exception("PostgreSQL unreachable; no SQLite fallback found")
-                    except Exception:
-                        pass
+            # If we are in production, do not continue in a degraded state:
+            # fail fast so the service restarts and logs the real cause.
+            if is_production and not probe_ok:
+                raise RuntimeError(
+                    "PostgreSQL is unreachable/misconfigured. "
+                    "Fix DATABASE_URL/permissions/migrations before going live."
+                ) from last_exc
+            # Non-production: if PostgreSQL is down and a legacy SQLite DB exists, keep the app usable.
+            if (not probe_ok) and sqlite_fallback.startswith("sqlite:") and (
+                sqlite_fallback != "sqlite:///sonacip.db" or os.path.exists(sqlite_file)
+            ):
+                try:
+                    app.logger.exception("PostgreSQL unreachable; falling back to SQLite")
+                except Exception:
+                    pass
+                db_uri = sqlite_fallback
+            elif not probe_ok:
+                try:
+                    app.logger.exception("PostgreSQL unreachable; no SQLite fallback found")
+                except Exception:
+                    pass
 
         app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

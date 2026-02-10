@@ -205,7 +205,17 @@ def login():
                     _sqlite_add_missing_columns(current_app, db)
                     user = _do_user_lookup()
                 else:
-                    raise
+                    # For PostgreSQL (new installs) the schema might not be initialized yet.
+                    # Attempt a best-effort auto-upgrade + seed, then retry lookup.
+                    try:
+                        from app import _auto_upgrade_db, _auto_seed
+
+                        app_obj = current_app._get_current_object()
+                        _auto_upgrade_db(app_obj)
+                        _auto_seed(app_obj)
+                    except Exception:
+                        current_app.logger.exception("Auto-upgrade/seed attempt failed during login")
+                    user = _do_user_lookup()
             except Exception:
                 db.session.rollback()
                 current_app.logger.exception("User lookup failed after repair attempt")

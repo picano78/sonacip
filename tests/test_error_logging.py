@@ -12,6 +12,8 @@ def app():
     app = create_app('development')
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
+    # Ensure error handlers are invoked as in production
+    app.config['PROPAGATE_EXCEPTIONS'] = False
     return app
 
 

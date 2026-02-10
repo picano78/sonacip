@@ -716,7 +716,7 @@ def create_app(config_name: str | None = None) -> Flask:
 
     @app.errorhandler(InternalServerError)
     def handle_internal_server_error(err: InternalServerError):
-        # Log dettagliato dell'errore per debug
+        # Log dettagliato dell'errore per il debugging
         try:
             from flask_login import current_user
             user_info = f"User ID: {current_user.id}" if current_user and current_user.is_authenticated else "Anonymous"

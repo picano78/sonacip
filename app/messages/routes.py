@@ -55,6 +55,21 @@ def inbox():
                          messages=[])
 
 
+@bp.route('/conversations')
+@login_required
+def conversations():
+    """
+    Compatibility endpoint.
+
+    Some templates/older links use `messages.conversations` with `?to=<user_id>`.
+    Redirect to the proper chat or inbox.
+    """
+    to_raw = (request.args.get('to') or '').strip()
+    if to_raw.isdigit():
+        return redirect(url_for('messages.chat', user_id=int(to_raw)))
+    return redirect(url_for('messages.inbox'))
+
+
 @bp.route('/chat/<int:user_id>')
 @login_required
 def chat(user_id):

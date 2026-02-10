@@ -71,11 +71,15 @@ from app.models import (
     Message,
     Role,
     EmailConfirmationSetting,
+    AutomationRule,
+    AutomationRun,
 )
 from datetime import datetime, timedelta, timezone
 import os
 import json
 from app.utils import log_action
+
+from app.automation.forms import AutomationRuleForm
 
 DEFAULT_SIDEBAR_MENU = [
     {'id': 'dashboard', 'label': 'Cruscotto', 'icon': 'bi-speedometer2', 'endpoint': 'main.dashboard', 'feature': None, 'section': 'main', 'fixed': True},
@@ -233,6 +237,128 @@ def social_settings():
         return redirect(url_for('admin.social_settings'))
 
     return render_template('admin/social_settings.html', form=form, settings=settings)
+
+
+@bp.route('/automation')
+@login_required
+@admin_required
+def automation_rules():
+    """List declarative automation rules."""
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+
+    rules = AutomationRule.query.order_by(AutomationRule.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    rule_stats = {}
+    try:
+        rows = (
+            db.session.query(
+                AutomationRun.rule_id.label('rule_id'),
+                func.count(AutomationRun.id).label('total'),
+                func.sum(case((AutomationRun.status == 'success', 1), else_=0)).label('success'),
+                func.sum(case((AutomationRun.status == 'failed', 1), else_=0)).label('failed'),
+                func.max(AutomationRun.created_at).label('last_run'),
+            )
+            .group_by(AutomationRun.rule_id)
+            .all()
+        )
+        for r in rows:
+            rule_stats[int(r.rule_id)] = {
+                'total': int(r.total or 0),
+                'success': int(r.success or 0),
+                'failed': int(r.failed or 0),
+                'last_run': r.last_run,
+            }
+    except Exception:
+        current_app.logger.exception("Failed to compute automation rule stats")
+        rule_stats = {}
+
+    return render_template('admin/automation_rules.html', rules=rules, rule_stats=rule_stats)
+
+
+@bp.route('/automation/new', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def create_automation_rule():
+    """Create a new automation rule."""
+    form = AutomationRuleForm()
+    if form.validate_on_submit():
+        rule = AutomationRule(
+            name=form.name.data.strip(),
+            event_type=form.event_type.data,
+            condition=(form.condition.data or '').strip() or None,
+            actions=form.actions.data.strip(),
+            is_active=bool(form.is_active.data),
+            max_retries=form.max_retries.data or 0,
+            retry_delay=form.retry_delay.data or 60,
+            created_by=getattr(current_user, 'id', None),
+        )
+        db.session.add(rule)
+        db.session.commit()
+        flash('Regola creata con successo.', 'success')
+        return redirect(url_for('admin.automation_rules'))
+    return render_template('admin/automation_form.html', form=form, rule=None)
+
+
+@bp.route('/automation/<int:rule_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_automation_rule(rule_id: int):
+    """Edit an existing automation rule."""
+    rule = AutomationRule.query.get_or_404(rule_id)
+    form = AutomationRuleForm(obj=rule)
+    if request.method == 'GET':
+        form.actions.data = rule.actions or ''
+        form.condition.data = rule.condition or ''
+
+    if form.validate_on_submit():
+        rule.name = form.name.data.strip()
+        rule.event_type = form.event_type.data
+        rule.condition = (form.condition.data or '').strip() or None
+        rule.actions = form.actions.data.strip()
+        rule.is_active = bool(form.is_active.data)
+        rule.max_retries = form.max_retries.data or 0
+        rule.retry_delay = form.retry_delay.data or 60
+        db.session.commit()
+        flash('Regola aggiornata.', 'success')
+        return redirect(url_for('admin.automation_rules'))
+
+    return render_template('admin/automation_form.html', form=form, rule=rule)
+
+
+@bp.route('/automation/<int:rule_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_automation_rule(rule_id: int):
+    """Delete an automation rule."""
+    rule = AutomationRule.query.get_or_404(rule_id)
+    try:
+        # Delete runs first to avoid FK issues
+        AutomationRun.query.filter_by(rule_id=rule.id).delete(synchronize_session=False)
+        db.session.delete(rule)
+        db.session.commit()
+        flash('Regola eliminata.', 'success')
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to delete automation rule %s", rule_id)
+        flash('Eliminazione non riuscita.', 'danger')
+    return redirect(url_for('admin.automation_rules'))
+
+
+@bp.route('/automation/<int:rule_id>/runs')
+@login_required
+@admin_required
+def automation_runs(rule_id: int):
+    """List execution runs for a given rule."""
+    rule = AutomationRule.query.get_or_404(rule_id)
+    page = request.args.get('page', 1, type=int)
+    per_page = 25
+    runs = AutomationRun.query.filter_by(rule_id=rule.id).order_by(AutomationRun.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    return render_template('admin/automation_runs.html', rule=rule, runs=runs)
 
 
 @bp.route('/social-feed-algorithm', methods=['GET', 'POST'])

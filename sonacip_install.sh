@@ -114,6 +114,33 @@ set -a
 . "$ENV_FILE"
 set +a
 
+echo "[5/10] Setup PostgreSQL (idempotente)..."
+# Install/enable PostgreSQL if missing (Ubuntu 24.04 compatible)
+if ! command -v psql >/dev/null 2>&1; then
+  echo "PostgreSQL non trovato: installazione..."
+  apt-get update -y
+  apt-get install -y --no-install-recommends postgresql postgresql-contrib
+fi
+systemctl enable --now postgresql >/dev/null 2>&1 || true
+
+# Ensure DATABASE_URL exists (do not overwrite if already set)
+if ! grep -qE '^DATABASE_URL=' "$ENV_FILE"; then
+  printf '%s\n' "DATABASE_URL=postgresql://sonacipuser:SonacipStrongPass123@localhost/sonacipdb" >> "$ENV_FILE"
+  chown "$APP_USER":"$APP_USER" "$ENV_FILE"
+fi
+
+# Create DB/user safely (no DO blocks; safe to re-run)
+echo "Verifica database sonacipdb..."
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='sonacipdb'" | grep -q 1 || \
+  sudo -u postgres createdb sonacipdb
+
+echo "Verifica utente sonacipuser..."
+sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='sonacipuser'" | grep -q 1 || \
+  sudo -u postgres psql -c "CREATE USER sonacipuser WITH PASSWORD 'SonacipStrongPass123'"
+
+echo "Concessione privilegi..."
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sonacipdb TO sonacipuser"
+
 # Defaults match app/core/config.py if not specified in .env
 STORAGE_ROOT="${STORAGE_LOCAL_PATH:-$APP_DIR/uploads}"
 BACKUP_DIR="${BACKUP_FOLDER:-$APP_DIR/backups}"

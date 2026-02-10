@@ -52,9 +52,6 @@ from app.ads.utils import choose_creative, make_token
 bp = Blueprint('social', __name__, url_prefix='/social')
 
 
-@bp.route('/feed')
-@login_required
-@permission_required('social', 'comment')
 def _build_feed_page(user, page, per_page, settings, admin_access, scope_id, cache, cache_ttl):
     cache_key = f"feed:{user.id}:p{page}:pp{per_page}"
     cached_ids = cache.get(cache_key)
@@ -140,6 +137,9 @@ def _build_feed_page(user, page, per_page, settings, admin_access, scope_id, cac
     return posts, total
 
 
+@bp.route('/feed')
+@login_required
+@permission_required('social', 'comment')
 def feed():
     """Main social feed"""
     page = request.args.get('page', 1, type=int)

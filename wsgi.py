@@ -1,3 +1,13 @@
-from app import create_app
+"""
+Gunicorn entrypoint.
 
-app = create_app()
+Expose `application` for WSGI servers.
+"""
+
+from run import app
+
+# Gunicorn common: `wsgi:application`
+application = app
+
+# Backward compatibility: some configs use `wsgi:app`
+__all__ = ["app", "application"]

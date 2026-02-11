@@ -9,7 +9,7 @@ Group=sonacip
 WorkingDirectory=/opt/sonacip
 EnvironmentFile=/opt/sonacip/.env
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/sonacip/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 wsgi:app
+ExecStart=/opt/sonacip/venv/bin/gunicorn --config /opt/sonacip/gunicorn.conf.py --capture-output wsgi:application
 Restart=on-failure
 RestartSec=5
 

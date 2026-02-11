@@ -11,13 +11,9 @@ WorkingDirectory=/opt/sonacip
 EnvironmentFile=/opt/sonacip/.env
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/sonacip/venv/bin/gunicorn \
-    --bind 127.0.0.1:8000 \
-    --workers 3 \
-    --timeout 120 \
-    --access-logfile /opt/sonacip/logs/access.log \
-    --error-logfile /opt/sonacip/logs/error.log \
+    --config /opt/sonacip/gunicorn.conf.py \
     --capture-output \
-    wsgi:app
+    wsgi:application
 ExecReload=/bin/kill -s HUP $MAINPID
 Restart=on-failure
 RestartSec=5

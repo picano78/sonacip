@@ -23,6 +23,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from authlib.integrations.flask_client import OAuth
 
 from app.core.config import config
+from app.core.logging import configure_logging
 
 # Single source of truth for extensions
 db = SQLAlchemy()
@@ -30,6 +31,11 @@ login_manager = LoginManager()
 migrate = Migrate()
 mail = Mail()
 csrf = CSRFProtect()
+try:
+    from flask_session import Session  # type: ignore
+except Exception:  # pragma: no cover
+    Session = None  # type: ignore
+session_ext = Session() if Session else None  # type: ignore
 # Production-safe: rate limiting should never crash critical endpoints (e.g. /auth/login)
 def _get_real_ip():
     """
@@ -490,86 +496,68 @@ def _auto_upgrade_db(app: Flask) -> None:
     )
     migrate_dir = app.config.get("MIGRATIONS_DIR") or os.path.join(base_dir, "migrations")
 
-    def _try_alembic_upgrade():
-        try:
-            from flask_migrate import upgrade as migrate_upgrade
-            with app.app_context():
-                migrate_upgrade(directory=migrate_dir, revision="heads")
-            return True
-        except Exception:
-            try:
-                app.logger.exception("Alembic upgrade failed, falling back to create_all")
-            except Exception:
-                pass
-            return False
+    def _try_alembic_upgrade_strict() -> None:
+        from flask_migrate import upgrade as migrate_upgrade
+        with app.app_context():
+            migrate_upgrade(directory=migrate_dir, revision="heads")
 
     def _ensure_schema():
-        try:
-            with app.app_context():
-                from app import models as _models  # noqa: F401
-                db.create_all()
-                if is_sqlite:
-                    _sqlite_add_missing_columns(app, db)
-        except Exception:
-            try:
-                app.logger.exception("db.create_all fallback also failed")
-            except Exception:
-                pass
+        # In production, Alembic is the only source of truth.
+        # We keep create_all only for test/dev SQLite paths (never for production PG).
+        with app.app_context():
+            from app import models as _models  # noqa: F401
+            db.create_all()
+            if is_sqlite:
+                _sqlite_add_missing_columns(app, db)
 
-    def _fallback_create_all():
-        _ensure_schema()
+    # PostgreSQL: strict Alembic upgrade only (fail-fast).
+    # SQLite: best-effort (dev/testing only).
+    if not is_sqlite:
+        _try_alembic_upgrade_strict()
+        return
 
+    # SQLite path (dev/testing): keep old behavior but never crash the app.
     try:
-        if is_sqlite:
-            db_path = None
-            if uri.startswith("sqlite:////"):
-                db_path = "/" + uri.split("sqlite:////", 1)[1]
-            elif uri.startswith("sqlite:///"):
-                db_path = uri.split("sqlite:///", 1)[1]
+        db_path = None
+        if uri.startswith("sqlite:////"):
+            db_path = "/" + uri.split("sqlite:////", 1)[1]
+        elif uri.startswith("sqlite:///"):
+            db_path = uri.split("sqlite:///", 1)[1]
 
-            if db_path:
-                lock_dir = os.path.dirname(db_path) or base_dir
-                lock_path = os.path.join(lock_dir, ".sonacip_alembic_upgrade.lock")
-                os.makedirs(lock_dir, exist_ok=True)
+        if db_path:
+            lock_dir = os.path.dirname(db_path) or base_dir
+            lock_path = os.path.join(lock_dir, ".sonacip_alembic_upgrade.lock")
+            os.makedirs(lock_dir, exist_ok=True)
 
-                import fcntl
-                with open(lock_path, "w", encoding="utf-8") as lockf:
-                    start = time.time()
-                    while True:
-                        try:
-                            fcntl.flock(lockf.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                            break
-                        except BlockingIOError:
-                            if time.time() - start > 30:
-                                _fallback_create_all()
-                                return
-                            time.sleep(0.2)
-
-                    if not _try_alembic_upgrade():
-                        _fallback_create_all()
-                    else:
-                        _ensure_schema()
-            else:
-                if not _try_alembic_upgrade():
-                    _fallback_create_all()
-                else:
+            import fcntl
+            with open(lock_path, "w", encoding="utf-8") as lockf:
+                start = time.time()
+                while True:
+                    try:
+                        fcntl.flock(lockf.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        break
+                    except BlockingIOError:
+                        if time.time() - start > 30:
+                            _ensure_schema()
+                            return
+                        time.sleep(0.2)
+                try:
+                    _try_alembic_upgrade_strict()
+                except Exception:
                     _ensure_schema()
         else:
-            if not _try_alembic_upgrade():
-                _fallback_create_all()
-            else:
+            try:
+                _try_alembic_upgrade_strict()
+            except Exception:
                 _ensure_schema()
     except Exception:
-        try:
-            app.logger.exception("Auto-upgrade DB wrapper failed")
-        except Exception:
-            pass
-        _fallback_create_all()
+        _ensure_schema()
 
 
 def create_app(config_name: str | None = None) -> Flask:
     """Create and configure the Flask application."""
     _load_dotenv_if_present()
+    configure_logging()
     app = Flask(__name__)
 
     if config_name is None:
@@ -589,144 +577,70 @@ def create_app(config_name: str | None = None) -> Flask:
     app.config.from_object(config_class)
 
     # Ensure DB URI is resolved *after* dotenv is loaded.
-    # Config class attributes are evaluated at import time, so relying on them
-    # would ignore `.env` values loaded at runtime.
-    #
-    # Production safety: if DATABASE_URL points to PostgreSQL but the server is
-    # temporarily unreachable, fall back to an existing SQLite DB (if present)
-    # so the site can still function during transient outages/misconfig.
+    # PostgreSQL is required for production scale. Fail fast if misconfigured.
     if not app.config.get("TESTING"):
         base_dir = app.config.get("BASE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-        sqlite_file = os.path.join(str(base_dir), "sonacip.db")
-        sqlite_fallback = f"sqlite:///{sqlite_file}" if os.path.exists(sqlite_file) else "sqlite:///sonacip.db"
+        uploads_dir = os.path.join(str(base_dir), "uploads")
+        os.makedirs(uploads_dir, exist_ok=True)
 
-        db_uri = os.environ.get("DATABASE_URL", sqlite_fallback)
+        db_uri = (os.environ.get("DATABASE_URL") or "").strip()
         if db_uri.startswith("postgres://"):
             db_uri = db_uri.replace("postgres://", "postgresql://", 1)
-
-        # Detect "production-like" mode to avoid running half-broken.
-        is_production = (
-            (config_name == "production")
-            or (os.environ.get("APP_ENV") == "production")
-            or (os.environ.get("FLASK_ENV") == "production")
-        )
-
-        def _try_bootstrap_postgres_database(pg_url: str) -> bool:
-            """
-            Best-effort: if the target DB does not exist, attempt to create it.
-
-            This helps first-boot deployments where PostgreSQL is installed but the
-            database wasn't created yet.
-            """
-            try:
-                from sqlalchemy.engine import make_url
-                from sqlalchemy import create_engine, text
-            except Exception:
-                return False
-
-            try:
-                u = make_url(pg_url)
-            except Exception:
-                return False
-
-            db_name = (u.database or "").strip()
-            if not db_name:
-                return False
-
-            # Only allow simple identifiers for auto-create (safety).
-            import re
-
-            if not re.match(r"^[a-zA-Z0-9_]+$", db_name):
-                return False
-
-            admin_db = os.environ.get("PG_ADMIN_DB", "postgres")
-            try:
-                admin_url = u.set(database=admin_db)
-            except Exception:
-                return False
-
-            try:
-                eng = create_engine(
-                    admin_url.render_as_string(hide_password=False),
-                    pool_pre_ping=True,
-                    connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
-                )
-                with eng.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
-                    conn.execute(text(f'CREATE DATABASE "{db_name}"'))
-                return True
-            except Exception:
-                # Already exists or no privileges / server down.
-                return False
-
-        # Best-effort connectivity probe for PostgreSQL only.
-        if db_uri.startswith("postgresql"):
-            probe_ok = False
-            last_exc: Exception | None = None
-            try:
-                from sqlalchemy import create_engine, text
-
-                eng = create_engine(
-                    db_uri,
-                    pool_pre_ping=True,
-                    connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
-                )
-                with eng.connect() as conn:
-                    conn.execute(text("SELECT 1"))
-                probe_ok = True
-            except Exception as exc:
-                last_exc = exc
-                # If this is a brand-new install and the DB is missing, try to create it.
-                try:
-                    msg = str(exc).lower()
-                except Exception:
-                    msg = ""
-                try:
-                    # Some drivers say: "database \"sonacipdb\" does not exist"
-                    missing_db = ("does not exist" in msg and "database" in msg) or ("invalidcatalogname" in msg)
-                except Exception:
-                    missing_db = False
-
-                if missing_db and _try_bootstrap_postgres_database(db_uri):
-                    # Re-probe after creating DB
-                    try:
-                        from sqlalchemy import create_engine, text
-
-                        eng = create_engine(
-                            db_uri,
-                            pool_pre_ping=True,
-                            connect_args={"connect_timeout": int(os.environ.get("PG_CONNECT_TIMEOUT", "3"))},
-                        )
-                        with eng.connect() as conn:
-                            conn.execute(text("SELECT 1"))
-                        probe_ok = True
-                        last_exc = None
-                    except Exception as exc2:
-                        last_exc = exc2
-
-            # If we are in production, do not continue in a degraded state:
-            # fail fast so the service restarts and logs the real cause.
-            if is_production and not probe_ok:
-                raise RuntimeError(
-                    "PostgreSQL is unreachable/misconfigured. "
-                    "Fix DATABASE_URL/permissions/migrations before going live."
-                ) from last_exc
-            # Non-production: if PostgreSQL is down and a legacy SQLite DB exists, keep the app usable.
-            if (not probe_ok) and sqlite_fallback.startswith("sqlite:") and (
-                sqlite_fallback != "sqlite:///sonacip.db" or os.path.exists(sqlite_file)
-            ):
-                try:
-                    app.logger.exception("PostgreSQL unreachable; falling back to SQLite")
-                except Exception:
-                    pass
-                db_uri = sqlite_fallback
-            elif not probe_ok:
-                try:
-                    app.logger.exception("PostgreSQL unreachable; no SQLite fallback found")
-                except Exception:
-                    pass
+        if not db_uri:
+            raise RuntimeError("DATABASE_URL is required (PostgreSQL) for non-testing environments")
+        if not db_uri.startswith("postgresql://"):
+            raise RuntimeError("DATABASE_URL must be PostgreSQL (postgresql://...)")
 
         app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    def _configure_redis_backends() -> None:
+        """
+        Optional Redis integration:
+        - Sessions backend
+        - Flask-Limiter storage
+        Falls back safely if Redis is not reachable.
+        """
+        redis_url = (os.environ.get("REDIS_URL") or app.config.get("REDIS_URL") or "").strip()
+        if not redis_url:
+            return
+        try:
+            import redis as _redis  # type: ignore
+        except Exception:
+            try:
+                app.logger.warning("REDIS_URL is set but python 'redis' package is missing")
+            except Exception:
+                pass
+            return
+        try:
+            client = _redis.from_url(redis_url)
+            client.ping()
+        except Exception as exc:
+            try:
+                app.logger.warning("Redis not reachable (%s): %s", redis_url, exc)
+            except Exception:
+                pass
+            return
+
+        # Sessions (server-side) if Flask-Session is installed
+        if session_ext is not None:
+            try:
+                app.config.setdefault("SESSION_TYPE", "redis")
+                app.config.setdefault("SESSION_USE_SIGNER", True)
+                app.config.setdefault("SESSION_PERMANENT", True)
+                app.config.setdefault("SESSION_REDIS", client)
+            except Exception:
+                pass
+
+        # Limiter storage (only if not explicitly set)
+        if not (os.environ.get("RATELIMIT_STORAGE_URI") or app.config.get("RATELIMIT_STORAGE_URI")):
+            # Use separate DB in Redis by default to keep it isolated from cache
+            if redis_url.rstrip("/").endswith("/0"):
+                app.config["RATELIMIT_STORAGE_URI"] = redis_url.rsplit("/", 1)[0] + "/1"
+            else:
+                app.config["RATELIMIT_STORAGE_URI"] = redis_url
+
+    _configure_redis_backends()
 
     _ensure_secret_key(app)
     _normalize_sqlite_db(app)
@@ -778,6 +692,15 @@ def create_app(config_name: str | None = None) -> Flask:
     csrf.init_app(app)
     limiter.init_app(app)
     oauth.init_app(app)
+    if session_ext is not None:
+        try:
+            session_ext.init_app(app)
+        except Exception:
+            # Sessions must not crash startup; cookie sessions will be used instead.
+            try:
+                app.logger.exception("Failed to init Flask-Session (non-fatal)")
+            except Exception:
+                pass
 
     # Keep schema aligned automatically (production/dev). Skip in tests.
     if not app.config.get("TESTING"):

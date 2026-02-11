@@ -1,3 +1,9 @@
-from app import create_app
+"""
+Gunicorn entrypoint.
 
-app = create_app()
+Expose `application` for WSGI servers.
+"""
+
+from run import app
+
+application = app

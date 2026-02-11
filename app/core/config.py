@@ -23,11 +23,12 @@ class Config:
         SECRET_KEY = secrets.token_hex(32)
 
     # Database configuration
-    # Prefer DATABASE_URL (PostgreSQL on VPS), fallback to local SQLite.
-    # Keep this dead-simple so no code switch is required.
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
+    # SQLite by default, PostgreSQL only if DATABASE_URL is set.
+    # Use a path that works regardless of install folder name.
+    DEFAULT_SQLITE_PATH = os.path.join(BASE_DIR, "uploads", "sonacip.db")
+    SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "sqlite:///sonacip.db",
+        f"sqlite:///{DEFAULT_SQLITE_PATH}",
     )
     # Backward compatibility: some platforms still use the old `postgres://` scheme.
     if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
@@ -151,8 +152,8 @@ class ProductionConfig(Config):
         """Validate production configuration after app factory has run."""
         if not os.environ.get('SECRET_KEY'):
             raise RuntimeError("SECRET_KEY must be set in production environment")
-        if not os.environ.get('DATABASE_URL') or 'sqlite' in os.environ.get('DATABASE_URL', ''):
-            raise RuntimeError("Production must use PostgreSQL, not SQLite")
+        # Allow SQLite in production for first-boot installs.
+        # PostgreSQL can be enabled later by setting DATABASE_URL.
 
 
 class TestingConfig(Config):

@@ -470,6 +470,7 @@ def _auto_seed(app: Flask) -> None:
     """
     try:
         from app.core.seed import seed_defaults
+        from sqlalchemy.exc import SQLAlchemyError
         with app.app_context():
             # Ensure database tables exist before seeding
             try:
@@ -481,18 +482,21 @@ def _auto_seed(app: Flask) -> None:
                 if 'role' not in tables or 'user' not in tables:
                     db.create_all()
                     app.logger.info("Database tables created")
-            except Exception:
+            except SQLAlchemyError as e:
                 # If inspection fails, try create_all anyway (idempotent)
+                app.logger.warning("Database inspection failed, attempting create_all: %s", e)
                 try:
                     db.create_all()
-                except Exception:
-                    pass
+                    app.logger.info("Database tables created via fallback")
+                except SQLAlchemyError as create_err:
+                    app.logger.error("Failed to create database tables: %s", create_err)
+                    # Continue anyway - seed might still work if tables were created elsewhere
             
             summary = seed_defaults(app)
             created = sum(v for v in summary.values() if isinstance(v, int))
             if created:
                 app.logger.info("Auto-seed completed: %s", summary)
-    except Exception:
+    except Exception as e:
         app.logger.exception("Auto-seed failed (non-fatal)")
 
 

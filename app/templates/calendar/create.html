@@ -34,6 +34,23 @@
                         <div class="form-text">Usata per calcolare occupazione e conflitti.</div>
                     </div>
                     <div class="col-md-6">
+                        <div class="form-check mt-4">
+                            {{ form.book_season(class="form-check-input", id="bookSeason") }}
+                            <label class="form-check-label" for="bookSeason">
+                                Occupa palestra/e per tutta la stagione (1 Agosto - 31 Luglio)
+                            </label>
+                            <div class="form-text">
+                                Crea automaticamente allenamenti settimanali fino al 31/07 della stagione corrente.
+                                Eventuali conflitti verranno saltati e riepilogati.
+                            </div>
+                        </div>
+                        <div id="seasonFacilitiesBox" class="mt-2" style="display:none;">
+                            <label class="form-label">Palestre / Risorse (stagione)</label>
+                            {{ form.facility_ids(class="form-select", multiple=true) }}
+                            <div class="form-text">Seleziona una o più palestre da occupare in modo ricorrente.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">Colore</label>
                         <div class="d-flex align-items-center gap-2">
                             {{ form.color(class="form-control form-control-color", type="color", value=(form.color.data or '#0d6efd')) }}
@@ -135,6 +152,18 @@
       if (!btn) return;
       setColor(btn.getAttribute('data-color'));
     });
+  })();
+</script>
+<script>
+  (function() {
+    const cb = document.getElementById('bookSeason');
+    const box = document.getElementById('seasonFacilitiesBox');
+    if (!cb || !box) return;
+    function sync() {
+      box.style.display = cb.checked ? 'block' : 'none';
+    }
+    cb.addEventListener('change', sync);
+    sync();
   })();
 </script>
 {% endblock %}

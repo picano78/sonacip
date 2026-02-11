@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
 from app import db
 from app.scheduler.forms import SocietyCalendarEventForm, FacilityForm
+from app.scheduler.season import season_end_for, iter_weekly
 from app.models import (
     SocietyCalendarEvent,
     society_calendar_event_staff,
@@ -334,125 +335,153 @@ def create():
         if not end_dt:
             end_dt = start_dt + timedelta(hours=2)
 
-        facility_id = form.facility_id.data if form.facility_id.data and form.facility_id.data != -1 else None
-        if facility_id:
-            # Verify facility belongs to this society
-            facility = Facility.query.filter_by(id=facility_id, society_id=form.society_id.data).first()
-            if not facility:
-                flash('Risorsa/palestra non valida per questa società.', 'danger')
-                return redirect(url_for('calendar.create'))
+        # Facilities selection (single or season multi)
+        single_facility_id = form.facility_id.data if form.facility_id.data and form.facility_id.data != -1 else None
+        season_facility_ids = [int(x) for x in (form.facility_ids.data or []) if int(x) > 0]
 
-            # Conflict detection: same facility overlapping time range
-            conflict = (
+        # If booking for season: require at least one facility (single or multi)
+        if form.book_season.data:
+            facility_ids = season_facility_ids or ([single_facility_id] if single_facility_id else [])
+            if not facility_ids:
+                flash('Per occupare la stagione devi selezionare almeno una palestra/risorsa.', 'danger')
+                return redirect(url_for('calendar.create'))
+        else:
+            facility_ids = [single_facility_id] if single_facility_id else [None]
+
+        # Preload staff/athletes once
+        staff_members = User.query.filter(User.id.in_(form.staff_ids.data)).all() if form.staff_ids.data else []
+        athletes = User.query.filter(User.id.in_(form.athlete_ids.data)).all() if form.athlete_ids.data else []
+
+        created = []
+        skipped = 0
+
+        # Determine recurrence window
+        season_end = season_end_for(form.start_date.data) if form.book_season.data else form.start_date.data
+
+        def _has_conflict(society_id: int, facility_id, sdt: datetime, edt: datetime):
+            if not facility_id:
+                return None
+            return (
                 SocietyCalendarEvent.query.filter(
-                    SocietyCalendarEvent.society_id == form.society_id.data,
+                    SocietyCalendarEvent.society_id == society_id,
                     SocietyCalendarEvent.facility_id == facility_id,
-                    SocietyCalendarEvent.start_datetime < end_dt,
-                    SocietyCalendarEvent.end_datetime > start_dt,
+                    SocietyCalendarEvent.start_datetime < edt,
+                    SocietyCalendarEvent.end_datetime > sdt,
                 )
                 .order_by(SocietyCalendarEvent.start_datetime.asc())
                 .first()
             )
-            if conflict:
-                flash(
-                    f'Conflitto: la risorsa è già occupata da "{conflict.title}" '
-                    f'({conflict.start_datetime.strftime("%d/%m %H:%M")} - {conflict.end_datetime.strftime("%H:%M")}).',
-                    'danger',
-                )
+
+        # Validate facilities belong to society (once)
+        valid_facilities = {}
+        for fid in [f for f in facility_ids if f]:
+            fac = Facility.query.filter_by(id=fid, society_id=form.society_id.data).first()
+            if not fac:
+                flash('Risorsa/palestra non valida per questa società.', 'danger')
                 return redirect(url_for('calendar.create'))
+            valid_facilities[fid] = fac
 
-        event = SocietyCalendarEvent(
-            society_id=form.society_id.data,
-            created_by=current_user.id,
-            facility_id=facility_id,
-            title=form.title.data,
-            team=form.team.data,
-            category=form.category.data,
-            event_type=form.event_type.data,
-            competition_name=form.competition_name.data,
-            start_datetime=start_dt,
-            end_datetime=end_dt,
-            color=(form.color.data or '').strip() or '#212529',
-            location_text=form.location_text.data,
-            notes=form.notes.data,
-            share_to_social=form.share_to_social.data
-        )
-        db.session.add(event)
-        db.session.flush()
+        # Create one or many events
+        occurrences = [(start_dt, end_dt)]
+        if form.book_season.data:
+            occurrences = list(iter_weekly(start_dt, end_dt, season_end))
 
-        # Attach staff
-        if form.staff_ids.data:
-            staff_members = User.query.filter(User.id.in_(form.staff_ids.data)).all()
-            for member in staff_members:
-                event.staff_members.append(member)
+        for fid in facility_ids:
+            for sdt, edt in occurrences:
+                conflict = _has_conflict(form.society_id.data, fid, sdt, edt)
+                if conflict:
+                    skipped += 1
+                    continue
+                ev = SocietyCalendarEvent(
+                    society_id=form.society_id.data,
+                    created_by=current_user.id,
+                    facility_id=fid,
+                    title=form.title.data,
+                    team=form.team.data,
+                    category=form.category.data,
+                    event_type=form.event_type.data,
+                    competition_name=form.competition_name.data,
+                    start_datetime=sdt,
+                    end_datetime=edt,
+                    color=(form.color.data or '').strip() or '#212529',
+                    location_text=form.location_text.data,
+                    notes=form.notes.data,
+                    share_to_social=False if form.book_season.data else form.share_to_social.data,
+                )
+                db.session.add(ev)
+                db.session.flush()
 
-        # Attach athletes
-        if form.athlete_ids.data:
-            athletes = User.query.filter(User.id.in_(form.athlete_ids.data)).all()
-            for athlete in athletes:
-                event.athletes.append(athlete)
+                # Attach staff/athletes (visibility)
+                for member in staff_members:
+                    ev.staff_members.append(member)
+                for athlete in athletes:
+                    ev.athletes.append(athlete)
+
+                # RSVP rows (no notifications spam)
+                for athlete in athletes:
+                    db.session.add(SocietyCalendarAttendance(event_id=ev.id, user_id=athlete.id, status='pending'))
+
+                created.append(ev)
 
         db.session.commit()
 
-        # Create RSVP rows for athletes
-        try:
-            for athlete in event.athletes.all():
-                if not SocietyCalendarAttendance.query.filter_by(event_id=event.id, user_id=athlete.id).first():
-                    db.session.add(SocietyCalendarAttendance(event_id=event.id, user_id=athlete.id, status='pending'))
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-        # Notify staff and athletes linked to the event
-        try:
-            recipients = event.staff_members.all() + event.athletes.all()
-            for recipient in recipients:
-                notification = Notification(
-                    user_id=recipient.id,
-                    title='Nuovo evento calendario società',
-                    message=f'{event.title} - {event.start_datetime.strftime("%d/%m/%Y %H:%M")}',
-                    notification_type='calendar',
-                    link=url_for('calendar.detail', event_id=event.id)
-                )
-                db.session.add(notification)
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-        # Direct social post for each athlete (so they see it in their feed)
-        try:
-            for athlete in event.athletes.all():
-                db.session.add(
-                    Post(
-                        user_id=current_user.id,
-                        content=f'Convocazione: {event.title} ({event.start_datetime.strftime("%d/%m/%Y %H:%M")}). Conferma disponibilità.',
-                        is_public=False,
-                        audience='direct',
-                        society_id=event.society_id,
-                        target_user_id=athlete.id,
-                        post_type='calendar_invite',
-                    )
-                )
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-        # Optional social post
-        if event.share_to_social:
+        # Notifications/posts: keep existing behaviour only for single-event creation
+        if (not form.book_season.data) and created:
+            event = created[0]
+            # Notify staff and athletes linked to the event
             try:
-                post = Post(
-                    user_id=current_user.id,
-                    content=f'Nuovo evento in calendario: {event.title} ({event.start_datetime.strftime("%d/%m/%Y")})',
-                    is_public=True,
-                    audience='society',
-                    society_id=event.society_id,
-                    post_type='calendar'
-                )
-                db.session.add(post)
+                recipients = event.staff_members.all() + event.athletes.all()
+                for recipient in recipients:
+                    notification = Notification(
+                        user_id=recipient.id,
+                        title='Nuovo evento calendario società',
+                        message=f'{event.title} - {event.start_datetime.strftime("%d/%m/%Y %H:%M")}',
+                        notification_type='calendar',
+                        link=url_for('calendar.detail', event_id=event.id)
+                    )
+                    db.session.add(notification)
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-        flash('Evento inserito nel Calendario Società.', 'success')
+
+            # Direct social post for each athlete (so they see it in their feed)
+            try:
+                for athlete in event.athletes.all():
+                    db.session.add(
+                        Post(
+                            user_id=current_user.id,
+                            content=f'Convocazione: {event.title} ({event.start_datetime.strftime("%d/%m/%Y %H:%M")}). Conferma disponibilità.',
+                            is_public=False,
+                            audience='direct',
+                            society_id=event.society_id,
+                            target_user_id=athlete.id,
+                            post_type='calendar_invite',
+                        )
+                    )
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+            # Optional social post
+            if event.share_to_social:
+                try:
+                    post = Post(
+                        user_id=current_user.id,
+                        content=f'Nuovo evento in calendario: {event.title} ({event.start_datetime.strftime("%d/%m/%Y")})',
+                        is_public=True,
+                        audience='society',
+                        society_id=event.society_id,
+                        post_type='calendar'
+                    )
+                    db.session.add(post)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+        if form.book_season.data:
+            flash(f'Allenamenti creati: {len(created)}. Conflitti saltati: {skipped}.', 'success')
+        else:
+            flash('Evento inserito nel Calendario Società.', 'success')
         return redirect(url_for('calendar.index'))
 
     return render_template('calendar/create.html', form=form)

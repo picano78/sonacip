@@ -11,6 +11,7 @@ class SocietyCalendarEventForm(FlaskForm):
     team = StringField('Squadra / Categoria', validators=[Optional(), Length(max=100)])
     category = StringField('Categoria', validators=[Optional(), Length(max=100)])
     event_type = SelectField('Tipo', choices=[
+        ('allenamento', 'Allenamento'),
         ('match', 'Partita'),
         ('tournament', 'Torneo'),
         ('meeting', 'Riunione'),
@@ -23,6 +24,9 @@ class SocietyCalendarEventForm(FlaskForm):
     end_date = DateField('Data Fine', validators=[Optional()])
     end_time = TimeField('Ora Fine', validators=[Optional()])
     facility_id = SelectField('Palestra / Risorsa', coerce=int, validators=[Optional()])
+    # Season booking helper: allow booking multiple facilities weekly for entire season.
+    book_season = BooleanField('Occupa palestra/e per tutta la stagione (1 Agosto - 31 Luglio)')
+    facility_ids = SelectMultipleField('Palestre / Risorse (stagione)', coerce=int, validators=[Optional()])
     color = StringField('Colore', validators=[Optional(), Length(max=20)])
     location_text = StringField('Luogo', validators=[Optional(), Length(max=255)])
     notes = TextAreaField('Note', validators=[Optional()])
@@ -85,10 +89,12 @@ class SocietyCalendarEventForm(FlaskForm):
             # Facilities for the society
             facilities = Facility.query.filter_by(society_id=chosen_society_id).order_by(Facility.name.asc()).all()
             self.facility_id.choices = [(-1, '— Nessuna risorsa —')] + [(f.id, f.name) for f in facilities]
+            self.facility_ids.choices = [(f.id, f.name) for f in facilities]
 
         # Default color heuristic
         if not self.color.data:
             type_color = {
+                'allenamento': '#1877f2',
                 'match': '#198754',
                 'tournament': '#0d6efd',
                 'meeting': '#6f42c1',
@@ -99,7 +105,7 @@ class SocietyCalendarEventForm(FlaskForm):
 
         # Keep a sensible default event type
         if not self.event_type.data:
-            self.event_type.data = 'match'
+            self.event_type.data = 'allenamento'
 
 
 class FacilityForm(FlaskForm):

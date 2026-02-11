@@ -28,6 +28,7 @@ wheels/
 instance/
 .webassets-cache
 *.db
+flask_session/
 
 # Database
 *.sqlite

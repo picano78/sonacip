@@ -582,9 +582,16 @@ def my_purchases():
 @login_required
 def install(purchase_id: int):
     purchase = MarketplacePurchase.query.get_or_404(purchase_id)
-    # Only verify that the purchase belongs to the current user
+    # Verify that the purchase belongs to the current user
     if purchase.user_id != current_user.id:
         abort(403)
+    
+    # If purchase is for a society, verify user can manage that society
+    if purchase.society_id:
+        if not check_permission('society_admin', purchase.society_id, current_user.id):
+            flash("Non hai i permessi per installare questo pacchetto per la società specificata.", "danger")
+            return redirect(url_for("marketplace.my_purchases"))
+    
     if purchase.status != "completed":
         flash("Acquisto non completato.", "warning")
         return redirect(url_for("marketplace.my_purchases"))

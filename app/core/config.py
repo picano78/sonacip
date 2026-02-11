@@ -74,10 +74,10 @@ class Config:
     REDIS_URL = os.environ.get('REDIS_URL') or os.environ.get('CACHE_REDIS_URL')
     CACHE_DEFAULT_TTL = int(os.environ.get('CACHE_DEFAULT_TTL', '300'))
     # Sessions (optional, via Flask-Session)
-    # Only set SESSION_TYPE if explicitly provided in environment
-    # If not set, Flask-Session will be configured automatically (redis if available, else cookie-based)
-    if os.environ.get("SESSION_TYPE"):
-        SESSION_TYPE = os.environ.get("SESSION_TYPE")  # e.g. "redis"
+    # Only set SESSION_TYPE if explicitly provided in environment.
+    # If not set here, it will be configured during app initialization (_configure_redis_backends in app/__init__.py)
+    if 'SESSION_TYPE' in os.environ:
+        SESSION_TYPE = os.environ['SESSION_TYPE']  # e.g. "redis"
 
     # Plug-in modules folder (safe discovery)
     MODULES_FOLDER = os.environ.get('MODULES_FOLDER') or os.path.join(BASE_DIR, 'app', 'modules')

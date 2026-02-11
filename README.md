@@ -48,6 +48,29 @@ export SECRET_KEY="change-me"  # oppure usa un file .env (vedi .env.example)
 gunicorn wsgi:app
 ```
 
+## 🔑 Credenziali Super Admin
+
+Al primo avvio, viene creato automaticamente un utente Super Admin con le seguenti credenziali predefinite:
+
+- **Email**: `picano78@gmail.com`
+- **Password**: `Simone78`
+
+⚠️ **IMPORTANTE**: Per motivi di sicurezza, cambia immediatamente la password dopo il primo accesso!
+
+Per personalizzare le credenziali del Super Admin, imposta le variabili d'ambiente prima del primo avvio:
+
+```bash
+export SUPERADMIN_EMAIL="tuaemail@esempio.it"
+export SUPERADMIN_PASSWORD="TuaPasswordSicura"
+```
+
+oppure aggiungile al file `.env`:
+
+```
+SUPERADMIN_EMAIL=tuaemail@esempio.it
+SUPERADMIN_PASSWORD=TuaPasswordSicura
+```
+
 ## 🚀 Deploy VPS (Ubuntu 24.04)
 
 Vedi guida completa: `DEPLOYMENT_UBUNTU_24_04.md`.

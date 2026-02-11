@@ -52,6 +52,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (isIos && !isStandalone) {
             showInstallUI('ios');
+            return;
+        }
+        // Fallback: some browsers/devices do not expose beforeinstallprompt.
+        // Provide clear instructions instead of a no-op click.
+        try {
+            if (!isStandalone) {
+                alert("Installazione app: apri il menu del browser e seleziona 'Aggiungi a schermata Home' (o 'Installa app').");
+            }
+        } catch (e) {
+            // ignore
         }
     }
 

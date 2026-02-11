@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
 from app import db
-from app.scheduler.forms import SocietyCalendarEventForm, FacilityForm
+from app.scheduler.forms import SocietyCalendarEventForm, SocietyCalendarEventEditForm, FacilityForm
 from app.scheduler.season import season_end_for, iter_weekly
 from app.models import (
     SocietyCalendarEvent,
@@ -272,12 +272,14 @@ def occupancy():
         secs = totals.get(f.id, 0)
         rows.append({'facility': f, 'hours': round(secs / 3600.0, 2)})
     rows.sort(key=lambda r: r['hours'], reverse=True)
+    max_hours = max([r['hours'] for r in rows], default=0) if rows else 0
 
     return render_template(
         'calendar/occupancy.html',
         start_date=start_date,
         end_date=end_date,
         rows=rows,
+        max_hours=max_hours,
     )
 
 
@@ -387,6 +389,10 @@ def create():
             occurrences = list(iter_weekly(start_dt, end_dt, season_end))
 
         for fid in facility_ids:
+            series_id = None
+            if form.book_season.data and fid:
+                import uuid
+                series_id = str(uuid.uuid4())
             for sdt, edt in occurrences:
                 conflict = _has_conflict(form.society_id.data, fid, sdt, edt)
                 if conflict:
@@ -396,6 +402,9 @@ def create():
                     society_id=form.society_id.data,
                     created_by=current_user.id,
                     facility_id=fid,
+                    series_id=series_id,
+                    series_rule="weekly_season" if form.book_season.data else None,
+                    series_until=season_end if form.book_season.data else None,
                     title=form.title.data,
                     team=form.team.data,
                     category=form.category.data,
@@ -485,6 +494,171 @@ def create():
         return redirect(url_for('calendar.index'))
 
     return render_template('calendar/create.html', form=form)
+
+
+@bp.route('/calendar/<int:event_id>/edit', methods=['GET', 'POST'])
+@login_required
+@permission_required('calendar', 'manage', society_id_func=lambda event_id: _event_scope_id(event_id))
+def edit(event_id):
+    ev = SocietyCalendarEvent.query.get_or_404(event_id)
+    if not ev.is_visible_to(current_user):
+        abort(403)
+
+    form = SocietyCalendarEventEditForm(current_user=current_user)
+
+    # Prefill
+    if request.method == 'GET':
+        form.title.data = ev.title
+        form.team.data = ev.team
+        form.category.data = ev.category
+        form.event_type.data = ev.event_type
+        form.competition_name.data = ev.competition_name
+        form.start_date.data = ev.start_datetime.date()
+        form.start_time.data = ev.start_datetime.time()
+        if ev.end_datetime:
+            form.end_date.data = ev.end_datetime.date()
+            form.end_time.data = ev.end_datetime.time()
+        form.facility_id.data = ev.facility_id or -1
+        form.color.data = ev.color
+        form.location_text.data = ev.location_text
+        form.notes.data = ev.notes
+        form.share_to_social.data = ev.share_to_social
+        form.society_id.data = ev.society_id
+
+        # If not part of a series, force single
+        if not ev.series_id:
+            form.apply_to.data = 'single'
+
+    if not form.validate_on_submit():
+        return render_template('calendar/edit.html', form=form, event=ev)
+
+    # Build update set
+    def _target_events():
+        if not ev.series_id:
+            return [ev]
+        apply_to = (form.apply_to.data or 'single').strip()
+        if apply_to == 'all':
+            return (
+                SocietyCalendarEvent.query.filter_by(society_id=ev.society_id, series_id=ev.series_id)
+                .order_by(SocietyCalendarEvent.start_datetime.asc())
+                .all()
+            )
+        if apply_to == 'future':
+            return (
+                SocietyCalendarEvent.query.filter(
+                    SocietyCalendarEvent.society_id == ev.society_id,
+                    SocietyCalendarEvent.series_id == ev.series_id,
+                    SocietyCalendarEvent.start_datetime >= ev.start_datetime,
+                )
+                .order_by(SocietyCalendarEvent.start_datetime.asc())
+                .all()
+            )
+        return [ev]
+
+    # New duration/time settings
+    new_start_time = form.start_time.data
+    # Determine intended duration
+    if form.end_time.data:
+        # duration inferred from input times on same day
+        dur = datetime.combine(datetime.now(timezone.utc).date(), form.end_time.data) - datetime.combine(
+            datetime.now(timezone.utc).date(), new_start_time
+        )
+        if dur.total_seconds() <= 0:
+            dur = timedelta(hours=2)
+    else:
+        # fallback to existing duration
+        dur = (ev.end_datetime - ev.start_datetime) if ev.end_datetime else timedelta(hours=2)
+
+    # Facility update
+    new_facility_id = form.facility_id.data if form.facility_id.data and form.facility_id.data != -1 else None
+    if new_facility_id:
+        fac = Facility.query.filter_by(id=new_facility_id, society_id=ev.society_id).first()
+        if not fac:
+            flash('Risorsa/palestra non valida per questa società.', 'danger')
+            return redirect(url_for('calendar.edit', event_id=ev.id))
+
+    skipped = 0
+    updated = 0
+
+    for target in _target_events():
+        # For series edits, keep each occurrence date; for single edit allow changing date
+        if (form.apply_to.data or 'single') == 'single':
+            d = form.start_date.data
+        else:
+            d = target.start_datetime.date()
+
+        sdt = datetime.combine(d, new_start_time)
+        edt = sdt + dur
+
+        # Conflict detection (same facility, same society), exclude itself
+        if new_facility_id:
+            conflict = (
+                SocietyCalendarEvent.query.filter(
+                    SocietyCalendarEvent.society_id == ev.society_id,
+                    SocietyCalendarEvent.facility_id == new_facility_id,
+                    SocietyCalendarEvent.id != target.id,
+                    SocietyCalendarEvent.start_datetime < edt,
+                    SocietyCalendarEvent.end_datetime > sdt,
+                )
+                .order_by(SocietyCalendarEvent.start_datetime.asc())
+                .first()
+            )
+            if conflict:
+                skipped += 1
+                continue
+
+        target.title = form.title.data
+        target.team = form.team.data
+        target.category = form.category.data
+        target.event_type = form.event_type.data
+        target.competition_name = form.competition_name.data
+        target.start_datetime = sdt
+        target.end_datetime = edt
+        target.color = (form.color.data or '').strip() or target.color
+        target.location_text = form.location_text.data or None
+        target.notes = form.notes.data or None
+        # Do not spam social on bulk edits
+        target.share_to_social = form.share_to_social.data if (form.apply_to.data or 'single') == 'single' else False
+        target.facility_id = new_facility_id
+        updated += 1
+
+    db.session.commit()
+
+    if ev.series_id and (form.apply_to.data in ('future', 'all')):
+        flash(f'Modifiche applicate: {updated}. Conflitti saltati: {skipped}.', 'success')
+    else:
+        flash('Evento aggiornato.', 'success')
+    return redirect(url_for('calendar.detail', event_id=ev.id))
+
+
+@bp.route('/calendar/<int:event_id>/delete', methods=['POST'])
+@login_required
+@permission_required('calendar', 'manage', society_id_func=lambda event_id: _event_scope_id(event_id))
+def delete(event_id):
+    ev = SocietyCalendarEvent.query.get_or_404(event_id)
+    if not ev.is_visible_to(current_user):
+        abort(403)
+
+    apply_to = (request.form.get('apply_to') or 'single').strip()
+    targets = [ev]
+    if ev.series_id and apply_to in ('future', 'all'):
+        q = SocietyCalendarEvent.query.filter_by(society_id=ev.society_id, series_id=ev.series_id)
+        if apply_to == 'future':
+            q = q.filter(SocietyCalendarEvent.start_datetime >= ev.start_datetime)
+        targets = q.all()
+
+    # Delete attendances first (FK)
+    ids = [t.id for t in targets]
+    SocietyCalendarAttendance.query.filter(SocietyCalendarAttendance.event_id.in_(ids)).delete(synchronize_session=False)
+    for t in targets:
+        db.session.delete(t)
+    db.session.commit()
+
+    if ev.series_id and apply_to in ('future', 'all'):
+        flash(f'Allenamenti eliminati: {len(targets)}.', 'success')
+    else:
+        flash('Evento eliminato.', 'success')
+    return redirect(url_for('calendar.grid'))
 
 
 @bp.route('/calendar/<int:event_id>/respond/<string:response>', methods=['POST'])

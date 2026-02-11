@@ -7,9 +7,35 @@
         <div>
             <h1 class="h3 mb-1">{{ event.title }}</h1>
             <p class="text-muted mb-0">Calendario Società &middot; Evento strategico (non pianificazione campi)</p>
+            {% if event.series_id %}
+              <div class="small text-muted">Serie stagionale: modificabile come singolo o “resto stagione”.</div>
+            {% endif %}
         </div>
         <span class="badge bg-primary text-uppercase align-self-center">{{ event.event_type }}</span>
     </div>
+
+    {% if can('calendar','manage') %}
+    <div class="d-flex gap-2 mb-3">
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('calendar.edit', event_id=event.id) }}">
+            <i class="bi bi-pencil"></i> Modifica
+        </a>
+        <form method="post" action="{{ url_for('calendar.delete', event_id=event.id) }}" class="d-flex gap-2">
+            {{ csrf_token() }}
+            {% if event.series_id %}
+              <select name="apply_to" class="form-select form-select-sm" style="max-width:220px;">
+                  <option value="single">Solo questo</option>
+                  <option value="future">Questo e successivi</option>
+                  <option value="all">Tutta la stagione</option>
+              </select>
+            {% else %}
+              <input type="hidden" name="apply_to" value="single">
+            {% endif %}
+            <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Eliminare l'evento?">
+                <i class="bi bi-trash"></i> Elimina
+            </button>
+        </form>
+    </div>
+    {% endif %}
 
     <div class="card mb-3">
         <div class="card-body">

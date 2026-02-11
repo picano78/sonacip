@@ -669,11 +669,16 @@ class SocietyCalendarEvent(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), index=True)
+    # Recurring series (season bookings / weekly trainings)
+    # When set, events with same series_id belong to the same editable series.
+    series_id = db.Column(db.String(36), index=True)
+    series_rule = db.Column(db.String(40))  # e.g. 'weekly_season'
+    series_until = db.Column(db.Date)  # end date for the recurrence window (e.g. 31/07)
 
     title = db.Column(db.String(200), nullable=False)
     team = db.Column(db.String(100))  # textual team/category label
     category = db.Column(db.String(100))
-    event_type = db.Column(db.String(50), nullable=False)  # match, tournament, meeting, travel, other
+    event_type = db.Column(db.String(50), nullable=False)  # allenamento, match, tournament, meeting, travel, other
     competition_name = db.Column(db.String(200))
 
     start_datetime = db.Column(db.DateTime, nullable=False)

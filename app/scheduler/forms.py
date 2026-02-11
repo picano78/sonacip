@@ -108,6 +108,26 @@ class SocietyCalendarEventForm(FlaskForm):
             self.event_type.data = 'allenamento'
 
 
+class SocietyCalendarEventEditForm(SocietyCalendarEventForm):
+    """
+    Edit form with series scope.
+    If the event belongs to a series, users can apply changes to:
+    - only this occurrence
+    - this and future occurrences
+    - the whole series
+    """
+    apply_to = SelectField(
+        'Applica modifiche a',
+        choices=[
+            ('single', 'Solo questo allenamento'),
+            ('future', 'Questo e i successivi'),
+            ('all', 'Tutta la stagione (serie completa)'),
+        ],
+        validators=[Optional()],
+        default='single',
+    )
+
+
 class FacilityForm(FlaskForm):
     name = StringField('Nome', validators=[DataRequired(), Length(max=200)])
     address = StringField('Indirizzo', validators=[Optional(), Length(max=255)])

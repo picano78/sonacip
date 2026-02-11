@@ -40,6 +40,12 @@
               <td>
                 <span class="badge me-2" style="background-color: {{ r.facility.color or '#0d6efd' }}; color:#fff;">&nbsp;</span>
                 {{ r.facility.name }}
+                <div class="mt-2" style="max-width:420px;">
+                  {% set pct = (0 if not max_hours else (r.hours / max_hours * 100)) %}
+                  <div style="height:10px; background:#eef2f7; border-radius:999px; overflow:hidden;">
+                    <div style="height:10px; width:{{ pct }}%; background:{{ r.facility.color or '#0d6efd' }};"></div>
+                  </div>
+                </div>
               </td>
               <td class="text-end">{{ r.hours }}</td>
             </tr>

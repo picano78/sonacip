@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}Modifica evento | Calendario Società{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="mb-3">
+    <h1 class="h3 mb-1">Modifica evento</h1>
+    <p class="text-muted mb-0">Puoi modificare il singolo allenamento oppure la serie (stagione) se presente.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Titolo</label>
+            {{ form.title(class="form-control") }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Tipo</label>
+            {{ form.event_type(class="form-select") }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Società</label>
+            {{ form.society_id(class="form-select") }}
+          </div>
+
+          {% if event.series_id %}
+          <div class="col-12">
+            <label class="form-label">Applica modifiche a</label>
+            {{ form.apply_to(class="form-select") }}
+            <div class="form-text">“Questo e i successivi” modifica gli allenamenti dalla data corrente in avanti.</div>
+          </div>
+          {% endif %}
+
+          <div class="col-md-6">
+            <div class="d-flex justify-content-between align-items-center">
+              <label class="form-label mb-0">Palestra / Risorsa</label>
+              <a class="small text-decoration-none" href="{{ url_for('calendar.facilities') }}">Gestisci risorse</a>
+            </div>
+            {{ form.facility_id(class="form-select") }}
+            <div class="form-text">Aggiorna l’occupazione palestra per evento/serie.</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Colore</label>
+            <div class="d-flex align-items-center gap-2">
+              {{ form.color(class="form-control form-control-color", type="color", value=(form.color.data or '#0d6efd')) }}
+              <input type="text" class="form-control" style="max-width:140px;" id="eventColorHex" value="{{ form.color.data or '#0d6efd' }}" placeholder="#0d6efd">
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Squadra / Categoria</label>
+            {{ form.team(class="form-control") }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Categoria</label>
+            {{ form.category(class="form-control") }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Competizione</label>
+            {{ form.competition_name(class="form-control") }}
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Data</label>
+            {{ form.start_date(class="form-control") }}
+            {% if event.series_id %}
+              <div class="form-text">Nella serie, la data rimane quella di ogni occorrenza.</div>
+            {% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Ora inizio</label>
+            {{ form.start_time(class="form-control") }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Ora fine</label>
+            {{ form.end_time(class="form-control") }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Condividi social</label>
+            <div class="form-check mt-2">
+              {{ form.share_to_social(class="form-check-input", id="shareSocial") }}
+              <label class="form-check-label" for="shareSocial">Solo per questo evento</label>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Luogo</label>
+            {{ form.location_text(class="form-control") }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Note</label>
+            {{ form.notes(class="form-control", rows=4) }}
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <a href="{{ url_for('calendar.detail', event_id=event.id) }}" class="btn btn-outline-secondary">Annulla</a>
+          <button type="submit" class="btn btn-primary">Salva modifiche</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-control-color{width:3.2rem; padding:0.2rem; height:2.4rem;}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const colorInput = document.querySelector('input[name="color"]');
+    const hexInput = document.getElementById('eventColorHex');
+    if (!colorInput || !hexInput) return;
+    hexInput.addEventListener('input', function() {
+      const v = (hexInput.value || '').trim();
+      if (v.startsWith('#') && (v.length === 7 || v.length === 4)) colorInput.value = v;
+    });
+    colorInput.addEventListener('input', function() {
+      hexInput.value = colorInput.value;
+    });
+  })();
+</script>
+{% endblock %}
+

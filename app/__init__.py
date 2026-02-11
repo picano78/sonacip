@@ -129,13 +129,12 @@ def _load_dotenv_if_present() -> None:
     """
     try:
         from dotenv import load_dotenv
-    except Exception:
-        return
-
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-    env_path = os.path.join(repo_root, ".env")
-    # Do not override already-exported environment variables
-    try:
+        # Load from current working directory first, then from repo root
+        load_dotenv(override=False)
+        
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+        env_path = os.path.join(repo_root, ".env")
+        # Do not override already-exported environment variables
         load_dotenv(env_path, override=False)
     except Exception:
         return
@@ -484,8 +483,18 @@ def _auto_upgrade_db(app: Flask) -> None:
     crash login/registration with OperationalError (missing tables/columns).
     Works with both SQLite and PostgreSQL databases.
     Uses a file lock (SQLite) or advisory approach to avoid concurrent upgrades.
+    
+    SAFETY: Only runs when:
+    - Not in TESTING mode
+    - RUN_MAIN environment variable is set to "true" (Werkzeug/Gunicorn reloader flag)
+    This prevents auto-upgrade from running during Flask CLI commands like "flask db upgrade"
     """
     if app.config.get("TESTING"):
+        return
+    
+    # Only run auto-upgrade when RUN_MAIN is "true" (main process, not CLI)
+    # This prevents conflicts with Flask CLI commands like "flask db upgrade"
+    if os.getenv("RUN_MAIN") != "true":
         return
 
     uri = (app.config.get("SQLALCHEMY_DATABASE_URI") or "").strip()
@@ -603,6 +612,9 @@ def create_app(config_name: str | None = None) -> Flask:
         - Flask-Limiter storage
         Falls back safely if Redis is not reachable.
         """
+        # Set default SESSION_TYPE to prevent "Unrecognized value for SESSION_TYPE: null" error
+        app.config.setdefault("SESSION_TYPE", "filesystem")
+        
         redis_url = (os.environ.get("REDIS_URL") or app.config.get("REDIS_URL") or "").strip()
         if not redis_url:
             return
@@ -666,7 +678,12 @@ def create_app(config_name: str | None = None) -> Flask:
         pass
 
     if hasattr(config_class, 'validate_config'):
-        config_class.validate_config()
+        # Only validate config for non-CLI contexts (avoid crashing during "flask db upgrade")
+        # Check if we're running under Flask CLI
+        import sys
+        is_flask_cli = "flask" in sys.argv[0] or any("flask" in arg for arg in sys.argv)
+        if not is_flask_cli:
+            config_class.validate_config()
 
     if app.config.get('USE_PROXYFIX'):
         app.wsgi_app = ProxyFix(

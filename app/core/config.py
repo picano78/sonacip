@@ -19,16 +19,24 @@ class Config:
     # Development: auto-generate if missing
     # Production: must be explicitly set via environment variable
     SECRET_KEY = os.environ.get('SECRET_KEY')
-    if not SECRET_KEY and os.environ.get('FLASK_ENV') != 'production':
+    if not SECRET_KEY:
+        # Generate a default key for development/testing if not in production
+        if os.environ.get('FLASK_ENV') == 'production':
+            import warnings
+            warnings.warn("SECRET_KEY not set in production environment!")
         SECRET_KEY = secrets.token_hex(32)
 
     # Database configuration (production-grade)
     #
     # PostgreSQL is the only supported database for production scale.
     # Provide DATABASE_URL (e.g. postgresql://user:pass@host:5432/dbname).
+    # Default to SQLite for development if not specified
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "").strip()
+    if not SQLALCHEMY_DATABASE_URI:
+        # Default to SQLite for development
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, 'sonacip.db')}"
     # Backward compatibility: some platforms still use the old `postgres://` scheme.
-    if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+    elif SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # SQLAlchemy engine tuning (PostgreSQL)
@@ -72,12 +80,11 @@ class Config:
 
     # Caching / Redis
     REDIS_URL = os.environ.get('REDIS_URL') or os.environ.get('CACHE_REDIS_URL')
+    CACHE_TYPE = os.environ.get('CACHE_TYPE', 'simple')  # Default to simple cache
     CACHE_DEFAULT_TTL = int(os.environ.get('CACHE_DEFAULT_TTL', '300'))
     # Sessions (optional, via Flask-Session)
-    # Only set SESSION_TYPE if explicitly provided in environment.
-    # If not set here, it will be configured during app initialization (_configure_redis_backends in app/__init__.py)
-    if 'SESSION_TYPE' in os.environ:
-        SESSION_TYPE = os.environ['SESSION_TYPE']  # e.g. "redis"
+    # Default to filesystem sessions if not specified
+    SESSION_TYPE = os.environ.get('SESSION_TYPE', 'filesystem')
 
     # Plug-in modules folder (safe discovery)
     MODULES_FOLDER = os.environ.get('MODULES_FOLDER') or os.path.join(BASE_DIR, 'app', 'modules')

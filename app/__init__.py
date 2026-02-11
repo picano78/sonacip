@@ -702,10 +702,9 @@ def create_app(config_name: str | None = None) -> Flask:
             except Exception:
                 pass
 
-    # Keep schema aligned automatically (production/dev). Skip in tests.
-    if not app.config.get("TESTING"):
-        _auto_upgrade_db(app)
-        _auto_seed(app)
+    # Schema alignment removed: migrations must run via CLI only
+    # Production deployments should run "flask db upgrade" separately
+    # App must start even if DB is empty
 
     login_manager.login_view = 'auth.login'
 

@@ -20,10 +20,10 @@ class Config:
     # Production: must be explicitly set via environment variable
     SECRET_KEY = os.environ.get('SECRET_KEY')
     if not SECRET_KEY:
-        # Generate a default key for development/testing if not in production
-        if os.environ.get('FLASK_ENV') == 'production':
-            import warnings
-            warnings.warn("SECRET_KEY not set in production environment!")
+        # Fail fast in production to prevent insecure deployments
+        if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production':
+            raise RuntimeError("SECRET_KEY must be set in production environment!")
+        # Generate a default key for development/testing
         SECRET_KEY = secrets.token_hex(32)
 
     # Database configuration (production-grade)

@@ -35,8 +35,13 @@ def init_db() -> None:
             print(f"Warning: Migration upgrade failed: {e}")
             print("Attempting create_all() fallback...")
             try:
-                # Import all models to ensure they're registered
-                from app import models as _models  # noqa: F401
+                # Import models module to ensure all models are registered with SQLAlchemy
+                # This is necessary for create_all() to work properly
+                try:
+                    from app import models  # noqa: F401
+                except ImportError as import_err:
+                    print(f"Warning: Could not import models: {import_err}")
+                    print("Attempting create_all() anyway...")
                 db.create_all()
                 print("✓ Database schema created via create_all()")
             except Exception as create_err:

@@ -466,15 +466,37 @@ def _auto_seed(app: Flask) -> None:
     """
     Run idempotent seed on startup so roles + super admin always exist.
     Safe to call multiple times (seed_defaults is idempotent).
+    Ensures database tables exist before seeding.
     """
     try:
         from app.core.seed import seed_defaults
+        from sqlalchemy.exc import SQLAlchemyError
         with app.app_context():
+            # Ensure database tables exist before seeding
+            try:
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                tables = set(inspector.get_table_names())
+                
+                # If critical tables don't exist, create all tables
+                if 'role' not in tables or 'user' not in tables:
+                    db.create_all()
+                    app.logger.info("Database tables created")
+            except SQLAlchemyError as e:
+                # If inspection fails, try create_all anyway (idempotent)
+                app.logger.warning("Unable to inspect database schema, falling back to table creation: %s", e)
+                try:
+                    db.create_all()
+                    app.logger.info("Database tables created via fallback")
+                except SQLAlchemyError as create_err:
+                    app.logger.error("Failed to create database tables - seeding may fail: %s", create_err)
+                    # Continue anyway - seed might still work if tables were created elsewhere
+            
             summary = seed_defaults(app)
             created = sum(v for v in summary.values() if isinstance(v, int))
             if created:
                 app.logger.info("Auto-seed completed: %s", summary)
-    except Exception:
+    except Exception as e:
         app.logger.exception("Auto-seed failed (non-fatal)")
 
 
@@ -1074,5 +1096,10 @@ def create_app(config_name: str | None = None) -> Flask:
         except Exception:
             return resp
         return resp
+
+    # Auto-seed database to ensure required roles and admin exist
+    # This is idempotent and safe to run on every startup
+    if not app.config.get("TESTING"):
+        _auto_seed(app)
 
     return app

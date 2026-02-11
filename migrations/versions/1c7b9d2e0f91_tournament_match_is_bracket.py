@@ -18,7 +18,7 @@ depends_on = None
 
 def upgrade():
     with op.batch_alter_table('tournament_match', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('is_bracket', sa.Boolean(), nullable=True, server_default=sa.text('0')))
+        batch_op.add_column(sa.Column('is_bracket', sa.Boolean(), nullable=True, server_default=sa.text('FALSE')))
         batch_op.create_index(batch_op.f('ix_tournament_match_is_bracket'), ['is_bracket'], unique=False)
 
 

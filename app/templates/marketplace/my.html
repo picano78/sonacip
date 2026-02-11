@@ -55,6 +55,7 @@
         <thead style="background: #f8f9fa;">
           <tr>
             <th class="px-4 py-3">Pacchetto</th>
+            <th class="py-3">Società</th>
             <th class="py-3">Stato</th>
             <th class="py-3">Installato</th>
             <th class="text-end px-4 py-3">Azioni</th>
@@ -66,6 +67,13 @@
               <td class="px-4">
                 <strong>{{ p.package.name if p.package else ('Package #' ~ p.package_id) }}</strong>
                 <div class="text-muted small">{{ p.created_at|datetime_format }}</div>
+              </td>
+              <td class="text-muted small">
+                {% if p.society %}
+                  {{ p.society.name }}
+                {% else %}
+                  <em>Personale</em>
+                {% endif %}
               </td>
               <td>
                 <span class="badge bg-{{ 'success' if p.status == 'completed' else ('warning' if p.status == 'pending' else 'danger') }}">
@@ -95,7 +103,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="4" class="text-center py-5">
+              <td colspan="5" class="text-center py-5">
                 <i class="bi bi-bag display-4 text-muted"></i>
                 <h5 class="mt-3 text-muted">Nessun acquisto</h5>
                 <p class="text-muted">Non hai ancora effettuato acquisti.</p>

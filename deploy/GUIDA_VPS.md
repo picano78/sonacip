@@ -118,6 +118,9 @@ Apri `.env` e configura almeno:
 ```bash
 source venv/bin/activate
 
+# Verifica che PostgreSQL sia configurato correttamente
+python check_postgresql.py
+
 # Esegui le migrazioni del database
 python manage.py db upgrade
 

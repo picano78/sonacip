@@ -26,6 +26,21 @@ Sistema completo di gestione per società sportive, staff, atleti e appassionati
 - Nginx (produzione)
 - Gunicorn (produzione)
 
+## ✅ Verifica PostgreSQL
+
+Per verificare che PostgreSQL sia installato e configurato correttamente:
+
+```bash
+python check_postgresql.py
+```
+
+Lo script controlla:
+- ✓ Installazione PostgreSQL client e server
+- ✓ Servizio PostgreSQL attivo
+- ✓ Configurazione DATABASE_URL in `.env`
+- ✓ Connessione al database
+- ✓ Tabelle create correttamente
+
 ## ▶️ Avvio
 
 ```bash

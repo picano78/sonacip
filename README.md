@@ -55,7 +55,10 @@ Al primo avvio, viene creato automaticamente un utente Super Admin con le seguen
 - **Email**: `picano78@gmail.com`
 - **Password**: `Simone78`
 
-⚠️ **IMPORTANTE**: Per motivi di sicurezza, cambia immediatamente la password dopo il primo accesso!
+⚠️ **ATTENZIONE SICUREZZA**: 
+- Queste credenziali sono note pubblicamente e devono essere considerate **SOLO per test e sviluppo**
+- **CAMBIA IMMEDIATAMENTE** la password dopo il primo accesso, specialmente in produzione
+- Per installazioni di produzione, imposta credenziali personalizzate PRIMA del primo avvio (vedi sotto)
 
 Per personalizzare le credenziali del Super Admin, imposta le variabili d'ambiente prima del primo avvio:
 

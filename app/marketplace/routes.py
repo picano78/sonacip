@@ -573,9 +573,8 @@ def buy(package_id: int):
 @bp.route("/my")
 @login_required
 def my_purchases():
-    society = current_user.get_primary_society()
-    scope_society_id = society.id if society else None
-    purchases = MarketplacePurchase.query.filter_by(user_id=current_user.id, society_id=scope_society_id).order_by(MarketplacePurchase.created_at.desc()).all()
+    # Show all purchases made by the user, regardless of society
+    purchases = MarketplacePurchase.query.filter_by(user_id=current_user.id).order_by(MarketplacePurchase.created_at.desc()).all()
     return render_template("marketplace/my.html", purchases=purchases)
 
 
@@ -583,9 +582,8 @@ def my_purchases():
 @login_required
 def install(purchase_id: int):
     purchase = MarketplacePurchase.query.get_or_404(purchase_id)
-    society = current_user.get_primary_society()
-    scope_society_id = society.id if society else None
-    if purchase.user_id != current_user.id or purchase.society_id != scope_society_id:
+    # Only verify that the purchase belongs to the current user
+    if purchase.user_id != current_user.id:
         abort(403)
     if purchase.status != "completed":
         flash("Acquisto non completato.", "warning")

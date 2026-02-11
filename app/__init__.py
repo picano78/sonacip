@@ -484,12 +484,12 @@ def _auto_seed(app: Flask) -> None:
                     app.logger.info("Database tables created")
             except SQLAlchemyError as e:
                 # If inspection fails, try create_all anyway (idempotent)
-                app.logger.warning("Database inspection failed, attempting create_all: %s", e)
+                app.logger.warning("Unable to inspect database schema, falling back to table creation: %s", e)
                 try:
                     db.create_all()
                     app.logger.info("Database tables created via fallback")
                 except SQLAlchemyError as create_err:
-                    app.logger.error("Failed to create database tables: %s", create_err)
+                    app.logger.error("Failed to create database tables - seeding may fail: %s", create_err)
                     # Continue anyway - seed might still work if tables were created elsewhere
             
             summary = seed_defaults(app)

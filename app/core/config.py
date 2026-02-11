@@ -39,20 +39,30 @@ class Config:
     elif SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # SQLAlchemy engine tuning (PostgreSQL)
+    
+    # SQLAlchemy engine tuning (PostgreSQL only)
+    # These settings are only applied if using PostgreSQL
     DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
     DB_MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))
     DB_POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))
     DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
     DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-        "pool_size": DB_POOL_SIZE,
-        "max_overflow": DB_MAX_OVERFLOW,
-        "pool_recycle": DB_POOL_RECYCLE,
-        "pool_timeout": DB_POOL_TIMEOUT,
-        "connect_args": {"connect_timeout": DB_CONNECT_TIMEOUT},
-    }
+    
+    # Build engine options based on database type
+    if SQLALCHEMY_DATABASE_URI.startswith("postgresql://"):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_pre_ping": True,
+            "pool_size": DB_POOL_SIZE,
+            "max_overflow": DB_MAX_OVERFLOW,
+            "pool_recycle": DB_POOL_RECYCLE,
+            "pool_timeout": DB_POOL_TIMEOUT,
+            "connect_args": {"connect_timeout": DB_CONNECT_TIMEOUT},
+        }
+    else:
+        # SQLite or other databases - no connection pooling
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "poolclass": StaticPool,
+        }
 
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)

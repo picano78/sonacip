@@ -577,7 +577,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app.config.from_object(config_class)
 
     # Ensure DB URI is resolved *after* dotenv is loaded.
-    # PostgreSQL is required for production scale. Fail fast if misconfigured.
+    # Use config default (SQLite) if DATABASE_URL not provided
     if not app.config.get("TESTING"):
         base_dir = app.config.get("BASE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
         uploads_dir = os.path.join(str(base_dir), "uploads")
@@ -586,12 +586,14 @@ def create_app(config_name: str | None = None) -> Flask:
         db_uri = (os.environ.get("DATABASE_URL") or "").strip()
         if db_uri.startswith("postgres://"):
             db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+        
+        # If no DATABASE_URL, use the config default (SQLite for dev)
         if not db_uri:
-            raise RuntimeError("DATABASE_URL is required (PostgreSQL) for non-testing environments")
-        if not db_uri.startswith("postgresql://"):
-            raise RuntimeError("DATABASE_URL must be PostgreSQL (postgresql://...)")
-
-        app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
+            db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+        
+        # Update config with resolved URI
+        if db_uri:
+            app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     def _configure_redis_backends() -> None:

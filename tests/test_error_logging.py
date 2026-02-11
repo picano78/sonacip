@@ -9,7 +9,8 @@ from flask import Flask
 def app():
     """Create and configure a test Flask app instance."""
     from app import create_app
-    app = create_app('development')
+    # Use dedicated TestingConfig to avoid requiring DATABASE_URL during tests.
+    app = create_app('testing')
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
     # Ensure error handlers are invoked as in production

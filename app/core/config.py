@@ -22,18 +22,29 @@ class Config:
     if not SECRET_KEY and os.environ.get('FLASK_ENV') != 'production':
         SECRET_KEY = secrets.token_hex(32)
 
-    # Database configuration
-    # SQLite by default, PostgreSQL only if DATABASE_URL is set.
-    # Use a path that works regardless of install folder name.
-    DEFAULT_SQLITE_PATH = os.path.join(BASE_DIR, "uploads", "sonacip.db")
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        f"sqlite:///{DEFAULT_SQLITE_PATH}",
-    )
+    # Database configuration (production-grade)
+    #
+    # PostgreSQL is the only supported database for production scale.
+    # Provide DATABASE_URL (e.g. postgresql://user:pass@host:5432/dbname).
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "").strip()
     # Backward compatibility: some platforms still use the old `postgres://` scheme.
     if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # SQLAlchemy engine tuning (PostgreSQL)
+    DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
+    DB_MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))
+    DB_POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))
+    DB_POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "5"))
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_size": DB_POOL_SIZE,
+        "max_overflow": DB_MAX_OVERFLOW,
+        "pool_recycle": DB_POOL_RECYCLE,
+        "pool_timeout": DB_POOL_TIMEOUT,
+        "connect_args": {"connect_timeout": DB_CONNECT_TIMEOUT},
+    }
 
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
@@ -62,6 +73,8 @@ class Config:
     # Caching / Redis
     REDIS_URL = os.environ.get('REDIS_URL') or os.environ.get('CACHE_REDIS_URL')
     CACHE_DEFAULT_TTL = int(os.environ.get('CACHE_DEFAULT_TTL', '300'))
+    # Sessions (optional, via Flask-Session)
+    SESSION_TYPE = os.environ.get("SESSION_TYPE")  # e.g. "redis"
 
     # Plug-in modules folder (safe discovery)
     MODULES_FOLDER = os.environ.get('MODULES_FOLDER') or os.path.join(BASE_DIR, 'app', 'modules')
@@ -152,8 +165,13 @@ class ProductionConfig(Config):
         """Validate production configuration after app factory has run."""
         if not os.environ.get('SECRET_KEY'):
             raise RuntimeError("SECRET_KEY must be set in production environment")
-        # Allow SQLite in production for first-boot installs.
-        # PostgreSQL can be enabled later by setting DATABASE_URL.
+        uri = (os.environ.get("DATABASE_URL") or "").strip()
+        if not uri:
+            raise RuntimeError("DATABASE_URL must be set in production")
+        if uri.startswith("postgres://"):
+            uri = uri.replace("postgres://", "postgresql://", 1)
+        if not uri.startswith("postgresql://"):
+            raise RuntimeError("DATABASE_URL must be PostgreSQL (postgresql://...)")
 
 
 class TestingConfig(Config):
@@ -173,6 +191,7 @@ class TestingConfig(Config):
 
     # Use in-memory rate limit storage
     RATELIMIT_STORAGE_URI = 'memory://'
+    SESSION_TYPE = None
 
 
 config = {

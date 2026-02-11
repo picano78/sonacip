@@ -126,12 +126,15 @@ def _load_dotenv_if_present() -> None:
 
     We deliberately keep this dependency-free at runtime (python-dotenv is already
     in requirements.txt) and do not require systemd EnvironmentFile tweaks.
+    
+    Loads .env files in this order (later values do not override earlier ones):
+    1. Environment variables already set
+    2. .env in repo root
     """
     try:
         from dotenv import load_dotenv
-        # Load from current working directory first, then from repo root
-        load_dotenv(override=False)
         
+        # Load from repo root (preferred location for production .env file)
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
         env_path = os.path.join(repo_root, ".env")
         # Do not override already-exported environment variables
@@ -486,14 +489,18 @@ def _auto_upgrade_db(app: Flask) -> None:
     
     SAFETY: Only runs when:
     - Not in TESTING mode
-    - RUN_MAIN environment variable is set to "true" (Werkzeug/Gunicorn reloader flag)
-    This prevents auto-upgrade from running during Flask CLI commands like "flask db upgrade"
+    - RUN_MAIN environment variable is set to "true"
+    
+    NOTE: RUN_MAIN is a Werkzeug-specific flag set during development server reloads.
+    For production (Gunicorn/uWSGI), set RUN_MAIN=true explicitly if you want auto-migrations.
+    Otherwise, run migrations manually via "flask db upgrade" before starting the server.
     """
     if app.config.get("TESTING"):
         return
     
-    # Only run auto-upgrade when RUN_MAIN is "true" (main process, not CLI)
+    # Only run auto-upgrade when RUN_MAIN is "true"
     # This prevents conflicts with Flask CLI commands like "flask db upgrade"
+    # and gives operators explicit control over when auto-migrations occur
     if os.getenv("RUN_MAIN") != "true":
         return
 
@@ -681,7 +688,16 @@ def create_app(config_name: str | None = None) -> Flask:
         # Only validate config for non-CLI contexts (avoid crashing during "flask db upgrade")
         # Check if we're running under Flask CLI
         import sys
-        is_flask_cli = "flask" in sys.argv[0] or any("flask" in arg for arg in sys.argv)
+        is_flask_cli = False
+        try:
+            # More robust check: use Flask's CLI context
+            from flask import cli
+            is_flask_cli = cli.get_current_context(silent=True) is not None
+        except Exception:
+            # Fallback: check sys.argv if available
+            if len(sys.argv) > 0:
+                is_flask_cli = "flask" in sys.argv[0] or any("flask" in str(arg) for arg in sys.argv)
+        
         if not is_flask_cli:
             config_class.validate_config()
 

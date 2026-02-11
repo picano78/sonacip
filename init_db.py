@@ -36,12 +36,14 @@ def init_db() -> None:
             print("Attempting create_all() fallback...")
             try:
                 # Import models module to ensure all models are registered with SQLAlchemy
-                # This is necessary for create_all() to work properly
+                # This is necessary for create_all() to work properly.
+                # The import might fail in rare cases (e.g., circular dependencies, missing dependencies),
+                # but create_all() can still work if models are registered via other means.
                 try:
                     from app import models  # noqa: F401
                 except ImportError as import_err:
-                    print(f"Warning: Could not import models: {import_err}")
-                    print("Attempting create_all() anyway...")
+                    print(f"Warning: Could not import app.models: {import_err}")
+                    print("Attempting create_all() anyway (models may be registered elsewhere)...")
                 db.create_all()
                 print("✓ Database schema created via create_all()")
             except Exception as create_err:

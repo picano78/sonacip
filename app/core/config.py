@@ -21,6 +21,8 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY')
     if not SECRET_KEY:
         # Fail fast in production to prevent insecure deployments
+        # Check both FLASK_ENV and APP_ENV for compatibility with different deployment platforms
+        # (Heroku uses FLASK_ENV, some platforms use APP_ENV)
         if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production':
             raise RuntimeError("SECRET_KEY must be set in production environment!")
         # Generate a default key for development/testing

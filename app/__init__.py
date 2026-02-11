@@ -466,10 +466,28 @@ def _auto_seed(app: Flask) -> None:
     """
     Run idempotent seed on startup so roles + super admin always exist.
     Safe to call multiple times (seed_defaults is idempotent).
+    Ensures database tables exist before seeding.
     """
     try:
         from app.core.seed import seed_defaults
         with app.app_context():
+            # Ensure database tables exist before seeding
+            try:
+                from sqlalchemy import inspect
+                inspector = inspect(db.engine)
+                tables = set(inspector.get_table_names())
+                
+                # If critical tables don't exist, create all tables
+                if 'role' not in tables or 'user' not in tables:
+                    db.create_all()
+                    app.logger.info("Database tables created")
+            except Exception:
+                # If inspection fails, try create_all anyway (idempotent)
+                try:
+                    db.create_all()
+                except Exception:
+                    pass
+            
             summary = seed_defaults(app)
             created = sum(v for v in summary.values() if isinstance(v, int))
             if created:
@@ -1074,5 +1092,10 @@ def create_app(config_name: str | None = None) -> Flask:
         except Exception:
             return resp
         return resp
+
+    # Auto-seed database to ensure required roles and admin exist
+    # This is idempotent and safe to run on every startup
+    if not app.config.get("TESTING"):
+        _auto_seed(app)
 
     return app

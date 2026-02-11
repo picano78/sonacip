@@ -1,7 +1,7 @@
 """admin billing and broadcast tables
 
 Revision ID: j2a4b6c8d0e1
-Revises: i7j8k9l0m1n2, b8ccb2eccc31
+Revises: i7j8k9l0m1n2, fcec1bf08c43
 Create Date: 2026-02-08 10:05:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "j2a4b6c8d0e1"
-down_revision = ("i7j8k9l0m1n2", "b8ccb2eccc31")
+down_revision = ("i7j8k9l0m1n2", "fcec1bf08c43")
 branch_labels = None
 depends_on = None
 

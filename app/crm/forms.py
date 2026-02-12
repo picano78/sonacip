@@ -3,14 +3,22 @@ CRM Forms
 """
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, SelectField, DateField, BooleanField, IntegerField, HiddenField
-from wtforms.validators import DataRequired, Email, Optional, Length
+from wtforms.validators import DataRequired, Email, Optional, Length, ValidationError
 from app.models import User, SocietyMembership
+
+
+def optional_email(form, field):
+    """Custom validator: Email format only if provided"""
+    if field.data and field.data.strip():
+        # Only validate email format if there's actual data
+        email_validator = Email()
+        email_validator(form, field)
 
 
 class ContactForm(FlaskForm):
     first_name = StringField('Nome', validators=[Optional()])
     last_name = StringField('Cognome', validators=[Optional()])
-    email = StringField('Email', validators=[Optional(), Email()])
+    email = StringField('Email', validators=[Optional(), optional_email])
     phone = StringField('Telefono', validators=[Optional()])
     company = StringField('Azienda/Società', validators=[Optional()])
     position = StringField('Posizione', validators=[Optional()])

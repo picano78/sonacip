@@ -145,8 +145,9 @@ def create():
         # If facility is selected and event type is training or match, create a SocietyCalendarEvent
         if facility_id and society and form.event_type.data in ('allenamento', 'partita'):
             # Map event type to society calendar event type
+            # Note: 'allenamento' maps to 'other' since SocietyCalendarEvent doesn't have a training type
             event_type_map = {
-                'allenamento': 'other',  # training mapped to 'other' or could add new type
+                'allenamento': 'other',  # No training type in SocietyCalendarEvent, use 'other'
                 'partita': 'match',
             }
             
@@ -322,8 +323,9 @@ def edit(event_id):
             cal_event.updated_at = datetime.now(timezone.utc)
         elif facility_id and society and form.event_type.data in ('allenamento', 'partita'):
             # Create calendar event if it doesn't exist and facility is now selected
+            # Note: 'allenamento' maps to 'other' since SocietyCalendarEvent doesn't have a training type
             event_type_map = {
-                'allenamento': 'other',
+                'allenamento': 'other',  # No training type in SocietyCalendarEvent, use 'other'
                 'partita': 'match',
             }
             calendar_event = SocietyCalendarEvent(

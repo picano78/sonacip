@@ -7,6 +7,13 @@ import secrets
 from datetime import timedelta
 from sqlalchemy.pool import StaticPool
 
+# Invalid SECRET_KEY placeholders that must be rejected in production
+INVALID_SECRET_KEY_PLACEHOLDERS = (
+    '',
+    'CHANGEME_GENERATE_WITH_PYTHON_SECRETS',
+    'your-secret-key-here',
+)
+
 
 class Config:
     """Base configuration"""
@@ -21,7 +28,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', '').strip()
     
     # Reject placeholder values
-    if SECRET_KEY in ('', 'CHANGEME_GENERATE_WITH_PYTHON_SECRETS', 'your-secret-key-here'):
+    if SECRET_KEY in INVALID_SECRET_KEY_PLACEHOLDERS:
         # Fail fast in production to prevent insecure deployments
         # Check both FLASK_ENV and APP_ENV for compatibility with different deployment platforms
         # (Heroku uses FLASK_ENV, some platforms use APP_ENV)
@@ -192,7 +199,7 @@ class ProductionConfig(Config):
     def validate_config(cls):
         """Validate production configuration after app factory has run."""
         secret_key = os.environ.get('SECRET_KEY', '').strip()
-        if not secret_key or secret_key in ('CHANGEME_GENERATE_WITH_PYTHON_SECRETS', 'your-secret-key-here'):
+        if not secret_key or secret_key in INVALID_SECRET_KEY_PLACEHOLDERS:
             raise RuntimeError(
                 "SECRET_KEY must be set in production environment!\n"
                 "Generate a secure key with: python3 -c \"import secrets; print(secrets.token_hex(32))\"\n"

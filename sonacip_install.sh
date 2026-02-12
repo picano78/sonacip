@@ -108,8 +108,11 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "  password: $ADMIN_PASSWORD"
 else
   # Validate that SECRET_KEY is set and not a placeholder
-  if ! grep -qE '^SECRET_KEY=.+' "$ENV_FILE" || \
-     grep -qE '^SECRET_KEY=(|CHANGEME_GENERATE_WITH_PYTHON_SECRETS|your-secret-key-here)\s*$' "$ENV_FILE"; then
+  # Check for empty, whitespace-only, or known placeholder values
+  SECRET_KEY_VALUE=$(grep '^SECRET_KEY=' "$ENV_FILE" | cut -d= -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  if [[ -z "$SECRET_KEY_VALUE" ]] || \
+     [[ "$SECRET_KEY_VALUE" == "CHANGEME_GENERATE_WITH_PYTHON_SECRETS" ]] || \
+     [[ "$SECRET_KEY_VALUE" == "your-secret-key-here" ]]; then
     echo "ATTENZIONE: SECRET_KEY non configurata correttamente in $ENV_FILE"
     echo "Generazione di una nuova SECRET_KEY..."
     SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"

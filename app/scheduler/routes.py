@@ -1,6 +1,6 @@
 """Routes for Society Calendar (strategic, society-wide)"""
 from datetime import datetime, timedelta, timezone
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, send_file
 from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
 from app import db
@@ -16,6 +16,7 @@ from app.models import (
     SocietyCalendarAttendance,
 )
 from app.utils import permission_required, check_permission, get_active_society_id
+from app.pdf_utils import generate_calendar_pdf
 
 bp = Blueprint('calendar', __name__, url_prefix='/scheduler')
 
@@ -95,6 +96,52 @@ def index():
         start_date=start_date,
         end_date=end_date,
         filters={'team': team or '', 'category': category or '', 'competition': competition or ''}
+    )
+
+@bp.route('/calendar/export-pdf')
+@login_required
+@permission_required('calendar', 'view', society_id_func=lambda: _scope_id())
+def export_pdf():
+    """Export calendar events to PDF"""
+    view = request.args.get('view', 'week')
+    try:
+        start_str = request.args.get('start')
+        start_date = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else datetime.now(timezone.utc).date()
+    except ValueError:
+        start_date = datetime.now(timezone.utc).date()
+
+    start_date, end_date = _date_range(view, start_date)
+
+    query = _base_query_for_user()
+
+    # Date filtering (overlapping window)
+    query = query.filter(
+        SocietyCalendarEvent.start_datetime >= datetime.combine(start_date, datetime.min.time()),
+        SocietyCalendarEvent.start_datetime < datetime.combine(end_date, datetime.min.time())
+    )
+
+    # Text filters
+    team = request.args.get('team')
+    category = request.args.get('category')
+    competition = request.args.get('competition')
+    if team:
+        query = query.filter(SocietyCalendarEvent.team.ilike(f'%{team}%'))
+    if category:
+        query = query.filter(SocietyCalendarEvent.category.ilike(f'%{category}%'))
+    if competition:
+        query = query.filter(SocietyCalendarEvent.competition_name.ilike(f'%{competition}%'))
+
+    events = query.order_by(SocietyCalendarEvent.start_datetime.asc()).all()
+
+    # Generate PDF
+    pdf_buffer = generate_calendar_pdf(events, start_date, end_date, view)
+    
+    filename = f"calendario_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=filename
     )
 
 @bp.route('/calendar-grid')

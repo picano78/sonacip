@@ -2,13 +2,14 @@
 Tasks and Project Management Routes
 Advanced planning with Kanban, Gantt, Calendar views
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import login_required, current_user
 from app import db
 from app.models import Task, Project, User, Team
 from app.utils import permission_required, check_permission
 from app.models import Event
 from app.automation.utils import execute_automations, execute_rules
+from app.pdf_utils import generate_planner_pdf
 from datetime import datetime, timedelta, timezone
 import json
 
@@ -103,6 +104,37 @@ def planner():
     tasks = Task.query.filter_by(assigned_to=current_user.id).order_by(Task.due_date).limit(20).all()
 
     return render_template('tasks/planner.html', events=events, tasks=tasks)
+
+
+@bp.route('/planner/export-pdf')
+@login_required
+@permission_required('tasks', 'manage', society_id_func=_task_scope_id)
+def planner_export_pdf():
+    """Export planner to PDF"""
+    scope_id = _task_scope_id()
+
+    if check_permission(current_user, 'admin', 'access'):
+        events_query = Event.query
+    elif scope_id:
+        events_query = Event.query.filter_by(creator_id=current_user.id)
+    else:
+        events_query = current_user.events
+
+    events = events_query.order_by(Event.start_date.asc()).limit(20).all()
+
+    # Tasks assigned to me
+    tasks = Task.query.filter_by(assigned_to=current_user.id).order_by(Task.due_date).limit(20).all()
+
+    # Generate PDF
+    pdf_buffer = generate_planner_pdf(tasks, events)
+    
+    filename = f"planner_{datetime.now().strftime('%Y%m%d')}.pdf"
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 @bp.route('/kanban')

@@ -5,6 +5,9 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-calendar-check"></i> Planner</h2>
         <div>
+            <a href="{{ url_for('tasks.planner_export_pdf') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-file-pdf"></i> Esporta PDF
+            </a>
             <a href="{{ url_for('tasks.calendar') }}" class="btn btn-outline-secondary btn-sm">Calendario</a>
             <a href="{{ url_for('events.index') }}" class="btn btn-outline-secondary btn-sm">Eventi</a>
         </div>

@@ -39,6 +39,9 @@ gunicorn==23.0.0
 # File handling
 Pillow==11.0.0
 
+# PDF generation
+reportlab==4.2.5
+
 # Security - MIME type validation
 python-magic==0.4.27
 python-magic-bin==0.4.14; sys_platform == 'win32'

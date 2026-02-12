@@ -15,6 +15,9 @@
                     <div class="small text-muted">Filtro attivo</div>
                     <div class="fw-bold">{{ view|capitalize }}</div>
                 </div>
+                <a href="{{ url_for('calendar.export_pdf', view=view, start=start_date.strftime('%Y-%m-%d'), team=filters.team, category=filters.category, competition=filters.competition) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-file-pdf"></i> Esporta PDF
+                </a>
                 <a href="{{ url_for('calendar.grid') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-grid-3x3-gap"></i> Griglia
                 </a>

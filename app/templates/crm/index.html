@@ -33,6 +33,9 @@
         <p class="mb-0 opacity-75">Dashboard CRM &mdash; membri, certificati, quote e convocazioni</p>
       </div>
       <div class="d-flex gap-2 mt-2 mt-md-0">
+        <a href="{{ url_for('crm.export_crm_data_pdf') }}" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-file-pdf"></i> Esporta Dati PDF
+        </a>
         {% if can('crm','manage') %}
           <form method="post" action="{{ url_for('crm.reminders_run') }}" class="d-inline">
             {{ csrf_token() }}

@@ -2,7 +2,7 @@
 CRM Routes
 Sports Society Member Management
 """
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, send_file
 from flask_login import login_required, current_user
 from app import db
 from app.crm.forms import (
@@ -34,6 +34,7 @@ from app.models import (
 )
 from app.notifications.utils import create_notification
 from app.utils import permission_required, check_permission, feature_required, get_active_society_id
+from app.pdf_utils import generate_contacts_pdf, generate_crm_data_pdf
 from datetime import datetime, timezone
 from app.utils import log_action
 from sqlalchemy.orm import joinedload
@@ -221,6 +222,45 @@ def index():
         upcoming_events=upcoming_events,
         expiring_cert_list=expiring_cert_list,
         overdue_fee_list=overdue_fee_list,
+    )
+
+
+@bp.route('/export-pdf')
+@login_required
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
+def export_crm_data_pdf():
+    """Export CRM data summary to PDF"""
+    scope_id = _society_scope_id()
+
+    total_members = 0
+    total_athletes = 0
+    total_contacts = 0
+    total_activities = 0
+
+    if scope_id:
+        members_q = SocietyMembership.query.filter_by(society_id=scope_id, status='active')
+        total_members = members_q.count()
+        total_athletes = members_q.filter(SocietyMembership.role_name.in_(['atleta', 'athlete'])).count()
+        total_contacts = Contact.query.filter_by(society_id=scope_id).count()
+        total_activities = CRMActivity.query.filter_by(society_id=scope_id).count()
+
+    # Generate PDF
+    pdf_buffer = generate_crm_data_pdf(
+        contacts_count=total_contacts,
+        activities_count=total_activities,
+        additional_data={
+            'Membri Totali': total_members,
+            'Atleti': total_athletes,
+        }
+    )
+    
+    filename = f"dati_crm_{datetime.now().strftime('%Y%m%d')}.pdf"
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=filename
     )
 
 
@@ -761,6 +801,34 @@ def contacts():
         contacts_list = [c for c in contacts_list if c.status == status_filter]
 
     return render_template('crm/contacts.html', contacts=contacts_list, status_filter=status_filter)
+
+
+@bp.route('/contacts/export-pdf')
+@login_required
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
+def contacts_export_pdf():
+    """Export contacts to PDF"""
+    scope_id = _society_scope_id()
+    if scope_id:
+        contacts_list = Contact.query.filter_by(society_id=scope_id).order_by(Contact.created_at.desc()).all()
+    else:
+        contacts_list = Contact.query.order_by(Contact.created_at.desc()).all() if check_permission(current_user, 'admin', 'access') else []
+
+    status_filter = request.args.get('status')
+    if status_filter:
+        contacts_list = [c for c in contacts_list if c.status == status_filter]
+
+    # Generate PDF
+    pdf_buffer = generate_contacts_pdf(contacts_list, status_filter)
+    
+    filename = f"rubrica_contatti_{datetime.now().strftime('%Y%m%d')}.pdf"
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 @bp.route('/contacts/new', methods=['GET', 'POST'])

@@ -93,9 +93,14 @@
                 <h1 class="h3 mb-1"><i class="bi bi-person-lines-fill me-2"></i>Contatti</h1>
                 <p class="mb-0 opacity-75">Gestisci i contatti del CRM</p>
             </div>
-            <a href="{{ url_for('crm.new_contact') }}" class="btn btn-light text-primary fw-bold">
-                <i class="bi bi-person-plus me-1"></i> Nuovo Contatto
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('crm.contacts_export_pdf', status=status_filter) }}" class="btn btn-light text-primary fw-bold">
+                    <i class="bi bi-file-pdf me-1"></i> Esporta PDF
+                </a>
+                <a href="{{ url_for('crm.new_contact') }}" class="btn btn-light text-primary fw-bold">
+                    <i class="bi bi-person-plus me-1"></i> Nuovo Contatto
+                </a>
+            </div>
         </div>
     </div>
 

@@ -14,12 +14,16 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Verifica che siamo in una directory Git
-if [ ! -d .git ]; then
-    echo -e "${RED}❌ Errore: Non siamo in una directory Git${NC}"
-    echo -e "${RED}❌ Error: Not in a Git directory${NC}"
+# Verifica che siamo in un repository Git e vai alla root
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+    echo -e "${RED}❌ Errore: Non siamo in un repository Git${NC}"
+    echo -e "${RED}❌ Error: Not in a Git repository${NC}"
     exit 1
 fi
+
+# Vai alla root del repository
+GIT_ROOT=$(git rev-parse --show-toplevel)
+cd "$GIT_ROOT" || exit 1
 
 echo -e "${YELLOW}📊 Controllo dello stato del repository...${NC}"
 echo ""

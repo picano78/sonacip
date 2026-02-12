@@ -165,8 +165,9 @@ class Config:
     APP_NAME = 'SONACIP'
 
     # Bootstrap admin (used by manage.py seed)
-    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL')
-    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD')
+    # Default credentials match .env.example for consistency
+    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL') or 'Picano78@gmail.com'
+    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD') or 'Simone78'
 
     # Stripe (payments)
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')

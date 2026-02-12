@@ -68,8 +68,18 @@
                     {% if event.address %}
                         <p><span class="info-label"><i class="bi bi-map"></i>Indirizzo:</span> {{ event.address }}</p>
                     {% endif %}
+                    {% if event.facility %}
+                        <p><span class="info-label"><i class="bi bi-building"></i>Campo/Palestra:</span> {{ event.facility.name }}</p>
+                    {% endif %}
                 </div>
             </div>
+            {% if event.color and event.facility %}
+                <div class="mt-2">
+                    <p><span class="info-label"><i class="bi bi-palette"></i>Colore calendario:</span> 
+                        <span class="badge" style="background-color: {{ event.color }}; color: white;">{{ event.color }}</span>
+                    </p>
+                </div>
+            {% endif %}
         </div>
     </div>
 

@@ -7,7 +7,7 @@ from app.utils import check_permission
 
 
 class SocietyCalendarEventForm(FlaskForm):
-    title = StringField('Titolo', validators=[DataRequired(), Length(max=200)])
+    title = StringField('Titolo', validators=[Optional(), Length(max=200)])
     team = StringField('Squadra / Categoria', validators=[Optional(), Length(max=100)])
     category = StringField('Categoria', validators=[Optional(), Length(max=100)])
     event_type = SelectField('Tipo', choices=[
@@ -16,10 +16,10 @@ class SocietyCalendarEventForm(FlaskForm):
         ('meeting', 'Riunione'),
         ('travel', 'Trasferta'),
         ('other', 'Altro')
-    ], validators=[DataRequired()])
+    ], validators=[Optional()])
     competition_name = StringField('Competizione', validators=[Optional(), Length(max=200)])
-    start_date = DateField('Data Inizio', validators=[DataRequired()])
-    start_time = TimeField('Ora Inizio', validators=[DataRequired()])
+    start_date = DateField('Data Inizio', validators=[Optional()])
+    start_time = TimeField('Ora Inizio', validators=[Optional()])
     end_date = DateField('Data Fine', validators=[Optional()])
     end_time = TimeField('Ora Fine', validators=[Optional()])
     facility_id = SelectField('Palestra / Risorsa', coerce=int, validators=[Optional()])
@@ -28,7 +28,7 @@ class SocietyCalendarEventForm(FlaskForm):
     notes = TextAreaField('Note', validators=[Optional()])
     share_to_social = BooleanField('Condividi come post sociale')
 
-    society_id = SelectField('Società', coerce=int, validators=[DataRequired()])
+    society_id = SelectField('Società', coerce=int, validators=[Optional()])
     staff_ids = SelectMultipleField('Staff coinvolto', coerce=int, validators=[Optional()])
     athlete_ids = SelectMultipleField('Atleti convocati', coerce=int, validators=[Optional()])
 
@@ -103,7 +103,7 @@ class SocietyCalendarEventForm(FlaskForm):
 
 
 class FacilityForm(FlaskForm):
-    name = StringField('Nome', validators=[DataRequired(), Length(max=200)])
+    name = StringField('Nome', validators=[Optional(), Length(max=200)])
     address = StringField('Indirizzo', validators=[Optional(), Length(max=255)])
     capacity = IntegerField('Capienza', validators=[Optional()])
     color = StringField('Colore', validators=[Optional(), Length(max=20)])

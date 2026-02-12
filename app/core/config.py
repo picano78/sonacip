@@ -82,10 +82,13 @@ class Config:
         }
 
     # Session configuration
-    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    # Increased session lifetime to 30 days to reduce "session expired" issues
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() in ['true', 'on', '1']
+    # Refresh session on each request to keep it alive
+    SESSION_REFRESH_EACH_REQUEST = True
 
     # File upload configuration
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')

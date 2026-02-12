@@ -18,7 +18,7 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
-from werkzeug.exceptions import BadRequest, Forbidden, InternalServerError, NotFound, TooManyRequests
+from werkzeug.exceptions import BadRequest, Forbidden, InternalServerError, NotFound, TooManyRequests, RequestEntityTooLarge, RequestURITooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
 from authlib.integrations.flask_client import OAuth
 
@@ -833,6 +833,36 @@ def create_app(config_name: str | None = None) -> Flask:
             "</body></html>",
             400,
         )
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_file_too_large(err: RequestEntityTooLarge):
+        if _wants_json():
+            max_size_mb = app.config.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024) / (1024 * 1024)
+            return {"error": "file_too_large", "max_size_mb": max_size_mb}, 413
+        
+        max_size_mb = app.config.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024) / (1024 * 1024)
+        flash(f"Il file è troppo grande. La dimensione massima consentita è {max_size_mb:.0f} MB.", "danger")
+        
+        # Try to redirect back to referrer
+        ref = request.referrer
+        if _is_safe_referrer(app, ref):
+            return redirect(ref)
+        
+        return redirect(url_for("main.index"))
+
+    @app.errorhandler(RequestURITooLarge)
+    def handle_uri_too_large(err: RequestURITooLarge):
+        if _wants_json():
+            return {"error": "uri_too_large"}, 414
+        
+        flash("L'URL della richiesta è troppo lungo. Riduci la dimensione dei dati inviati.", "danger")
+        
+        # Try to redirect back to referrer
+        ref = request.referrer
+        if _is_safe_referrer(app, ref):
+            return redirect(ref)
+        
+        return redirect(url_for("main.index"))
 
     from flask import render_template as _rt
 

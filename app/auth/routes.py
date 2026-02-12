@@ -292,6 +292,8 @@ def login():
 
         login_user(user, remember=form.remember_me.data)
         
+        # Make session permanent to extend lifetime
+        session.permanent = True
         # Regenerate session ID to prevent session fixation attacks
         session.modified = True
         
@@ -420,6 +422,8 @@ def sso_callback():
         return redirect(url_for('auth.login'))
 
     login_user(user, remember=True)
+    # Make session permanent to extend lifetime
+    session.permanent = True
     user.last_seen = datetime.now(timezone.utc)
     _safe_commit("auth.sso:last_seen")
 

@@ -8,9 +8,9 @@ from app.models import User, SocietyMembership
 
 
 class ContactForm(FlaskForm):
-    first_name = StringField('Nome', validators=[DataRequired()])
-    last_name = StringField('Cognome', validators=[DataRequired()])
-    email = StringField('Email', validators=[DataRequired(), Email()])
+    first_name = StringField('Nome', validators=[Optional()])
+    last_name = StringField('Cognome', validators=[Optional()])
+    email = StringField('Email', validators=[Optional(), Email()])
     phone = StringField('Telefono', validators=[Optional()])
     company = StringField('Azienda/Società', validators=[Optional()])
     position = StringField('Posizione', validators=[Optional()])
@@ -22,7 +22,7 @@ class ContactForm(FlaskForm):
         ('partner', 'Partner'),
         ('parent', 'Genitore'),
         ('other', 'Altro')
-    ], validators=[DataRequired()])
+    ], validators=[Optional()])
 
     status = SelectField('Stato', choices=[
         ('new', 'Nuovo'),
@@ -30,7 +30,7 @@ class ContactForm(FlaskForm):
         ('interested', 'Interessato'),
         ('converted', 'Convertito'),
         ('lost', 'Perso')
-    ], validators=[DataRequired()])
+    ], validators=[Optional()])
 
     source = SelectField('Fonte', choices=[
         ('website', 'Sito Web'),
@@ -65,9 +65,9 @@ class ActivityForm(FlaskForm):
         ('note', 'Nota'),
         ('task', 'Task'),
         ('other', 'Altro')
-    ], validators=[DataRequired()])
+    ], validators=[Optional()])
 
-    subject = StringField('Oggetto', validators=[DataRequired()])
+    subject = StringField('Oggetto', validators=[Optional()])
     description = TextAreaField('Descrizione', validators=[Optional()])
     activity_date = DateField('Data', format='%Y-%m-%d', validators=[Optional()])
     completed = BooleanField('Completata')
@@ -76,14 +76,14 @@ class ActivityForm(FlaskForm):
 
 
 class MedicalCertificateForm(FlaskForm):
-    user_id = SelectField('Atleta', coerce=int, validators=[DataRequired()])
+    user_id = SelectField('Atleta', coerce=int, validators=[Optional()])
     issued_on = DateField('Data rilascio', format='%Y-%m-%d', validators=[Optional()])
-    expires_on = DateField('Data scadenza', format='%Y-%m-%d', validators=[DataRequired()])
+    expires_on = DateField('Data scadenza', format='%Y-%m-%d', validators=[Optional()])
     status = SelectField('Stato', choices=[
         ('valid', 'Valido'),
         ('expired', 'Scaduto'),
         ('revoked', 'Revocato'),
-    ], validators=[DataRequired()])
+    ], validators=[Optional()])
     notes = TextAreaField('Note', validators=[Optional(), Length(max=2000)])
 
     def __init__(self, *args, **kwargs):

@@ -220,6 +220,16 @@ Esegui la suite completa di test di sicurezza:
 
 Le variabili ambiente sono documentate nel file .env.example.
 
+## 🧹 Manutenzione Repository
+
+Per mantenere il repository Git pulito e ottimizzato:
+
+```bash
+./scripts/git_cleanup.sh
+```
+
+Per informazioni dettagliate sulla manutenzione del repository, consulta: [GIT_MAINTENANCE.md](GIT_MAINTENANCE.md)
+
 ## 📝 Note Importanti
 
 1. Cambia password admin dopo installazione

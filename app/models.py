@@ -597,6 +597,10 @@ class Event(db.Model):
     # Status
     status = db.Column(db.String(20), default='scheduled')  # scheduled, ongoing, completed, cancelled
     
+    # Field planner integration
+    facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), nullable=True, index=True)
+    color = db.Column(db.String(20), default='#212529')  # hex color for calendar display
+    
     created_at = db.Column(db.DateTime, default=utc_now)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
@@ -604,6 +608,7 @@ class Event(db.Model):
     convocated_athletes = db.relationship('User', secondary=event_athletes,
                                          backref=db.backref('events', lazy='dynamic'),
                                          lazy='dynamic')
+    facility = db.relationship('Facility', foreign_keys=[facility_id])
     
     def get_athlete_status(self, user_id):
         """Get athlete response status for this event"""
@@ -669,6 +674,9 @@ class SocietyCalendarEvent(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), index=True)
+    
+    # Link to Event if this calendar event was created from an Event
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=True, index=True)
 
     title = db.Column(db.String(200), nullable=False)
     team = db.Column(db.String(100))  # textual team/category label
@@ -693,6 +701,7 @@ class SocietyCalendarEvent(db.Model):
     society = db.relationship('Society', backref=db.backref('calendar_events', lazy='dynamic'))
     facility = db.relationship('Facility', foreign_keys=[facility_id])
     creator = db.relationship('User', foreign_keys=[created_by])
+    linked_event = db.relationship('Event', foreign_keys=[event_id], backref='calendar_event')
     staff_members = db.relationship(
         'User', secondary=society_calendar_event_staff,
         backref=db.backref('calendar_events_as_staff', lazy='dynamic'),

@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_, and_
 from app import db
 from app.events.forms import EventForm
-from app.models import Event, User, Notification, event_athletes, Post
+from app.models import Event, User, Notification, event_athletes, Post, Facility, SocietyCalendarEvent
 from app.automation.utils import execute_automations, execute_rules
 from app.utils import permission_required, check_permission
 from datetime import datetime, timezone
@@ -55,15 +55,75 @@ def index():
 @permission_required('events', 'create')
 def create():
     """Create a new event"""
-    form = EventForm()
+    form = EventForm(current_user=current_user)
     
     if form.validate_on_submit():
+        # Get facility and color
+        facility_id = form.facility_id.data if form.facility_id.data and form.facility_id.data != -1 else None
+        color = (form.color.data or '').strip() or '#212529'
+        
+        # Ensure end_date is set
+        end_date = form.end_date.data
+        if not end_date and form.start_date.data:
+            # Default to 2 hours after start if not specified
+            from datetime import timedelta
+            end_date = form.start_date.data + timedelta(hours=2)
+        
+        # Check for facility conflicts if facility is selected for training or match events
+        society = current_user.get_primary_society()
+        if facility_id and society and form.event_type.data in ('allenamento', 'partita'):
+            # Verify facility belongs to this society
+            facility = Facility.query.filter_by(id=facility_id, society_id=society.id).first()
+            if not facility:
+                flash('Campo/Palestra non valido per questa società.', 'danger')
+                return redirect(url_for('events.create'))
+            
+            # Check for conflicts in both Event and SocietyCalendarEvent tables
+            # Check Event table conflicts
+            event_conflict = (
+                Event.query.filter(
+                    Event.facility_id == facility_id,
+                    Event.start_date < end_date,
+                    Event.end_date > form.start_date.data,
+                    Event.status != 'cancelled'
+                )
+                .order_by(Event.start_date.asc())
+                .first()
+            )
+            
+            # Check SocietyCalendarEvent table conflicts
+            calendar_conflict = (
+                SocietyCalendarEvent.query.filter(
+                    SocietyCalendarEvent.facility_id == facility_id,
+                    SocietyCalendarEvent.start_datetime < end_date,
+                    SocietyCalendarEvent.end_datetime > form.start_date.data,
+                )
+                .order_by(SocietyCalendarEvent.start_datetime.asc())
+                .first()
+            )
+            
+            if event_conflict:
+                flash(
+                    f'Conflitto: il campo è già occupato da evento "{event_conflict.title}" '
+                    f'({event_conflict.start_date.strftime("%d/%m %H:%M")} - {event_conflict.end_date.strftime("%H:%M")}).',
+                    'danger',
+                )
+                return redirect(url_for('events.create'))
+            
+            if calendar_conflict:
+                flash(
+                    f'Conflitto: il campo è già occupato da evento calendario "{calendar_conflict.title}" '
+                    f'({calendar_conflict.start_datetime.strftime("%d/%m %H:%M")} - {calendar_conflict.end_datetime.strftime("%H:%M")}).',
+                    'danger',
+                )
+                return redirect(url_for('events.create'))
+        
         event = Event(
             title=form.title.data,
             description=form.description.data,
             event_type=form.event_type.data,
             start_date=form.start_date.data,
-            end_date=form.end_date.data,
+            end_date=end_date,
             location=form.location.data,
             address=form.address.data,
             tournament_name=form.tournament_name.data or None,
@@ -74,18 +134,47 @@ def create():
             score_against=form.score_against.data or None,
             bracket_url=form.bracket_url.data or None,
             creator_id=current_user.id,
-            status='scheduled'
+            status='scheduled',
+            facility_id=facility_id,
+            color=color
         )
         
         db.session.add(event)
         db.session.commit()
+        
+        # If facility is selected and event type is training or match, create a SocietyCalendarEvent
+        if facility_id and society and form.event_type.data in ('allenamento', 'partita'):
+            # Map event type to society calendar event type
+            # Note: 'allenamento' maps to 'other' since SocietyCalendarEvent doesn't have a training type
+            event_type_map = {
+                'allenamento': 'other',  # No training type in SocietyCalendarEvent, use 'other'
+                'partita': 'match',
+            }
+            
+            calendar_event = SocietyCalendarEvent(
+                society_id=society.id,
+                created_by=current_user.id,
+                facility_id=facility_id,
+                event_id=event.id,  # Link to the Event
+                title=form.title.data,
+                event_type=event_type_map.get(form.event_type.data, 'other'),
+                start_datetime=form.start_date.data,
+                end_datetime=end_date,
+                color=color,
+                location_text=form.location.data,
+                notes=f"Sincronizzato automaticamente da evento #{event.id}"
+            )
+            db.session.add(calendar_event)
+            db.session.commit()
+            
+            flash('Evento creato e integrato nel planner campo! Ora puoi convocare gli atleti.', 'success')
+        else:
+            flash('Evento creato! Ora puoi convocare gli atleti.', 'success')
 
         # Fire automations on event creation
-        society = current_user.get_primary_society()
         execute_automations('event_created', society_id=society.id if society else None, payload={'event_id': event.id})
         execute_rules('event_created', payload={'event_id': event.id, 'creator_id': current_user.id})
         
-        flash('Evento creato! Ora puoi convocare gli atleti.', 'success')
         return redirect(url_for('events.detail', event_id=event.id))
     
     return render_template('events/create.html', form=form)
@@ -142,14 +231,73 @@ def edit(event_id):
         flash('Non hai i permessi per modificare questo evento.', 'danger')
         return redirect(url_for('events.detail', event_id=event_id))
     
-    form = EventForm(obj=event)
+    form = EventForm(obj=event, current_user=current_user)
     
     if form.validate_on_submit():
+        # Get facility and color
+        facility_id = form.facility_id.data if form.facility_id.data and form.facility_id.data != -1 else None
+        color = (form.color.data or '').strip() or '#212529'
+        
+        # Ensure end_date is set
+        end_date = form.end_date.data
+        if not end_date and form.start_date.data:
+            from datetime import timedelta
+            end_date = form.start_date.data + timedelta(hours=2)
+        
+        # Check for facility conflicts if facility changed for training or match events
+        society = current_user.get_primary_society()
+        if facility_id and society and form.event_type.data in ('allenamento', 'partita'):
+            # Verify facility belongs to this society
+            facility = Facility.query.filter_by(id=facility_id, society_id=society.id).first()
+            if not facility:
+                flash('Campo/Palestra non valido per questa società.', 'danger')
+                return redirect(url_for('events.edit', event_id=event_id))
+            
+            # Check for conflicts excluding this event
+            event_conflict = (
+                Event.query.filter(
+                    Event.id != event.id,
+                    Event.facility_id == facility_id,
+                    Event.start_date < end_date,
+                    Event.end_date > form.start_date.data,
+                    Event.status != 'cancelled'
+                )
+                .order_by(Event.start_date.asc())
+                .first()
+            )
+            
+            calendar_conflict = (
+                SocietyCalendarEvent.query.filter(
+                    SocietyCalendarEvent.facility_id == facility_id,
+                    SocietyCalendarEvent.start_datetime < end_date,
+                    SocietyCalendarEvent.end_datetime > form.start_date.data,
+                    SocietyCalendarEvent.event_id != event.id,  # Exclude linked calendar event
+                )
+                .order_by(SocietyCalendarEvent.start_datetime.asc())
+                .first()
+            )
+            
+            if event_conflict:
+                flash(
+                    f'Conflitto: il campo è già occupato da evento "{event_conflict.title}" '
+                    f'({event_conflict.start_date.strftime("%d/%m %H:%M")} - {event_conflict.end_date.strftime("%H:%M")}).',
+                    'danger',
+                )
+                return redirect(url_for('events.edit', event_id=event_id))
+            
+            if calendar_conflict:
+                flash(
+                    f'Conflitto: il campo è già occupato da evento calendario "{calendar_conflict.title}" '
+                    f'({calendar_conflict.start_datetime.strftime("%d/%m %H:%M")} - {calendar_conflict.end_datetime.strftime("%H:%M")}).',
+                    'danger',
+                )
+                return redirect(url_for('events.edit', event_id=event_id))
+        
         event.title = form.title.data
         event.description = form.description.data
         event.event_type = form.event_type.data
         event.start_date = form.start_date.data
-        event.end_date = form.end_date.data
+        event.end_date = end_date
         event.location = form.location.data
         event.address = form.address.data
         event.tournament_name = form.tournament_name.data or None
@@ -159,7 +307,41 @@ def edit(event_id):
         event.score_for = form.score_for.data or None
         event.score_against = form.score_against.data or None
         event.bracket_url = form.bracket_url.data or None
+        event.facility_id = facility_id
+        event.color = color
         event.updated_at = datetime.now(timezone.utc)
+        
+        # Update linked calendar event if it exists
+        if event.calendar_event:
+            cal_event = event.calendar_event
+            cal_event.title = form.title.data
+            cal_event.start_datetime = form.start_date.data
+            cal_event.end_datetime = end_date
+            cal_event.color = color
+            cal_event.location_text = form.location.data
+            cal_event.facility_id = facility_id
+            cal_event.updated_at = datetime.now(timezone.utc)
+        elif facility_id and society and form.event_type.data in ('allenamento', 'partita'):
+            # Create calendar event if it doesn't exist and facility is now selected
+            # Note: 'allenamento' maps to 'other' since SocietyCalendarEvent doesn't have a training type
+            event_type_map = {
+                'allenamento': 'other',  # No training type in SocietyCalendarEvent, use 'other'
+                'partita': 'match',
+            }
+            calendar_event = SocietyCalendarEvent(
+                society_id=society.id,
+                created_by=current_user.id,
+                facility_id=facility_id,
+                event_id=event.id,
+                title=form.title.data,
+                event_type=event_type_map.get(form.event_type.data, 'other'),
+                start_datetime=form.start_date.data,
+                end_datetime=end_date,
+                color=color,
+                location_text=form.location.data,
+                notes=f"Sincronizzato automaticamente da evento #{event.id}"
+            )
+            db.session.add(calendar_event)
         
         db.session.commit()
         

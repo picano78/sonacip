@@ -836,11 +836,11 @@ def create_app(config_name: str | None = None) -> Flask:
 
     @app.errorhandler(RequestEntityTooLarge)
     def handle_file_too_large(err: RequestEntityTooLarge):
+        max_size_mb = app.config.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024) / (1024 * 1024)
+        
         if _wants_json():
-            max_size_mb = app.config.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024) / (1024 * 1024)
             return {"error": "file_too_large", "max_size_mb": max_size_mb}, 413
         
-        max_size_mb = app.config.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024) / (1024 * 1024)
         flash(f"Il file è troppo grande. La dimensione massima consentita è {max_size_mb:.0f} MB.", "danger")
         
         # Try to redirect back to referrer

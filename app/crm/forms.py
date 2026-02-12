@@ -6,13 +6,15 @@ from wtforms import StringField, TextAreaField, SelectField, DateField, BooleanF
 from wtforms.validators import DataRequired, Email, Optional, Length, ValidationError
 from app.models import User, SocietyMembership
 
+# Create a reusable email validator instance
+_email_validator = Email()
+
 
 def optional_email(form, field):
     """Custom validator: Email format only if provided"""
     if field.data and field.data.strip():
         # Only validate email format if there's actual data
-        email_validator = Email()
-        email_validator(form, field)
+        _email_validator(form, field)
 
 
 class ContactForm(FlaskForm):

@@ -172,8 +172,8 @@ class Config:
     
     # Provide development defaults if not in production
     # In production, credentials will be randomly generated if not explicitly set (see seed.py)
-    is_production = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production'
-    if not is_production:
+    IS_PRODUCTION = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production'
+    if not IS_PRODUCTION:
         # Development/testing convenience defaults
         SUPERADMIN_EMAIL = SUPERADMIN_EMAIL or 'Picano78@gmail.com'
         SUPERADMIN_PASSWORD = SUPERADMIN_PASSWORD or 'Simone78'

@@ -22,6 +22,15 @@ PREFIX_OVERRIDES = {
     'analytics': '/analytics',
     'tournaments': '/tournaments',
     'scheduler': None,
+    'ads': '/ads',
+    'documents': '/documents',
+    'gamification': '/gamification',
+    'groups': '/groups',
+    'marketplace': '/marketplace',
+    'payments': '/payments',
+    'polls': '/polls',
+    'stats': '/stats',
+    'stories': '/stories',
 }
 
 

@@ -154,13 +154,14 @@ def create():
                 society_id=society.id,
                 created_by=current_user.id,
                 facility_id=facility_id,
+                event_id=event.id,  # Link to the Event
                 title=form.title.data,
                 event_type=event_type_map.get(form.event_type.data, 'other'),
                 start_datetime=form.start_date.data,
                 end_datetime=end_date,
                 color=color,
                 location_text=form.location.data,
-                notes=f"Sincronizzato da evento #{event.id}"
+                notes=f"Sincronizzato automaticamente da evento #{event.id}"
             )
             db.session.add(calendar_event)
             db.session.commit()
@@ -269,6 +270,7 @@ def edit(event_id):
                     SocietyCalendarEvent.facility_id == facility_id,
                     SocietyCalendarEvent.start_datetime < end_date,
                     SocietyCalendarEvent.end_datetime > form.start_date.data,
+                    SocietyCalendarEvent.event_id != event.id,  # Exclude linked calendar event
                 )
                 .order_by(SocietyCalendarEvent.start_datetime.asc())
                 .first()
@@ -307,6 +309,37 @@ def edit(event_id):
         event.facility_id = facility_id
         event.color = color
         event.updated_at = datetime.now(timezone.utc)
+        
+        # Update linked calendar event if it exists
+        if event.calendar_event:
+            cal_event = event.calendar_event
+            cal_event.title = form.title.data
+            cal_event.start_datetime = form.start_date.data
+            cal_event.end_datetime = end_date
+            cal_event.color = color
+            cal_event.location_text = form.location.data
+            cal_event.facility_id = facility_id
+            cal_event.updated_at = datetime.now(timezone.utc)
+        elif facility_id and society and form.event_type.data in ('allenamento', 'partita'):
+            # Create calendar event if it doesn't exist and facility is now selected
+            event_type_map = {
+                'allenamento': 'other',
+                'partita': 'match',
+            }
+            calendar_event = SocietyCalendarEvent(
+                society_id=society.id,
+                created_by=current_user.id,
+                facility_id=facility_id,
+                event_id=event.id,
+                title=form.title.data,
+                event_type=event_type_map.get(form.event_type.data, 'other'),
+                start_datetime=form.start_date.data,
+                end_datetime=end_date,
+                color=color,
+                location_text=form.location.data,
+                notes=f"Sincronizzato automaticamente da evento #{event.id}"
+            )
+            db.session.add(calendar_event)
         
         db.session.commit()
         

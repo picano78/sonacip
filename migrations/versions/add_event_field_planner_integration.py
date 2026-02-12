@@ -26,10 +26,20 @@ def upgrade():
     
     # Create index on facility_id for better query performance
     op.create_index('ix_event_facility_id', 'event', ['facility_id'], unique=False)
+    
+    # Add event_id to society_calendar_event for linking
+    op.add_column('society_calendar_event', sa.Column('event_id', sa.Integer(), nullable=True))
+    op.create_foreign_key('fk_society_calendar_event_event_id', 'society_calendar_event', 'event', ['event_id'], ['id'])
+    op.create_index('ix_society_calendar_event_event_id', 'society_calendar_event', ['event_id'], unique=False)
 
 
 def downgrade():
-    # Drop index and foreign key constraint
+    # Drop society_calendar_event event_id
+    op.drop_index('ix_society_calendar_event_event_id', table_name='society_calendar_event')
+    op.drop_constraint('fk_society_calendar_event_event_id', 'society_calendar_event', type_='foreignkey')
+    op.drop_column('society_calendar_event', 'event_id')
+    
+    # Drop event fields
     op.drop_index('ix_event_facility_id', table_name='event')
     op.drop_constraint('fk_event_facility_id', 'event', type_='foreignkey')
     

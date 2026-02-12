@@ -674,6 +674,9 @@ class SocietyCalendarEvent(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), index=True)
+    
+    # Link to Event if this calendar event was created from an Event
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=True, index=True)
 
     title = db.Column(db.String(200), nullable=False)
     team = db.Column(db.String(100))  # textual team/category label
@@ -698,6 +701,7 @@ class SocietyCalendarEvent(db.Model):
     society = db.relationship('Society', backref=db.backref('calendar_events', lazy='dynamic'))
     facility = db.relationship('Facility', foreign_keys=[facility_id])
     creator = db.relationship('User', foreign_keys=[created_by])
+    linked_event = db.relationship('Event', foreign_keys=[event_id], backref='calendar_event')
     staff_members = db.relationship(
         'User', secondary=society_calendar_event_staff,
         backref=db.backref('calendar_events_as_staff', lazy='dynamic'),

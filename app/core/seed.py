@@ -482,7 +482,7 @@ def seed_defaults(app) -> dict:
                 existing_admin.username = username
                 changed = True
             # Ensure email_confirmed is True for super admin
-            if not getattr(existing_admin, 'email_confirmed', True):
+            if not getattr(existing_admin, 'email_confirmed', False):
                 existing_admin.email_confirmed = True
                 changed = True
             # If password is the default (no env override), ensure it matches.

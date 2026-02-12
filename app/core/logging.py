@@ -52,3 +52,27 @@ def configure_logging() -> None:
     logging.getLogger("sqlalchemy.engine").setLevel(db_level)
     logging.getLogger("alembic").setLevel(level)
 
+
+def setup_file_logging(app):
+    """Configura logging con rotazione automatica"""
+    from logging.handlers import RotatingFileHandler
+    import os
+    
+    log_folder = app.config.get('LOGS_FOLDER') or 'logs'
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder, exist_ok=True)
+    
+    # Application log
+    file_handler = RotatingFileHandler(
+        os.path.join(log_folder, 'sonacip.log'),
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=10
+    )
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('SONACIP startup')
+

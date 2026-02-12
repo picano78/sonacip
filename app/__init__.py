@@ -96,6 +96,7 @@ CORE_MODULES = [
     'payments',
     'documents',
     'gamification',
+    'security',
 ]
 
 
@@ -758,6 +759,15 @@ def create_app(config_name: str | None = None) -> Flask:
                 app.logger.exception("Failed to init Flask-Session (non-fatal)")
             except Exception:
                 pass
+
+    # Security event logger
+    from app.security.logger import security_logger
+    security_logger.init_app(app)
+    app.security_logger = security_logger
+    
+    # Setup file logging with rotation
+    from app.core.logging import setup_file_logging
+    setup_file_logging(app)
 
     # Schema alignment removed: migrations must run via CLI only
     # Production deployments should run "flask db upgrade" separately

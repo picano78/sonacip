@@ -13,8 +13,73 @@ from app.backup.utils import (
 from app.models import Backup, AuditLog, BackupSetting
 from app.admin.utils import admin_required
 from datetime import datetime, timezone
+import os
 
 bp = Blueprint('backup', __name__, url_prefix='/backup')
+
+
+def get_encryption_key():
+    """Ottiene o genera chiave di cifratura per i backup"""
+    key_file = 'instance/backup_key.key'
+    
+    if os.path.exists(key_file):
+        with open(key_file, 'rb') as f:
+            return f.read()
+    else:
+        # Genera nuova chiave
+        from cryptography.fernet import Fernet
+        key = Fernet.generate_key()
+        os.makedirs('instance', exist_ok=True)
+        with open(key_file, 'wb') as f:
+            f.write(key)
+        os.chmod(key_file, 0o600)  # Solo owner può leggere
+        return key
+
+
+def encrypt_backup(backup_path):
+    """Cifra un file di backup"""
+    from cryptography.fernet import Fernet
+    key = get_encryption_key()
+    fernet = Fernet(key)
+    
+    # Leggi backup
+    with open(backup_path, 'rb') as f:
+        backup_data = f.read()
+    
+    # Cifra
+    encrypted_data = fernet.encrypt(backup_data)
+    
+    # Salva versione cifrata
+    encrypted_path = f"{backup_path}.encrypted"
+    with open(encrypted_path, 'wb') as f:
+        f.write(encrypted_data)
+    
+    # Rimuovi originale non cifrato
+    os.remove(backup_path)
+    os.rename(encrypted_path, backup_path)
+    
+    return backup_path
+
+
+def decrypt_backup(backup_path):
+    """Decifra un file di backup"""
+    from cryptography.fernet import Fernet
+    key = get_encryption_key()
+    fernet = Fernet(key)
+    
+    # Leggi backup cifrato
+    with open(backup_path, 'rb') as f:
+        encrypted_data = f.read()
+    
+    # Decifra
+    decrypted_data = fernet.decrypt(encrypted_data)
+    
+    # Salva temporaneo decifrato
+    temp_path = f"{backup_path}.decrypted"
+    with open(temp_path, 'wb') as f:
+        f.write(decrypted_data)
+    
+    return temp_path
 
 
 @bp.route('/')

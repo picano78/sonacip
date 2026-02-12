@@ -13,6 +13,7 @@ from app.auth.forms import (
     ResetPasswordRequestForm,
     ResetPasswordForm,
 )
+from app.api.rate_limits import get_rate_limit
 from app.models import User, AuditLog, Subscription, Plan, Dashboard, DashboardTemplate, Society, Role, EnterpriseSSOSetting, EmailConfirmationSetting
 from app.auth.email_confirm import is_email_confirmation_required, send_confirmation_email, can_resend, verify_token, get_confirmation_settings
 from datetime import datetime, timezone
@@ -191,7 +192,7 @@ def _enterprise_oidc_client():
 
 
 @bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute", methods=["POST"])
+@limiter.limit(get_rate_limit('authentication'), methods=["POST"])
 def login():
     """Login page"""
     if current_user.is_authenticated:
@@ -250,11 +251,21 @@ def login():
 
         if user is None:
             current_app.logger.warning("Login failed: no user found for identifier=%r", identifier)
+            if hasattr(current_app, 'security_logger'):
+                current_app.security_logger.log_failed_login(
+                    identifier=identifier,
+                    reason='User not found'
+                )
             flash('Credenziali non valide', 'danger')
             return redirect(url_for('auth.login'))
 
         if not user.check_password(form.password.data):
             current_app.logger.warning("Login failed: wrong password for user id=%s email=%s", user.id, user.email)
+            if hasattr(current_app, 'security_logger'):
+                current_app.security_logger.log_failed_login(
+                    identifier=identifier,
+                    reason='Invalid password'
+                )
             flash('Credenziali non valide', 'danger')
             return redirect(url_for('auth.login'))
 

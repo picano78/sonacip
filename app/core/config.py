@@ -25,9 +25,11 @@ class Config:
     # Secret key for session management and CSRF protection
     # Development: auto-generate if missing
     # Production: must be explicitly set via environment variable
+    # Get SECRET_KEY and strip whitespace; empty string default ensures consistent handling
+    # when the environment variable is not set at all
     SECRET_KEY = os.environ.get('SECRET_KEY', '').strip()
     
-    # Reject placeholder values
+    # Reject placeholder values (including empty string from unset env var)
     if SECRET_KEY in INVALID_SECRET_KEY_PLACEHOLDERS:
         # Fail fast in production to prevent insecure deployments
         # Check both FLASK_ENV and APP_ENV for compatibility with different deployment platforms

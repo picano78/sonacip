@@ -13,18 +13,6 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 
-def create_pdf_header(c, title, subtitle=None):
-    """Create a standard PDF header"""
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(2*cm, 27*cm, title)
-    if subtitle:
-        c.setFont("Helvetica", 10)
-        c.drawString(2*cm, 26.5*cm, subtitle)
-    c.setFont("Helvetica", 8)
-    c.drawRightString(19*cm, 27*cm, f"Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    c.line(2*cm, 26.2*cm, 19*cm, 26.2*cm)
-
-
 def generate_calendar_pdf(events, start_date, end_date, view_type='week'):
     """Generate PDF for calendar events"""
     buffer = BytesIO()

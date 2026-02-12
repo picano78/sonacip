@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Planner{% endblock %}
 
+{# Macro to get status color #}
+{% macro status_color(status) -%}
+{% if status == 'done' %}success{% elif status == 'in_progress' %}primary{% elif status == 'review' %}warning{% else %}secondary{% endif %}
+{%- endmacro %}
+
+{# Macro to get event type color #}
+{% macro event_type_color(event_type) -%}
+{% if event_type == 'allenamento' %}primary{% elif event_type == 'partita' %}success{% else %}warning{% endif %}
+{%- endmacro %}
+
 {% block extra_css %}
 <style>
 .planner-header {
@@ -79,7 +89,7 @@
                                 <div class="list-group-item task-item d-flex justify-content-between align-items-start">
                                     <div class="flex-grow-1">
                                         <div class="d-flex align-items-center gap-2 mb-1">
-                                            <i class="bi bi-circle-fill" style="font-size: 0.5rem; color: {{ 'var(--bs-success)' if t.status == 'done' else 'var(--bs-primary)' if t.status == 'in_progress' else 'var(--bs-warning)' if t.status == 'review' else 'var(--bs-secondary)' }};"></i>
+                                            <i class="bi bi-circle-fill text-{{ status_color(t.status) }}" style="font-size: 0.5rem;"></i>
                                             <h6 class="mb-0">{{ t.title }}</h6>
                                         </div>
                                         <div class="small text-muted">
@@ -87,7 +97,7 @@
                                             Scadenza: {{ t.due_date|datetime_format if t.due_date else 'N/D' }}
                                         </div>
                                     </div>
-                                    <span class="status-badge bg-{{ 'success' if t.status == 'done' else 'primary' if t.status == 'in_progress' else 'warning' if t.status == 'review' else 'secondary' }}">
+                                    <span class="status-badge bg-{{ status_color(t.status) }}">
                                         {{ t.status|replace('_',' ')|title }}
                                     </span>
                                 </div>
@@ -117,7 +127,7 @@
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center gap-2 mb-1">
-                                                <i class="bi bi-calendar-check-fill text-{{ 'primary' if e.event_type == 'allenamento' else 'success' if e.event_type == 'partita' else 'warning' }}"></i>
+                                                <i class="bi bi-calendar-check-fill text-{{ event_type_color(e.event_type) }}"></i>
                                                 <h6 class="mb-0">{{ e.title }}</h6>
                                             </div>
                                             <div class="small text-muted mb-2">
@@ -134,7 +144,7 @@
                                                 </div>
                                             {% endif %}
                                         </div>
-                                        <span class="status-badge bg-{{ 'primary' if e.event_type == 'allenamento' else 'success' if e.event_type == 'partita' else 'warning' }}">
+                                        <span class="status-badge bg-{{ event_type_color(e.event_type) }}">
                                             {{ e.event_type|title }}
                                         </span>
                                     </div>

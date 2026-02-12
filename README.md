@@ -72,6 +72,21 @@ SUPERADMIN_EMAIL=tuaemail@esempio.it
 SUPERADMIN_PASSWORD=TuaPasswordSicura
 ```
 
+### Script di Aggiornamento Credenziali
+
+Se hai già avviato il sistema e vuoi cambiare le credenziali del super admin, usa lo script dedicato:
+
+```bash
+cd /opt/sonacip
+source venv/bin/activate
+python update_admin_credentials.py
+```
+
+Lo script aggiornerà:
+- Email a: picano78@gmail.com
+- Username a: picano78@gmail.com
+- Password a: Simone78
+
 ## 🚀 Deploy VPS (Ubuntu 24.04)
 
 Vedi guida completa: `DEPLOYMENT_UBUNTU_24_04.md`.

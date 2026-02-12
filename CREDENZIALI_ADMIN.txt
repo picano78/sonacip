@@ -1,0 +1,98 @@
+═══════════════════════════════════════════════════════════════════════
+  SONACIP - CREDENZIALI SUPER ADMIN - GUIDA RAPIDA
+═══════════════════════════════════════════════════════════════════════
+
+⭐ CREDENZIALI PREDEFINITE:
+   Email:    Picano78@gmail.com
+   Password: Simone78
+
+📖 DOCUMENTAZIONE COMPLETA: Vedi FAQ_CREDENZIALI_ADMIN.md
+
+═══════════════════════════════════════════════════════════════════════
+  OPZIONE 1: CREDENZIALI PERSONALIZZATE (RACCOMANDATA)
+═══════════════════════════════════════════════════════════════════════
+
+Se hai configurato le variabili d'ambiente PRIMA del primo avvio:
+
+  Email:    Il valore che hai impostato in SUPERADMIN_EMAIL
+  Password: Il valore che hai impostato in SUPERADMIN_PASSWORD
+
+Come configurarle nel file .env:
+  
+  1. cp .env.example .env
+  2. Il file contiene già le credenziali predefinite:
+     SUPERADMIN_EMAIL=Picano78@gmail.com
+     SUPERADMIN_PASSWORD=Simone78
+  3. Puoi usarle così o modificarle per maggiore sicurezza
+
+═══════════════════════════════════════════════════════════════════════
+  OPZIONE 2: CREDENZIALI GENERATE AUTOMATICAMENTE
+═══════════════════════════════════════════════════════════════════════
+
+Se NON hai configurato le variabili d'ambiente, le credenziali sono 
+state generate automaticamente e mostrate NEI LOG DI AVVIO.
+
+Come trovarle:
+
+  METODO FACILE - Script automatico (raccomandato):
+    python recupera_credenziali.py
+
+  Con systemd:
+    sudo journalctl -u sonacip -n 100 | grep -A 5 "Generated Super Admin"
+
+  Nei file di log:
+    cat logs/sonacip.log | grep -A 5 "Generated Super Admin"
+
+Cerca un blocco simile a questo:
+  
+  ======================================================================
+  NO SUPERADMIN CREDENTIALS PROVIDED IN ENV!
+  Generated Super Admin credentials:
+    Email: admin@sonacip.local
+    Password: aB3#xY9$mK2@pL5!
+  COPY THESE CREDENTIALS NOW - They will not be shown again!
+  ======================================================================
+
+═══════════════════════════════════════════════════════════════════════
+  HO PERSO LE CREDENZIALI - COSA FACCIO?
+═══════════════════════════════════════════════════════════════════════
+
+1. Ferma l'applicazione:
+   sudo systemctl stop sonacip
+
+2. Aggiungi le credenziali nel file .env:
+   SUPERADMIN_EMAIL=tuanuovaemail@esempio.it
+   SUPERADMIN_PASSWORD=NuovaPasswordSicura123!
+
+3. Riavvia l'applicazione:
+   sudo systemctl start sonacip
+
+L'app aggiornerà automaticamente la password del Super Admin.
+
+═══════════════════════════════════════════════════════════════════════
+  ACCESSO AL SISTEMA
+═══════════════════════════════════════════════════════════════════════
+
+URL di login: http://tuodominio.it/auth/login
+
+Dopo il login, cambia immediatamente la password:
+  1. Vai su "Profilo" 
+  2. Clicca "Cambia Password"
+  3. Imposta una nuova password sicura
+
+═══════════════════════════════════════════════════════════════════════
+  BEST PRACTICES SICUREZZA
+═══════════════════════════════════════════════════════════════════════
+
+✓ Imposta sempre credenziali personalizzate in produzione
+✓ Usa password forti (min 12 caratteri, miste)
+✓ Cambia la password dopo il primo accesso
+✓ Non condividere le credenziali
+✓ Conserva le credenziali in un password manager
+✓ Monitora gli accessi nel pannello admin
+
+═══════════════════════════════════════════════════════════════════════
+
+Per maggiori dettagli, consulta: FAQ_CREDENZIALI_ADMIN.md
+
+SONACIP © 2026

@@ -67,12 +67,11 @@ echo ""
 
 # Verifica integrità finale
 echo -e "${YELLOW}🔒 Verifica integrità del repository...${NC}"
-FSCK_OUTPUT=$(git fsck --full 2>&1)
-if [ $? -eq 0 ]; then
+if git fsck --full > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Repository integro e pulito${NC}"
 else
     echo -e "${RED}⚠️  Attenzione: Problemi di integrità rilevati${NC}"
-    echo "$FSCK_OUTPUT"
+    git fsck --full
 fi
 echo ""
 

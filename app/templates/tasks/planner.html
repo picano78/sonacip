@@ -1,63 +1,153 @@
 {% extends "base.html" %}
 {% block title %}Planner{% endblock %}
+
+{% block extra_css %}
+<style>
+.planner-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+.planner-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+}
+.planner-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+.planner-card .card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 700;
+    padding: 1rem 1.25rem;
+}
+.task-item, .event-item {
+    transition: background .2s;
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+.task-item:hover, .event-item:hover {
+    background: #f0f7ff !important;
+}
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 12px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container my-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-calendar-check"></i> Planner</h2>
-        <div>
-            <a href="{{ url_for('tasks.planner_export_pdf') }}" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-file-pdf"></i> Esporta PDF
-            </a>
-            <a href="{{ url_for('tasks.calendar') }}" class="btn btn-outline-secondary btn-sm">Calendario</a>
-            <a href="{{ url_for('events.index') }}" class="btn btn-outline-secondary btn-sm">Eventi</a>
-        </div>
-    </div>
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Attività assegnate</h5>
-                    <a href="{{ url_for('tasks.index') }}" class="small">Vai a Task</a>
-                </div>
-                <ul class="list-group list-group-flush">
-                    {% for t in tasks %}
-                        <li class="list-group-item d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">{{ t.title }}</h6>
-                                <small class="text-muted">Scadenza: {{ t.due_date|datetime_format if t.due_date else 'N/D' }}</small>
-                            </div>
-                            <span class="badge bg-{{ 'success' if t.status == 'done' else 'primary' if t.status == 'in_progress' else 'warning' if t.status == 'review' else 'secondary' }}">{{ t.status|replace('_',' ')|title }}</span>
-                        </li>
-                    {% else %}
-                        <li class="list-group-item text-muted">Nessun task assegnato.</li>
-                    {% endfor %}
-                </ul>
+    <div class="planner-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="h3 mb-1"><i class="bi bi-calendar-check me-2"></i>Planner</h1>
+                <p class="mb-0 opacity-75">Organizza le tue attività ed eventi in un unico posto</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('tasks.planner_export_pdf') }}" class="btn btn-light text-primary fw-bold">
+                    <i class="bi bi-file-pdf me-1"></i> Esporta PDF
+                </a>
+                <a href="{{ url_for('tasks.calendar') }}" class="btn btn-outline-light">
+                    <i class="bi bi-calendar3 me-1"></i> Calendario
+                </a>
+                <a href="{{ url_for('events.index') }}" class="btn btn-outline-light">
+                    <i class="bi bi-calendar-event me-1"></i> Eventi
+                </a>
             </div>
         </div>
+    </div>
+
+    <div class="row g-4">
         <div class="col-lg-6">
-            <div class="card h-100">
+            <div class="planner-card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Eventi</h5>
-                    <a href="{{ url_for('events.index') }}" class="small">Vai a Eventi</a>
+                    <h5 class="mb-0"><i class="bi bi-check2-square text-primary me-2"></i>Attività assegnate</h5>
+                    <a href="{{ url_for('tasks.index') }}" class="btn btn-sm btn-outline-primary">Vai a Task</a>
                 </div>
-                <ul class="list-group list-group-flush">
-                    {% for e in events %}
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h6 class="mb-1">{{ e.title }}</h6>
-                                    <small class="text-muted">{{ e.start_date|datetime_format }}</small>
+                <div class="card-body p-0">
+                    {% if tasks %}
+                        <div class="list-group list-group-flush">
+                            {% for t in tasks %}
+                                <div class="list-group-item task-item d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <i class="bi bi-circle-fill" style="font-size: 0.5rem; color: {{ 'var(--bs-success)' if t.status == 'done' else 'var(--bs-primary)' if t.status == 'in_progress' else 'var(--bs-warning)' if t.status == 'review' else 'var(--bs-secondary)' }};"></i>
+                                            <h6 class="mb-0">{{ t.title }}</h6>
+                                        </div>
+                                        <div class="small text-muted">
+                                            <i class="bi bi-calendar3 me-1"></i>
+                                            Scadenza: {{ t.due_date|datetime_format if t.due_date else 'N/D' }}
+                                        </div>
+                                    </div>
+                                    <span class="status-badge bg-{{ 'success' if t.status == 'done' else 'primary' if t.status == 'in_progress' else 'warning' if t.status == 'review' else 'secondary' }}">
+                                        {{ t.status|replace('_',' ')|title }}
+                                    </span>
                                 </div>
-                                <span class="badge bg-{{ 'primary' if e.event_type == 'allenamento' else 'success' if e.event_type == 'partita' else 'warning' }}">{{ e.event_type|title }}</span>
-                            </div>
-                            {% if e.tournament_name or e.opponent_name %}
-                                <small class="text-muted"><i class="bi bi-trophy"></i> {{ e.tournament_name }} {% if e.opponent_name %}· vs {{ e.opponent_name }}{% endif %}</small>
-                            {% endif %}
-                        </li>
+                            {% endfor %}
+                        </div>
                     {% else %}
-                        <li class="list-group-item text-muted">Nessun evento imminente.</li>
-                    {% endfor %}
-                </ul>
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="text-muted mt-2">Nessun task assegnato.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="planner-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-calendar-event text-success me-2"></i>Eventi</h5>
+                    <a href="{{ url_for('events.index') }}" class="btn btn-sm btn-outline-success">Vai a Eventi</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if events %}
+                        <div class="list-group list-group-flush">
+                            {% for e in events %}
+                                <div class="list-group-item event-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <i class="bi bi-calendar-check-fill text-{{ 'primary' if e.event_type == 'allenamento' else 'success' if e.event_type == 'partita' else 'warning' }}"></i>
+                                                <h6 class="mb-0">{{ e.title }}</h6>
+                                            </div>
+                                            <div class="small text-muted mb-2">
+                                                <i class="bi bi-clock me-1"></i>
+                                                {{ e.start_date|datetime_format }}
+                                            </div>
+                                            {% if e.tournament_name or e.opponent_name %}
+                                                <div class="small">
+                                                    <span class="badge bg-info-subtle text-info">
+                                                        <i class="bi bi-trophy me-1"></i>
+                                                        {{ e.tournament_name }}
+                                                        {% if e.opponent_name %}· vs {{ e.opponent_name }}{% endif %}
+                                                    </span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <span class="status-badge bg-{{ 'primary' if e.event_type == 'allenamento' else 'success' if e.event_type == 'partita' else 'warning' }}">
+                                            {{ e.event_type|title }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-calendar-x text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="text-muted mt-2">Nessun evento imminente.</p>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

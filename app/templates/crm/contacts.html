@@ -9,11 +9,16 @@
     padding: 2rem;
     border-radius: 14px;
     margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(24, 119, 242, 0.2);
 }
 .filter-card {
     border: none;
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    transition: box-shadow .2s;
+}
+.filter-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
 }
 .filter-card .btn-outline-primary {
     border-color: #1877f2;
@@ -49,8 +54,12 @@
 .contacts-table-card {
     border: none;
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
     overflow: hidden;
+    transition: box-shadow .2s;
+}
+.contacts-table-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
 }
 .contacts-table-card .table thead {
     background: #f8f9fa;

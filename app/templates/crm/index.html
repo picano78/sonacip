@@ -8,6 +8,7 @@
     border-radius: 1rem;
     padding: 2rem;
     margin-bottom: 1.5rem;
+    box-shadow: 0 4px 16px rgba(24, 119, 242, 0.2);
   }
   [data-bs-theme="dark"] .crm-hero {
     background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
@@ -15,13 +16,21 @@
   .stat-card {
     border: none;
     border-radius: .75rem;
-    transition: transform .15s;
+    transition: transform .15s, box-shadow .15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
   }
-  .stat-card:hover { transform: translateY(-3px); }
+  .stat-card:hover { 
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0,0,0,.15);
+  }
   .stat-icon { font-size: 2rem; opacity: .7; }
   .quick-action-btn {
     border-radius: .5rem;
     font-weight: 500;
+    transition: transform .15s;
+  }
+  .quick-action-btn:hover {
+    transform: translateY(-2px);
   }
 </style>
 

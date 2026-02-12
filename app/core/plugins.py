@@ -92,7 +92,29 @@ def create_plugin_blueprint(plugin_id: str, plugin_dir: str, url_prefix: str | N
 
 
 def _import_plugin_module(plugin_id: str, plugin_dir: str):
+    """
+    Import plugin.py module with security checks.
+    
+    Security considerations:
+    - Validates plugin directory is within PLUGINS_FOLDER
+    - Prevents path traversal attacks through multiple checks:
+      1. Preliminary check for '..' in path (fast early rejection)
+      2. Realpath validation ensures resolved path is within plugin_dir
+    - Isolates plugin modules to prevent conflicts
+    """
+    # Security: Preliminary path traversal check (fast early rejection)
+    # Note: This is followed by a more thorough realpath validation below
+    if '..' in plugin_dir or not os.path.isabs(plugin_dir):
+        raise ValueError(f"Invalid plugin directory path: {plugin_dir}")
+    
     plugin_py = os.path.join(plugin_dir, "plugin.py")
+    
+    # Security: Verify the resolved path is still within plugin_dir
+    real_plugin_py = os.path.realpath(plugin_py)
+    real_plugin_dir = os.path.realpath(plugin_dir)
+    if not real_plugin_py.startswith(real_plugin_dir):
+        raise ValueError(f"Security: plugin.py path traversal detected for '{plugin_id}'")
+    
     if not os.path.isfile(plugin_py):
         raise FileNotFoundError(f"Missing plugin.py for plugin '{plugin_id}'")
 
@@ -118,9 +140,21 @@ def load_external_plugins(app) -> list[PluginMeta]:
     - If PLUGINS_ALLOWLIST is set, only those IDs are loaded.
     - If PLUGINS_BLOCKLIST is set, those IDs are skipped.
     - Otherwise, plugins with enabled_by_default=true are loaded.
+    
+    Security:
+    - Validates plugin folder exists and is a directory
+    - Prevents loading plugins from outside the designated folder
+    - Validates plugin IDs against strict regex
     """
     plugins_dir = app.config.get("PLUGINS_FOLDER")
     if not plugins_dir or not os.path.isdir(plugins_dir):
+        app.extensions["sonacip_plugins"] = []
+        return []
+    
+    # Security: Get absolute path and validate it's a real directory
+    plugins_dir = os.path.abspath(os.path.realpath(plugins_dir))
+    if not os.path.isdir(plugins_dir):
+        app.logger.error("PLUGINS_FOLDER is not a valid directory: %s", plugins_dir)
         app.extensions["sonacip_plugins"] = []
         return []
 
@@ -137,6 +171,13 @@ def load_external_plugins(app) -> list[PluginMeta]:
             continue
 
         plugin_path = os.path.join(plugins_dir, plugin_id)
+        
+        # Security: Prevent path traversal
+        real_plugin_path = os.path.realpath(plugin_path)
+        if not real_plugin_path.startswith(plugins_dir):
+            app.logger.error("Security: Path traversal attempt detected for plugin: %s", plugin_id)
+            continue
+            
         if not os.path.isdir(plugin_path):
             continue
 

@@ -5,6 +5,9 @@ This is intentionally deterministic: safe to run multiple times.
 """
 from __future__ import annotations
 
+import json
+import secrets
+import string
 from datetime import datetime, timezone
 
 
@@ -440,10 +443,28 @@ def seed_defaults(app) -> dict:
         # ---------------------------------------------------------------------
         # Super admin user
         # ---------------------------------------------------------------------
-        # Production requirement: do not rely on extra env vars.
-        # If SUPERADMIN_* is not provided, default to the requested credentials.
-        email = app.config.get("SUPERADMIN_EMAIL") or "picano78@gmail.com"
-        password = app.config.get("SUPERADMIN_PASSWORD") or "Simone78"
+        # Security: Generate random credentials if not provided via env vars
+        email = app.config.get("SUPERADMIN_EMAIL")
+        password = app.config.get("SUPERADMIN_PASSWORD")
+        
+        # If credentials not provided, generate secure random ones
+        if not email or not password:
+            if not email:
+                email = "admin@sonacip.local"
+            if not password:
+                # Generate a secure random password
+                alphabet = string.ascii_letters + string.digits + string.punctuation
+                password = ''.join(secrets.choice(alphabet) for _ in range(16))
+                # Log the generated credentials ONCE at startup
+                app.logger.warning("="*70)
+                app.logger.warning("NO SUPERADMIN CREDENTIALS PROVIDED IN ENV!")
+                app.logger.warning(f"Generated Super Admin credentials:")
+                app.logger.warning(f"  Email: {email}")
+                app.logger.warning(f"  Password: {password}")
+                app.logger.warning("COPY THESE CREDENTIALS NOW - They will not be shown again!")
+                app.logger.warning("Set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD in .env to customize.")
+                app.logger.warning("="*70)
+        
         # Login form uses email, but we keep username aligned to avoid confusion in admin UI.
         username = email
 
@@ -485,8 +506,8 @@ def seed_defaults(app) -> dict:
             if not getattr(existing_admin, 'email_confirmed', False):
                 existing_admin.email_confirmed = True
                 changed = True
-            # If password is the default (no env override), ensure it matches.
-            if not app.config.get("SUPERADMIN_PASSWORD"):
+            # Only update password if explicitly provided via env
+            if app.config.get("SUPERADMIN_PASSWORD"):
                 try:
                     if not existing_admin.check_password(password):
                         existing_admin.set_password(password)

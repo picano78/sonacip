@@ -1,6 +1,11 @@
 (function() {
   'use strict';
 
+  function getCsrfToken() {
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    return csrfMeta ? csrfMeta.getAttribute('content') : '';
+  }
+
   function isPushSupported() {
     return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   }
@@ -45,7 +50,10 @@
           return fetch('/notifications/push/subscribe', {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCsrfToken()
+            },
             body: JSON.stringify({
               endpoint: subJson.endpoint,
               keys: {
@@ -77,7 +85,10 @@
         return fetch('/notifications/push/unsubscribe', {
           method: 'POST',
           credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
           body: JSON.stringify({ endpoint: endpoint })
         });
       }).then(function() {

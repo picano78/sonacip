@@ -172,12 +172,30 @@ class Config:
     STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
     STRIPE_PORTAL_RETURN_URL = os.environ.get('STRIPE_PORTAL_RETURN_URL')
 
-    # Security headers (safe defaults; CSP is off by default because of CDNs)
+    # Security headers (safe defaults)
     SECURITY_HEADERS_ENABLED = os.environ.get('SECURITY_HEADERS_ENABLED', 'true').lower() in ['true', 'on', '1']
     HSTS_ENABLED = os.environ.get('HSTS_ENABLED', 'true').lower() in ['true', 'on', '1']
-    HSTS_MAX_AGE = int(os.environ.get('HSTS_MAX_AGE', '31536000'))  # 1 year
-    CSP_ENABLED = os.environ.get('CSP_ENABLED', 'false').lower() in ['true', 'on', '1']
+    HSTS_MAX_AGE = int(os.environ.get('HSTS_MAX_AGE', '63072000'))  # 2 years (730 days - recommended minimum)
+    HSTS_INCLUDE_SUBDOMAINS = os.environ.get('HSTS_INCLUDE_SUBDOMAINS', 'true').lower() in ['true', 'on', '1']
+    HSTS_PRELOAD = os.environ.get('HSTS_PRELOAD', 'false').lower() in ['true', 'on', '1']
+    
+    # CSP: Enable by default in production for security
+    # Can be disabled if needed, but should be enabled for best security
+    CSP_ENABLED = os.environ.get('CSP_ENABLED', 'true').lower() in ['true', 'on', '1']
     CSP_REPORT_ONLY = os.environ.get('CSP_REPORT_ONLY', 'false').lower() in ['true', 'on', '1']
+    
+    # CSP policy - restrictive but allows common CDNs
+    CSP_POLICY = {
+        'default-src': ["'self'"],
+        'script-src': ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+        'style-src': ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"],
+        'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
+        'img-src': ["'self'", "data:", "https:"],
+        'connect-src': ["'self'"],
+        'frame-ancestors': ["'none'"],
+        'base-uri': ["'self'"],
+        'form-action': ["'self'"],
+    }
 
 
 class DevelopmentConfig(Config):

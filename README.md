@@ -133,6 +133,45 @@ sudo ./sonacip_install.sh
 - **Atleta**: Risposta convocazioni
 - **Appassionato**: Navigazione sociale
 
+## 🔒 Security Features
+
+### Event Logging
+- Tracciamento automatico eventi sospetti
+- Log file: `logs/security.log`
+- Eventi monitorati: tentativi di login falliti, upload sospetti, violazioni CSRF, accessi non autorizzati
+
+### Log Rotation
+- Automatica ogni 10MB
+- Mantiene 10 backup compressi
+- Cleanup automatico dopo 30 giorni
+
+### Backup Encryption
+- Tutti i backup cifrati con Fernet (symmetric encryption)
+- Chiave salvata in `instance/backup_key.key` (protezione 600)
+- Decriptazione automatica durante restore
+
+### Rate Limiting
+- Login: 5 tentativi/minuto
+- API write: 30 richieste/minuto
+- API read: 100 richieste/minuto
+- File upload: 10 upload/minuto
+
+### CSP Reporting
+- Report violazioni CSP: `/security/csp-report`
+- Monitoring automatico tentativi XSS
+
+### Security Scan
+Esegui scan di sicurezza automatico:
+```bash
+python security_scan.py
+```
+
+### Security Tests
+Esegui la suite completa di test di sicurezza:
+```bash
+./run_security_tests.sh
+```
+
 ## 🔐 Configurazione
 
 Le variabili ambiente sono documentate nel file .env.example.

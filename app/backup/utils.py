@@ -74,6 +74,13 @@ def create_backup(created_by_id, backup_type='full', notes=None):
                         arcname = os.path.relpath(file_path, temp_dir)
                         zipf.write(file_path, arcname)
         
+        # Encrypt the backup
+        try:
+            from app.backup.routes import encrypt_backup
+            encrypt_backup(backup_path)
+        except Exception as e:
+            current_app.logger.warning(f'Backup encryption failed (continuing with unencrypted): {str(e)}')
+        
         # Get file size and checksum
         file_size = os.path.getsize(backup_path)
         checksum = calculate_checksum(backup_path)
@@ -186,17 +193,30 @@ def restore_backup(backup_id):
             db.session.commit()
             return False, 'File di backup non trovato'
         
+        # Decrypt the backup if encrypted
+        backup_file_path = backup.filepath
+        decrypted_temp_path = None
+        try:
+            from app.backup.routes import decrypt_backup
+            decrypted_temp_path = decrypt_backup(backup_file_path)
+            backup_file_path = decrypted_temp_path
+        except Exception as e:
+            current_app.logger.info(f'Backup decryption skipped (may not be encrypted): {str(e)}')
+            # Continue with original file if decryption fails (may not be encrypted)
+        
         # Validate zip file
-        if not zipfile.is_zipfile(backup.filepath):
+        if not zipfile.is_zipfile(backup_file_path):
             backup.is_valid = False
             backup.validation_message = 'File zip non valido'
             db.session.commit()
+            if decrypted_temp_path and os.path.exists(decrypted_temp_path):
+                os.remove(decrypted_temp_path)
             return False, 'File di backup corrotto'
         
         # Create temporary directory for extraction
         with tempfile.TemporaryDirectory() as temp_dir:
             # Extract backup
-            with zipfile.ZipFile(backup.filepath, 'r') as zipf:
+            with zipfile.ZipFile(backup_file_path, 'r') as zipf:
                 zipf.extractall(temp_dir)
             
             # Restore database
@@ -227,6 +247,13 @@ def restore_backup(backup_id):
                 
                 # Restore uploads
                 shutil.copytree(uploads_backup_path, uploads_folder, dirs_exist_ok=True)
+        
+        # Clean up decrypted temp file if it was created
+        if decrypted_temp_path and os.path.exists(decrypted_temp_path):
+            try:
+                os.remove(decrypted_temp_path)
+            except Exception:
+                pass
         
         return True, 'Backup ripristinato con successo'
         

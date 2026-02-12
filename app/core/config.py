@@ -129,6 +129,7 @@ class Config:
 
     # Logs configuration (production: use env var for custom path)
     LOGS_FOLDER = os.environ.get('LOGS_FOLDER') or os.path.join(BASE_DIR, 'logs')
+    SECURITY_LOG_FILE = os.environ.get('SECURITY_LOG_FILE') or os.path.join(BASE_DIR, 'logs', 'security.log')
 
     # Migrations
     MIGRATIONS_DIR = os.environ.get('MIGRATIONS_DIR') or os.path.join(BASE_DIR, 'migrations')
@@ -195,6 +196,7 @@ class Config:
         'frame-ancestors': ["'none'"],
         'base-uri': ["'self'"],
         'form-action': ["'self'"],
+        'report-uri': ['/security/csp-report'],
     }
 
 

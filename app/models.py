@@ -597,6 +597,10 @@ class Event(db.Model):
     # Status
     status = db.Column(db.String(20), default='scheduled')  # scheduled, ongoing, completed, cancelled
     
+    # Field planner integration
+    facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), nullable=True, index=True)
+    color = db.Column(db.String(20), default='#212529')  # hex color for calendar display
+    
     created_at = db.Column(db.DateTime, default=utc_now)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
@@ -604,6 +608,7 @@ class Event(db.Model):
     convocated_athletes = db.relationship('User', secondary=event_athletes,
                                          backref=db.backref('events', lazy='dynamic'),
                                          lazy='dynamic')
+    facility = db.relationship('Facility', foreign_keys=[facility_id])
     
     def get_athlete_status(self, user_id):
         """Get athlete response status for this event"""

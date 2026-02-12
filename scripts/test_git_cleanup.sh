@@ -48,7 +48,7 @@ run_test "Script ha shebang bash" \
 
 # Test 3: Script fallisce fuori da repository Git
 run_test "Script rileva quando non è in repo Git" \
-    "cd /tmp && '$CLEANUP_SCRIPT' 2>&1 | grep -q 'Error.*repository' && test \${PIPESTATUS[0]} -eq 1"
+    "cd /tmp && OUTPUT=\$('$CLEANUP_SCRIPT' 2>&1); EXITCODE=\$?; echo \"\$OUTPUT\" | grep -q 'Error.*repository' && [ \$EXITCODE -eq 1 ]"
 
 # Test 4: Script funziona da root del repository
 run_test "Script funziona da root repository" \

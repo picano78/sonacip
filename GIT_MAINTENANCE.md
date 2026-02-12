@@ -14,6 +14,16 @@ The project includes an automatic script for repository cleanup:
 ./scripts/git_cleanup.sh
 ```
 
+### 🧪 Test Suite / Testing
+
+Per verificare che lo script funzioni correttamente, esegui la suite di test automatica:
+
+To verify that the script works correctly, run the automated test suite:
+
+```bash
+./scripts/test_git_cleanup.sh
+```
+
 Lo script esegue le seguenti operazioni / The script performs the following operations:
 
 1. **Elenca rami locali e remoti** / Lists local and remote branches

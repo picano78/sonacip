@@ -18,13 +18,19 @@ class Config:
     # Secret key for session management and CSRF protection
     # Development: auto-generate if missing
     # Production: must be explicitly set via environment variable
-    SECRET_KEY = os.environ.get('SECRET_KEY')
-    if not SECRET_KEY:
+    SECRET_KEY = os.environ.get('SECRET_KEY', '').strip()
+    
+    # Reject placeholder values
+    if SECRET_KEY in ('', 'CHANGEME_GENERATE_WITH_PYTHON_SECRETS', 'your-secret-key-here'):
         # Fail fast in production to prevent insecure deployments
         # Check both FLASK_ENV and APP_ENV for compatibility with different deployment platforms
         # (Heroku uses FLASK_ENV, some platforms use APP_ENV)
         if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production':
-            raise RuntimeError("SECRET_KEY must be set in production environment!")
+            raise RuntimeError(
+                "SECRET_KEY must be set in production environment!\n"
+                "Generate a secure key with: python3 -c \"import secrets; print(secrets.token_hex(32))\"\n"
+                "Then set it in your .env file or as an environment variable."
+            )
         # Generate a default key for development/testing
         SECRET_KEY = secrets.token_hex(32)
 
@@ -185,8 +191,13 @@ class ProductionConfig(Config):
     @classmethod
     def validate_config(cls):
         """Validate production configuration after app factory has run."""
-        if not os.environ.get('SECRET_KEY'):
-            raise RuntimeError("SECRET_KEY must be set in production environment")
+        secret_key = os.environ.get('SECRET_KEY', '').strip()
+        if not secret_key or secret_key in ('CHANGEME_GENERATE_WITH_PYTHON_SECRETS', 'your-secret-key-here'):
+            raise RuntimeError(
+                "SECRET_KEY must be set in production environment!\n"
+                "Generate a secure key with: python3 -c \"import secrets; print(secrets.token_hex(32))\"\n"
+                "Then set it in your .env file or as an environment variable."
+            )
         uri = (os.environ.get("DATABASE_URL") or "").strip()
         if not uri:
             raise RuntimeError("DATABASE_URL must be set in production")

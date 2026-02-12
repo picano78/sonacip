@@ -55,11 +55,27 @@ sudo chown sonacip:sonacip /opt/sonacip
 
 ## 3. Database PostgreSQL
 
+**IMPORTANTE**: PostgreSQL non permette `CREATE DATABASE` all'interno di funzioni PL/pgSQL o blocchi `DO $$`. 
+Utilizza sempre i comandi diretti `createdb` o `CREATE DATABASE` eseguiti fuori da funzioni.
+
 ```bash
 # Entra come utente postgres
 sudo -u postgres psql
 
-# Crea database e utente
+# Crea utente e database
+CREATE USER sonacip WITH PASSWORD 'tua_password_sicura';
+\q
+
+# Crea il database (FUORI da psql, per evitare errori con DO blocks)
+sudo -u postgres createdb -O sonacip sonacip
+
+# Concedi privilegi
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sonacip TO sonacip;"
+```
+
+**Alternativa (tutto in psql, ma SENZA DO blocks):**
+```bash
+sudo -u postgres psql
 CREATE USER sonacip WITH PASSWORD 'tua_password_sicura';
 CREATE DATABASE sonacip OWNER sonacip;
 GRANT ALL PRIVILEGES ON DATABASE sonacip TO sonacip;

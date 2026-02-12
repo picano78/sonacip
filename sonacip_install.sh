@@ -106,6 +106,19 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "Credenziali iniziali admin:"
   echo "  email: admin@example.com"
   echo "  password: $ADMIN_PASSWORD"
+else
+  # Validate that SECRET_KEY is set and not a placeholder
+  if ! grep -qE '^SECRET_KEY=.+' "$ENV_FILE" || \
+     grep -qE '^SECRET_KEY=(|CHANGEME_GENERATE_WITH_PYTHON_SECRETS|your-secret-key-here)\s*$' "$ENV_FILE"; then
+    echo "ATTENZIONE: SECRET_KEY non configurata correttamente in $ENV_FILE"
+    echo "Generazione di una nuova SECRET_KEY..."
+    SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+    # Remove any existing SECRET_KEY line
+    sed -i '/^SECRET_KEY=/d' "$ENV_FILE"
+    # Add new SECRET_KEY
+    printf '%s\n' "SECRET_KEY=$SECRET_KEY" >> "$ENV_FILE"
+    echo "SECRET_KEY generata e salvata in $ENV_FILE"
+  fi
 fi
 
 # Ensure required writable directories exist (no runtime fixes inside app)

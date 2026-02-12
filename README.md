@@ -50,6 +50,10 @@ gunicorn wsgi:app
 
 ## 🔑 Credenziali Super Admin
 
+📖 **Per informazioni complete sulle credenziali del Super Admin, consulta:** [FAQ_CREDENZIALI_ADMIN.md](FAQ_CREDENZIALI_ADMIN.md)
+
+### Configurazione Rapida
+
 Al primo avvio, se non specifichi credenziali personalizzate tramite variabili d'ambiente, l'applicazione genererà automaticamente credenziali sicure casuali e le mostrerà nei log.
 
 ⚠️ **IMPORTANTE PER LA SICUREZZA**: 
@@ -71,6 +75,20 @@ oppure aggiungile al file `.env`:
 SUPERADMIN_EMAIL=tuaemail@esempio.it
 SUPERADMIN_PASSWORD=TuaPasswordSicura
 ```
+
+### Come recuperare le credenziali generate
+
+Se le credenziali sono state generate automaticamente, cerca nei log di avvio:
+
+```bash
+# Con systemd
+sudo journalctl -u sonacip -n 100 | grep -A 5 "Generated Super Admin"
+
+# Oppure nei file di log
+cat logs/sonacip.log | grep -A 5 "Generated Super Admin"
+```
+
+**📚 Per una guida completa con tutte le opzioni e troubleshooting, leggi:** [FAQ_CREDENZIALI_ADMIN.md](FAQ_CREDENZIALI_ADMIN.md)
 
 ## 🚀 Deploy VPS (Ubuntu 24.04)
 

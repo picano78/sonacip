@@ -280,6 +280,10 @@ def login():
             current_app.logger.exception("Email confirmation check failed, skipping")
 
         login_user(user, remember=form.remember_me.data)
+        
+        # Regenerate session ID to prevent session fixation attacks
+        session.modified = True
+        
         try:
             user.last_seen = datetime.now(timezone.utc)
             _safe_commit("auth.login:last_seen")

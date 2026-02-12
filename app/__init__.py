@@ -1073,24 +1073,43 @@ def create_app(config_name: str | None = None) -> Flask:
             # HSTS only on HTTPS
             try:
                 if request.is_secure and app.config.get("HSTS_ENABLED", True):
-                    max_age = int(app.config.get("HSTS_MAX_AGE", 31536000))
-                    resp.headers.setdefault("Strict-Transport-Security", f"max-age={max_age}; includeSubDomains")
+                    max_age = int(app.config.get("HSTS_MAX_AGE", 63072000))  # 2 years
+                    hsts_value = f"max-age={max_age}"
+                    if app.config.get("HSTS_INCLUDE_SUBDOMAINS", True):
+                        hsts_value += "; includeSubDomains"
+                    if app.config.get("HSTS_PRELOAD", False):
+                        hsts_value += "; preload"
+                    resp.headers.setdefault("Strict-Transport-Security", hsts_value)
             except Exception:
                 pass
 
-            # Optional CSP (off by default due to external CDNs and inline scripts/styles)
-            if app.config.get("CSP_ENABLED", False):
-                csp = (
-                    "default-src 'self'; "
-                    "base-uri 'self'; "
-                    "object-src 'none'; "
-                    "frame-ancestors 'none'; "
-                    "img-src 'self' data: https:; "
-                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-                    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
-                    "connect-src 'self' https:; "
-                    "manifest-src 'self'; "
-                )
+            # CSP (enabled by default for security)
+            if app.config.get("CSP_ENABLED", True):
+                # Get CSP policy from config or use defaults
+                csp_policy = app.config.get("CSP_POLICY", {})
+                if csp_policy:
+                    # Build CSP from dictionary
+                    csp_parts = []
+                    for directive, values in csp_policy.items():
+                        if isinstance(values, list):
+                            csp_parts.append(f"{directive} {' '.join(values)}")
+                        else:
+                            csp_parts.append(f"{directive} {values}")
+                    csp = "; ".join(csp_parts)
+                else:
+                    # Fallback to hardcoded CSP
+                    csp = (
+                        "default-src 'self'; "
+                        "base-uri 'self'; "
+                        "object-src 'none'; "
+                        "frame-ancestors 'none'; "
+                        "img-src 'self' data: https:; "
+                        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+                        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+                        "connect-src 'self' https:; "
+                        "manifest-src 'self'; "
+                    )
                 header = "Content-Security-Policy-Report-Only" if app.config.get("CSP_REPORT_ONLY", False) else "Content-Security-Policy"
                 resp.headers.setdefault(header, csp)
         except Exception:

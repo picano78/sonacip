@@ -52,6 +52,12 @@ gunicorn wsgi:app
 
 📖 **Per informazioni complete sulle credenziali del Super Admin, consulta:** [FAQ_CREDENZIALI_ADMIN.md](FAQ_CREDENZIALI_ADMIN.md)
 
+⭐ **CREDENZIALI PREDEFINITE**:
+- **Email**: Picano78@gmail.com
+- **Password**: Simone78
+
+Queste credenziali sono configurate nel file `.env.example` e verranno utilizzate quando copi il file in `.env`.
+
 ### Configurazione Rapida
 
 Al primo avvio, se non specifichi credenziali personalizzate tramite variabili d'ambiente, l'applicazione genererà automaticamente credenziali sicure casuali e le mostrerà nei log.
@@ -72,6 +78,11 @@ export SUPERADMIN_PASSWORD="TuaPasswordSicura"
 oppure aggiungile al file `.env`:
 
 ```
+# Il file .env.example contiene già le credenziali predefinite:
+# SUPERADMIN_EMAIL=Picano78@gmail.com
+# SUPERADMIN_PASSWORD=Simone78
+
+# Puoi usarle così come sono, o modificarle:
 SUPERADMIN_EMAIL=tuaemail@esempio.it
 SUPERADMIN_PASSWORD=TuaPasswordSicura
 ```

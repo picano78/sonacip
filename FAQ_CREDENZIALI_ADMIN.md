@@ -2,6 +2,12 @@
 
 ## 🔑 Quali sono le credenziali del Super Admin?
 
+⭐ **CREDENZIALI PREDEFINITE**:
+- **Email**: Picano78@gmail.com
+- **Password**: Simone78
+
+Queste sono le credenziali predefinite configurate nel file `.env.example`. Quando copi questo file in `.env`, queste credenziali verranno utilizzate automaticamente.
+
 Le credenziali del Super Admin di SONACIP dipendono da come hai configurato l'applicazione:
 
 ### Opzione 1: Credenziali Personalizzate (RACCOMANDATA per Produzione)
@@ -12,10 +18,14 @@ Se hai impostato le variabili d'ambiente `SUPERADMIN_EMAIL` e `SUPERADMIN_PASSWO
 
 1. **Tramite file `.env`** (metodo raccomandato):
    ```bash
-   # Copia il file esempio
+   # Copia il file esempio (che contiene credenziali predefinite)
    cp .env.example .env
    
-   # Modifica il file .env e imposta:
+   # Il file .env.example contiene già le credenziali predefinite:
+   # SUPERADMIN_EMAIL=Picano78@gmail.com
+   # SUPERADMIN_PASSWORD=Simone78
+   
+   # Puoi usarle così come sono, oppure modificarle:
    SUPERADMIN_EMAIL=tuaemail@tuodominio.it
    SUPERADMIN_PASSWORD=TuaPasswordSicura123!
    ```

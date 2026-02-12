@@ -2,6 +2,10 @@
   SONACIP - CREDENZIALI SUPER ADMIN - GUIDA RAPIDA
 ═══════════════════════════════════════════════════════════════════════
 
+⭐ CREDENZIALI PREDEFINITE:
+   Email:    Picano78@gmail.com
+   Password: Simone78
+
 📖 DOCUMENTAZIONE COMPLETA: Vedi FAQ_CREDENZIALI_ADMIN.md
 
 ═══════════════════════════════════════════════════════════════════════
@@ -16,9 +20,10 @@ Se hai configurato le variabili d'ambiente PRIMA del primo avvio:
 Come configurarle nel file .env:
   
   1. cp .env.example .env
-  2. Modifica .env e imposta:
-     SUPERADMIN_EMAIL=tuaemail@tuodominio.it
-     SUPERADMIN_PASSWORD=TuaPasswordSicura123!
+  2. Il file contiene già le credenziali predefinite:
+     SUPERADMIN_EMAIL=Picano78@gmail.com
+     SUPERADMIN_PASSWORD=Simone78
+  3. Puoi usarle così o modificarle per maggiore sicurezza
 
 ═══════════════════════════════════════════════════════════════════════
   OPZIONE 2: CREDENZIALI GENERATE AUTOMATICAMENTE

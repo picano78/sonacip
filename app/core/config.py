@@ -175,7 +175,7 @@ class Config:
     # Security headers (safe defaults)
     SECURITY_HEADERS_ENABLED = os.environ.get('SECURITY_HEADERS_ENABLED', 'true').lower() in ['true', 'on', '1']
     HSTS_ENABLED = os.environ.get('HSTS_ENABLED', 'true').lower() in ['true', 'on', '1']
-    HSTS_MAX_AGE = int(os.environ.get('HSTS_MAX_AGE', '63072000'))  # 2 years (recommended)
+    HSTS_MAX_AGE = int(os.environ.get('HSTS_MAX_AGE', '63072000'))  # 2 years (730 days - recommended minimum)
     HSTS_INCLUDE_SUBDOMAINS = os.environ.get('HSTS_INCLUDE_SUBDOMAINS', 'true').lower() in ['true', 'on', '1']
     HSTS_PRELOAD = os.environ.get('HSTS_PRELOAD', 'false').lower() in ['true', 'on', '1']
     

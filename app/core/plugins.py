@@ -97,10 +97,13 @@ def _import_plugin_module(plugin_id: str, plugin_dir: str):
     
     Security considerations:
     - Validates plugin directory is within PLUGINS_FOLDER
-    - Prevents path traversal attacks
+    - Prevents path traversal attacks through multiple checks:
+      1. Preliminary check for '..' in path (fast early rejection)
+      2. Realpath validation ensures resolved path is within plugin_dir
     - Isolates plugin modules to prevent conflicts
     """
-    # Security: Prevent path traversal by ensuring plugin_dir doesn't contain ..
+    # Security: Preliminary path traversal check (fast early rejection)
+    # Note: This is followed by a more thorough realpath validation below
     if '..' in plugin_dir or not os.path.isabs(plugin_dir):
         raise ValueError(f"Invalid plugin directory path: {plugin_dir}")
     

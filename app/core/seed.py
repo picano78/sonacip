@@ -5,6 +5,9 @@ This is intentionally deterministic: safe to run multiple times.
 """
 from __future__ import annotations
 
+import json
+import secrets
+import string
 from datetime import datetime, timezone
 
 
@@ -441,9 +444,6 @@ def seed_defaults(app) -> dict:
         # Super admin user
         # ---------------------------------------------------------------------
         # Security: Generate random credentials if not provided via env vars
-        import secrets
-        import string
-        
         email = app.config.get("SUPERADMIN_EMAIL")
         password = app.config.get("SUPERADMIN_PASSWORD")
         

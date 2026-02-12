@@ -155,7 +155,7 @@ class TestSecurityFeatures:
     
     def test_csrf_protection_enabled(self, app):
         """Test CSRF protection is configured"""
-        # In testing mode CSRFcan be disabled, but should be configured
+        # In testing mode CSRF can be disabled, but should be configured
         from app import csrf
         assert csrf is not None
     
@@ -357,8 +357,8 @@ class TestRouteProtection:
     def test_crm_routes_exist(self, client):
         """Test CRM routes are registered"""
         response = client.get('/crm/contacts')
-        # Should redirect or deny, not 404
-        assert response.status_code != 404 or response.status_code in [302, 401, 403]
+        # Should exist (not 404) and be protected (302/401/403)
+        assert response.status_code != 404 and response.status_code in [302, 401, 403]
 
 
 class TestCompleteSystemIntegration:
@@ -399,8 +399,11 @@ class TestCompleteSystemIntegration:
         with app.app_context():
             tables = list(db.metadata.tables.keys())
             
-            # Should have substantial number of tables
-            assert len(tables) > 20, f"Only {len(tables)} tables found"
+            # Expected minimum tables for full CRM + Social platform
+            # Includes: user, role, post, event, contact, opportunity, notification,
+            # message, audit_log, society, backup, and many more modules
+            MIN_EXPECTED_TABLES = 20
+            assert len(tables) > MIN_EXPECTED_TABLES, f"Only {len(tables)} tables found, expected at least {MIN_EXPECTED_TABLES}"
     
     def test_no_import_errors(self):
         """Test there are no import errors in critical modules"""

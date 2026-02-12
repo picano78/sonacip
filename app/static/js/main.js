@@ -563,17 +563,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 const typeLabels = {user:'Utente', listing:'Annuncio', event:'Evento', society:'Societ\u00e0'};
                 const typeColors = {user:'#1877f2', listing:'#43a047', event:'#fb8c00', society:'#7c4dff'};
 
-                dd.innerHTML = items.map((item, i) => {
-                    const avatarHtml = item.avatar
-                        ? '<img src="'+item.avatar+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">'
-                        : '<div style="width:36px;height:36px;border-radius:50%;background:'+(typeColors[item.type]||'#e4e6ea')+';display:flex;align-items:center;justify-content:center;color:white;"><i class="bi '+item.icon+'"></i></div>';
-                    return '<a href="'+item.url+'" class="ac-item" data-idx="'+i+'" style="display:flex;align-items:center;gap:12px;padding:10px 14px;text-decoration:none;color:inherit;cursor:pointer;transition:background 0.15s;border-bottom:1px solid #f0f2f5;">'
-                        + avatarHtml
-                        + '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+item.text+'</div>'
-                        + '<div style="font-size:0.78rem;color:#65676b;">'+item.sub+'</div></div>'
-                        + '<span style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+(typeColors[item.type]||'#e4e6ea')+'20;color:'+(typeColors[item.type]||'#65676b')+';font-weight:600;">'+( typeLabels[item.type]||item.type)+'</span>'
-                        + '</a>';
-                }).join('');
+                // Clear previous content
+                dd.innerHTML = '';
+                
+                // Create items using DOM methods to prevent XSS
+                items.forEach((item, i) => {
+                    const link = document.createElement('a');
+                    link.href = item.url || '#';
+                    link.className = 'ac-item';
+                    link.dataset.idx = i;
+                    link.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;text-decoration:none;color:inherit;cursor:pointer;transition:background 0.15s;border-bottom:1px solid #f0f2f5;';
+                    
+                    // Avatar
+                    if (item.avatar) {
+                        const img = document.createElement('img');
+                        img.src = item.avatar;
+                        img.style.cssText = 'width:36px;height:36px;border-radius:50%;object-fit:cover;';
+                        link.appendChild(img);
+                    } else {
+                        const avatarDiv = document.createElement('div');
+                        avatarDiv.style.cssText = 'width:36px;height:36px;border-radius:50%;background:'+(typeColors[item.type]||'#e4e6ea')+';display:flex;align-items:center;justify-content:center;color:white;';
+                        const icon = document.createElement('i');
+                        icon.className = 'bi ' + (item.icon || 'bi-person');
+                        avatarDiv.appendChild(icon);
+                        link.appendChild(avatarDiv);
+                    }
+                    
+                    // Text content
+                    const textDiv = document.createElement('div');
+                    textDiv.style.cssText = 'flex:1;min-width:0;';
+                    
+                    const titleDiv = document.createElement('div');
+                    titleDiv.style.cssText = 'font-weight:600;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+                    titleDiv.textContent = item.text || '';
+                    textDiv.appendChild(titleDiv);
+                    
+                    const subDiv = document.createElement('div');
+                    subDiv.style.cssText = 'font-size:0.78rem;color:#65676b;';
+                    subDiv.textContent = item.sub || '';
+                    textDiv.appendChild(subDiv);
+                    
+                    link.appendChild(textDiv);
+                    
+                    // Type label
+                    const typeSpan = document.createElement('span');
+                    typeSpan.style.cssText = 'font-size:0.7rem;padding:2px 8px;border-radius:10px;background:'+(typeColors[item.type]||'#e4e6ea')+'20;color:'+(typeColors[item.type]||'#65676b')+';font-weight:600;';
+                    typeSpan.textContent = typeLabels[item.type] || item.type || '';
+                    link.appendChild(typeSpan);
+                    
+                    dd.appendChild(link);
+                });
+                
                 dd.style.display = 'block';
 
                 dd.querySelectorAll('.ac-item').forEach(a => {
@@ -740,7 +780,18 @@ document.addEventListener('DOMContentLoaded', function() {
         var toast = document.createElement('div');
         toast.id = 'sonacipNotifToast';
         toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;background:linear-gradient(135deg,#1877f2,#42a5f5);color:#fff;padding:14px 22px;border-radius:14px;box-shadow:0 8px 32px rgba(24,119,242,0.35);font-size:0.95rem;font-weight:500;display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideInRight 0.4s ease;max-width:360px;';
-        toast.innerHTML = '<i class="bi bi-bell-fill" style="font-size:1.2rem;"></i><span>' + (newCount === 1 ? 'Hai una nuova notifica' : 'Hai ' + newCount + ' nuove notifiche') + '</span>';
+        
+        // Secure: Use textContent for user-controlled data
+        var icon = document.createElement('i');
+        icon.className = 'bi bi-bell-fill';
+        icon.style.fontSize = '1.2rem';
+        
+        var textSpan = document.createElement('span');
+        textSpan.textContent = newCount === 1 ? 'Hai una nuova notifica' : 'Hai ' + newCount + ' nuove notifiche';
+        
+        toast.appendChild(icon);
+        toast.appendChild(textSpan);
+        
         toast.onclick = function() {
             window.location.href = '/notifications/';
         };

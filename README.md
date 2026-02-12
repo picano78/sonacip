@@ -50,17 +50,15 @@ gunicorn wsgi:app
 
 ## 🔑 Credenziali Super Admin
 
-Al primo avvio, viene creato automaticamente un utente Super Admin con le seguenti credenziali predefinite:
+Al primo avvio, se non specifichi credenziali personalizzate tramite variabili d'ambiente, l'applicazione genererà automaticamente credenziali sicure casuali e le mostrerà nei log.
 
-- **Email**: `picano78@gmail.com`
-- **Password**: `Simone78`
+⚠️ **IMPORTANTE PER LA SICUREZZA**: 
+- Imposta sempre credenziali personalizzate PRIMA del primo avvio in produzione
+- Le credenziali generate casualmente vengono mostrate UNA SOLA VOLTA nei log
+- Copia immediatamente le credenziali generate e conservale in modo sicuro
+- Cambia la password dopo il primo accesso
 
-⚠️ **ATTENZIONE SICUREZZA**: 
-- Queste credenziali sono note pubblicamente e devono essere considerate **SOLO per test e sviluppo**
-- **CAMBIA IMMEDIATAMENTE** la password dopo il primo accesso, specialmente in produzione
-- Per installazioni di produzione, imposta credenziali personalizzate PRIMA del primo avvio (vedi sotto)
-
-Per personalizzare le credenziali del Super Admin, imposta le variabili d'ambiente prima del primo avvio:
+Per personalizzare le credenziali del Super Admin, imposta le variabili d'ambiente PRIMA del primo avvio:
 
 ```bash
 export SUPERADMIN_EMAIL="tuaemail@esempio.it"

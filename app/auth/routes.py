@@ -4,6 +4,7 @@ Authentication routes
 from flask import Blueprint, current_app, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, current_user
 from sqlalchemy import func, or_
+from urllib.parse import urlparse, urljoin
 from app import db, limiter, oauth
 from app.auth.forms import (
     LoginForm,
@@ -19,6 +20,31 @@ import json
 import secrets
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+
+def is_safe_url(target):
+    """
+    Check if target URL is safe for redirects.
+    Prevents open redirect vulnerabilities by ensuring the URL is relative
+    and doesn't redirect to external sites.
+    """
+    if not target:
+        return False
+    
+    # Parse the URL
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    
+    # URL must use http or https scheme
+    if test_url.scheme not in ('http', 'https', ''):
+        return False
+    
+    # URL must be on the same host (or be a relative URL with no netloc)
+    if test_url.netloc and test_url.netloc != ref_url.netloc:
+        return False
+    
+    return True
+
 
 def _safe_commit(context: str) -> bool:
     """
@@ -293,9 +319,9 @@ def login():
         flash(f'Benvenuto, {name}!', 'success')
 
         next_page = request.args.get('next')
-        if not next_page or not next_page.startswith('/'):
-            next_page = url_for('social.feed')
-        return redirect(next_page)
+        if next_page and is_safe_url(next_page):
+            return redirect(next_page)
+        return redirect(url_for('social.feed'))
     
     return render_template('auth/login.html', form=form)
 

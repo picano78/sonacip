@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Tuple
 import shutil
 import subprocess
+import magic
 
 from flask import current_app
 from werkzeug.utils import secure_filename
@@ -13,6 +14,47 @@ from PIL import Image
 
 from app import db
 from app.models import StorageSetting
+
+
+# Allowed file extensions and MIME types for security
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'}
+ALLOWED_IMAGE_MIMES = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'
+}
+ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'}
+ALLOWED_VIDEO_MIMES = {
+    'video/mp4', 'video/x-msvideo', 'video/quicktime', 
+    'video/x-ms-wmv', 'video/x-flv', 'video/webm', 'video/x-matroska'
+}
+
+
+def validate_file_type(file_stream, allowed_extensions: set, allowed_mimes: set, file_type: str = "file"):
+    """
+    Validate file type using both extension and MIME type detection.
+    Returns True if valid, raises ValueError if invalid.
+    """
+    # Check file extension
+    filename = getattr(file_stream, 'filename', '')
+    if not filename:
+        raise ValueError(f"Invalid {file_type}: no filename provided")
+    
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    if ext not in allowed_extensions:
+        raise ValueError(f"Invalid {file_type} extension. Allowed: {', '.join(allowed_extensions)}")
+    
+    # Check MIME type using python-magic
+    try:
+        file_stream.seek(0)
+        mime = magic.from_buffer(file_stream.read(2048), mime=True)
+        file_stream.seek(0)
+        
+        if mime not in allowed_mimes:
+            raise ValueError(f"Invalid {file_type} MIME type '{mime}'. File may be disguised.")
+    except Exception as e:
+        current_app.logger.warning(f"MIME type validation failed: {e}")
+        # If magic fails, at least we checked the extension
+    
+    return True
 
 
 def get_storage_settings() -> StorageSetting:
@@ -62,6 +104,10 @@ def ensure_subfolder(folder: str) -> str:
 def save_image_light(form_picture, folder: str = 'posts', size: Tuple[int, int] = (1280, 1280)) -> str:
     """Save image as lightweight web/optimized format honoring admin settings."""
     settings = get_storage_settings()
+    
+    # Validate file type before processing
+    validate_file_type(form_picture, ALLOWED_IMAGE_EXTENSIONS, ALLOWED_IMAGE_MIMES, "image")
+    
     _enforce_size_limit(form_picture, settings.max_image_mb)
     upload_folder = ensure_subfolder(folder)
 
@@ -74,15 +120,19 @@ def save_image_light(form_picture, folder: str = 'posts', size: Tuple[int, int] 
     file_path = os.path.join(upload_folder, filename)
 
     try:
+        # Verify image can be opened by Pillow (additional security check)
         img = Image.open(form_picture)
+        # Verify it's actually an image by checking format
+        if not img.format:
+            raise ValueError("File is not a valid image")
         if img.mode in ('RGBA', 'LA'):
             img = img.convert('RGB')
         img.thumbnail(size)
         img.save(file_path, format=target_ext.upper(), quality=settings.image_quality or 75, optimize=True)
     except (IOError, OSError, ValueError) as e:
-        # Fallback to raw save if conversion fails
-        current_app.logger.warning(f"Image optimization failed, using raw save: {e}")
-        form_picture.save(file_path)
+        # Do not fallback to raw save - reject invalid files
+        current_app.logger.error(f"Image validation/processing failed: {e}")
+        raise ValueError(f"Invalid image file: {e}")
 
     return os.path.join(folder, filename)
 
@@ -90,6 +140,10 @@ def save_image_light(form_picture, folder: str = 'posts', size: Tuple[int, int] 
 def save_video_light(form_file, folder: str = 'posts') -> str:
     """Compress video via ffmpeg when available, enforce size limits."""
     settings = get_storage_settings()
+    
+    # Validate file type before processing
+    validate_file_type(form_file, ALLOWED_VIDEO_EXTENSIONS, ALLOWED_VIDEO_MIMES, "video")
+    
     _enforce_size_limit(form_file, settings.max_video_mb)
     upload_folder = ensure_subfolder(folder)
     original_name = secure_filename(form_file.filename or 'video')
@@ -120,11 +174,13 @@ def save_video_light(form_file, folder: str = 'posts') -> str:
             os.remove(tmp_input)
             return os.path.join(folder, filename)
         except (subprocess.CalledProcessError, OSError) as e:
-            # fallback to raw save
-            current_app.logger.warning(f"FFmpeg compression failed: {e}")
-            pass
+            # Do not fallback - reject invalid videos
+            current_app.logger.error(f"Video processing failed: {e}")
+            if os.path.exists(tmp_input):
+                os.remove(tmp_input)
+            raise ValueError(f"Invalid video file: {e}")
 
-    # Fallback when ffmpeg missing or fails
+    # Fallback when ffmpeg missing - save but still validated
     form_file.save(file_path)
     return os.path.join(folder, filename)
 

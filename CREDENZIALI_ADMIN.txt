@@ -29,6 +29,9 @@ state generate automaticamente e mostrate NEI LOG DI AVVIO.
 
 Come trovarle:
 
+  METODO FACILE - Script automatico (raccomandato):
+    python recupera_credenziali.py
+
   Con systemd:
     sudo journalctl -u sonacip -n 100 | grep -A 5 "Generated Super Admin"
 

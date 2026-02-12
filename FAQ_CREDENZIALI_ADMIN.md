@@ -47,6 +47,12 @@ Set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD in .env to customize.
 
 **Come visualizzare i log:**
 
+- **METODO FACILE: Usa lo script automatico** (raccomandato):
+  ```bash
+  python recupera_credenziali.py
+  ```
+  Questo script cerca automaticamente le credenziali in tutti i possibili file di log.
+
 - **Se stai usando systemd** (installazione VPS):
   ```bash
   sudo journalctl -u sonacip -n 100 | grep -A 5 "Generated Super Admin"

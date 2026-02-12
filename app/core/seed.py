@@ -459,6 +459,7 @@ def seed_defaults(app) -> dict:
                 last_name="",
                 is_active=True,
                 is_verified=True,
+                email_confirmed=True,
                 role_obj=role,
                 role_legacy=role.name,
             )
@@ -479,6 +480,10 @@ def seed_defaults(app) -> dict:
                 pass
             if existing_admin.username != username:
                 existing_admin.username = username
+                changed = True
+            # Ensure email_confirmed is True for super admin
+            if not getattr(existing_admin, 'email_confirmed', True):
+                existing_admin.email_confirmed = True
                 changed = True
             # If password is the default (no env override), ensure it matches.
             if not app.config.get("SUPERADMIN_PASSWORD"):

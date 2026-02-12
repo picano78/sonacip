@@ -5,6 +5,30 @@ import pytest
 from datetime import datetime, timedelta
 
 
+@pytest.fixture
+def app():
+    """Create and configure a test app instance"""
+    from app import create_app
+    
+    app = create_app()
+    app.config['TESTING'] = True
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app.config['WTF_CSRF_ENABLED'] = False
+    return app
+
+
+@pytest.fixture
+def db_session(app):
+    """Create a database session for tests"""
+    from app import db
+    
+    with app.app_context():
+        db.create_all()
+        yield db.session
+        db.session.rollback()
+        db.drop_all()
+
+
 def test_event_model_has_facility_fields(app):
     """Test that Event model has facility_id and color fields"""
     from app.models import Event
@@ -88,27 +112,3 @@ def test_event_creation_with_facility(app, db_session):
         assert event.facility_id == facility.id
         assert event.color == '#0dcaf0'
         assert event.facility.name == 'Test Field'
-
-
-@pytest.fixture
-def app():
-    """Create and configure a test app instance"""
-    from app import create_app
-    
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    app.config['WTF_CSRF_ENABLED'] = False
-    return app
-
-
-@pytest.fixture
-def db_session(app):
-    """Create a database session for tests"""
-    from app import db
-    
-    with app.app_context():
-        db.create_all()
-        yield db.session
-        db.session.rollback()
-        db.drop_all()

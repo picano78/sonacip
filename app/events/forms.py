@@ -53,7 +53,8 @@ class EventForm(FlaskForm):
                 facility_choices.extend([(f.id, f.name) for f in facilities])
         self.facility_id.choices = facility_choices
         
-        # Default color based on event type (only if creating new event, not editing)
+        # Set default color based on event type only for new events (when color is None or empty)
+        # For existing events, color.data will already be populated from obj.color
         if not self.color.data:
             type_color = {
                 'allenamento': '#0dcaf0',  # cyan for training
@@ -62,4 +63,6 @@ class EventForm(FlaskForm):
                 'meeting': '#6f42c1',      # purple for meetings
                 'altro': '#212529',        # dark for other
             }
-            self.color.data = type_color.get(self.event_type.data or 'altro', '#212529')
+            # Only set if we have an event_type to base it on
+            if self.event_type.data:
+                self.color.data = type_color.get(self.event_type.data, '#212529')

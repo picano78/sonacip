@@ -96,9 +96,10 @@ class Config:
     # for extended periods. The session itself provides security through its 30-day timeout.
     WTF_CSRF_TIME_LIMIT = None
     # Allow CSRF timeout to be configured via environment variable if needed
-    if os.environ.get('WTF_CSRF_TIME_LIMIT'):
+    csrf_time_limit_env = os.environ.get('WTF_CSRF_TIME_LIMIT')
+    if csrf_time_limit_env:
         try:
-            WTF_CSRF_TIME_LIMIT = int(os.environ.get('WTF_CSRF_TIME_LIMIT'))
+            WTF_CSRF_TIME_LIMIT = int(csrf_time_limit_env)
         except (ValueError, TypeError):
             pass
 

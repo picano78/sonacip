@@ -48,12 +48,14 @@
                             </li>
                         {% elif item_id == 'planner' %}
                             {% if feature_enabled('planner') and can('calendar', 'view') %}
+                            {% if not current_user.is_society() %}
                             <li class="sidebar-item">
                                 <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner" title="Planner">
                                     <i class="bi bi-calendar-check"></i>
                                     <span class="sidebar-text">Planner</span>
                                 </a>
                             </li>
+                            {% endif %}
                             {% endif %}
                         {% elif item_id == 'calendario' %}
                             {% if feature_enabled('planner') and can('calendar', 'view') %}
@@ -84,12 +86,14 @@
                             {% endif %}
                         {% elif item_id == 'eventi' %}
                             {% if feature_enabled('events') and can('events', 'view') %}
+                            {% if not current_user.is_society() %}
                             <li class="sidebar-item">
                                 <a href="{{ url_for('events.index') }}" class="sidebar-link" data-tooltip="Eventi" title="Eventi">
                                     <i class="bi bi-calendar-event"></i>
                                     <span class="sidebar-text">Eventi</span>
                                 </a>
                             </li>
+                            {% endif %}
                             {% endif %}
                         {% elif item_id == 'tornei' %}
                             {% if feature_enabled('tournaments') and can('tournaments', 'view') %}
@@ -111,12 +115,14 @@
                             {% endif %}
                         {% elif item_id == 'crm' %}
                             {% if feature_enabled('crm') and can('crm', 'access') %}
+                            {% if not current_user.is_society() %}
                             <li class="sidebar-item">
                                 <a href="{{ url_for('crm.index') }}" class="sidebar-link" data-tooltip="CRM" title="CRM">
                                     <i class="bi bi-briefcase"></i>
                                     <span class="sidebar-text">CRM</span>
                                 </a>
                             </li>
+                            {% endif %}
                             {% endif %}
                         {% elif item_id == 'analytics' %}
                             {% if feature_enabled('advanced_stats') and can('analytics', 'access') %}
@@ -210,6 +216,7 @@
                 </a>
             </li>
             {% if feature_enabled('planner') and can('calendar', 'view') %}
+            {% if not current_user.is_society() %}
             <li class="sidebar-item">
                 <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner" title="Planner">
                     <i class="bi bi-calendar-check"></i>
@@ -222,6 +229,7 @@
                     <span class="sidebar-text">Calendario</span>
                 </a>
             </li>
+            {% endif %}
             {% endif %}
             {% if feature_enabled('social_feed') %}
             <li class="sidebar-item">
@@ -267,12 +275,14 @@
                 </li>
                 {% endif %}
                 {% if feature_enabled('events') and can('events', 'view') %}
+                {% if not current_user.is_society() %}
                     <li class="sidebar-item">
                         <a href="{{ url_for('events.index') }}" class="sidebar-link" data-tooltip="Eventi" title="Eventi">
                             <i class="bi bi-calendar-event"></i>
                             <span class="sidebar-text">Eventi</span>
                         </a>
                     </li>
+                {% endif %}
                 {% endif %}
                 {% if feature_enabled('tournaments') and can('tournaments', 'view') %}
                     <li class="sidebar-item">
@@ -291,12 +301,14 @@
                 </li>
                 {% endif %}
                 {% if feature_enabled('crm') and can('crm', 'access') %}
+                {% if not current_user.is_society() %}
                     <li class="sidebar-item">
                         <a href="{{ url_for('crm.index') }}" class="sidebar-link" data-tooltip="CRM" title="CRM">
                             <i class="bi bi-briefcase"></i>
                             <span class="sidebar-text">CRM</span>
                         </a>
                     </li>
+                {% endif %}
                 {% endif %}
                 {% if feature_enabled('advanced_stats') and can('analytics', 'access') %}
                     <li class="sidebar-item">

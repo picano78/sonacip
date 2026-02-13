@@ -12,6 +12,7 @@ Sistema completo di gestione per società sportive, staff, atleti e appassionati
 
 - **Gestione Utenti Multi-Ruolo**: Super Admin, Società Sportive, Staff, Atleti, Appassionati
 - **Social Network**: Feed, post, like, commenti, sistema follow stile LinkedIn
+- **Live Streaming**: Dirette video senza archiviazione server, registrazione opzionale sul dispositivo, visualizzazione full-screen
 - **CRM Integrato**: Gestione contatti, lead, opportunità, attività
 - **Eventi e Convocazioni**: Creazione eventi, convocazione atleti, gestione risposte accept/reject
 - **Notifiche**: Sistema interno + integrazione email (SMTP) + pronto per SMS
@@ -153,6 +154,7 @@ sudo ./sonacip_install.sh
 │   ├── auth/             # Autenticazione e registrazione
 │   ├── admin/            # Panel admin completo
 │   ├── social/           # Social network (feed, posts, follow)
+│   ├── livestream/       # Live streaming (dirette senza archiviazione server)
 │   ├── crm/              # CRM (contatti, opportunità, attività)
 │   ├── events/           # Eventi e convocazioni
 │   ├── scheduler/        # Calendario società

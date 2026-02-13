@@ -78,6 +78,20 @@
                                 </a>
                             </li>
                         {% endif %}
+                        {% if feature_enabled('stories') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('stories.feed') }}">
+                                <i class="bi bi-circle-fill"></i> Storie
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if feature_enabled('livestream') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('livestream.index') }}">
+                                <i class="bi bi-broadcast text-danger"></i> Live
+                            </a>
+                        </li>
+                        {% endif %}
                         {% if feature_enabled('tournaments') and can('tournaments', 'view') %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ url_for('tournaments.list_tournaments') }}">

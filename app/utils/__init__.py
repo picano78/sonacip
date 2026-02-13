@@ -439,7 +439,9 @@ def timeago(date):
         except Exception:
             date_norm = date
     else:
-        now = datetime.utcnow()
+        # Use recommended datetime.now(timezone.utc) instead of deprecated datetime.utcnow()
+        now = datetime.now(timezone.utc)
+        # Treat naive datetime as UTC naive for consistency
         date_norm = date
 
     diff = now - date_norm
@@ -527,7 +529,7 @@ __all__ = [
     'can_view_user',
     'get_user_society',
     'permission_required',
-    'plan_feature_required',  # Note: renamed from feature_required to avoid conflict
+    'plan_feature_required',  # Subscription-based features (distinct from feature_required which checks platform feature flags)
     'safe_get_or_404',
     'timeago',
     'escape_like',

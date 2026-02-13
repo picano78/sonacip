@@ -1,5 +1,8 @@
 // Main JavaScript for SONACIP
 
+// Performance monitoring constants
+const SLOW_PAGE_LOAD_THRESHOLD = 3000; // milliseconds
+
 document.addEventListener('DOMContentLoaded', function() {
     // PWA install prompt handling (Android + iOS)
     let deferredPrompt = null;
@@ -809,5 +812,150 @@ document.addEventListener('DOMContentLoaded', function() {
         s.id = 'notifToastCSS';
         s.textContent = '@keyframes slideInRight{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOutRight{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}';
         document.head.appendChild(s);
+    }
+
+    // Lazy loading for images - Performance optimization
+    if ('loading' in HTMLImageElement.prototype) {
+        // Browser supports native lazy loading
+        const images = document.querySelectorAll('img:not([loading])');
+        images.forEach(img => {
+            img.loading = 'lazy';
+        });
+    } else {
+        // Fallback to Intersection Observer for older browsers
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                    }
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: '50px 0px',
+            threshold: 0.01
+        });
+
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            imageObserver.observe(img);
+        });
+    }
+
+    // Form validation feedback improvements
+    const forms = document.querySelectorAll('form.needs-validation');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Show error message for first invalid field
+                const firstInvalid = form.querySelector(':invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                    // Add visual feedback - respect prefers-reduced-motion
+                    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    firstInvalid.scrollIntoView({ 
+                        behavior: prefersReducedMotion ? 'auto' : 'smooth', 
+                        block: 'center' 
+                    });
+                }
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+
+    // Enhanced error messages with better UX
+    const errorContainers = document.querySelectorAll('.error-message, .alert-danger');
+    errorContainers.forEach(container => {
+        if (container.textContent.trim()) {
+            container.style.animation = 'shake 0.5s';
+        }
+    });
+
+    // Add shake animation CSS if not present
+    if (!document.getElementById('errorAnimCSS')) {
+        const style = document.createElement('style');
+        style.id = 'errorAnimCSS';
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(5px); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Performance monitoring - send to analytics if available
+    if (window.performance && window.performance.timing) {
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const perfData = window.performance.timing;
+                const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+                const connectTime = perfData.responseEnd - perfData.requestStart;
+                const renderTime = perfData.domComplete - perfData.domLoading;
+                
+                // Check if in development mode via data attribute
+                // Set in HTML: <body data-dev-mode="true"> for development
+                // Production: omit attribute or set to "false"
+                const isDev = document.body.dataset.devMode === 'true';
+                
+                // Only log in development mode
+                if (isDev) {
+                    console.log('Performance Metrics:', {
+                        pageLoadTime: pageLoadTime + 'ms',
+                        connectTime: connectTime + 'ms',
+                        renderTime: renderTime + 'ms'
+                    });
+                    
+                    if (pageLoadTime > SLOW_PAGE_LOAD_THRESHOLD) {
+                        console.warn('Slow page load detected:', pageLoadTime + 'ms');
+                    }
+                }
+                
+                // Send to analytics endpoint if available (production)
+                // Note: This requires an analytics library to be loaded (e.g., Google Analytics)
+                // or a custom analytics endpoint to be implemented
+                if (window.gtag && pageLoadTime > 0) {
+                    try {
+                        // Send to Google Analytics if available
+                        gtag('event', 'page_performance', {
+                            page_load_time: pageLoadTime,
+                            connect_time: connectTime,
+                            render_time: renderTime,
+                            page_path: window.location.pathname
+                        });
+                    } catch (e) {
+                        // Silently fail
+                    }
+                } else if (window.fetch && pageLoadTime > 0) {
+                    // Fallback: send to custom analytics endpoint if gtag not available
+                    // Check if analytics endpoint exists before sending
+                    var analyticsEnabled = document.body.dataset.analyticsEnabled === 'true';
+                    if (analyticsEnabled) {
+                        try {
+                            fetch('/analytics/performance', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    pageLoadTime: pageLoadTime,
+                                    connectTime: connectTime,
+                                    renderTime: renderTime,
+                                    url: window.location.pathname
+                                })
+                            }).catch(function() {
+                                // Silently fail - analytics should never break the app
+                            });
+                        } catch (e) {
+                            // Silently fail
+                        }
+                    }
+                }
+            }, 0);
+        });
     }
 });

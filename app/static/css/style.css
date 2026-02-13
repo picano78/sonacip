@@ -607,3 +607,119 @@ body[data-theme="dark"] .sidebar-link::after {
 .calendar-cell-clickable.has-events:hover {
     background-color: rgba(13, 110, 253, 0.12);
 }
+
+/* Performance Optimizations */
+* {
+    /* Improved font rendering for better readability */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+img, video {
+    /* Prevent layout shift */
+    max-width: 100%;
+    height: auto;
+}
+
+/* GPU acceleration only for elements that are actively being animated 
+   Note: will-change should ideally be added dynamically before animations 
+   and removed after, but for simplicity we apply it to known animated elements */
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Enhanced mobile responsiveness */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+    }
+    
+    .stat-tile {
+        padding: 12px;
+    }
+    
+    .section-hero {
+        padding: 16px;
+    }
+    
+    /* Touch-friendly buttons - only for button-like elements */
+    button, .btn, a.btn, a[role="button"], 
+    input[type="submit"], input[type="button"], input[type="reset"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Prevent horizontal scroll */
+    html, body {
+        overflow-x: hidden;
+    }
+}
+
+/* Loading state improvements */
+.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spinner 0.6s linear infinite;
+}
+
+@keyframes spinner {
+    to { transform: rotate(360deg); }
+}
+
+/* Error states with better visibility */
+.is-invalid {
+    border-color: #dc3545 !important;
+    animation: shake 0.3s;
+}
+
+.invalid-feedback {
+    display: block;
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Skip to main content link for accessibility */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary-color);
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    z-index: 100;
+}
+
+.skip-link:focus {
+    top: 0;
+}

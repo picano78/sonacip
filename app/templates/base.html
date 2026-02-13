@@ -8,6 +8,15 @@
     <meta name="apple-mobile-web-app-title" content="{{ (site.navbar_brand_text if site and site.navbar_brand_text else 'SONACIP') }}">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
+    
+    <!-- Performance: Preconnect to external domains -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
     <title>
       {% if page and page.title %}
         {{ page.title }}
@@ -20,8 +29,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Custom CSS with cache busting -->
+    <link rel="stylesheet" href="{{ static_versioned('css/style.css') }}">
     {% set app_icon = (appearance.app_icon_url if appearance and appearance.app_icon_url else None) %}
     {% if appearance and appearance.favicon_url %}
       <link rel="icon" href="{{ appearance.favicon_url }}">
@@ -36,7 +45,7 @@
     <meta name="theme-color" content="{{ (appearance.primary_color if appearance else '') or '#1877f2' }}" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
     
-    <!-- HTMX -->
+    <!-- HTMX - load early without defer since HTMX attributes need processing on page load -->
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
 
     <style>
@@ -258,10 +267,10 @@
         }
     </style>
     
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- Bootstrap JS with defer for better performance -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+    <!-- Custom JS with defer and cache busting -->
+    <script src="{{ static_versioned('js/main.js') }}" defer></script>
     
     {% block extra_js %}{% endblock %}
 </body>

@@ -20,6 +20,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 from werkzeug.exceptions import BadRequest, Forbidden, InternalServerError, NotFound, TooManyRequests, RequestEntityTooLarge, RequestURITooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_compress import Compress
 from authlib.integrations.flask_client import OAuth
 
 from app.core.config import config
@@ -759,6 +760,25 @@ def create_app(config_name: str | None = None) -> Flask:
     csrf.init_app(app)
     limiter.init_app(app)
     oauth.init_app(app)
+    
+    # Initialize compression for better performance
+    try:
+        compress = Compress()
+        compress.init_app(app)
+        app.config.setdefault('COMPRESS_MIMETYPES', [
+            'text/html', 'text/css', 'text/xml', 'text/plain',
+            'application/json', 'application/javascript', 'application/xml',
+            'application/x-javascript', 'text/javascript'
+        ])
+        app.config.setdefault('COMPRESS_LEVEL', 6)
+        app.config.setdefault('COMPRESS_MIN_SIZE', 500)
+    except Exception:
+        # Compression is optional; app should work without it
+        try:
+            app.logger.warning("Flask-Compress not available, compression disabled")
+        except Exception:
+            pass
+    
     if session_ext is not None:
         try:
             session_ext.init_app(app)
@@ -959,6 +979,37 @@ def create_app(config_name: str | None = None) -> Flask:
             return []
     app.template_filter('fromjson')(_fromjson)
 
+    # Add version helper for cache busting
+    # Note: Cache is bounded by the number of static files in the app (typically small)
+    # For apps with many dynamic static files, consider adding a size limit
+    _static_versions = {}
+    
+    def static_versioned(filename):
+        """Generate versioned URL for static files for cache busting.
+        
+        Uses file modification time as version parameter to ensure browsers
+        get fresh files when they change, while maintaining long cache times.
+        """
+        if filename in _static_versions:
+            return _static_versions[filename]
+        
+        try:
+            # Get file modification time as version
+            static_path = os.path.join(app.static_folder or '', filename)
+            if os.path.exists(static_path):
+                # Use mtime directly - simpler and equally effective
+                version = str(int(os.path.getmtime(static_path)))
+                versioned_url = url_for('static', filename=filename, v=version)
+                _static_versions[filename] = versioned_url
+                return versioned_url
+        except Exception:
+            pass
+        
+        # Fallback to regular URL
+        return url_for('static', filename=filename)
+    
+    app.jinja_env.globals['static_versioned'] = static_versioned
+
     from app.core.bootstrap import discover_and_register_modules
     _register_blueprints(app)
     discover_and_register_modules(app, strict=False)
@@ -1107,6 +1158,10 @@ def create_app(config_name: str | None = None) -> Flask:
             'feature_enabled': feature_enabled,
         }
 
+    # Cache duration constants for HTTP headers
+    STATIC_CACHE_MAX_AGE = 31536000  # 1 year for versioned static files
+    UPLOAD_CACHE_MAX_AGE = 86400     # 1 day for uploads
+
     @app.after_request
     def apply_security_headers(resp):
         """Security headers (safe defaults; CSP optional)."""
@@ -1118,6 +1173,15 @@ def create_app(config_name: str | None = None) -> Flask:
             resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
             resp.headers.setdefault("X-Frame-Options", "DENY")
             resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+
+            # Add caching headers for static files to improve performance
+            if request.path.startswith('/static/'):
+                # Static files cache with long duration - safe with versioned URLs
+                # Version query parameters ensure cache busting when files change
+                resp.headers.setdefault("Cache-Control", f"public, max-age={STATIC_CACHE_MAX_AGE}, immutable")
+            elif request.path.startswith('/uploads/'):
+                # Uploaded files cache for moderate time
+                resp.headers.setdefault("Cache-Control", f"public, max-age={UPLOAD_CACHE_MAX_AGE}")
 
             # HSTS only on HTTPS
             try:

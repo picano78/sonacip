@@ -3236,6 +3236,114 @@ class ProfileSection(db.Model):
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
 
+class ProfileVerification(db.Model):
+    """
+    Profile verification requests and status
+    """
+    __tablename__ = 'profile_verification'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True, index=True)
+    
+    # Verification type
+    verification_type = db.Column(db.String(50), nullable=False)  # identity, athlete, society, professional
+    
+    # Status
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, under_review
+    
+    # Documents
+    document_1_path = db.Column(db.String(500))  # ID card, passport
+    document_2_path = db.Column(db.String(500))  # Additional proof
+    document_3_path = db.Column(db.String(500))  # Supporting document
+    
+    # Verification details
+    submitted_at = db.Column(db.DateTime, default=utc_now)
+    reviewed_at = db.Column(db.DateTime)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Notes
+    applicant_notes = db.Column(db.Text)  # Why they want verification
+    reviewer_notes = db.Column(db.Text)  # Admin notes on verification
+    rejection_reason = db.Column(db.Text)
+    
+    # Badge information (if verified)
+    badge_type = db.Column(db.String(50))  # blue_check, gold_star, society_verified, athlete_verified
+    badge_expires_at = db.Column(db.DateTime)  # Some verifications may expire
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('verification', uselist=False))
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by])
+    
+    def __repr__(self):
+        return f'<ProfileVerification user={self.user_id} status={self.status}>'
+
+
+class ProfileAnalytics(db.Model):
+    """
+    Profile view and engagement analytics
+    """
+    __tablename__ = 'profile_analytics'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Daily metrics
+    date = db.Column(db.Date, nullable=False, index=True)
+    profile_views = db.Column(db.Integer, default=0)
+    unique_viewers = db.Column(db.Integer, default=0)
+    
+    # Engagement
+    new_followers = db.Column(db.Integer, default=0)
+    lost_followers = db.Column(db.Integer, default=0)
+    messages_received = db.Column(db.Integer, default=0)
+    
+    # Source tracking
+    view_sources = db.Column(db.Text)  # JSON: where views came from
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('profile_analytics', lazy='dynamic'))
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'date', name='uq_profile_analytics_date'),
+    )
+    
+    def __repr__(self):
+        return f'<ProfileAnalytics user={self.user_id} date={self.date}>'
+
+
+class CustomProfileField(db.Model):
+    """
+    Custom profile fields that users can add
+    """
+    __tablename__ = 'custom_profile_field'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Field definition
+    field_name = db.Column(db.String(100), nullable=False)
+    field_type = db.Column(db.String(20), default='text')  # text, url, date, number
+    field_value = db.Column(db.Text)
+    
+    # Display
+    is_visible = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+    
+    # Category
+    category = db.Column(db.String(50))  # contact, social, professional, personal
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('custom_fields', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<CustomProfileField {self.field_name} for user={self.user_id}>'
+
+
 class ModerationRule(db.Model):
     """
     Automatic moderation rules for social content

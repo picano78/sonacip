@@ -70,7 +70,7 @@ def get_or_create_thread(user1_id, user2_id):
         # Create new thread
         import hashlib
         thread_str = f"{user1_id}-{user2_id}"
-        thread_id = hashlib.md5(thread_str.encode()).hexdigest()[:16]
+        thread_id = hashlib.md5(thread_str.encode(), usedforsecurity=False).hexdigest()[:16]
         
         thread = MessageThread(
             thread_id=thread_id,

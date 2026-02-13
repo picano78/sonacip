@@ -2,6 +2,7 @@
 Live Streaming Routes
 Handles live stream creation, viewing, and management
 No video storage on server - uses WebRTC for peer-to-peer streaming
+Enhanced with WebSocket support for real-time features
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
@@ -12,6 +13,12 @@ import secrets
 import json
 
 bp = Blueprint('livestream', __name__, url_prefix='/livestream')
+
+# Import WebSocket events to register them
+try:
+    from app.livestream import events
+except Exception:
+    pass  # WebSocket events not available
 
 
 @bp.before_request
@@ -254,13 +261,80 @@ def signal(stream_id):
     if not stream.is_active:
         return jsonify({'error': 'Stream not active'}), 400
     
-    # This is a simple signaling mechanism
-    # In production, you'd use WebSocket or a proper signaling server
+    # WebSocket signaling is now handled by events.py
+    # This endpoint is kept for compatibility
     data = request.json
     
-    # Store signaling data temporarily (in production use Redis or similar)
-    # For now, we'll just relay the message
     return jsonify({
         'success': True,
+        'message': 'Use WebSocket connection for real-time signaling',
         'relay': data
+    })
+
+
+@bp.route('/<int:stream_id>/quality', methods=['POST'])
+@login_required
+def set_quality(stream_id):
+    """Set stream quality preference"""
+    stream = LiveStream.query.get_or_404(stream_id)
+    
+    if stream.user_id != current_user.id:
+        return jsonify({'error': 'Not authorized'}), 403
+    
+    quality = request.json.get('quality', 'auto')
+    allowed_qualities = ['low', 'medium', 'high', 'auto']
+    
+    if quality not in allowed_qualities:
+        return jsonify({'error': 'Invalid quality setting'}), 400
+    
+    # Store quality preference (could add field to model if needed)
+    current_app.logger.info(f"Stream {stream_id} quality set to {quality}")
+    
+    return jsonify({
+        'success': True,
+        'quality': quality
+    })
+
+
+@bp.route('/<int:stream_id>/analytics')
+@login_required
+def stream_analytics(stream_id):
+    """Get detailed stream analytics"""
+    stream = LiveStream.query.get_or_404(stream_id)
+    
+    # Only streamer and admins can see analytics
+    if stream.user_id != current_user.id and not current_user.is_admin():
+        return jsonify({'error': 'Not authorized'}), 403
+    
+    # Get viewer statistics
+    total_viewers = LiveStreamViewer.query.filter_by(stream_id=stream_id).count()
+    active_viewers = LiveStreamViewer.query.filter_by(
+        stream_id=stream_id,
+        left_at=None
+    ).count()
+    
+    # Calculate average watch time
+    completed_viewers = LiveStreamViewer.query.filter(
+        LiveStreamViewer.stream_id == stream_id,
+        LiveStreamViewer.left_at != None
+    ).all()
+    
+    if completed_viewers:
+        total_watch_time = sum(
+            (v.left_at - v.joined_at).total_seconds()
+            for v in completed_viewers
+        )
+        avg_watch_time = total_watch_time / len(completed_viewers)
+    else:
+        avg_watch_time = 0
+    
+    return jsonify({
+        'stream_id': stream.id,
+        'title': stream.title,
+        'total_viewers': total_viewers,
+        'active_viewers': active_viewers,
+        'peak_viewers': stream.peak_viewers,
+        'duration_seconds': stream.duration_seconds,
+        'average_watch_time': round(avg_watch_time, 2),
+        'is_active': stream.is_active
     })

@@ -36,6 +36,13 @@ try:
 except Exception:  # pragma: no cover
     Session = None  # type: ignore
 session_ext = Session() if Session else None  # type: ignore
+
+# SocketIO for real-time features (livestreaming, chat, notifications)
+try:
+    from flask_socketio import SocketIO
+    socketio = SocketIO()
+except Exception:
+    socketio = None
 # Production-safe: rate limiting should never crash critical endpoints (e.g. /auth/login)
 def _get_real_ip():
     """
@@ -1156,6 +1163,23 @@ def create_app(config_name: str | None = None) -> Flask:
         except Exception:
             return resp
         return resp
+
+    # Initialize SocketIO for real-time features
+    if socketio is not None:
+        try:
+            # Configure SocketIO with async mode for better performance
+            socketio_kwargs = {
+                'cors_allowed_origins': '*',  # Configure based on production needs
+                'async_mode': 'threading',  # Use threading for compatibility
+                'logger': False,
+                'engineio_logger': False
+            }
+            socketio.init_app(app, **socketio_kwargs)
+        except Exception as exc:
+            try:
+                app.logger.warning(f"SocketIO initialization failed (non-fatal): {exc}")
+            except Exception:
+                pass
 
     # Auto-seed database to ensure required roles and admin exist
     # This is idempotent and safe to run on every startup

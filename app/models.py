@@ -437,12 +437,12 @@ class User(UserMixin, db.Model):
 
 class Post(db.Model):
     """
-    Social post model - LinkedIn-style posts
+    Social post model - LinkedIn-style posts with hashtags and scheduling
     """
     __tablename__ = 'post'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     content = db.Column(db.Text, nullable=False)
     image = db.Column(db.String(255))  # optional image
     
@@ -453,6 +453,14 @@ class Post(db.Model):
     society_id = db.Column(db.Integer, db.ForeignKey('society.id'))  # owning society for scoped comms
     target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # direct-to user comms
     post_type = db.Column(db.String(50), default='personal')  # personal, official, tournament, match, automation
+
+    # Scheduling
+    is_scheduled = db.Column(db.Boolean, default=False)
+    scheduled_for = db.Column(db.DateTime, index=True)  # When to publish scheduled post
+    published_at = db.Column(db.DateTime)  # Actual publication time
+    
+    # Status
+    status = db.Column(db.String(20), default='published')  # draft, scheduled, published, archived
 
     # Promotion/ads
     is_promoted = db.Column(db.Boolean, default=False)
@@ -465,6 +473,8 @@ class Post(db.Model):
     # Engagement
     likes_count = db.Column(db.Integer, default=0)
     comments_count = db.Column(db.Integer, default=0)
+    shares_count = db.Column(db.Integer, default=0)
+    views_count = db.Column(db.Integer, default=0)
     
     created_at = db.Column(db.DateTime, default=utc_now, index=True)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
@@ -483,8 +493,115 @@ class Post(db.Model):
         """Check if user liked this post"""
         return self.liked_by.filter(post_likes.c.user_id == user.id).count() > 0
     
+    def extract_hashtags(self):
+        """Extract hashtags from post content"""
+        import re
+        return re.findall(r'#(\w+)', self.content)
+    
+    @property
+    def engagement_rate(self):
+        """Calculate engagement rate (likes + comments + shares) / views"""
+        if self.views_count == 0:
+            return 0.0
+        total_engagement = self.likes_count + self.comments_count + self.shares_count
+        return (total_engagement / self.views_count) * 100
+    
     def __repr__(self):
         return f'<Post {self.id} by {self.user_id}>'
+
+
+class Hashtag(db.Model):
+    """
+    Hashtag model for social posts
+    """
+    __tablename__ = 'hashtag'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tag = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    use_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    last_used_at = db.Column(db.DateTime, default=utc_now)
+    
+    def __repr__(self):
+        return f'<Hashtag #{self.tag} ({self.use_count} uses)>'
+
+
+# Association table for posts and hashtags
+post_hashtags = db.Table('post_hashtags',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True),
+    db.Column('hashtag_id', db.Integer, db.ForeignKey('hashtag.id'), primary_key=True),
+    db.Column('created_at', db.DateTime, default=utc_now)
+)
+
+
+class PostAnalytics(db.Model):
+    """
+    Analytics tracking for individual posts
+    """
+    __tablename__ = 'post_analytics'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False, index=True)
+    
+    # Daily metrics
+    date = db.Column(db.Date, nullable=False, index=True)
+    views = db.Column(db.Integer, default=0)
+    unique_views = db.Column(db.Integer, default=0)
+    likes = db.Column(db.Integer, default=0)
+    comments = db.Column(db.Integer, default=0)
+    shares = db.Column(db.Integer, default=0)
+    
+    # Audience insights
+    viewer_roles = db.Column(db.Text)  # JSON: breakdown by user role
+    viewer_locations = db.Column(db.Text)  # JSON: breakdown by location
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationship
+    post = db.relationship('Post', backref=db.backref('analytics', lazy='dynamic'))
+    
+    __table_args__ = (
+        db.UniqueConstraint('post_id', 'date', name='uq_post_analytics_date'),
+    )
+    
+    def __repr__(self):
+        return f'<PostAnalytics post={self.post_id} date={self.date}>'
+
+
+class UserSocialStats(db.Model):
+    """
+    Aggregated social statistics for users
+    """
+    __tablename__ = 'user_social_stats'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True, index=True)
+    
+    # Follower stats
+    followers_count = db.Column(db.Integer, default=0)
+    following_count = db.Column(db.Integer, default=0)
+    
+    # Content stats
+    posts_count = db.Column(db.Integer, default=0)
+    total_likes_received = db.Column(db.Integer, default=0)
+    total_comments_received = db.Column(db.Integer, default=0)
+    total_shares_received = db.Column(db.Integer, default=0)
+    total_views = db.Column(db.Integer, default=0)
+    
+    # Engagement metrics
+    avg_engagement_rate = db.Column(db.Float, default=0.0)
+    most_popular_post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
+    
+    # Activity
+    last_post_at = db.Column(db.DateTime)
+    last_updated = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('social_stats', uselist=False))
+    most_popular_post = db.relationship('Post', foreign_keys=[most_popular_post_id])
+    
+    def __repr__(self):
+        return f'<UserSocialStats user={self.user_id}>'
 
 
 class SocietyMembership(db.Model):

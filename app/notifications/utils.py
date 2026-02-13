@@ -126,6 +126,82 @@ def cleanup_old_notifications(days=90):
         return 0
 
 
+def notify_planner_change(society_id, title, message, link=None):
+    """
+    Notify all society members who have enabled planner notifications
+    """
+    try:
+        from app.models import SocietyMembership
+        
+        # Get all active members who want planner notifications
+        memberships = (
+            SocietyMembership.query
+            .filter_by(society_id=society_id, status='active')
+            .filter_by(receive_planner_notifications=True)
+            .all()
+        )
+        
+        notifications = []
+        for membership in memberships:
+            notif = create_notification(
+                membership.user_id,
+                title,
+                message,
+                notification_type='calendar',
+                link=link
+            )
+            if notif:
+                notifications.append(notif)
+        
+        return notifications
+    except Exception as e:
+        print(f"Error sending planner notifications: {e}")
+        return []
+
+
+def notify_event_change(event_id, title, message, include_creator=True):
+    """
+    Notify all convocated athletes and optionally the creator about event changes
+    """
+    try:
+        from app.models import Event, event_athletes
+        
+        event = Event.query.get(event_id)
+        if not event:
+            return []
+        
+        # Get all convocated athletes
+        athlete_ids = db.session.execute(
+            db.select(event_athletes.c.user_id).where(
+                event_athletes.c.event_id == event_id
+            )
+        ).scalars().all()
+        
+        # Add creator if requested
+        user_ids = set(athlete_ids)
+        if include_creator and event.creator_id:
+            user_ids.add(event.creator_id)
+        
+        notifications = []
+        link = f'/events/{event_id}'
+        
+        for user_id in user_ids:
+            notif = create_notification(
+                user_id,
+                title,
+                message,
+                notification_type='event',
+                link=link
+            )
+            if notif:
+                notifications.append(notif)
+        
+        return notifications
+    except Exception as e:
+        print(f"Error sending event notifications: {e}")
+        return []
+
+
 def send_email(recipient, subject, body, html_body=None):
     """
     Send email notification

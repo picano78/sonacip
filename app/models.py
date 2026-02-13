@@ -501,6 +501,11 @@ class SocietyMembership(db.Model):
     role_name = db.Column(db.String(50), nullable=False, default='appassionato')  # atleta, staff, coach, dirigente, appassionato
     status = db.Column(db.String(20), nullable=False, default='active')  # pending, active, rejected, revoked
 
+    # Visibility and permission controls
+    can_see_all_events = db.Column(db.Boolean, default=False)  # Can see all society events
+    can_manage_planner = db.Column(db.Boolean, default=False)  # Can manage field planner
+    receive_planner_notifications = db.Column(db.Boolean, default=True)  # Receive notifications for planner changes
+
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     created_at = db.Column(db.DateTime, default=utc_now)
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))

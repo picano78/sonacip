@@ -10,6 +10,7 @@ from app.events.forms import EventForm
 from app.models import Event, User, Notification, event_athletes, Post, Facility, SocietyCalendarEvent
 from app.automation.utils import execute_automations, execute_rules
 from app.utils import permission_required, check_permission
+from app.notifications.utils import notify_planner_change, notify_event_change
 from datetime import datetime, timezone
 
 bp = Blueprint('events', __name__, url_prefix='/events')
@@ -34,10 +35,38 @@ def index():
     scope = current_user.get_primary_society()
 
     if admin_access:
+        # Admin sees all events
         events_query = Event.query
     elif scope:
-        events_query = Event.query.filter_by(creator_id=current_user.id)
+        # Check if user can see all society events
+        from app.models import SocietyMembership
+        membership = SocietyMembership.query.filter_by(
+            society_id=scope.id,
+            user_id=current_user.id,
+            status='active'
+        ).first()
+        
+        if membership and membership.can_see_all_events:
+            # User can see all events in their society
+            events_query = Event.query.join(User, Event.creator_id == User.id).filter(
+                or_(
+                    Event.creator_id == current_user.id,
+                    User.id.in_(
+                        db.session.query(SocietyMembership.user_id)
+                        .filter_by(society_id=scope.id, status='active')
+                    )
+                )
+            )
+        else:
+            # User can only see their own events and events they're convocated for
+            events_query = Event.query.filter(
+                or_(
+                    Event.creator_id == current_user.id,
+                    Event.convocated_athletes.any(User.id == current_user.id)
+                )
+            )
     else:
+        # No society scope - only see events user is convocated for
         events_query = current_user.events
 
     pagination = events_query.order_by(Event.start_date.desc()).paginate(
@@ -166,6 +195,16 @@ def create():
             )
             db.session.add(calendar_event)
             db.session.commit()
+            
+            # Send notification to society members about planner change
+            if society:
+                facility_name = event.facility.name if event.facility else "campo"
+                notify_planner_change(
+                    society.id,
+                    f"Nuovo evento sul planner: {event.title}",
+                    f"È stato creato un nuovo evento '{event.title}' sul {facility_name} per il {event.start_date.strftime('%d/%m/%Y alle %H:%M')}.",
+                    link=f'/events/{event.id}'
+                )
             
             flash('Evento creato e integrato nel planner campo! Ora puoi convocare gli atleti.', 'success')
         else:
@@ -344,6 +383,25 @@ def edit(event_id):
             db.session.add(calendar_event)
         
         db.session.commit()
+        
+        # Send notifications about event changes to convocated athletes
+        if event.convocated_athletes.count() > 0:
+            notify_event_change(
+                event.id,
+                f"Evento modificato: {event.title}",
+                f"L'evento '{event.title}' è stato aggiornato. Controlla i dettagli.",
+                include_creator=False  # Don't notify the person who made the change
+            )
+        
+        # If facility changed, notify society members
+        if facility_id and society:
+            facility_name = event.facility.name if event.facility else "campo"
+            notify_planner_change(
+                society.id,
+                f"Planner aggiornato: {event.title}",
+                f"L'evento '{event.title}' sul {facility_name} è stato modificato.",
+                link=f'/events/{event.id}'
+            )
         
         flash('Evento aggiornato!', 'success')
         return redirect(url_for('events.detail', event_id=event.id))

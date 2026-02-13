@@ -16,6 +16,7 @@ from app.models import (
     SocietyCalendarAttendance,
 )
 from app.utils import permission_required, check_permission, get_active_society_id
+from app.notifications.utils import notify_planner_change
 
 bp = Blueprint('calendar', __name__, url_prefix='/scheduler')
 
@@ -452,6 +453,17 @@ def create():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
+        
+        # Notify all society members about planner change if facility is used
+        if facility_id:
+            facility_name = event.facility.name if event.facility else "risorsa"
+            notify_planner_change(
+                event.society_id,
+                f"Nuovo evento sul planner: {event.title}",
+                f"È stato creato un nuovo evento '{event.title}' sul {facility_name} per il {event.start_datetime.strftime('%d/%m/%Y alle %H:%M')}.",
+                link=url_for('calendar.detail', event_id=event.id)
+            )
+        
         flash('Evento inserito nel Calendario Società.', 'success')
         return redirect(url_for('calendar.index'))
 

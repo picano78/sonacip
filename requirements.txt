@@ -51,12 +51,17 @@ apispec==6.7.1
 
 # Performance & Monitoring
 flask-caching==2.3.0
+psutil==6.1.0
 
 # Production server
 gunicorn==23.0.0
 
 # File handling
 Pillow==11.0.0
+
+# Data Export
+openpyxl==3.1.5
+reportlab==4.2.5
 
 # Security - MIME type validation
 python-magic==0.4.27

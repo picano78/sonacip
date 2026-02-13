@@ -187,26 +187,13 @@ def send_email(recipient, subject, body, html_body=None):
 
 def send_sms(phone_number, message):
     """
-    Send SMS notification
-    Ready for integration with SMS provider (Twilio, etc.)
+    Send SMS notification via Twilio
     """
-    provider = current_app.config.get('SMS_PROVIDER')
-    
-    if not provider:
-        # SMS not configured
+    try:
+        from app.notifications.sms import send_sms_twilio
+        return send_sms_twilio(phone_number, message)
+    except Exception as e:
+        current_app.logger.error(f'Failed to send SMS: {str(e)}')
         return False
-    
-    # TODO: Integrate with actual SMS provider
-    # Example for Twilio:
-    # from twilio.rest import Client
-    # client = Client(config['SMS_API_KEY'], config['SMS_API_SECRET'])
-    # client.messages.create(
-    #     to=phone_number,
-    #     from_=config['SMS_FROM_NUMBER'],
-    #     body=message
-    # )
-    
-    current_app.logger.info(f'SMS would be sent to {phone_number}: {message}')
-    return True
 
 

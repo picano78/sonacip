@@ -338,7 +338,7 @@ def can_view_user(user):
 def get_user_society(user):
     """
     Get the society associated with a user
-    Returns User object or None
+    Returns Society object or None
     """
     try:
         return user.get_primary_society()
@@ -384,10 +384,10 @@ def permission_required(resource, action, society_id_param=None, society_id_func
     return decorator
 
 
-def feature_required(feature_name):
+def plan_feature_required(feature_name):
     """
-    Decorator to require a specific plan feature
-    Usage: @feature_required('crm')
+    Decorator to require a specific plan feature (subscription-based)
+    Usage: @plan_feature_required('crm')
     """
     def decorator(f):
         @wraps(f)
@@ -527,6 +527,7 @@ __all__ = [
     'can_view_user',
     'get_user_society',
     'permission_required',
+    'plan_feature_required',  # Note: renamed from feature_required to avoid conflict
     'safe_get_or_404',
     'timeago',
     'escape_like',

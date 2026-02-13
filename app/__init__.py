@@ -102,6 +102,7 @@ CORE_MODULES = [
     'polls',
     'stats',
     'payments',
+    'accounting',
     'documents',
     'gamification',
     'security',

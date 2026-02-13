@@ -3639,6 +3639,189 @@ class FeePayment(db.Model):
         return f'<FeePayment {self.id} fee={self.fee_id} user={self.user_id} status={self.status}>'
 
 
+class Invoice(db.Model):
+    """
+    Invoice model for payments and fees
+    Links to payments and provides formal invoicing
+    """
+    __tablename__ = 'invoice'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    
+    # Links to payment or fee payment
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), nullable=True)
+    fee_payment_id = db.Column(db.Integer, db.ForeignKey('fee_payment.id'), nullable=True)
+    
+    # Billing information
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=True)
+    
+    # Invoice details
+    amount = db.Column(db.Float, nullable=False)
+    tax_amount = db.Column(db.Float, default=0.0)
+    total_amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='EUR')
+    
+    # Billing address
+    billing_name = db.Column(db.String(200))
+    billing_address = db.Column(db.Text)
+    billing_city = db.Column(db.String(100))
+    billing_postal_code = db.Column(db.String(20))
+    billing_country = db.Column(db.String(100))
+    tax_id = db.Column(db.String(50))  # VAT/Tax ID
+    
+    # Invoice dates
+    invoice_date = db.Column(db.DateTime, default=utc_now, nullable=False)
+    due_date = db.Column(db.DateTime, nullable=True)
+    paid_date = db.Column(db.DateTime, nullable=True)
+    
+    # Status and notes
+    status = db.Column(db.String(20), default='draft')  # draft, sent, paid, cancelled, overdue
+    description = db.Column(db.Text)
+    notes = db.Column(db.Text)
+    
+    # PDF generation
+    pdf_path = db.Column(db.String(500))  # Path to generated PDF
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    user = db.relationship('User', backref='invoices')
+    society = db.relationship('Society', backref='invoices')
+    payment = db.relationship('Payment', backref='invoice', uselist=False)
+    fee_payment = db.relationship('FeePayment', backref='invoice', uselist=False)
+    
+    def __repr__(self):
+        return f'<Invoice {self.invoice_number}: {self.total_amount} {self.currency} - {self.status}>'
+    
+    def generate_invoice_number(self):
+        """Generate unique invoice number"""
+        from datetime import datetime
+        year = datetime.now().year
+        # Format: INV-YYYY-XXXXX (e.g., INV-2026-00001)
+        return f'INV-{year}-{str(self.id).zfill(5)}'
+
+
+class InvoiceLineItem(db.Model):
+    """
+    Line items for invoices (for detailed invoices with multiple items)
+    """
+    __tablename__ = 'invoice_line_item'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False, index=True)
+    
+    description = db.Column(db.String(500), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    unit_price = db.Column(db.Float, nullable=False)
+    tax_rate = db.Column(db.Float, default=0.0)  # Tax rate percentage
+    amount = db.Column(db.Float, nullable=False)  # quantity * unit_price
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationship
+    invoice = db.relationship('Invoice', backref=db.backref('line_items', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<InvoiceLineItem {self.id}: {self.description} - {self.amount}>'
+
+
+class Expense(db.Model):
+    """
+    Expense tracking for societies and platform
+    """
+    __tablename__ = 'expense'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Expense details
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='EUR')
+    category = db.Column(db.String(50), nullable=False)  # travel, equipment, facility, marketing, etc.
+    description = db.Column(db.Text, nullable=False)
+    
+    # Vendor and receipt
+    vendor_name = db.Column(db.String(200))
+    receipt_path = db.Column(db.String(500))  # Path to uploaded receipt
+    
+    # Dates
+    expense_date = db.Column(db.DateTime, nullable=False, index=True)
+    
+    # Approval and reimbursement
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, reimbursed
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    approved_at = db.Column(db.DateTime)
+    reimbursed_at = db.Column(db.DateTime)
+    
+    notes = db.Column(db.Text)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    society = db.relationship('Society', backref='expenses')
+    user = db.relationship('User', foreign_keys=[user_id], backref='submitted_expenses')
+    approver = db.relationship('User', foreign_keys=[approved_by], backref='approved_expenses')
+    
+    def __repr__(self):
+        return f'<Expense {self.id}: {self.amount} {self.currency} - {self.category}>'
+
+
+class Budget(db.Model):
+    """
+    Budget planning and tracking for societies
+    """
+    __tablename__ = 'budget'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    
+    # Budget details
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    category = db.Column(db.String(50), nullable=False)  # operating, capital, project, event, etc.
+    
+    # Budget amounts
+    allocated_amount = db.Column(db.Float, nullable=False)
+    spent_amount = db.Column(db.Float, default=0.0)
+    currency = db.Column(db.String(3), default='EUR')
+    
+    # Period
+    period_start = db.Column(db.DateTime, nullable=False, index=True)
+    period_end = db.Column(db.DateTime, nullable=False, index=True)
+    
+    # Status
+    status = db.Column(db.String(20), default='active')  # active, closed, exceeded
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    society = db.relationship('Society', backref='budgets')
+    
+    @property
+    def remaining_amount(self):
+        """Calculate remaining budget"""
+        return self.allocated_amount - self.spent_amount
+    
+    @property
+    def percentage_spent(self):
+        """Calculate percentage of budget spent"""
+        if self.allocated_amount == 0:
+            return 0
+        return (self.spent_amount / self.allocated_amount) * 100
+    
+    def __repr__(self):
+        return f'<Budget {self.id}: {self.name} - {self.allocated_amount} {self.currency}>'
+
+
 class ContactMessage(db.Model):
     __tablename__ = 'contact_message'
 

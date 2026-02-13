@@ -1,12 +1,12 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, current_app, Response
 from flask_login import login_required, current_user
 from app import db
 from app.models import Document, DocumentFolder, User
 from app.utils import admin_required, log_action, get_active_society_id
-from app.utils.exports import DataExporter
 from datetime import datetime
 import os
 import uuid
+import io
 from werkzeug.utils import secure_filename
 
 bp = Blueprint('documents', __name__, url_prefix='/documents')
@@ -80,6 +80,115 @@ def _get_society_filter():
         if society:
             return society.id
     return None
+
+
+def _generate_pdf_export(data, filename='export.pdf', title='Data Export'):
+    """
+    Generate a PDF export of document data using reportlab.
+    
+    Args:
+        data: List of dictionaries with document information
+        filename: Output filename
+        title: PDF title
+        
+    Returns:
+        Flask Response with PDF file
+    """
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+    except ImportError:
+        flash('Impossibile generare PDF. Libreria reportlab non disponibile.', 'danger')
+        return redirect(url_for('documents.index'))
+    
+    if not data:
+        data = [{}]
+    
+    # Auto-detect columns
+    columns = list(data[0].keys()) if data else []
+    
+    # Create PDF in memory
+    output = io.BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=A4)
+    elements = []
+    
+    # Styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        textColor=colors.HexColor('#366092'),
+        spaceAfter=20,
+        alignment=1  # Center
+    )
+    
+    # Add title
+    elements.append(Paragraph(title, title_style))
+    elements.append(Spacer(1, 0.2 * inch))
+    
+    # Prepare table data
+    table_data = [columns]
+    for row in data:
+        table_row = []
+        for col in columns:
+            value = row.get(col, '')
+            if isinstance(value, datetime):
+                value = value.strftime('%d/%m/%Y %H:%M')
+            # Truncate long values
+            str_value = str(value)
+            if len(str_value) > 40:
+                str_value = str_value[:37] + '...'
+            table_row.append(str_value)
+        table_data.append(table_row)
+    
+    # Create table with auto column widths
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#366092')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
+    ]))
+    
+    elements.append(table)
+    
+    # Add footer
+    elements.append(Spacer(1, 0.3 * inch))
+    footer_style = ParagraphStyle(
+        'Footer',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=colors.grey,
+        alignment=1
+    )
+    footer_text = f"Generato il {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    elements.append(Paragraph(footer_text, footer_style))
+    
+    # Build PDF
+    doc.build(elements)
+    output.seek(0)
+    
+    # Create response
+    response = Response(
+        output.getvalue(),
+        mimetype='application/pdf',
+        headers={
+            'Content-Disposition': f'attachment; filename={filename}'
+        }
+    )
+    
+    return response
 
 
 @bp.route('/')
@@ -402,4 +511,4 @@ def export_pdf():
     
     log_action('export_documents_pdf', 'Document', None, f'Esportati {len(documents)} documenti in PDF')
     
-    return DataExporter.to_pdf(data, filename=filename, title=title, columns=columns)
+    return _generate_pdf_export(data, filename=filename, title=title)

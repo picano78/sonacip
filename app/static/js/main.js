@@ -810,4 +810,100 @@ document.addEventListener('DOMContentLoaded', function() {
         s.textContent = '@keyframes slideInRight{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOutRight{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}';
         document.head.appendChild(s);
     }
+
+    // Lazy loading for images - Performance optimization
+    if ('loading' in HTMLImageElement.prototype) {
+        // Browser supports native lazy loading
+        const images = document.querySelectorAll('img:not([loading])');
+        images.forEach(img => {
+            img.loading = 'lazy';
+        });
+    } else {
+        // Fallback to Intersection Observer for older browsers
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                    }
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: '50px 0px',
+            threshold: 0.01
+        });
+
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            imageObserver.observe(img);
+        });
+    }
+
+    // Form validation feedback improvements
+    const forms = document.querySelectorAll('form.needs-validation');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Show error message for first invalid field
+                const firstInvalid = form.querySelector(':invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                    // Add visual feedback
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+
+    // Enhanced error messages with better UX
+    const errorContainers = document.querySelectorAll('.error-message, .alert-danger');
+    errorContainers.forEach(container => {
+        if (container.textContent.trim()) {
+            container.style.animation = 'shake 0.5s';
+        }
+    });
+
+    // Add shake animation CSS if not present
+    if (!document.getElementById('errorAnimCSS')) {
+        const style = document.createElement('style');
+        style.id = 'errorAnimCSS';
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(5px); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Performance monitoring - send to analytics if available
+    if (window.performance && window.performance.timing) {
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const perfData = window.performance.timing;
+                const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+                const connectTime = perfData.responseEnd - perfData.requestStart;
+                const renderTime = perfData.domComplete - perfData.domLoading;
+                
+                // Log performance metrics for debugging
+                console.log('Performance Metrics:', {
+                    pageLoadTime: pageLoadTime + 'ms',
+                    connectTime: connectTime + 'ms',
+                    renderTime: renderTime + 'ms'
+                });
+                
+                // Send to analytics endpoint if available
+                if (pageLoadTime > 3000) {
+                    console.warn('Slow page load detected:', pageLoadTime + 'ms');
+                }
+            }, 0);
+        });
+    }
 });

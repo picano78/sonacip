@@ -76,6 +76,7 @@
         background: rgba(0,0,0,0.8);
         padding: 15px 20px;
         border-radius: 12px;
+        min-width: 200px;
     }
     
     .stat-item {
@@ -103,18 +104,45 @@
         50% { opacity: 0.7; }
     }
     
-    .recording-indicator {
+    .quality-selector {
         position: absolute;
         top: 20px;
         right: 20px;
-        background: rgba(220, 53, 69, 0.9);
+        background: rgba(0,0,0,0.8);
         padding: 10px 15px;
         border-radius: 8px;
-        display: none;
     }
     
-    .recording-indicator.active {
+    .quality-select {
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    
+    .tips-notification {
+        position: absolute;
+        bottom: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        color: #000;
+        padding: 15px 25px;
+        border-radius: 10px;
+        font-weight: 600;
+        display: none;
+        animation: slideIn 0.3s;
+    }
+    
+    .tips-notification.show {
         display: block;
+    }
+    
+    @keyframes slideIn {
+        from { transform: translate(-50%, 20px); opacity: 0; }
+        to { transform: translate(-50%, 0); opacity: 1; }
     }
     
     @media (max-width: 768px) {
@@ -150,14 +178,32 @@
                 <span id="viewerCount">0</span> spettatori
             </div>
             <div class="stat-item">
+                <i class="bi bi-graph-up"></i>
+                <span id="peakViewers">0</span> picco
+            </div>
+            <div class="stat-item">
                 <i class="bi bi-clock-fill"></i>
                 <span id="duration">00:00</span>
             </div>
+            <div class="stat-item">
+                <i class="bi bi-coin"></i>
+                <span id="tipsTotal">€0.00</span> donazioni
+            </div>
         </div>
         
-        <div class="recording-indicator" id="recordingIndicator">
-            <i class="bi bi-record-circle me-2"></i>
-            Registrazione in corso
+        <div class="quality-selector">
+            <label class="me-2">Qualità:</label>
+            <select class="quality-select" id="qualitySelect">
+                <option value="auto" selected>Auto</option>
+                <option value="high">Alta (720p)</option>
+                <option value="medium">Media (480p)</option>
+                <option value="low">Bassa (360p)</option>
+            </select>
+        </div>
+        
+        <div class="tips-notification" id="tipsNotification">
+            <i class="bi bi-coin"></i>
+            <span id="tipText"></span>
         </div>
         
         <div class="controls-overlay">
@@ -173,6 +219,9 @@
             <button class="control-btn" id="toggleFullscreen" title="Schermo intero">
                 <i class="bi bi-fullscreen"></i>
             </button>
+            <button class="control-btn" id="showAnalytics" title="Statistiche">
+                <i class="bi bi-bar-chart-fill"></i>
+            </button>
             <button class="control-btn danger" id="endStream" title="Termina diretta">
                 <i class="bi bi-stop-circle-fill"></i>
             </button>
@@ -182,6 +231,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
 const streamId = {{ stream.id }};
 const roomId = '{{ stream.room_id }}';
@@ -189,24 +239,63 @@ const roomId = '{{ stream.room_id }}';
 let localStream = null;
 let videoEnabled = true;
 let audioEnabled = true;
-let facingMode = 'user'; // 'user' for front camera, 'environment' for back camera
+let facingMode = 'user';
 let startTime = new Date();
+let socket = null;
+let tipsReceived = 0;
+
+// Initialize Socket.IO
+try {
+    socket = io({
+        transports: ['websocket', 'polling']
+    });
+    
+    socket.on('connect', function() {
+        console.log('WebSocket connected');
+        socket.emit('join_stream', {stream_id: streamId});
+    });
+    
+    socket.on('viewer_joined', function(data) {
+        updateViewerStats(data);
+    });
+    
+    socket.on('viewer_left', function(data) {
+        updateViewerStats(data);
+    });
+    
+    socket.on('new_tip', function(data) {
+        handleNewTip(data);
+    });
+    
+} catch (e) {
+    console.error('WebSocket not available:', e);
+}
+
+function updateViewerStats(data) {
+    if (data.viewer_count !== undefined) {
+        document.getElementById('viewerCount').textContent = data.viewer_count;
+    }
+}
+
+function handleNewTip(data) {
+    tipsReceived += parseFloat(data.amount);
+    document.getElementById('tipsTotal').textContent = `€${tipsReceived.toFixed(2)}`;
+    
+    const notification = document.getElementById('tipsNotification');
+    const tipText = document.getElementById('tipText');
+    tipText.textContent = `${data.tipper_name} ha donato €${data.amount}! ${data.message || ''}`;
+    notification.classList.add('show');
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 5000);
+}
 
 // Initialize camera and microphone
 async function initMedia() {
     try {
-        const constraints = {
-            video: {
-                facingMode: facingMode,
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            },
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
-            }
-        };
+        const quality = document.getElementById('qualitySelect').value;
+        const constraints = getConstraints(quality);
         
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
         document.getElementById('localVideo').srcObject = localStream;
@@ -219,6 +308,48 @@ async function initMedia() {
         alert('Impossibile accedere alla fotocamera o al microfono. Verifica i permessi del browser.');
     }
 }
+
+function getConstraints(quality) {
+    const resolutions = {
+        high: { width: 1280, height: 720 },
+        medium: { width: 640, height: 480 },
+        low: { width: 640, height: 360 },
+        auto: { width: { ideal: 1280 }, height: { ideal: 720 } }
+    };
+    
+    const resolution = resolutions[quality] || resolutions.auto;
+    
+    return {
+        video: {
+            facingMode: facingMode,
+            ...resolution
+        },
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+        }
+    };
+}
+
+// Quality change handler
+document.getElementById('qualitySelect').addEventListener('change', async function() {
+    const quality = this.value;
+    
+    // Notify viewers about quality change
+    if (socket) {
+        socket.emit('stream_quality_change', {
+            stream_id: streamId,
+            quality: quality
+        });
+    }
+    
+    // Restart stream with new quality
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    await initMedia();
+});
 
 // Toggle camera on/off
 document.getElementById('toggleCamera').addEventListener('click', () => {
@@ -256,12 +387,10 @@ document.getElementById('toggleMic').addEventListener('click', () => {
 document.getElementById('switchCamera').addEventListener('click', async () => {
     facingMode = facingMode === 'user' ? 'environment' : 'user';
     
-    // Stop current stream
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
     }
     
-    // Restart with new camera
     await initMedia();
 });
 
@@ -278,6 +407,29 @@ document.getElementById('toggleFullscreen').addEventListener('click', () => {
     }
 });
 
+// Show analytics
+document.getElementById('showAnalytics').addEventListener('click', async () => {
+    try {
+        const response = await fetch(`/livestream/${streamId}/analytics`);
+        const data = await response.json();
+        
+        const avgWatchMin = Math.floor(data.average_watch_time / 60);
+        const avgWatchSec = Math.floor(data.average_watch_time % 60);
+        
+        alert(
+            `Statistiche Diretta:\n\n` +
+            `Spettatori Totali: ${data.total_viewers}\n` +
+            `Spettatori Attuali: ${data.active_viewers}\n` +
+            `Picco Spettatori: ${data.peak_viewers}\n` +
+            `Durata: ${Math.floor(data.duration_seconds / 60)}m ${data.duration_seconds % 60}s\n` +
+            `Tempo Medio Visione: ${avgWatchMin}m ${avgWatchSec}s`
+        );
+    } catch (error) {
+        console.error('Error fetching analytics:', error);
+        alert('Errore nel caricamento delle statistiche');
+    }
+});
+
 // End stream
 document.getElementById('endStream').addEventListener('click', async () => {
     if (!confirm('Sei sicuro di voler terminare la diretta?')) return;
@@ -290,12 +442,14 @@ document.getElementById('endStream').addEventListener('click', async () => {
         const data = await response.json();
         
         if (data.success) {
-            // Stop all tracks
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
             }
             
-            // Redirect to main page
+            if (socket) {
+                socket.disconnect();
+            }
+            
             window.location.href = '/livestream';
         }
     } catch (error) {
@@ -310,11 +464,12 @@ async function updateViewerCount() {
         const response = await fetch(`/livestream/${streamId}/info`);
         const data = await response.json();
         document.getElementById('viewerCount').textContent = data.viewer_count;
+        document.getElementById('peakViewers').textContent = data.peak_viewers;
     } catch (error) {
         console.error('Error fetching viewer count:', error);
     }
     
-    setTimeout(updateViewerCount, 3000);
+    setTimeout(updateViewerCount, 5000);
 }
 
 // Update duration display
@@ -333,6 +488,9 @@ function updateDuration() {
 window.addEventListener('beforeunload', () => {
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
+    }
+    if (socket) {
+        socket.disconnect();
     }
 });
 

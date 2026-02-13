@@ -53,34 +53,15 @@
                     <h5 class="mb-0">Commenti</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('social.comment_post', post_id=post.id) }}" class="mb-4">
-                        {{ form.hidden_tag() }}
-                        {{ form.content(class="form-control mb-2", rows="2", placeholder="Scrivi un commento...") }}
-                        <button type="submit" class="btn btn-sm btn-primary">Commenta</button>
-                    </form>
+                    {% include 'components/comment_form.html' %}
                     
-                    {% for comment in post.comments.order_by(comment.created_at.desc()) %}
-                        <div class="d-flex mb-3">
-                            {% if comment.author.avatar %}
-                                <img src="{{ url_for('static', filename='uploads/' + comment.author.avatar) }}" 
-                                     class="rounded-circle me-2" width="40" height="40">
-                            {% else %}
-                                <div class="bg-secondary text-white rounded-circle me-2 d-flex align-items-center justify-content-center" 
-                                     style="width: 40px; height: 40px; min-width: 40px;">
-                                    <i class="bi bi-person-fill"></i>
-                                </div>
-                            {% endif %}
-                            <div class="flex-grow-1">
-                                <div class="bg-light p-2 rounded">
-                                    <strong>{{ comment.author.get_full_name() }}</strong>
-                                    <p class="mb-0">{{ comment.content }}</p>
-                                </div>
-                                <small class="text-muted">{{ comment.created_at|timeago }}</small>
-                            </div>
-                        </div>
-                    {% else %}
-                        <p class="text-muted">Nessun commento ancora. Sii il primo a commentare!</p>
-                    {% endfor %}
+                    <div id="comments-list">
+                        {% for comment in post.comments.order_by(comment.created_at.desc()) %}
+                            {% include 'components/comment_item.html' %}
+                        {% else %}
+                            <p class="text-muted">Nessun commento ancora. Sii il primo a commentare!</p>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>

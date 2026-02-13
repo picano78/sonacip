@@ -605,6 +605,14 @@ def comment_post(post_id):
         
         db.session.commit()
         flash('Commento aggiunto!', 'success')
+        
+        # HTMX request: return the comment HTML and empty form
+        if request.headers.get('HX-Request'):
+            return render_template('components/comment_item.html', comment=comment)
+    
+    # HTMX request with validation errors
+    if request.headers.get('HX-Request'):
+        return render_template('components/comment_form.html', form=form, post=post), 400
     
     return redirect(url_for('social.view_post', post_id=post_id))
 

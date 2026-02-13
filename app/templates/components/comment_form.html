@@ -1,0 +1,9 @@
+<form hx-post="{{ url_for('social.comment_post', post_id=post.id) }}"
+      hx-target="#comments-list"
+      hx-swap="afterbegin"
+      hx-on::after-request="this.reset()"
+      class="mb-4">
+    {{ form.hidden_tag() }}
+    {{ form.content(class="form-control mb-2", rows="2", placeholder="Scrivi un commento...") }}
+    <button type="submit" class="btn btn-sm btn-primary">Commenta</button>
+</form>

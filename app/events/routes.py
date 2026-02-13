@@ -48,13 +48,17 @@ def index():
         
         if membership and membership.can_see_all_events:
             # User can see all events in their society
-            events_query = Event.query.join(User, Event.creator_id == User.id).filter(
+            # Get all user IDs that are active members of the society
+            society_member_ids = (
+                db.session.query(SocietyMembership.user_id)
+                .filter_by(society_id=scope.id, status='active')
+                .scalar_subquery()
+            )
+            
+            events_query = Event.query.filter(
                 or_(
                     Event.creator_id == current_user.id,
-                    User.id.in_(
-                        db.session.query(SocietyMembership.user_id)
-                        .filter_by(society_id=scope.id, status='active')
-                    )
+                    Event.creator_id.in_(society_member_ids)
                 )
             )
         else:
@@ -202,7 +206,7 @@ def create():
                 notify_planner_change(
                     society.id,
                     f"Nuovo evento sul planner: {event.title}",
-                    f"È stato creato un nuovo evento '{event.title}' sul {facility_name} per il {event.start_date.strftime('%d/%m/%Y alle %H:%M')}.",
+                    f"È stato creato un nuovo evento '{event.title}' sul {facility_name} per il {event.start_date.strftime('%d/%m/%Y')} alle {event.start_date.strftime('%H:%M')}.",
                     link=f'/events/{event.id}'
                 )
             

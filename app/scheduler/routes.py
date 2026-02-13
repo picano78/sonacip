@@ -460,7 +460,7 @@ def create():
             notify_planner_change(
                 event.society_id,
                 f"Nuovo evento sul planner: {event.title}",
-                f"È stato creato un nuovo evento '{event.title}' sul {facility_name} per il {event.start_datetime.strftime('%d/%m/%Y alle %H:%M')}.",
+                f"È stato creato un nuovo evento '{event.title}' sul {facility_name} per il {event.start_datetime.strftime('%d/%m/%Y')} alle {event.start_datetime.strftime('%H:%M')}.",
                 link=url_for('calendar.detail', event_id=event.id)
             )
         

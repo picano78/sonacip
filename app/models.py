@@ -1446,27 +1446,112 @@ class WhatsappMessageLog(db.Model):
 
 class Message(db.Model):
     """
-    Direct messaging between users
+    Direct messaging between users with threading and attachment support
     """
     __tablename__ = 'message'
     
     id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     subject = db.Column(db.String(200))
     body = db.Column(db.Text, nullable=False)
     
+    # Threading support
+    thread_id = db.Column(db.String(50), index=True)  # Groups related messages
+    parent_id = db.Column(db.Integer, db.ForeignKey('message.id'))  # Reply to message
+    
+    # Attachment support
+    has_attachment = db.Column(db.Boolean, default=False)
+    attachment_count = db.Column(db.Integer, default=0)
+    
     # Status
-    is_read = db.Column(db.Boolean, default=False)
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    is_archived = db.Column(db.Boolean, default=False)
+    is_starred = db.Column(db.Boolean, default=False)
+    is_deleted_by_sender = db.Column(db.Boolean, default=False)
+    is_deleted_by_recipient = db.Column(db.Boolean, default=False)
+    
+    # Timestamps
     created_at = db.Column(db.DateTime, default=utc_now, index=True)
     read_at = db.Column(db.DateTime)
     
     # Relationships
     sender = db.relationship('User', foreign_keys=[sender_id], backref='messages_sent')
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref='messages_received')
+    parent = db.relationship('Message', remote_side=[id], backref='replies')
     
     def __repr__(self):
         return f'<Message {self.id} from {self.sender_id} to {self.recipient_id}>'
+    
+    def generate_thread_id(self):
+        """Generate unique thread ID for message conversation"""
+        import hashlib
+        # Create consistent thread ID based on sender and recipient
+        ids = sorted([self.sender_id, self.recipient_id])
+        thread_str = f"{ids[0]}-{ids[1]}-{self.created_at.strftime('%Y%m%d')}"
+        return hashlib.md5(thread_str.encode()).hexdigest()[:16]
+
+
+class MessageAttachment(db.Model):
+    """
+    File attachments for messages
+    """
+    __tablename__ = 'message_attachment'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False, index=True)
+    
+    filename = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_size = db.Column(db.Integer)  # Size in bytes
+    mime_type = db.Column(db.String(100))
+    
+    uploaded_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationship
+    message = db.relationship('Message', backref=db.backref('attachments', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<MessageAttachment {self.id}: {self.original_filename}>'
+
+
+class MessageThread(db.Model):
+    """
+    Message thread/conversation tracking for improved organization
+    """
+    __tablename__ = 'message_thread'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    thread_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    
+    # Participants
+    user1_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user2_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Thread info
+    subject = db.Column(db.String(200))
+    last_message_at = db.Column(db.DateTime, default=utc_now, index=True)
+    message_count = db.Column(db.Integer, default=0)
+    
+    # Status for each participant
+    user1_archived = db.Column(db.Boolean, default=False)
+    user2_archived = db.Column(db.Boolean, default=False)
+    user1_deleted = db.Column(db.Boolean, default=False)
+    user2_deleted = db.Column(db.Boolean, default=False)
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationships
+    user1 = db.relationship('User', foreign_keys=[user1_id])
+    user2 = db.relationship('User', foreign_keys=[user2_id])
+    
+    __table_args__ = (
+        db.UniqueConstraint('user1_id', 'user2_id', name='uq_thread_participants'),
+    )
+    
+    def __repr__(self):
+        return f'<MessageThread {self.thread_id}: {self.user1_id} <-> {self.user2_id}>'
 
 
 class MedicalCertificate(db.Model):

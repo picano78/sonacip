@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from sqlalchemy import or_, and_, func
+import os
 from app import db
 from app.messages.forms import MessageForm
 from app.models import Message, User
@@ -197,3 +198,156 @@ def unread_count():
         is_read=False
     ).count()
     return jsonify({'count': count})
+
+
+@bp.route('/search')
+@login_required
+def search():
+    """Search messages by content"""
+    from app.messages.utils import search_messages
+    
+    query = request.args.get('q', '').strip()
+    results = []
+    
+    if query:
+        results = search_messages(query, current_user.id)
+    
+    return render_template('messages/search.html', query=query, results=results)
+
+
+@bp.route('/archive/<int:message_id>', methods=['POST'])
+@login_required
+def archive_message(message_id):
+    """Archive a message"""
+    message = Message.query.get_or_404(message_id)
+    
+    # Check permissions
+    if message.sender_id != current_user.id and message.recipient_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    message.is_archived = True
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+
+@bp.route('/star/<int:message_id>', methods=['POST'])
+@login_required
+def star_message(message_id):
+    """Star/unstar a message"""
+    message = Message.query.get_or_404(message_id)
+    
+    # Check permissions
+    if message.sender_id != current_user.id and message.recipient_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    message.is_starred = not message.is_starred
+    db.session.commit()
+    
+    return jsonify({'success': True, 'starred': message.is_starred})
+
+
+@bp.route('/delete/<int:message_id>', methods=['POST'])
+@login_required
+def delete_message(message_id):
+    """Soft delete a message for current user"""
+    from app.messages.utils import delete_message_for_user
+    
+    success = delete_message_for_user(message_id, current_user.id)
+    
+    if success:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Message not found or unauthorized'}), 404
+
+
+@bp.route('/upload-attachment', methods=['POST'])
+@login_required
+def upload_attachment():
+    """Upload file attachment for a message"""
+    from app.messages.utils import save_attachment, allowed_file, MAX_FILE_SIZE
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    message_id = request.form.get('message_id', type=int)
+    
+    if not message_id:
+        return jsonify({'error': 'Message ID required'}), 400
+    
+    message = Message.query.get(message_id)
+    if not message or (message.sender_id != current_user.id and message.recipient_id != current_user.id):
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'File type not allowed'}), 400
+    
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    
+    if file_size > MAX_FILE_SIZE:
+        return jsonify({'error': 'File too large. Maximum size is 10MB'}), 400
+    
+    # Save attachment
+    attachment = save_attachment(file, message_id)
+    
+    if attachment:
+        db.session.add(attachment)
+        
+        # Update message
+        message.has_attachment = True
+        message.attachment_count = message.attachments.count() + 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'attachment_id': attachment.id,
+            'filename': attachment.original_filename,
+            'size': attachment.file_size
+        })
+    else:
+        return jsonify({'error': 'Failed to save attachment'}), 500
+
+
+@bp.route('/download-attachment/<int:attachment_id>')
+@login_required
+def download_attachment(attachment_id):
+    """Download message attachment"""
+    from flask import send_file
+    from app.models import MessageAttachment
+    
+    attachment = MessageAttachment.query.get_or_404(attachment_id)
+    message = attachment.message
+    
+    # Check permissions
+    if message.sender_id != current_user.id and message.recipient_id != current_user.id:
+        flash('Unauthorized access.', 'danger')
+        return redirect(url_for('messages.inbox'))
+    
+    return send_file(
+        attachment.file_path,
+        as_attachment=True,
+        download_name=attachment.original_filename
+    )
+
+
+@bp.route('/stats')
+@login_required
+def message_stats():
+    """Get message statistics for current user"""
+    from app.messages.utils import get_user_message_stats
+    
+    stats = get_user_message_stats(current_user.id)
+    
+    if request.args.get('json'):
+        return jsonify(stats)
+    
+    return render_template('messages/stats.html', stats=stats)
+

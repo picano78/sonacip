@@ -1816,7 +1816,7 @@ class CRMPipelineStage(db.Model):
 class Contact(db.Model):
     """
     CRM Contact model
-    Lead, prospect, sponsor, partner contacts
+    Lead, prospect, sponsor, partner contacts with scoring
     """
     __tablename__ = 'contact'
     
@@ -1833,16 +1833,30 @@ class Contact(db.Model):
     status = db.Column(db.String(50), default='new')  # new, contacted, interested, converted, lost
     source = db.Column(db.String(50))  # website, social, referral, event, advertising, other
     
+    # Lead scoring
+    score = db.Column(db.Integer, default=0)  # 0-100 lead score
+    score_updated_at = db.Column(db.DateTime)
+    engagement_level = db.Column(db.String(20), default='cold')  # cold, warm, hot
+    
+    # Segmentation tags (JSON array)
+    tags = db.Column(db.Text)  # JSON: ["vip", "sponsor", "parent"]
+    
     # Address
     address = db.Column(db.String(255))
     city = db.Column(db.String(100))
     postal_code = db.Column(db.String(10))
+    country = db.Column(db.String(100))
     
     # Notes
     notes = db.Column(db.Text)
     
+    # Last interaction
+    last_contacted_at = db.Column(db.DateTime)
+    last_contacted_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
     # Ownership
-    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))  # Assigned sales rep
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Timestamps
@@ -1852,12 +1866,99 @@ class Contact(db.Model):
     # Relationships
     society = db.relationship('Society', foreign_keys=[society_id], backref='crm_contacts')
     creator = db.relationship('User', foreign_keys=[created_by])
+    assigned_user = db.relationship('User', foreign_keys=[assigned_to])
+    last_contact_user = db.relationship('User', foreign_keys=[last_contacted_by])
     
     def get_full_name(self):
         return f'{self.first_name} {self.last_name}'
     
+    def get_tags_list(self):
+        """Get tags as a list"""
+        import json
+        if self.tags:
+            try:
+                return json.loads(self.tags)
+            except:
+                return []
+        return []
+    
+    def add_tag(self, tag):
+        """Add a tag to contact"""
+        import json
+        tags = self.get_tags_list()
+        if tag not in tags:
+            tags.append(tag)
+            self.tags = json.dumps(tags)
+    
     def __repr__(self):
         return f'<Contact {self.id}: {self.get_full_name()}>'
+
+
+class ContactSegment(db.Model):
+    """
+    Contact segmentation for targeted communications
+    """
+    __tablename__ = 'contact_segment'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Filter criteria (JSON)
+    criteria = db.Column(db.Text, nullable=False)  # JSON: filters for segmentation
+    
+    # Statistics
+    contact_count = db.Column(db.Integer, default=0)
+    last_calculated_at = db.Column(db.DateTime)
+    
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    society = db.relationship('Society', backref='contact_segments')
+    creator = db.relationship('User', backref='created_segments')
+    
+    def __repr__(self):
+        return f'<ContactSegment {self.id}: {self.name}>'
+
+
+class LeadScoringRule(db.Model):
+    """
+    Rules for automatic lead scoring
+    """
+    __tablename__ = 'lead_scoring_rule'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Rule definition
+    rule_type = db.Column(db.String(50), nullable=False)  # demographic, behavioral, engagement, firmographic
+    attribute = db.Column(db.String(100), nullable=False)  # e.g., 'contact_type', 'source', 'activity_count'
+    operator = db.Column(db.String(20), nullable=False)  # equals, contains, greater_than, less_than
+    value = db.Column(db.String(200))
+    
+    # Scoring
+    points = db.Column(db.Integer, nullable=False)  # Points to add/subtract
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True)
+    
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    society = db.relationship('Society', backref='lead_scoring_rules')
+    creator = db.relationship('User', backref='created_scoring_rules')
+    
+    def __repr__(self):
+        return f'<LeadScoringRule {self.id}: {self.name} ({self.points} pts)>'
 
 
 class Opportunity(db.Model):

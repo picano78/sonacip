@@ -90,6 +90,19 @@ class Config:
     # Refresh session on each request to keep it alive
     SESSION_REFRESH_EACH_REQUEST = True
 
+    # CSRF configuration
+    # Set CSRF token timeout to None (no expiration) to match extended session lifetime
+    # This prevents "Sessione scaduta o richiesta non valida" errors when users keep login pages open
+    # for extended periods. The session itself provides security through its 30-day timeout.
+    WTF_CSRF_TIME_LIMIT = None
+    # Allow CSRF timeout to be configured via environment variable if needed
+    csrf_time_limit_env = os.environ.get('WTF_CSRF_TIME_LIMIT')
+    if csrf_time_limit_env:
+        try:
+            WTF_CSRF_TIME_LIMIT = int(csrf_time_limit_env)
+        except (ValueError, TypeError):
+            pass
+
     # File upload configuration
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     STORAGE_BACKEND = os.environ.get('STORAGE_BACKEND', 'local')

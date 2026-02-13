@@ -90,6 +90,9 @@
                     <input type="text" name="q" class="form-control form-control-sm header-search me-1" placeholder="Cerca documenti..." value="{{ search_query if search_query is defined else '' }}">
                     <button type="submit" class="btn btn-sm btn-outline-light"><i class="bi bi-search"></i></button>
                 </form>
+                <a href="{{ url_for('documents.export_pdf') }}" class="btn btn-sm btn-outline-light" title="Esporta in PDF">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Esporta PDF
+                </a>
                 <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#newFolderModal">
                     <i class="bi bi-folder-plus me-1"></i> Nuova Cartella
                 </button>

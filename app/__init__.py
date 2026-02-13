@@ -91,6 +91,7 @@ CORE_MODULES = [
     'marketplace',
     'groups',
     'stories',
+    'livestream',
     'polls',
     'stats',
     'payments',

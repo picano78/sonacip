@@ -3320,6 +3320,56 @@ class StoryView(db.Model):
         return f'<StoryView story={self.story_id} viewer={self.viewer_id}>'
 
 
+class LiveStream(db.Model):
+    """Live streaming sessions - metadata only, no video storage"""
+    __tablename__ = 'live_stream'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    title = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    started_at = db.Column(db.DateTime, default=utc_now, index=True)
+    ended_at = db.Column(db.DateTime)
+    viewer_count = db.Column(db.Integer, default=0)
+    peak_viewers = db.Column(db.Integer, default=0)
+    
+    # WebRTC connection info (for signaling only)
+    room_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    
+    streamer = db.relationship('User', foreign_keys=[user_id], backref=db.backref('live_streams', lazy='dynamic'))
+
+    @property
+    def duration_seconds(self):
+        if self.ended_at:
+            return int((self.ended_at - self.started_at).total_seconds())
+        return int((datetime.now(timezone.utc) - self.started_at).total_seconds())
+
+    def __repr__(self):
+        return f'<LiveStream {self.id} by user={self.user_id} active={self.is_active}>'
+
+
+class LiveStreamViewer(db.Model):
+    """Track live stream viewers - for analytics only"""
+    __tablename__ = 'live_stream_viewer'
+
+    id = db.Column(db.Integer, primary_key=True)
+    stream_id = db.Column(db.Integer, db.ForeignKey('live_stream.id'), nullable=False, index=True)
+    viewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    joined_at = db.Column(db.DateTime, default=utc_now)
+    left_at = db.Column(db.DateTime)
+    
+    stream = db.relationship('LiveStream', foreign_keys=[stream_id], backref=db.backref('viewers', lazy='dynamic'))
+    viewer = db.relationship('User', foreign_keys=[viewer_id])
+
+    __table_args__ = (
+        db.Index('ix_stream_viewer_active', 'stream_id', 'viewer_id'),
+    )
+
+    def __repr__(self):
+        return f'<LiveStreamViewer stream={self.stream_id} viewer={self.viewer_id}>'
+
+
 class Poll(db.Model):
     """Polls/surveys"""
     __tablename__ = 'poll'

@@ -792,6 +792,8 @@ def follow(user_id):
     
     if user.id == current_user.id:
         flash('Non puoi seguire te stesso.', 'warning')
+        if request.headers.get('HX-Request'):
+            return render_template('components/follow_button.html', user=user), 400
         return redirect(url_for('social.profile', user_id=user_id))
     
     try:
@@ -823,6 +825,28 @@ def follow(user_id):
         except Exception:
             pass
         flash('Impossibile seguire questo profilo in questo momento.', 'danger')
+        if request.headers.get('HX-Request'):
+            context = 'default'
+            referer = request.referrer or ''
+            if 'profile' in referer:
+                context = 'profile'
+            elif 'search' in referer:
+                context = 'search'
+            elif 'explore' in referer:
+                context = 'explore'
+            return render_template('components/follow_button.html', user=user, context=context), 500
+    
+    # HTMX request: return just the button HTML
+    if request.headers.get('HX-Request'):
+        context = 'default'
+        referer = request.referrer or ''
+        if 'profile' in referer:
+            context = 'profile'
+        elif 'search' in referer:
+            context = 'search'
+        elif 'explore' in referer:
+            context = 'explore'
+        return render_template('components/follow_button.html', user=user, context=context)
     
     return redirect(request.referrer or url_for('social.profile', user_id=user_id))
 
@@ -854,6 +878,28 @@ def unfollow(user_id):
         except Exception:
             pass
         flash('Impossibile aggiornare il follow in questo momento.', 'danger')
+        if request.headers.get('HX-Request'):
+            context = 'default'
+            referer = request.referrer or ''
+            if 'profile' in referer:
+                context = 'profile'
+            elif 'search' in referer:
+                context = 'search'
+            elif 'explore' in referer:
+                context = 'explore'
+            return render_template('components/follow_button.html', user=user, context=context), 500
+    
+    # HTMX request: return just the button HTML
+    if request.headers.get('HX-Request'):
+        context = 'default'
+        referer = request.referrer or ''
+        if 'profile' in referer:
+            context = 'profile'
+        elif 'search' in referer:
+            context = 'search'
+        elif 'explore' in referer:
+            context = 'explore'
+        return render_template('components/follow_button.html', user=user, context=context)
     
     return redirect(request.referrer or url_for('social.profile', user_id=user_id))
 

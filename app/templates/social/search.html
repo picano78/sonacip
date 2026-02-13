@@ -135,11 +135,12 @@
                                 <span class="badge" style="background:#1877f2;">{{ user.role }}</span>
                             </div>
                             {% if current_user.id != user.id %}
-                                <form method="POST" action="{{ url_for('social.follow' if not current_user.is_following(user) else 'social.unfollow', user_id=user.id) }}">
-                                    <button type="submit" class="btn btn-sm btn-follow-search {{ 'following' if current_user.is_following(user) }}">
-                                        {{ 'Smetti di seguire' if current_user.is_following(user) else 'Segui' }}
-                                    </button>
-                                </form>
+                                <button class="btn btn-sm btn-follow-search {{ 'following' if current_user.is_following(user) }}"
+                                        hx-post="{{ url_for('social.unfollow' if current_user.is_following(user) else 'social.follow', user_id=user.id) }}"
+                                        hx-swap="outerHTML"
+                                        hx-target="this">
+                                    {{ 'Smetti di seguire' if current_user.is_following(user) else 'Segui' }}
+                                </button>
                             {% endif %}
                         </div>
                     </div>

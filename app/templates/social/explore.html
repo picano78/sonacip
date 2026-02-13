@@ -112,11 +112,12 @@
                                         <small class="text-muted"><i class="bi bi-people me-1"></i>{{ society.followers.count() }} follower</small>
                                     </div>
                                     {% if current_user.id != society.id %}
-                                        <form method="POST" action="{{ url_for('social.follow' if not current_user.is_following(society) else 'social.unfollow', user_id=society.id) }}">
-                                            <button type="submit" class="btn btn-sm btn-follow">
-                                                {{ 'Seguendo' if current_user.is_following(society) else 'Segui' }}
-                                            </button>
-                                        </form>
+                                        <button class="btn btn-sm btn-follow"
+                                                hx-post="{{ url_for('social.unfollow' if current_user.is_following(society) else 'social.follow', user_id=society.id) }}"
+                                                hx-swap="outerHTML"
+                                                hx-target="this">
+                                            {{ 'Seguendo' if current_user.is_following(society) else 'Segui' }}
+                                        </button>
                                     {% endif %}
                                 </div>
                             </div>

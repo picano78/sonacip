@@ -900,6 +900,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const renderTime = perfData.domComplete - perfData.domLoading;
                 
                 // Check if in development mode via data attribute
+                // Set in HTML: <body data-dev-mode="true"> for development
+                // Production: omit attribute or set to "false"
                 const isDev = document.body.dataset.devMode === 'true';
                 
                 // Only log in development mode

@@ -980,29 +980,33 @@ def create_app(config_name: str | None = None) -> Flask:
     app.template_filter('fromjson')(_fromjson)
 
     # Add version helper for cache busting
+    # Note: Cache is bounded by the number of static files in the app (typically small)
+    # For apps with many dynamic static files, consider adding a size limit
     _static_versions = {}
     
     def static_versioned(filename):
-        """Generate versioned URL for static files for cache busting."""
-        from flask import url_for as _url_for
+        """Generate versioned URL for static files for cache busting.
         
+        Uses file modification time as version parameter to ensure browsers
+        get fresh files when they change, while maintaining long cache times.
+        """
         if filename in _static_versions:
             return _static_versions[filename]
         
         try:
-            # Try to get file modification time as version
+            # Get file modification time as version
             static_path = os.path.join(app.static_folder or '', filename)
             if os.path.exists(static_path):
                 # Use mtime directly - simpler and equally effective
                 version = str(int(os.path.getmtime(static_path)))
-                versioned_url = _url_for('static', filename=filename, v=version)
+                versioned_url = url_for('static', filename=filename, v=version)
                 _static_versions[filename] = versioned_url
                 return versioned_url
         except Exception:
             pass
         
         # Fallback to regular URL
-        return _url_for('static', filename=filename)
+        return url_for('static', filename=filename)
     
     app.jinja_env.globals['static_versioned'] = static_versioned
 

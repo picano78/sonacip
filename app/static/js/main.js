@@ -856,8 +856,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const firstInvalid = form.querySelector(':invalid');
                 if (firstInvalid) {
                     firstInvalid.focus();
-                    // Add visual feedback
-                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Add visual feedback - respect prefers-reduced-motion
+                    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    firstInvalid.scrollIntoView({ 
+                        behavior: prefersReducedMotion ? 'auto' : 'smooth', 
+                        block: 'center' 
+                    });
                 }
             }
             form.classList.add('was-validated');
@@ -912,9 +916,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Send to analytics endpoint if available (production)
-                if (typeof analytics !== 'undefined' && pageLoadTime > 0) {
+                // Note: This requires an analytics library to be loaded (e.g., Google Analytics)
+                // or a custom analytics endpoint to be implemented
+                if (window.gtag && pageLoadTime > 0) {
                     try {
-                        // Send performance metrics to backend analytics
+                        // Send to Google Analytics if available
+                        gtag('event', 'page_performance', {
+                            page_load_time: pageLoadTime,
+                            connect_time: connectTime,
+                            render_time: renderTime,
+                            page_path: window.location.pathname
+                        });
+                    } catch (e) {
+                        // Silently fail
+                    }
+                } else if (window.fetch && pageLoadTime > 0) {
+                    try {
+                        // Fallback: send to custom analytics endpoint if gtag not available
                         fetch('/analytics/performance', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},

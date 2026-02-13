@@ -651,8 +651,8 @@ img, video {
         padding: 16px;
     }
     
-    /* Touch-friendly buttons */
-    button, .btn, a {
+    /* Touch-friendly buttons - only for button-like elements */
+    button, .btn, a.btn, input[type="submit"], input[type="button"] {
         min-height: 44px;
         min-width: 44px;
     }

@@ -999,9 +999,8 @@ def create_app(config_name: str | None = None) -> Flask:
             from flask import url_for as _url_for
             static_path = _os.path.join(app.static_folder or '', filename)
             if _os.path.exists(static_path):
-                mtime = str(int(_os.path.getmtime(static_path)))
-                # Use SHA256 with 16 chars for better collision resistance
-                version = hashlib.sha256(mtime.encode()).hexdigest()[:16]
+                # Use mtime directly - simpler and equally effective
+                version = str(int(_os.path.getmtime(static_path)))
                 versioned_url = _url_for('static', filename=filename, v=version)
                 _static_versions[filename] = versioned_url
                 return versioned_url

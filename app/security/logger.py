@@ -134,7 +134,10 @@ class SecurityEventLogger:
         )
     
     def log_super_admin_login(self, user_id, username, email):
-        """Log accesso del super admin"""
+        """
+        Log accesso del super admin.
+        IP address e user agent sono catturati automaticamente da log_event().
+        """
         self.log_event(
             'SUPER_ADMIN_LOGIN',
             f"Username: {username}, Email: {email}",

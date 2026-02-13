@@ -330,6 +330,7 @@ def login():
                 pass
 
         # Log super admin logins for security auditing
+        # Note: is_admin() checks for role == 'super_admin' specifically
         try:
             if user.is_admin():
                 if hasattr(current_app, 'security_logger'):

@@ -26,10 +26,6 @@ from authlib.integrations.flask_client import OAuth
 from app.core.config import config
 from app.core.logging import configure_logging
 
-# Cache duration constants (in seconds)
-STATIC_CACHE_MAX_AGE = 31536000  # 1 year for versioned static files
-UPLOAD_CACHE_MAX_AGE = 86400     # 1 day for uploads
-
 # Single source of truth for extensions
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -985,7 +981,6 @@ def create_app(config_name: str | None = None) -> Flask:
 
     # Add version helper for cache busting
     import hashlib
-    import os as _os
     
     _static_versions = {}
     
@@ -997,10 +992,10 @@ def create_app(config_name: str | None = None) -> Flask:
         try:
             # Try to get file modification time as version
             from flask import url_for as _url_for
-            static_path = _os.path.join(app.static_folder or '', filename)
-            if _os.path.exists(static_path):
+            static_path = os.path.join(app.static_folder or '', filename)
+            if os.path.exists(static_path):
                 # Use mtime directly - simpler and equally effective
-                version = str(int(_os.path.getmtime(static_path)))
+                version = str(int(os.path.getmtime(static_path)))
                 versioned_url = _url_for('static', filename=filename, v=version)
                 _static_versions[filename] = versioned_url
                 return versioned_url
@@ -1174,6 +1169,10 @@ def create_app(config_name: str | None = None) -> Flask:
             resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 
             # Add caching headers for static files to improve performance
+            # Cache duration constants
+            STATIC_CACHE_MAX_AGE = 31536000  # 1 year for versioned static files
+            UPLOAD_CACHE_MAX_AGE = 86400     # 1 day for uploads
+            
             if request.path.startswith('/static/'):
                 # Static files cache with long duration - safe with versioned URLs
                 # Version query parameters ensure cache busting when files change

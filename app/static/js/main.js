@@ -931,22 +931,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Silently fail
                     }
                 } else if (window.fetch && pageLoadTime > 0) {
-                    try {
-                        // Fallback: send to custom analytics endpoint if gtag not available
-                        fetch('/analytics/performance', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                pageLoadTime: pageLoadTime,
-                                connectTime: connectTime,
-                                renderTime: renderTime,
-                                url: window.location.pathname
-                            })
-                        }).catch(function() {
-                            // Silently fail - analytics should never break the app
-                        });
-                    } catch (e) {
-                        // Silently fail
+                    // Fallback: send to custom analytics endpoint if gtag not available
+                    // Check if analytics endpoint exists before sending
+                    var analyticsEnabled = document.body.dataset.analyticsEnabled === 'true';
+                    if (analyticsEnabled) {
+                        try {
+                            fetch('/analytics/performance', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    pageLoadTime: pageLoadTime,
+                                    connectTime: connectTime,
+                                    renderTime: renderTime,
+                                    url: window.location.pathname
+                                })
+                            }).catch(function() {
+                                // Silently fail - analytics should never break the app
+                            });
+                        } catch (e) {
+                            // Silently fail
+                        }
                     }
                 }
             }, 0);

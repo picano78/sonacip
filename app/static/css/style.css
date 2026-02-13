@@ -610,7 +610,7 @@ body[data-theme="dark"] .sidebar-link::after {
 
 /* Performance Optimizations */
 * {
-    /* Use GPU acceleration for better performance */
+    /* Improved font rendering for better readability */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -652,7 +652,8 @@ img, video {
     }
     
     /* Touch-friendly buttons - only for button-like elements */
-    button, .btn, a.btn, input[type="submit"], input[type="button"] {
+    button, .btn, a.btn, a[role="button"], 
+    input[type="submit"], input[type="button"], input[type="reset"] {
         min-height: 44px;
         min-width: 44px;
     }

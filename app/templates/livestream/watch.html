@@ -11,7 +11,23 @@
     .watch-container {
         min-height: 100vh;
         display: flex;
+        flex-direction: row;
+        gap: 0;
+    }
+    
+    .video-section {
+        flex: 1;
+        display: flex;
         flex-direction: column;
+        position: relative;
+    }
+    
+    .chat-section {
+        width: 350px;
+        background: #1a1a1a;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid #333;
     }
     
     .video-container {
@@ -27,9 +43,8 @@
         width: 100%;
         max-width: 100%;
         height: auto;
-        max-height: 80vh;
+        max-height: calc(100vh - 100px);
         object-fit: contain;
-        border-radius: 8px;
     }
     
     .stream-info-overlay {
@@ -39,6 +54,7 @@
         background: rgba(0,0,0,0.8);
         padding: 15px 20px;
         border-radius: 12px;
+        max-width: 400px;
     }
     
     .streamer-info {
@@ -100,53 +116,110 @@
         transform: scale(1.1);
     }
     
-    .control-btn.recording {
-        background: #dc3545;
+    .control-btn.active {
+        background: #1877f2;
     }
     
-    .control-btn.recording.active {
-        animation: recordPulse 1s infinite;
+    /* Chat Styles */
+    .chat-header {
+        padding: 15px;
+        background: #2a2a2a;
+        border-bottom: 1px solid #333;
     }
     
-    @keyframes recordPulse {
-        0%, 100% { background: #dc3545; }
-        50% { background: #ff1744; }
-    }
-    
-    .loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.9);
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10;
+        flex-direction: column;
+        gap: 10px;
     }
     
-    .loading-overlay.hidden {
-        display: none;
-    }
-    
-    .recording-status {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: rgba(220, 53, 69, 0.9);
-        padding: 10px 15px;
+    .chat-message {
+        padding: 8px 12px;
+        background: rgba(255,255,255,0.05);
         border-radius: 8px;
-        display: none;
     }
     
-    .recording-status.active {
+    .chat-message .author {
+        font-weight: 600;
+        color: #1877f2;
+        margin-bottom: 4px;
+    }
+    
+    .chat-message .text {
+        font-size: 14px;
+        word-wrap: break-word;
+    }
+    
+    .chat-message .timestamp {
+        font-size: 11px;
+        opacity: 0.6;
+        margin-top: 4px;
+    }
+    
+    .chat-input-container {
+        padding: 15px;
+        background: #2a2a2a;
+        border-top: 1px solid #333;
+    }
+    
+    .chat-input-group {
         display: flex;
+        gap: 10px;
+    }
+    
+    .chat-input {
+        flex: 1;
+        background: #1a1a1a;
+        border: 1px solid #444;
+        color: #fff;
+        padding: 10px 15px;
+        border-radius: 20px;
+    }
+    
+    .chat-send-btn {
+        background: #1877f2;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    
+    .chat-send-btn:hover {
+        background: #1564cc;
+    }
+    
+    .tip-button {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        color: #000;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 5px;
+    }
+    
+    .tip-button:hover {
+        transform: scale(1.05);
     }
     
     @media (max-width: 768px) {
+        .watch-container {
+            flex-direction: column;
+        }
+        
+        .chat-section {
+            width: 100%;
+            max-height: 300px;
+        }
+        
         .viewer-controls {
             bottom: 10px;
             padding: 10px 15px;
@@ -158,100 +231,178 @@
             height: 45px;
             font-size: 18px;
         }
-        
-        .stream-info-overlay {
-            top: 10px;
-            left: 10px;
-            padding: 10px 15px;
-        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="watch-container">
-    <div class="video-container">
-        <div class="loading-overlay" id="loadingOverlay">
-            <div class="text-center">
-                <div class="spinner-border text-light mb-3" role="status">
-                    <span class="visually-hidden">Caricamento...</span>
+    <div class="video-section">
+        <div class="video-container">
+            <video id="remoteVideo" autoplay playsinline></video>
+            
+            <div class="stream-info-overlay">
+                <div class="streamer-info">
+                    <img src="{% if stream.streamer.avatar %}/uploads/avatars/{{ stream.streamer.avatar }}{% else %}https://ui-avatars.com/api/?name={{ stream.streamer.get_full_name()|urlencode }}&background=1877f2&color=fff&size=48{% endif %}"
+                         class="streamer-avatar" alt="{{ stream.streamer.get_full_name() }}">
+                    <div>
+                        <div class="fw-bold">{{ stream.streamer.get_full_name() }}</div>
+                        <span class="live-badge">
+                            <i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i>
+                            LIVE
+                        </span>
+                    </div>
                 </div>
-                <p>Connessione alla diretta...</p>
-            </div>
-        </div>
-        
-        <video id="remoteVideo" autoplay playsinline></video>
-        
-        <div class="stream-info-overlay">
-            <div class="streamer-info">
-                <img src="{% if stream.streamer.avatar %}/uploads/avatars/{{ stream.streamer.avatar }}{% else %}https://ui-avatars.com/api/?name={{ stream.streamer.get_full_name()|urlencode }}&background=1877f2&color=fff&size=48{% endif %}"
-                     class="streamer-avatar" alt="{{ stream.streamer.get_full_name() }}">
-                <div>
-                    <div class="fw-bold">{{ stream.streamer.get_full_name() }}</div>
-                    <span class="live-badge">
-                        <i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i>
-                        LIVE
-                    </span>
+                <h5 class="mb-2">{{ stream.title }}</h5>
+                {% if stream.description %}
+                <p class="mb-2" style="font-size: 14px; opacity: 0.9;">{{ stream.description }}</p>
+                {% endif %}
+                <div class="d-flex align-items-center gap-3" style="font-size: 14px;">
+                    <span><i class="bi bi-eye-fill me-1"></i><span id="viewerCount">0</span> spettatori</span>
+                    <span><i class="bi bi-clock-fill me-1"></i><span id="duration">00:00</span></span>
+                </div>
+                <div class="mt-2">
+                    <button class="tip-button" onclick="showTipModal()">
+                        <i class="bi bi-coin"></i>
+                        Invia Donazione
+                    </button>
                 </div>
             </div>
-            <h5 class="mb-2">{{ stream.title }}</h5>
-            {% if stream.description %}
-            <p class="mb-2" style="font-size: 14px; opacity: 0.9;">{{ stream.description }}</p>
-            {% endif %}
-            <div class="d-flex align-items-center gap-3" style="font-size: 14px;">
-                <span><i class="bi bi-eye-fill me-1"></i><span id="viewerCount">0</span> spettatori</span>
-                <span><i class="bi bi-clock-fill me-1"></i><span id="duration">00:00</span></span>
+            
+            <div class="viewer-controls">
+                <button class="control-btn" id="toggleMute" title="Audio">
+                    <i class="bi bi-volume-up-fill"></i>
+                </button>
+                <button class="control-btn" id="toggleChat" title="Chat">
+                    <i class="bi bi-chat-dots-fill"></i>
+                </button>
+                <button class="control-btn" id="toggleFullscreen" title="Schermo intero">
+                    <i class="bi bi-fullscreen"></i>
+                </button>
             </div>
         </div>
-        
-        <div class="recording-status" id="recordingStatus">
-            <i class="bi bi-record-circle"></i>
-            <span>Registrazione sul tuo dispositivo</span>
+    </div>
+    
+    <div class="chat-section" id="chatSection">
+        <div class="chat-header">
+            <h6 class="mb-0">Chat Live</h6>
         </div>
-        
-        <div class="viewer-controls">
-            <button class="control-btn" id="toggleMute" title="Audio">
-                <i class="bi bi-volume-up-fill"></i>
-            </button>
-            <button class="control-btn recording" id="toggleRecord" title="Registra sul tuo telefono">
-                <i class="bi bi-record-circle"></i>
-            </button>
-            <button class="control-btn" id="toggleFullscreen" title="Schermo intero">
-                <i class="bi bi-fullscreen"></i>
-            </button>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Messages will be added here -->
+        </div>
+        <div class="chat-input-container">
+            <div class="chat-input-group">
+                <input type="text" 
+                       class="chat-input" 
+                       id="chatInput" 
+                       placeholder="Invia un messaggio..."
+                       maxlength="500">
+                <button class="chat-send-btn" id="chatSendBtn">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
 const streamId = {{ stream.id }};
 const roomId = '{{ stream.room_id }}';
 
-let remoteStream = null;
+let socket = null;
 let isMuted = false;
-let isRecording = false;
-let mediaRecorder = null;
-let recordedChunks = [];
-let startTime = new Date();
+let chatVisible = true;
 
-// Simulate receiving stream (in production, use WebRTC with signaling server)
-async function connectToStream() {
-    try {
-        // For now, we'll show a placeholder since we need a proper WebRTC implementation
-        // In production, this would establish a WebRTC connection
-        
-        setTimeout(() => {
-            document.getElementById('loadingOverlay').classList.add('hidden');
-            updateInfo();
-        }, 1500);
-        
-    } catch (error) {
-        console.error('Error connecting to stream:', error);
-        alert('Impossibile connettersi alla diretta');
-    }
+// Initialize Socket.IO
+try {
+    socket = io({
+        transports: ['websocket', 'polling']
+    });
+    
+    socket.on('connect', function() {
+        console.log('WebSocket connected');
+        socket.emit('join_stream', {stream_id: streamId});
+    });
+    
+    socket.on('viewer_joined', function(data) {
+        document.getElementById('viewerCount').textContent = data.viewer_count;
+    });
+    
+    socket.on('viewer_left', function(data) {
+        document.getElementById('viewerCount').textContent = data.viewer_count;
+    });
+    
+    socket.on('stream_chat_message', function(data) {
+        addChatMessage(data);
+    });
+    
+    socket.on('new_tip', function(data) {
+        showTipNotification(data);
+    });
+    
+} catch (e) {
+    console.error('WebSocket not available:', e);
 }
+
+// Chat functions
+function addChatMessage(data) {
+    const messagesDiv = document.getElementById('chatMessages');
+    const messageEl = document.createElement('div');
+    messageEl.className = 'chat-message';
+    
+    const time = new Date(data.timestamp).toLocaleTimeString('it-IT', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    messageEl.innerHTML = `
+        <div class="author">${escapeHtml(data.user_name)}</div>
+        <div class="text">${escapeHtml(data.message)}</div>
+        <div class="timestamp">${time}</div>
+    `;
+    
+    messagesDiv.appendChild(messageEl);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message || !socket) return;
+    
+    socket.emit('stream_chat_message', {
+        stream_id: streamId,
+        message: message
+    });
+    
+    input.value = '';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Chat input handlers
+document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
+document.getElementById('chatInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        sendChatMessage();
+    }
+});
+
+// Toggle chat
+document.getElementById('toggleChat').addEventListener('click', function() {
+    const chatSection = document.getElementById('chatSection');
+    chatVisible = !chatVisible;
+    chatSection.style.display = chatVisible ? 'flex' : 'none';
+    this.classList.toggle('active');
+});
 
 // Toggle mute
 document.getElementById('toggleMute').addEventListener('click', () => {
@@ -265,100 +416,14 @@ document.getElementById('toggleMute').addEventListener('click', () => {
         : '<i class="bi bi-volume-up-fill"></i>';
 });
 
-// Toggle recording (saves to device)
-document.getElementById('toggleRecord').addEventListener('click', async () => {
-    if (!isRecording) {
-        await startRecording();
-    } else {
-        stopRecording();
-    }
-});
-
-async function startRecording() {
-    const video = document.getElementById('remoteVideo');
-    
-    if (!video.srcObject) {
-        alert('Nessuno stream disponibile da registrare');
-        return;
-    }
-    
-    try {
-        const stream = video.srcObject;
-        mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'video/webm;codecs=vp8,opus'
-        });
-        
-        recordedChunks = [];
-        
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                recordedChunks.push(event.data);
-            }
-        };
-        
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            
-            // Download the recorded video
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `diretta_${new Date().getTime()}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 100);
-            
-            alert('Video salvato sul tuo dispositivo!');
-        };
-        
-        mediaRecorder.start();
-        isRecording = true;
-        
-        const btn = document.getElementById('toggleRecord');
-        btn.classList.add('active');
-        btn.innerHTML = '<i class="bi bi-stop-circle-fill"></i>';
-        
-        document.getElementById('recordingStatus').classList.add('active');
-        
-    } catch (error) {
-        console.error('Error starting recording:', error);
-        alert('Impossibile avviare la registrazione');
-    }
-}
-
-function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        isRecording = false;
-        
-        const btn = document.getElementById('toggleRecord');
-        btn.classList.remove('active');
-        btn.innerHTML = '<i class="bi bi-record-circle"></i>';
-        
-        document.getElementById('recordingStatus').classList.remove('active');
-    }
-}
-
 // Fullscreen toggle
 document.getElementById('toggleFullscreen').addEventListener('click', () => {
-    const videoContainer = document.querySelector('.video-container');
+    const videoSection = document.querySelector('.video-section');
     
     if (!document.fullscreenElement) {
-        videoContainer.requestFullscreen().catch(err => {
+        videoSection.requestFullscreen().catch(err => {
             console.error('Error attempting to enable fullscreen:', err);
         });
-        
-        // Lock orientation to landscape on mobile if available
-        if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape').catch(err => {
-                console.log('Orientation lock not supported:', err);
-            });
-        }
     } else {
         document.exitFullscreen();
     }
@@ -371,6 +436,7 @@ async function updateInfo() {
         const data = await response.json();
         
         if (!data.is_active) {
+            if (socket) socket.disconnect();
             alert('La diretta è terminata');
             window.location.href = '/livestream';
             return;
@@ -387,22 +453,72 @@ async function updateInfo() {
         console.error('Error fetching stream info:', error);
     }
     
-    setTimeout(updateInfo, 3000);
+    setTimeout(updateInfo, 5000);
 }
 
 // Notify server when leaving
 window.addEventListener('beforeunload', () => {
+    if (socket) {
+        socket.emit('leave_stream', {stream_id: streamId});
+        socket.disconnect();
+    }
+    
     fetch(`/livestream/${streamId}/leave`, {
         method: 'POST',
         keepalive: true
     });
-    
-    if (isRecording) {
-        stopRecording();
-    }
 });
 
+// Tip modal (simple version)
+function showTipModal() {
+    const amount = prompt('Quanto vuoi donare? (EUR)', '5.00');
+    if (!amount) return;
+    
+    const message = prompt('Messaggio (opzionale)', '');
+    
+    fetch(`/livestream/donations/${streamId}/tip`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({amount: parseFloat(amount), message: message})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('Donazione inviata con successo!');
+        } else {
+            alert('Errore: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(e => alert('Errore durante l\'invio della donazione'));
+}
+
+function showTipNotification(data) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        color: #000;
+        padding: 15px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        z-index: 9999;
+        animation: slideIn 0.3s;
+    `;
+    notification.innerHTML = `
+        <i class="bi bi-coin"></i>
+        ${escapeHtml(data.tipper_name)} ha donato €${data.amount}!
+        ${data.message ? '<br><small>' + escapeHtml(data.message) + '</small>' : ''}
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
 // Initialize
-connectToStream();
+updateInfo();
 </script>
 {% endblock %}

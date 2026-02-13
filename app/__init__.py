@@ -979,6 +979,36 @@ def create_app(config_name: str | None = None) -> Flask:
             return []
     app.template_filter('fromjson')(_fromjson)
 
+    # Add version helper for cache busting
+    import hashlib
+    import os as _os
+    
+    _static_versions = {}
+    
+    def static_versioned(filename):
+        """Generate versioned URL for static files for cache busting."""
+        if filename in _static_versions:
+            return _static_versions[filename]
+        
+        try:
+            # Try to get file modification time as version
+            from flask import url_for as _url_for
+            static_path = _os.path.join(app.static_folder or '', filename)
+            if _os.path.exists(static_path):
+                mtime = str(int(_os.path.getmtime(static_path)))
+                version = hashlib.md5(mtime.encode()).hexdigest()[:8]
+                versioned_url = _url_for('static', filename=filename, v=version)
+                _static_versions[filename] = versioned_url
+                return versioned_url
+        except Exception:
+            pass
+        
+        # Fallback to regular URL
+        from flask import url_for as _url_for
+        return _url_for('static', filename=filename)
+    
+    app.jinja_env.globals['static_versioned'] = static_versioned
+
     from app.core.bootstrap import discover_and_register_modules
     _register_blueprints(app)
     discover_and_register_modules(app, strict=False)
@@ -1141,7 +1171,8 @@ def create_app(config_name: str | None = None) -> Flask:
 
             # Add caching headers for static files to improve performance
             if request.path.startswith('/static/'):
-                # Static files can be cached for longer periods
+                # Static files cache with long duration (1 year) - safe with versioned URLs
+                # Version query parameters ensure cache busting when files change
                 resp.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
             elif request.path.startswith('/uploads/'):
                 # Uploaded files cache for moderate time

@@ -892,16 +892,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 const connectTime = perfData.responseEnd - perfData.requestStart;
                 const renderTime = perfData.domComplete - perfData.domLoading;
                 
-                // Log performance metrics for debugging
-                console.log('Performance Metrics:', {
-                    pageLoadTime: pageLoadTime + 'ms',
-                    connectTime: connectTime + 'ms',
-                    renderTime: renderTime + 'ms'
-                });
+                // Only log in development mode
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.log('Performance Metrics:', {
+                        pageLoadTime: pageLoadTime + 'ms',
+                        connectTime: connectTime + 'ms',
+                        renderTime: renderTime + 'ms'
+                    });
+                    
+                    if (pageLoadTime > 3000) {
+                        console.warn('Slow page load detected:', pageLoadTime + 'ms');
+                    }
+                }
                 
-                // Send to analytics endpoint if available
-                if (pageLoadTime > 3000) {
-                    console.warn('Slow page load detected:', pageLoadTime + 'ms');
+                // Send to analytics endpoint if available (production)
+                if (typeof analytics !== 'undefined' && pageLoadTime > 0) {
+                    try {
+                        // Send performance metrics to backend analytics
+                        fetch('/analytics/performance', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                pageLoadTime: pageLoadTime,
+                                connectTime: connectTime,
+                                renderTime: renderTime,
+                                url: window.location.pathname
+                            })
+                        }).catch(function() {
+                            // Silently fail - analytics should never break the app
+                        });
+                    } catch (e) {
+                        // Silently fail
+                    }
                 }
             }, 0);
         });

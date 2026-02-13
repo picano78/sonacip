@@ -624,8 +624,8 @@ img, video {
     will-change: auto;
 }
 
-/* Optimize animations */
-.card-hover, .post-card, a, button {
+/* Optimize animations - only for elements that actually animate */
+.card-hover, .post-card {
     will-change: transform;
 }
 

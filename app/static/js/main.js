@@ -892,8 +892,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const connectTime = perfData.responseEnd - perfData.requestStart;
                 const renderTime = perfData.domComplete - perfData.domLoading;
                 
+                // Check if in development mode via data attribute on body
+                const isDev = document.body.dataset.devMode === 'true' || 
+                              window.location.hostname === 'localhost' || 
+                              window.location.hostname === '127.0.0.1';
+                
                 // Only log in development mode
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                if (isDev) {
                     console.log('Performance Metrics:', {
                         pageLoadTime: pageLoadTime + 'ms',
                         connectTime: connectTime + 'ms',

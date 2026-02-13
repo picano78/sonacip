@@ -2,6 +2,7 @@
 """
 Script per aggiornare le credenziali del Super Admin
 Uso: python update_admin_credentials.py
+IMPORTANTE: Impostare ADMIN_EMAIL e ADMIN_PASSWORD come variabili d'ambiente
 """
 
 import sys
@@ -13,11 +14,20 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app import create_app, db
 from app.models import User
 
-# Nuove credenziali - Da configurare tramite variabili d'ambiente in produzione
-# SECURITY NOTE: Queste sono credenziali di default. 
-# In produzione, usa variabili d'ambiente: ADMIN_EMAIL e ADMIN_PASSWORD
-NEW_EMAIL = os.environ.get("ADMIN_EMAIL", "picano78@gmail.com")
-NEW_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Simone78")
+# SECURITY: Credenziali DEVONO essere configurate tramite variabili d'ambiente
+NEW_EMAIL = os.environ.get("ADMIN_EMAIL")
+NEW_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+
+if not NEW_EMAIL or not NEW_PASSWORD:
+    print("❌ ERRORE: Credenziali non configurate!")
+    print()
+    print("Per ragioni di sicurezza, le credenziali devono essere impostate tramite variabili d'ambiente:")
+    print()
+    print("  export ADMIN_EMAIL='tuaemail@esempio.it'")
+    print("  export ADMIN_PASSWORD='TuaPasswordSicura'")
+    print("  python update_admin_credentials.py")
+    print()
+    sys.exit(1)
 
 def update_admin_credentials():
     """Aggiorna le credenziali del super admin"""

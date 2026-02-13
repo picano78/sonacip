@@ -619,9 +619,11 @@ img, video {
     /* Prevent layout shift */
     max-width: 100%;
     height: auto;
-    /* Use GPU for transforms */
+}
+
+/* Only use GPU acceleration for elements that will actually be animated */
+.card-hover, .post-card, .animated {
     transform: translateZ(0);
-    will-change: auto;
 }
 
 /* Optimize animations - only for elements that actually animate */

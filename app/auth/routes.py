@@ -329,6 +329,23 @@ def login():
             except Exception:
                 pass
 
+        # Log super admin logins for security auditing
+        # Note: is_admin() checks for role == 'super_admin' specifically
+        try:
+            if user.is_admin():
+                if hasattr(current_app, 'security_logger'):
+                    current_app.security_logger.log_super_admin_login(
+                        user_id=user.id,
+                        username=user.username,
+                        email=user.email
+                    )
+        except Exception:
+            # Don't fail login if logging fails
+            try:
+                current_app.logger.exception("Failed to log super admin login")
+            except Exception:
+                pass
+
         try:
             name = user.get_full_name()
         except Exception:

@@ -591,12 +591,12 @@
                         <span class="conn-status-badge pending"><i class="bi bi-shield-lock me-1"></i>Non disponibile</span>
                         {% else %}
                         {% if connection_status != 'blocked' %}
-                        <form method="POST" action="{{ url_for('social.follow' if not is_following else 'social.unfollow', user_id=user.id) }}" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn-prof-primary">
-                                {% if is_following %}<i class="bi bi-check-lg"></i> Seguendo{% else %}<i class="bi bi-plus-lg"></i> Segui{% endif %}
-                            </button>
-                        </form>
+                        <button class="btn-prof-primary"
+                                hx-post="{{ url_for('social.unfollow' if is_following else 'social.follow', user_id=user.id) }}"
+                                hx-swap="outerHTML"
+                                hx-target="this">
+                            {% if is_following %}<i class="bi bi-check-lg"></i> Seguendo{% else %}<i class="bi bi-plus-lg"></i> Segui{% endif %}
+                        </button>
                         {% endif %}
 
                         {% if is_member_of_society %}

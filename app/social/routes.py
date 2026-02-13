@@ -51,6 +51,19 @@ from datetime import datetime, timedelta, timezone
 import os
 from app.ads.utils import choose_creative, make_token
 
+
+def _get_button_context():
+    """Determine button rendering context from request referrer."""
+    referer = request.referrer or ''
+    if '/profile/' in referer or referer.endswith('/profile'):
+        return 'profile'
+    elif '/search' in referer:
+        return 'search'
+    elif '/explore' in referer:
+        return 'explore'
+    return 'default'
+
+
 bp = Blueprint('social', __name__, url_prefix='/social')
 
 
@@ -607,6 +620,14 @@ def comment_post(post_id):
         
         db.session.commit()
         flash('Commento aggiunto!', 'success')
+        
+        # HTMX request: return the comment HTML and empty form
+        if request.headers.get('HX-Request'):
+            return render_template('components/comment_item.html', comment=comment)
+    
+    # HTMX request with validation errors
+    if request.headers.get('HX-Request'):
+        return render_template('components/comment_form.html', form=form, post=post), 400
     
     return redirect(url_for('social.view_post', post_id=post_id))
 
@@ -794,6 +815,8 @@ def follow(user_id):
     
     if user.id == current_user.id:
         flash('Non puoi seguire te stesso.', 'warning')
+        if request.headers.get('HX-Request'):
+            return render_template('components/follow_button.html', user=user), 400
         return redirect(url_for('social.profile', user_id=user_id))
     
     try:
@@ -825,6 +848,12 @@ def follow(user_id):
         except Exception:
             pass
         flash('Impossibile seguire questo profilo in questo momento.', 'danger')
+        if request.headers.get('HX-Request'):
+            return render_template('components/follow_button.html', user=user, context=_get_button_context()), 500
+    
+    # HTMX request: return just the button HTML
+    if request.headers.get('HX-Request'):
+        return render_template('components/follow_button.html', user=user, context=_get_button_context())
     
     return redirect(request.referrer or url_for('social.profile', user_id=user_id))
 
@@ -856,6 +885,12 @@ def unfollow(user_id):
         except Exception:
             pass
         flash('Impossibile aggiornare il follow in questo momento.', 'danger')
+        if request.headers.get('HX-Request'):
+            return render_template('components/follow_button.html', user=user, context=_get_button_context()), 500
+    
+    # HTMX request: return just the button HTML
+    if request.headers.get('HX-Request'):
+        return render_template('components/follow_button.html', user=user, context=_get_button_context())
     
     return redirect(request.referrer or url_for('social.profile', user_id=user_id))
 

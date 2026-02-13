@@ -22,6 +22,7 @@ SECURITY_EVENTS = {
     'UNAUTHORIZED_ACCESS': 'Tentativo di accesso non autorizzato',
     'SESSION_HIJACK_ATTEMPT': 'Potenziale session hijacking',
     'CSP_VIOLATION': 'Violazione CSP',
+    'SUPER_ADMIN_LOGIN': 'Accesso super admin',
 }
 
 class SecurityEventLogger:
@@ -130,6 +131,15 @@ class SecurityEventLogger:
             f"Endpoint: {endpoint}",
             user_id=user_id,
             severity='warning'
+        )
+    
+    def log_super_admin_login(self, user_id, username, email):
+        """Log accesso del super admin"""
+        self.log_event(
+            'SUPER_ADMIN_LOGIN',
+            f"Username: {username}, Email: {email}",
+            user_id=user_id,
+            severity='info'
         )
 
 # Istanza globale

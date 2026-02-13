@@ -1,59 +1,241 @@
 {% extends "base.html" %}
 {% block title %}Dashboard Società - {{ current_user.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.society-header {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+    color: white;
+    padding: 28px 32px;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(25, 135, 84, 0.3);
+}
+.stat-card {
+    background: white;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+.stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+.stat-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.stat-label {
+    color: #65676b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.action-card {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+.action-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+    border-color: rgba(25, 135, 84, 0.3);
+}
+.action-card .action-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 16px;
+}
+.action-card .action-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #1c1e21;
+}
+.action-card .action-desc {
+    font-size: 0.9rem;
+    color: #65676b;
+    margin-bottom: 0;
+}
+.section-header {
+    font-weight: 700;
+    color: #198754;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #e8f5e9;
+    font-size: 1.1rem;
+}
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .action-card {
+    background: #242526;
+    border-color: #3a3b3c;
+    color: #e4e6eb;
+}
+[data-theme="dark"] .action-card .action-title {
+    color: #e4e6eb;
+}
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .action-card .action-desc {
+    color: #b0b3b8;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container my-4">
-    <h1 class="mb-4"><i class="bi bi-building"></i> Dashboard Società</h1>
-    
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h3>{{ stats.followers_count }}</h3>
-                    <p class="mb-0">Follower</p>
-                </div>
+<div class="container-fluid px-4 my-4">
+    <div class="society-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-1"><i class="bi bi-building"></i> Dashboard Società</h1>
+                <p class="mb-0 opacity-75">{{ current_user.company_name or 'Gestisci la tua società' }}</p>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h3>{{ stats.athletes_count }}</h3>
-                    <p class="mb-0">Atleti</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <h3>{{ stats.staff_count }}</h3>
-                    <p class="mb-0">Staff</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark">
-                <div class="card-body">
-                    <h3>{{ stats.events_count }}</h3>
-                    <p class="mb-0">Eventi</p>
-                </div>
+            <div class="d-none d-md-block">
+                <span class="badge bg-white text-success fs-6 px-3 py-2" style="border-radius: 10px;">SOCIETÀ</span>
             </div>
         </div>
     </div>
     
     <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-primary-subtle text-primary me-3">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-primary">{{ stats.followers_count }}</div>
+                        <div class="stat-label">Follower</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-success-subtle text-success me-3">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-success">{{ stats.athletes_count }}</div>
+                        <div class="stat-label">Atleti</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-info-subtle text-info me-3">
+                        <i class="bi bi-person-video3"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-info">{{ stats.staff_count }}</div>
+                        <div class="stat-label">Staff</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-warning-subtle text-warning me-3">
+                        <i class="bi bi-calendar-event"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-warning">{{ stats.events_count }}</div>
+                        <div class="stat-label">Eventi</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <h2 class="section-header"><i class="bi bi-lightning-charge-fill me-2"></i>Azioni Rapide</h2>
+    <div class="row g-3 mb-4">
+        {% if feature_enabled('planner') and can('calendar', 'view') %}
+        <div class="col-md-4">
+            <a href="{{ url_for('calendar.grid') }}" class="action-card">
+                <div class="action-icon bg-primary-subtle">
+                    <i class="bi bi-calendar-check text-primary"></i>
+                </div>
+                <div class="action-title">Planner Campo</div>
+                <p class="action-desc">Gestisci allenamenti, partite e disponibilità campi</p>
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if feature_enabled('crm') and can('crm', 'access') %}
+        <div class="col-md-4">
+            <a href="{{ url_for('crm.index') }}" class="action-card">
+                <div class="action-icon bg-success-subtle">
+                    <i class="bi bi-briefcase text-success"></i>
+                </div>
+                <div class="action-title">CRM Mini</div>
+                <p class="action-desc">Gestisci contatti, membri e relazioni della società</p>
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if feature_enabled('events') and can('events', 'view') %}
+        <div class="col-md-4">
+            <a href="{{ url_for('events.index') }}" class="action-card">
+                <div class="action-icon bg-info-subtle">
+                    <i class="bi bi-calendar-event text-info"></i>
+                </div>
+                <div class="action-title">Eventi</div>
+                <p class="action-desc">Crea e gestisci eventi e tornei della società</p>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Health, Onboarding and Suggestions Row -->
+    <h2 class="section-header"><i class="bi bi-activity me-2"></i>Stato della Società</h2>
+    <div class="row g-3 mb-4">
         <div class="col-lg-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Health (Retention)</h5>
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-heart-pulse me-2 text-danger"></i>Health</h5>
                     {% if health %}
-                      <span class="badge bg-{{ 'success' if health.score >= 75 else ('warning' if health.score >= 50 else 'danger') }}">{{ health.score }}/100</span>
+                      <span class="badge bg-{{ 'success' if health.score >= 75 else ('warning' if health.score >= 50 else 'danger') }} fs-6">{{ health.score }}/100</span>
                     {% else %}
                       <span class="badge bg-secondary">n/d</span>
                     {% endif %}
                 </div>
-                <div class="card-body">
+                <div>
                     {% if health %}
                       <div class="text-muted small">Settimana: {{ health.week_key }}</div>
-                      <div class="small text-muted mt-2">Questo punteggio aiuta a capire adozione e rischi di abbandono.</div>
+                      <div class="small text-muted mt-2">Punteggio di retention e adozione della piattaforma.</div>
                     {% else %}
                       <div class="text-muted">In attesa del primo snapshot automatico.</div>
                     {% endif %}
@@ -61,133 +243,142 @@
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Onboarding</h5>
-                    <span class="badge bg-primary">{{ onboarding_progress }}%</span>
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-flag me-2 text-primary"></i>Onboarding</h5>
+                    <span class="badge bg-primary fs-6">{{ onboarding_progress }}%</span>
                 </div>
-                <div class="card-body">
-                    <div class="progress mb-3" style="height: 10px;">
-                        <div class="progress-bar" role="progressbar" style="width: {{ onboarding_progress }}%;" aria-valuenow="{{ onboarding_progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                <div>
+                    <div class="progress mb-3" style="height: 12px; border-radius: 10px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ onboarding_progress }}%;" aria-valuenow="{{ onboarding_progress }}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <div class="list-group list-group-flush">
-                        {% for s in onboarding %}
-                          <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
+                        {% for s in onboarding[:3] %}
+                          <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                            <div class="d-flex align-items-center">
                               {% if s.done %}
-                                <span class="badge bg-success me-2">OK</span>
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
                               {% else %}
-                                <span class="badge bg-secondary me-2">TODO</span>
+                                <i class="bi bi-circle text-secondary me-2"></i>
                               {% endif %}
-                              {{ s.label }}
+                              <small>{{ s.label }}</small>
                             </div>
                             {% if not s.done and s.manual %}
                               <form method="post" action="{{ url_for('social.society_onboarding_complete', step_key=s.key) }}">
                                 {{ csrf_token() }}
-                                <button class="btn btn-sm btn-outline-primary" type="submit">Segna fatto</button>
+                                <button class="btn btn-sm btn-outline-primary" type="submit" style="font-size: 0.75rem;">✓</button>
                               </form>
                             {% endif %}
                           </div>
                         {% endfor %}
                     </div>
-                    <div class="mt-3">
-                        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('social.society_permissions') }}">Permessi Ruoli</a>
-                    </div>
+                    <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('social.society_permissions') }}">
+                        <i class="bi bi-shield-lock me-1"></i>Permessi Ruoli
+                    </a>
                 </div>
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Suggerimenti</h5>
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2 text-warning"></i>Suggerimenti</h5>
                     <span class="badge bg-secondary">{{ suggestions|length }}</span>
                 </div>
-                <div class="card-body">
+                <div>
                     {% if suggestions and suggestions|length %}
                       <div class="list-group list-group-flush">
-                        {% for s in suggestions %}
-                          <div class="list-group-item">
+                        {% for s in suggestions[:3] %}
+                          <div class="list-group-item border-0 px-0 py-2">
                             <div class="d-flex justify-content-between align-items-start gap-2">
                               <div>
-                                <strong>{{ s.title }}</strong>
-                                <div class="text-muted small">{{ s.body }}</div>
+                                <strong class="small">{{ s.title }}</strong>
+                                <div class="text-muted" style="font-size: 0.75rem;">{{ s.body }}</div>
                                 {% if s.action_url %}
-                                  <a class="btn btn-sm btn-outline-primary mt-2" href="{{ s.action_url }}">Apri</a>
+                                  <a class="btn btn-sm btn-outline-primary mt-1" href="{{ s.action_url }}" style="font-size: 0.75rem;">Apri</a>
                                 {% endif %}
                               </div>
                               <form method="post" action="{{ url_for('social.society_dismiss_suggestion', key=s.key) }}">
                                 {{ csrf_token() }}
-                                <button class="btn btn-sm btn-outline-secondary" type="submit">Nascondi</button>
+                                <button class="btn btn-sm btn-link text-muted p-0" type="submit" title="Nascondi">×</button>
                               </form>
                             </div>
                           </div>
                         {% endfor %}
                       </div>
                     {% else %}
-                      <div class="text-muted">Nessun suggerimento al momento.</div>
+                      <div class="text-muted small">Nessun suggerimento al momento.</div>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
+    <!-- Staff and Athletes Row -->
+    <h2 class="section-header"><i class="bi bi-people me-2"></i>Team</h2>
+    <div class="row g-3 mb-4">
         <div class="col-md-6">
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Staff</h5>
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-video3 me-2 text-info"></i>Staff</h5>
                     <span class="badge bg-info">{{ staff|length }}</span>
                 </div>
-                <div class="list-group list-group-flush">
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
                     {% for member in staff %}
-                        <div class="list-group-item">
-                            <strong>{{ member.get_full_name() }}</strong><br>
-                            <small class="text-muted">{{ member.staff_role or 'Staff' }}</small>
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-circle text-info me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong class="d-block">{{ member.get_full_name() }}</strong>
+                                    <small class="text-muted">{{ member.staff_role or 'Staff' }}</small>
+                                </div>
+                            </div>
                         </div>
                     {% else %}
-                        <div class="list-group-item text-muted">Nessuno staff registrato</div>
+                        <div class="text-muted text-center py-3">Nessuno staff registrato</div>
                     {% endfor %}
                 </div>
             </div>
         </div>
         
         <div class="col-md-6">
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Atleti</h5>
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-badge me-2 text-success"></i>Atleti</h5>
                     <span class="badge bg-success">{{ athletes|length }}</span>
                 </div>
-                <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
                     {% for athlete in athletes %}
-                        <a href="{{ url_for('social.profile', user_id=athlete.id) }}" class="list-group-item list-group-item-action">
-                            {{ athlete.get_full_name() }}
+                        <a href="{{ url_for('social.profile', user_id=athlete.id) }}" class="list-group-item list-group-item-action border-0 px-0 py-2 d-flex align-items-center">
+                            <i class="bi bi-person-circle text-success me-2" style="font-size: 1.5rem;"></i>
+                            <span>{{ athlete.get_full_name() }}</span>
                         </a>
                     {% else %}
-                        <div class="list-group-item text-muted">Nessun atleta registrato</div>
+                        <div class="text-muted text-center py-3">Nessun atleta registrato</div>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-3 mb-3">
+    <!-- Broadcast Communication Card -->
+    <div class="row g-3 mb-4">
         <div class="col-12">
-            <div class="card" style="border: 2px solid #1877f2; background: linear-gradient(135deg, #1877f220, #0a4da310);">
-                <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="stat-card" style="border: 2px solid #198754; background: linear-gradient(135deg, rgba(25, 135, 84, 0.1), rgba(32, 201, 151, 0.05));">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                     <div class="d-flex align-items-center gap-3">
-                        <div style="width:48px; height:48px; border-radius:12px; background:#1877f2; display:flex; align-items:center; justify-content:center;">
-                            <i class="bi bi-megaphone-fill text-white" style="font-size:1.3rem;"></i>
+                        <div style="width:56px; height:56px; border-radius:14px; background:#198754; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-megaphone-fill text-white" style="font-size:1.5rem;"></i>
                         </div>
                         <div>
                             <h5 class="mb-0 fw-bold">Comunicazioni ai Membri</h5>
-                            <p class="text-muted mb-0 small">Invia messaggi a tutti i membri o per ruolo</p>
+                            <p class="text-muted mb-0 small">Invia messaggi broadcast a tutti i membri o per ruolo</p>
                         </div>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="{{ url_for('social.society_broadcast_compose') }}" class="btn btn-primary fw-semibold">
+                        <a href="{{ url_for('social.society_broadcast_compose') }}" class="btn btn-success fw-semibold">
                             <i class="bi bi-pencil-square me-1"></i> Nuovo Messaggio
                         </a>
-                        <a href="{{ url_for('social.society_broadcasts') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('social.society_broadcasts') }}" class="btn btn-outline-success">
                             <i class="bi bi-list-ul me-1"></i> Storico
                         </a>
                     </div>
@@ -196,62 +387,70 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-3">
+    <!-- Invite Section -->
+    <h2 class="section-header"><i class="bi bi-person-plus me-2"></i>Gestione Membri</h2>
+    <div class="row g-3 mb-4">
         <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header"><h5 class="mb-0">Invita un utente</h5></div>
-                <div class="card-body">
-                    <form method="post" action="{{ url_for('social.society_invite') }}">
-                        {{ invite_form.hidden_tag() }}
-                        <div class="mb-2">
-                            {{ invite_form.user_query.label(class="form-label") }}
-                            {{ invite_form.user_query(class="form-control", placeholder="email o username") }}
-                        </div>
-                        <div class="mb-2">
-                            {{ invite_form.requested_role.label(class="form-label") }}
-                            {{ invite_form.requested_role(class="form-select") }}
-                        </div>
-                        <div class="mb-2">
-                            {{ invite_form.note.label(class="form-label") }}
-                            {{ invite_form.note(class="form-control", rows="2") }}
-                        </div>
-                        <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i> Invia invito</button>
-                    </form>
-                </div>
+            <div class="stat-card">
+                <h5 class="mb-3 fw-bold"><i class="bi bi-envelope-plus me-2 text-primary"></i>Invita un utente</h5>
+                <form method="post" action="{{ url_for('social.society_invite') }}">
+                    {{ invite_form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ invite_form.user_query.label(class="form-label fw-semibold small") }}
+                        {{ invite_form.user_query(class="form-control", placeholder="email o username") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ invite_form.requested_role.label(class="form-label fw-semibold small") }}
+                        {{ invite_form.requested_role(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ invite_form.note.label(class="form-label fw-semibold small") }}
+                        {{ invite_form.note(class="form-control", rows="2") }}
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="bi bi-send me-1"></i> Invia invito
+                    </button>
+                </form>
             </div>
         </div>
         <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Inviti in attesa</h5>
-                    <span class="badge bg-secondary">{{ invites|length }}</span>
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-warning"></i>Inviti in attesa</h5>
+                    <span class="badge bg-warning">{{ invites|length }}</span>
                 </div>
-                <div class="list-group list-group-flush">
+                <div class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
                     {% for inv in invites %}
-                        <div class="list-group-item">
-                            <strong>{{ inv.invited_user.get_full_name() if inv.invited_user else ('User #' ~ inv.invited_user_id) }}</strong>
-                            <div class="small text-muted">Ruolo: {{ inv.requested_role }} — {{ inv.created_at|timeago }}</div>
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-circle text-warning me-2" style="font-size: 1.5rem;"></i>
+                                <div class="flex-grow-1">
+                                    <strong class="d-block">{{ inv.invited_user.get_full_name() if inv.invited_user else ('User #' ~ inv.invited_user_id) }}</strong>
+                                    <small class="text-muted">Ruolo: {{ inv.requested_role }} — {{ inv.created_at|timeago }}</small>
+                                </div>
+                            </div>
                         </div>
                     {% else %}
-                        <div class="list-group-item text-muted">Nessun invito in attesa</div>
+                        <div class="text-muted text-center py-3">Nessun invito in attesa</div>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Membri (ruoli e poteri)</h5>
+    <!-- Members Management Table -->
+    <div class="stat-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-people me-2 text-primary"></i>Membri (ruoli e poteri)</h5>
             <div class="d-flex gap-2">
                 <a class="btn btn-sm btn-outline-primary" href="{{ url_for('social.society_permissions') }}">
                     <i class="bi bi-shield-lock"></i> Permessi Ruoli
                 </a>
-                <span class="badge bg-secondary">{{ memberships|length }}</span>
+                <span class="badge bg-secondary align-self-center">{{ memberships|length }}</span>
             </div>
         </div>
         <div class="table-responsive">
-            <table class="table table-sm mb-0">
+            <table class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th>Utente</th>
@@ -264,8 +463,13 @@
                     {% for m in memberships %}
                         <tr>
                             <td>
-                                <a href="{{ url_for('social.profile', user_id=m.user.id) }}">{{ m.user.get_full_name() }}</a>
-                                <div class="text-muted small">{{ m.user.email }}</div>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-circle text-primary me-2" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <a href="{{ url_for('social.profile', user_id=m.user.id) }}" class="fw-semibold text-decoration-none">{{ m.user.get_full_name() }}</a>
+                                        <div class="text-muted small">{{ m.user.email }}</div>
+                                    </div>
+                                </div>
                             </td>
                             <td><span class="badge bg-secondary">{{ m.role_name }}</span></td>
                             <td class="text-muted small">{{ m.created_at|datetime_format }}</td>
@@ -288,59 +492,71 @@
                             </td>
                         </tr>
                     {% else %}
-                        <tr><td colspan="4" class="text-muted">Nessun membro</td></tr>
+                        <tr><td colspan="4" class="text-muted text-center py-3">Nessun membro</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 
-    <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Audit Società (chi fa cosa e quando)</h5>
-            <div class="d-flex gap-2 align-items-center">
-                {% if current_user.has_feature('enterprise_pack') %}
-                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('social.society_audit_export') }}">Export CSV</a>
-                {% endif %}
-                <span class="badge bg-secondary">{{ recent_audit|length }}</span>
+    <!-- Audit Logs and Events -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-info"></i>Audit Società</h5>
+                    <div class="d-flex gap-2 align-items-center">
+                        {% if current_user.has_feature('enterprise_pack') %}
+                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('social.society_audit_export') }}">
+                                <i class="bi bi-download"></i> Export CSV
+                            </a>
+                        {% endif %}
+                        <span class="badge bg-info">{{ recent_audit|length }}</span>
+                    </div>
+                </div>
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                    {% for log in recent_audit %}
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <span class="badge bg-secondary small">{{ log.action }}</span>
+                            <span class="ms-2">{{ log.details or '' }}</span>
+                            <div class="small text-muted mt-1">{{ log.created_at|timeago }}</div>
+                        </div>
+                    {% else %}
+                        <div class="text-muted text-center py-3">Nessun audit log</div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
-        <div class="list-group list-group-flush">
-            {% for log in recent_audit %}
-                <div class="list-group-item">
-                    <span class="badge bg-secondary">{{ log.action }}</span>
-                    {{ log.details or '' }}
-                    <div class="small text-muted">{{ log.created_at|timeago }}</div>
+        
+        <div class="col-lg-6">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-event me-2 text-warning"></i>Eventi Recenti</h5>
+                    <a href="{{ url_for('events.create') }}" class="btn btn-sm btn-warning">
+                        <i class="bi bi-plus-circle"></i> Nuovo Evento
+                    </a>
                 </div>
-            {% else %}
-                <div class="list-group-item text-muted">Nessun audit log</div>
-            {% endfor %}
-        </div>
-    </div>
-    
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Eventi Recenti</h5>
-            <a href="{{ url_for('events.create') }}" class="btn btn-sm btn-primary">
-                <i class="bi bi-plus-circle"></i> Nuovo Evento
-            </a>
-        </div>
-        <div class="list-group list-group-flush">
-            {% for event in events %}
-                <a href="{{ url_for('events.detail', event_id=event.id) }}" class="list-group-item list-group-item-action">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>{{ event.title }}</strong><br>
-                            <small class="text-muted">{{ event.start_date|datetime_format }}</small>
-                        </div>
-                        <span class="badge bg-{{ 'primary' if event.event_type == 'allenamento' else 'success' }}">
-                            {{ event.event_type }}
-                        </span>
-                    </div>
-                </a>
-            {% else %}
-                <div class="list-group-item text-muted">Nessun evento creato</div>
-            {% endfor %}
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                    {% for event in events %}
+                        <a href="{{ url_for('events.detail', event_id=event.id) }}" class="list-group-item list-group-item-action border-0 px-0 py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center flex-grow-1">
+                                    <i class="bi bi-calendar3 text-warning me-2" style="font-size: 1.3rem;"></i>
+                                    <div>
+                                        <strong class="d-block">{{ event.title }}</strong>
+                                        <small class="text-muted">{{ event.start_date|datetime_format }}</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-{{ 'primary' if event.event_type == 'allenamento' else 'success' }}">
+                                    {{ event.event_type }}
+                                </span>
+                            </div>
+                        </a>
+                    {% else %}
+                        <div class="text-muted text-center py-3">Nessun evento creato</div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
 </div>

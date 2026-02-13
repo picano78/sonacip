@@ -271,6 +271,11 @@
                             {% endif %}
                           </div>
                         {% endfor %}
+                        {% if onboarding|length > 3 %}
+                          <div class="list-group-item border-0 px-0 py-1">
+                            <small class="text-muted">+ {{ onboarding|length - 3 }} altri passi...</small>
+                          </div>
+                        {% endif %}
                     </div>
                     <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('social.society_permissions') }}">
                         <i class="bi bi-shield-lock me-1"></i>Permessi Ruoli
@@ -304,6 +309,11 @@
                             </div>
                           </div>
                         {% endfor %}
+                        {% if suggestions|length > 3 %}
+                          <div class="list-group-item border-0 px-0 py-1">
+                            <small class="text-muted">+ {{ suggestions|length - 3 }} altri suggerimenti</small>
+                          </div>
+                        {% endif %}
                       </div>
                     {% else %}
                       <div class="text-muted small">Nessun suggerimento al momento.</div>

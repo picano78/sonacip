@@ -16,12 +16,12 @@
   <!-- Dashboard Features Control -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-      <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Controllo Dashboard Utenti</h5>
+      <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Visibilità Dashboard per Ruolo</h5>
     </div>
     <div class="card-body">
       <p class="text-muted mb-3">
-        Quando promuovi un utente a coach, dirigente o atleta, puoi decidere quali funzionalità vedono nelle loro dashboard.
-        Queste impostazioni controllano l'accesso alle azioni rapide e ai moduli.
+        Quando promuovi un utente a coach, dirigente, atleta o staff, le loro dashboard mostreranno diverse funzionalità in base ai permessi che imposti qui sotto nella tabella dettagliata.
+        Questa tabella mostra quali funzionalità sono tipicamente disponibili per ogni ruolo.
       </p>
       <div class="table-responsive">
         <table class="table table-sm table-bordered align-middle">
@@ -38,88 +38,64 @@
             <tr>
               <td>
                 <div class="fw-semibold"><i class="bi bi-calendar-check text-primary me-2"></i>Planner Campo</div>
-                <div class="text-muted small">Accesso al planner per gestire allenamenti e disponibilità campi</div>
+                <div class="text-muted small">Gestione allenamenti e disponibilità campi</div>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="planner_coach" checked disabled>
-                </div>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="planner_dirigente" checked disabled>
-                </div>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="planner_atleta">
-                </div>
+                <span class="badge bg-secondary"><i class="bi bi-dash"></i> Limitato</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="planner_staff" checked disabled>
-                </div>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
               </td>
             </tr>
             <tr>
               <td>
                 <div class="fw-semibold"><i class="bi bi-briefcase text-success me-2"></i>CRM Mini</div>
-                <div class="text-muted small">Accesso al CRM per gestire contatti e membri</div>
+                <div class="text-muted small">Gestione contatti e membri</div>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="crm_coach" checked disabled>
-                </div>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="crm_dirigente" checked disabled>
-                </div>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="crm_atleta">
-                </div>
+                <span class="badge bg-secondary"><i class="bi bi-dash"></i> Limitato</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="crm_staff">
-                </div>
+                <span class="badge bg-warning"><i class="bi bi-eye"></i> Solo Vista</span>
               </td>
             </tr>
             <tr>
               <td>
                 <div class="fw-semibold"><i class="bi bi-calendar-event text-info me-2"></i>Eventi</div>
-                <div class="text-muted small">Accesso alla gestione eventi e tornei</div>
+                <div class="text-muted small">Gestione eventi e tornei</div>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="events_coach" checked disabled>
-                </div>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="events_dirigente" checked disabled>
-                </div>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="events_atleta" checked disabled>
-                </div>
+                <span class="badge bg-warning"><i class="bi bi-eye"></i> Solo Vista</span>
               </td>
               <td class="text-center">
-                <div class="form-check form-switch d-flex justify-content-center">
-                  <input class="form-check-input" type="checkbox" id="events_staff" checked disabled>
-                </div>
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div class="alert alert-warning mt-3">
-        <i class="bi bi-lightbulb me-2"></i>
-        <strong>Nota:</strong> Le funzionalità per Coach, Dirigente e Staff (segnate come già attive) sono gestite tramite i permessi dettagliati qui sotto.
-        Usa la tabella permessi per un controllo granulare delle azioni (view/edit).
+      <div class="alert alert-info mt-3 mb-0">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Come personalizzare:</strong> Usa la tabella dei permessi dettagliati qui sotto per controllare esattamente cosa ogni ruolo può fare.
+        Imposta "Consenti" per dare accesso completo, "Solo Vista" viene gestito con permessi view ma non edit, e "Nega" per rimuovere completamente l'accesso.
       </div>
     </div>
   </div>

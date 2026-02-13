@@ -20,8 +20,8 @@ def rotate_ads_autopilot():
     try:
         # Find active campaigns with autopilot enabled
         campaigns = AdCampaign.query.filter(
-            AdCampaign.is_active == True,
-            AdCampaign.autopilot == True
+            AdCampaign.is_active.is_(True),
+            AdCampaign.autopilot.is_(True)
         ).all()
         
         updated_count = 0
@@ -93,7 +93,7 @@ def calculate_ad_performance():
         
         # Get performance for each active campaign
         campaigns = AdCampaign.query.filter(
-            AdCampaign.is_active == True
+            AdCampaign.is_active.is_(True)
         ).all()
         
         performance_data = []
@@ -154,8 +154,8 @@ def optimize_ad_targeting():
         from app.models import AdEvent
         
         campaigns = AdCampaign.query.filter(
-            AdCampaign.is_active == True,
-            AdCampaign.autopilot == True
+            AdCampaign.is_active.is_(True),
+            AdCampaign.autopilot.is_(True)
         ).all()
         
         optimized_count = 0
@@ -222,8 +222,8 @@ def select_ad_for_placement(placement, society_id=None, user=None):
     try:
         # Build query for active creatives in this placement
         query = AdCreative.query.join(AdCampaign).filter(
-            AdCampaign.is_active == True,
-            AdCreative.is_active == True,
+            AdCampaign.is_active.is_(True),
+            AdCreative.is_active.is_(True),
             AdCreative.placement == placement
         )
         

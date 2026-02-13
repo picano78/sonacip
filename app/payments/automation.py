@@ -84,7 +84,7 @@ def generate_payment_invoices():
         # Find completed payments without invoice
         payments = FeePayment.query.filter(
             FeePayment.status == 'completed',
-            FeePayment.invoice_generated == False
+            FeePayment.invoice_generated.is_(False)
         ).all()
         
         generated_count = 0
@@ -134,7 +134,7 @@ def process_subscription_renewals():
         
         # Find subscriptions expiring soon
         expiring_subs = Subscription.query.filter(
-            Subscription.is_active == True,
+            Subscription.is_active.is_(True),
             Subscription.expires_at <= renewal_threshold,
             Subscription.expires_at > now
         ).all()
@@ -166,7 +166,7 @@ def process_subscription_renewals():
         
         # Deactivate expired subscriptions
         expired_subs = Subscription.query.filter(
-            Subscription.is_active == True,
+            Subscription.is_active.is_(True),
             Subscription.expires_at <= now
         ).all()
         

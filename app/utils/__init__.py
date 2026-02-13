@@ -439,9 +439,9 @@ def timeago(date):
         except Exception:
             date_norm = date
     else:
-        # Use recommended datetime.now(timezone.utc) instead of deprecated datetime.utcnow()
-        now = datetime.now(timezone.utc)
-        # Treat naive datetime as UTC naive for consistency
+        # For naive datetime, use naive now() for comparison
+        now = datetime.now()
+        # Treat naive datetime as local time
         date_norm = date
 
     diff = now - date_norm

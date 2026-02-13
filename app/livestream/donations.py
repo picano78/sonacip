@@ -38,7 +38,9 @@ def send_tip(stream_id):
     if amount < 1.0 or amount > 1000.0:
         return jsonify({'error': 'Amount must be between 1 and 1000 EUR'}), 400
     
-    message = request.json.get('message', '').strip()[:200]  # Max 200 chars
+    message = request.json.get('message', '').strip()
+    if len(message) > 200:
+        return jsonify({'error': 'Message too long (max 200 characters)'}), 400
     
     _init_stripe()
     if not stripe.api_key:

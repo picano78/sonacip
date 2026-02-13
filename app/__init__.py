@@ -980,18 +980,17 @@ def create_app(config_name: str | None = None) -> Flask:
     app.template_filter('fromjson')(_fromjson)
 
     # Add version helper for cache busting
-    import hashlib
-    
     _static_versions = {}
     
     def static_versioned(filename):
         """Generate versioned URL for static files for cache busting."""
+        from flask import url_for as _url_for
+        
         if filename in _static_versions:
             return _static_versions[filename]
         
         try:
             # Try to get file modification time as version
-            from flask import url_for as _url_for
             static_path = os.path.join(app.static_folder or '', filename)
             if os.path.exists(static_path):
                 # Use mtime directly - simpler and equally effective
@@ -1003,7 +1002,6 @@ def create_app(config_name: str | None = None) -> Flask:
             pass
         
         # Fallback to regular URL
-        from flask import url_for as _url_for
         return _url_for('static', filename=filename)
     
     app.jinja_env.globals['static_versioned'] = static_versioned
@@ -1156,6 +1154,10 @@ def create_app(config_name: str | None = None) -> Flask:
             'feature_enabled': feature_enabled,
         }
 
+    # Cache duration constants for HTTP headers
+    STATIC_CACHE_MAX_AGE = 31536000  # 1 year for versioned static files
+    UPLOAD_CACHE_MAX_AGE = 86400     # 1 day for uploads
+
     @app.after_request
     def apply_security_headers(resp):
         """Security headers (safe defaults; CSP optional)."""
@@ -1169,10 +1171,6 @@ def create_app(config_name: str | None = None) -> Flask:
             resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 
             # Add caching headers for static files to improve performance
-            # Cache duration constants
-            STATIC_CACHE_MAX_AGE = 31536000  # 1 year for versioned static files
-            UPLOAD_CACHE_MAX_AGE = 86400     # 1 day for uploads
-            
             if request.path.startswith('/static/'):
                 # Static files cache with long duration - safe with versioned URLs
                 # Version query parameters ensure cache busting when files change

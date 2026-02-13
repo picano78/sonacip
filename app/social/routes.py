@@ -41,6 +41,8 @@ from app.models import (
     BroadcastRecipient,
     Message,
     SmtpSetting,
+    Event,
+    event_athletes,
 )
 from app.cache import get_cache
 from app.utils import permission_required, check_permission, get_active_society_id
@@ -970,7 +972,6 @@ def society_dashboard():
         athletes = []
     
     # Get society's events
-    from app.models import Event
     events = Event.query.filter_by(
         creator_id=current_user.id
     ).order_by(Event.start_date.desc()).limit(10).all()
@@ -1036,6 +1037,39 @@ def society_dashboard():
     onboarding_progress = int((completed_count / max(1, len(step_defs))) * 100)
 
     invite_form = SocietyInviteForm()
+    
+    # Get pending planner events (upcoming events in the next 7 days)
+    today = datetime.now(timezone.utc)
+    week_from_now = today + timedelta(days=7)
+    pending_planner_events = (
+        SocietyCalendarEvent.query
+        .filter_by(society_id=society.id)
+        .filter(SocietyCalendarEvent.start_datetime >= today)
+        .filter(SocietyCalendarEvent.start_datetime <= week_from_now)
+        .order_by(SocietyCalendarEvent.start_datetime.asc())
+        .limit(10)
+        .all()
+    )
+    
+    # Get pending event responses (events where user hasn't responded yet)
+    pending_event_responses = (
+        Event.query
+        .join(event_athletes)
+        .filter(event_athletes.c.user_id == current_user.id)
+        .filter(event_athletes.c.status == 'pending')
+        .filter(Event.start_date >= today)
+        .order_by(Event.start_date.asc())
+        .limit(5)
+        .all()
+    )
+    
+    # Count members who can see all events (group operators)
+    group_operators_count = (
+        SocietyMembership.query
+        .filter_by(society_id=society.id, status='active')
+        .filter_by(can_see_all_events=True)
+        .count()
+    )
 
     return render_template(
         'social/society_dashboard.html',
@@ -1048,6 +1082,9 @@ def society_dashboard():
         recent_audit=recent_audit,
         invite_form=invite_form,
         health=health,
+        pending_planner_events=pending_planner_events,
+        pending_event_responses=pending_event_responses,
+        group_operators_count=group_operators_count,
         suggestions=suggestions,
         onboarding=onboarding,
         onboarding_progress=onboarding_progress,

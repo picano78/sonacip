@@ -4,13 +4,14 @@ Gestisce endpoint di sicurezza come CSP reporting
 """
 
 from flask import Blueprint, request, current_app
-from app import csrf
+from app import csrf, limiter
 import json
 
 bp = Blueprint('security', __name__, url_prefix='/security')
 
 @bp.route('/csp-report', methods=['POST'])
 @csrf.exempt
+@limiter.limit("100 per hour")
 def csp_report():
     """
     Endpoint per ricevere report di violazioni CSP

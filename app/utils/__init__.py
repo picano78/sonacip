@@ -425,7 +425,7 @@ def timeago(date):
         return ""
 
     # Normalize naive/aware datetimes to avoid TypeError on subtraction.
-    # - If `date` is naive, assume it's UTC naive.
+    # - If `date` is naive, assume it's UTC naive (common in database storage).
     # - If `date` is aware, convert to UTC.
     try:
         is_aware = date.tzinfo is not None and date.tzinfo.utcoffset(date) is not None
@@ -439,9 +439,9 @@ def timeago(date):
         except Exception:
             date_norm = date
     else:
-        # For naive datetime, use naive now() for comparison
-        now = datetime.now()
-        # Treat naive datetime as local time
+        # For naive datetime, use naive UTC time for consistent comparison
+        # (assuming naive datetimes are stored as UTC in the database)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         date_norm = date
 
     diff = now - date_norm

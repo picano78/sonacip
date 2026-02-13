@@ -621,15 +621,9 @@ img, video {
     height: auto;
 }
 
-/* Only use GPU acceleration for elements that will actually be animated */
-.card-hover, .post-card, .animated {
-    transform: translateZ(0);
-}
-
-/* Optimize animations - only for elements that actually animate */
-.card-hover, .post-card {
-    will-change: transform;
-}
+/* GPU acceleration only for elements that are actively being animated 
+   Note: will-change should ideally be added dynamically before animations 
+   and removed after, but for simplicity we apply it to known animated elements */
 
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {

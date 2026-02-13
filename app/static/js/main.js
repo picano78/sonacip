@@ -1,5 +1,8 @@
 // Main JavaScript for SONACIP
 
+// Performance monitoring constants
+const SLOW_PAGE_LOAD_THRESHOLD = 3000; // milliseconds
+
 document.addEventListener('DOMContentLoaded', function() {
     // PWA install prompt handling (Android + iOS)
     let deferredPrompt = null;
@@ -892,10 +895,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const connectTime = perfData.responseEnd - perfData.requestStart;
                 const renderTime = perfData.domComplete - perfData.domLoading;
                 
-                // Check if in development mode via data attribute on body
-                const isDev = document.body.dataset.devMode === 'true' || 
-                              window.location.hostname === 'localhost' || 
-                              window.location.hostname === '127.0.0.1';
+                // Check if in development mode via data attribute
+                const isDev = document.body.dataset.devMode === 'true';
                 
                 // Only log in development mode
                 if (isDev) {
@@ -905,7 +906,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         renderTime: renderTime + 'ms'
                     });
                     
-                    if (pageLoadTime > 3000) {
+                    if (pageLoadTime > SLOW_PAGE_LOAD_THRESHOLD) {
                         console.warn('Slow page load detected:', pageLoadTime + 'ms');
                     }
                 }

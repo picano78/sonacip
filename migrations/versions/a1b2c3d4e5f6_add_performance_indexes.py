@@ -1,10 +1,21 @@
-"""
-Database performance indexes migration
-Add indexes for frequently queried columns to improve performance
-"""
+"""Database performance indexes migration
 
+Add indexes for frequently queried columns to improve performance
+
+Revision ID: a1b2c3d4e5f6
+Revises: fa1c48513daf
+Create Date: 2026-02-13 19:46:00.000000
+
+"""
 from alembic import op
 import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision = 'a1b2c3d4e5f6'
+down_revision = 'fa1c48513daf'
+branch_labels = None
+depends_on = None
 
 
 def upgrade():

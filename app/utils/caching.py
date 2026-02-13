@@ -1,7 +1,7 @@
 """Advanced Caching Utilities"""
 from flask import current_app, g
 from functools import wraps
-from app.cache import cache
+from app.cache import get_cache
 import hashlib
 import json
 
@@ -10,7 +10,7 @@ def cache_key(*args, **kwargs):
     """Generate cache key from arguments"""
     key_data = {'args': args, 'kwargs': kwargs}
     key_str = json.dumps(key_data, sort_keys=True, default=str)
-    return hashlib.md5(key_str.encode()).hexdigest()
+    return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
 
 def cached_query(timeout=300, key_prefix='query'):
@@ -18,12 +18,13 @@ def cached_query(timeout=300, key_prefix='query'):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            cache = get_cache()
             cache_key_str = f"{key_prefix}:{cache_key(*args, **kwargs)}"
             cached_value = cache.get(cache_key_str)
             if cached_value is not None:
                 return cached_value
             result = f(*args, **kwargs)
-            cache.set(cache_key_str, result, timeout=timeout)
+            cache.set(cache_key_str, result, ttl=timeout)
             return result
         return decorated_function
     return decorator

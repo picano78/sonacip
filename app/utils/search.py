@@ -3,7 +3,7 @@ Advanced Search Utilities
 Provides flexible search across multiple models with filters
 """
 from sqlalchemy import or_, and_, func
-from app.models import User, Post, Event, Contact, Opportunity, Tournament, Match
+from app.models import User, Post, Event, Contact, Opportunity, Tournament, TournamentMatch
 from datetime import datetime, timedelta, timezone
 
 

@@ -52,6 +52,18 @@ import os
 from app.ads.utils import choose_creative, make_token
 
 
+def _get_followed_ids(user):
+    """Get IDs of users that the given user follows - optimized to avoid N+1 queries."""
+    try:
+        from app.models import followers
+        result = db.session.execute(
+            db.select(followers.c.followed_id).where(followers.c.follower_id == user.id)
+        )
+        return {row[0] for row in result}
+    except Exception:
+        return set()
+
+
 def _get_button_context():
     """Determine button rendering context from request referrer."""
     referer = request.referrer or ''
@@ -71,11 +83,8 @@ def _build_feed_page(user, page, per_page, settings, admin_access, scope_id, cac
     cache_key = f"feed:{user.id}:p{page}:pp{per_page}"
     cached_ids = cache.get(cache_key)
 
-    followed_ids = set()
-    try:
-        followed_ids = {u.id for u in user.followed.all()}
-    except Exception:
-        followed_ids = set()
+    # Optimize: Query followed IDs directly without loading full User objects
+    followed_ids = _get_followed_ids(user)
 
     friend_ids = get_connection_ids(user)
     friend_ids -= followed_ids
@@ -176,11 +185,7 @@ def feed():
     admin_access = check_permission(current_user, 'admin', 'access')
     scope_id = get_active_society_id(current_user)
     posts, total = _build_feed_page(current_user, page, per_page, settings, admin_access, scope_id, cache, cache_ttl)
-    followed_ids = set()
-    try:
-        followed_ids = {u.id for u in current_user.followed.all()}
-    except Exception:
-        followed_ids = set()
+    followed_ids = _get_followed_ids(current_user)
 
     # Autopilot banners (Facebook-like): pick creatives for placements.
     ad = None
@@ -258,11 +263,7 @@ def feed_posts():
     admin_access = check_permission(current_user, 'admin', 'access')
     scope_id = get_active_society_id(current_user)
     posts, _total = _build_feed_page(current_user, page, per_page, settings, admin_access, scope_id, cache, cache_ttl)
-    followed_ids = set()
-    try:
-        followed_ids = {u.id for u in current_user.followed.all()}
-    except Exception:
-        followed_ids = set()
+    followed_ids = _get_followed_ids(current_user)
 
     if not posts:
         return ''
@@ -292,11 +293,7 @@ def feed_updates():
     settings = SocialSetting.query.first()
     admin_access = check_permission(current_user, 'admin', 'access')
     scope_id = get_active_society_id(current_user)
-    followed_ids = set()
-    try:
-        followed_ids = {u.id for u in current_user.followed.all()}
-    except Exception:
-        followed_ids = set()
+    followed_ids = _get_followed_ids(current_user)
     friend_ids = get_connection_ids(current_user)
     friend_ids -= followed_ids
     if current_user.id in friend_ids:

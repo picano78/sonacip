@@ -338,7 +338,7 @@ def can_view_user(user):
 def get_user_society(user):
     """
     Get the society associated with a user
-    Returns User object or None
+    Returns Society object or None
     """
     try:
         return user.get_primary_society()
@@ -384,10 +384,10 @@ def permission_required(resource, action, society_id_param=None, society_id_func
     return decorator
 
 
-def feature_required(feature_name):
+def plan_feature_required(feature_name):
     """
-    Decorator to require a specific plan feature
-    Usage: @feature_required('crm')
+    Decorator to require a specific plan feature (subscription-based)
+    Usage: @plan_feature_required('crm')
     """
     def decorator(f):
         @wraps(f)
@@ -439,7 +439,9 @@ def timeago(date):
         except Exception:
             date_norm = date
     else:
-        now = datetime.utcnow()
+        # Use recommended datetime.now(timezone.utc) instead of deprecated datetime.utcnow()
+        now = datetime.now(timezone.utc)
+        # Treat naive datetime as UTC naive for consistency
         date_norm = date
 
     diff = now - date_norm
@@ -506,3 +508,36 @@ def log_action(action, entity_type=None, entity_id=None, details=None, society_i
             db.session.rollback()
             # Log to console but don't fail the main operation
             print(f"Warning: Failed to log action: {e}")
+
+
+# Make submodules available for import
+# These are lazily loaded to avoid circular imports
+
+__all__ = [
+    'check_feature_enabled',
+    'feature_required',
+    'rate_limit',
+    'check_permission',
+    'can',
+    'get_active_society_id',
+    'enforce_permission',
+    'admin_required',
+    'society_required',
+    'staff_or_society_required',
+    'role_required',
+    'can_manage_user',
+    'can_view_user',
+    'get_user_society',
+    'permission_required',
+    'plan_feature_required',  # Subscription-based features (distinct from feature_required which checks platform feature flags)
+    'safe_get_or_404',
+    'timeago',
+    'escape_like',
+    'datetime_format',
+    'log_action',
+    # Submodules
+    'caching',
+    'search',
+    'exports',
+    'error_handling',
+]

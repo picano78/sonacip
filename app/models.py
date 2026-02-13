@@ -1606,7 +1606,7 @@ class Message(db.Model):
         # Create consistent thread ID based on sender and recipient
         ids = sorted([self.sender_id, self.recipient_id])
         thread_str = f"{ids[0]}-{ids[1]}-{self.created_at.strftime('%Y%m%d')}"
-        return hashlib.md5(thread_str.encode()).hexdigest()[:16]
+        return hashlib.md5(thread_str.encode(), usedforsecurity=False).hexdigest()[:16]
 
 
 class MessageAttachment(db.Model):

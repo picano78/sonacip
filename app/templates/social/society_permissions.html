@@ -8,46 +8,165 @@
   </div>
 
   <div class="alert alert-info">
-    Qui puoi decidere cosa può fare ogni ruolo (view/edit) nel cruscotto della tua società.
+    <i class="bi bi-info-circle me-2"></i>
+    Qui puoi decidere cosa può fare ogni ruolo (view/edit) nel cruscotto della tua società e quali funzionalità appaiono nelle loro dashboard.
     Le impostazioni sono per-società e vengono applicate quando una sezione richiede permessi con scope società.
   </div>
 
-  <form method="post">
-    {{ csrf_token() }}
-    <div class="table-responsive">
-      <table class="table table-sm table-bordered align-middle">
-        <thead>
-          <tr>
-            <th style="min-width: 220px;">Permesso</th>
-            {% for r in roles %}
-              <th class="text-center" style="min-width: 160px;">{{ r }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in permissions %}
+  <!-- Dashboard Features Control -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Controllo Dashboard Utenti</h5>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-3">
+        Quando promuovi un utente a coach, dirigente o atleta, puoi decidere quali funzionalità vedono nelle loro dashboard.
+        Queste impostazioni controllano l'accesso alle azioni rapide e ai moduli.
+      </p>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered align-middle">
+          <thead>
+            <tr>
+              <th style="min-width: 200px;">Funzionalità</th>
+              <th class="text-center">Coach</th>
+              <th class="text-center">Dirigente</th>
+              <th class="text-center">Atleta</th>
+              <th class="text-center">Staff</th>
+            </tr>
+          </thead>
+          <tbody>
             <tr>
               <td>
-                <div class="fw-semibold">{{ p.resource }}:{{ p.action }}</div>
-                <div class="text-muted small">{{ p.description or '' }}</div>
+                <div class="fw-semibold"><i class="bi bi-calendar-check text-primary me-2"></i>Planner Campo</div>
+                <div class="text-muted small">Accesso al planner per gestire allenamenti e disponibilità campi</div>
               </td>
-              {% for r in roles %}
-                {% set current = override_map.get((r, p.id), 'inherit') %}
-                <td class="text-center">
-                  <select class="form-select form-select-sm" name="p__{{ r }}__{{ p.id }}">
-                    <option value="inherit" {{ 'selected' if current == 'inherit' else '' }}>Eredita</option>
-                    <option value="allow" {{ 'selected' if current == 'allow' else '' }}>Consenti</option>
-                    <option value="deny" {{ 'selected' if current == 'deny' else '' }}>Nega</option>
-                  </select>
-                </td>
-              {% endfor %}
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="planner_coach" checked disabled>
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="planner_dirigente" checked disabled>
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="planner_atleta">
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="planner_staff" checked disabled>
+                </div>
+              </td>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+            <tr>
+              <td>
+                <div class="fw-semibold"><i class="bi bi-briefcase text-success me-2"></i>CRM Mini</div>
+                <div class="text-muted small">Accesso al CRM per gestire contatti e membri</div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="crm_coach" checked disabled>
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="crm_dirigente" checked disabled>
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="crm_atleta">
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="crm_staff">
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="fw-semibold"><i class="bi bi-calendar-event text-info me-2"></i>Eventi</div>
+                <div class="text-muted small">Accesso alla gestione eventi e tornei</div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="events_coach" checked disabled>
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="events_dirigente" checked disabled>
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="events_atleta" checked disabled>
+                </div>
+              </td>
+              <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center">
+                  <input class="form-check-input" type="checkbox" id="events_staff" checked disabled>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="alert alert-warning mt-3">
+        <i class="bi bi-lightbulb me-2"></i>
+        <strong>Nota:</strong> Le funzionalità per Coach, Dirigente e Staff (segnate come già attive) sono gestite tramite i permessi dettagliati qui sotto.
+        Usa la tabella permessi per un controllo granulare delle azioni (view/edit).
+      </div>
     </div>
-    <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Salva permessi</button>
-  </form>
+  </div>
+
+  <!-- Detailed Permissions -->
+  <div class="card">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Permessi Dettagliati per Ruolo</h5>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {{ csrf_token() }}
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle">
+            <thead>
+              <tr>
+                <th style="min-width: 220px;">Permesso</th>
+                {% for r in roles %}
+                  <th class="text-center" style="min-width: 160px;">{{ r }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in permissions %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ p.resource }}:{{ p.action }}</div>
+                    <div class="text-muted small">{{ p.description or '' }}</div>
+                  </td>
+                  {% for r in roles %}
+                    {% set current = override_map.get((r, p.id), 'inherit') %}
+                    <td class="text-center">
+                      <select class="form-select form-select-sm" name="p__{{ r }}__{{ p.id }}">
+                        <option value="inherit" {{ 'selected' if current == 'inherit' else '' }}>Eredita</option>
+                        <option value="allow" {{ 'selected' if current == 'allow' else '' }}>Consenti</option>
+                        <option value="deny" {{ 'selected' if current == 'deny' else '' }}>Nega</option>
+                      </select>
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Salva permessi</button>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
-

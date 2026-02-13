@@ -5,7 +5,7 @@ Handles ad rotation, targeting, and performance analytics
 from datetime import datetime, timezone, timedelta
 from app import db
 from app.models import AdCampaign, AdCreative, User
-from sqlalchemy import func
+from sqlalchemy import func, case
 import logging
 import random
 
@@ -164,8 +164,8 @@ def optimize_ad_targeting():
             # Get performance by placement
             placements = db.session.query(
                 AdEvent.placement,
-                func.count(AdEvent.id).filter(AdEvent.event_type == 'impression').label('impressions'),
-                func.count(AdEvent.id).filter(AdEvent.event_type == 'click').label('clicks')
+                func.sum(case((AdEvent.event_type == 'impression', 1), else_=0)).label('impressions'),
+                func.sum(case((AdEvent.event_type == 'click', 1), else_=0)).label('clicks')
             ).filter(
                 AdEvent.campaign_id == campaign.id
             ).group_by(AdEvent.placement).all()
@@ -308,8 +308,8 @@ def generate_ad_report(campaign_id, start_date=None, end_date=None):
         # Performance by placement
         by_placement = db.session.query(
             AdEvent.placement,
-            func.count(AdEvent.id).filter(AdEvent.event_type == 'impression').label('impressions'),
-            func.count(AdEvent.id).filter(AdEvent.event_type == 'click').label('clicks')
+            func.sum(case((AdEvent.event_type == 'impression', 1), else_=0)).label('impressions'),
+            func.sum(case((AdEvent.event_type == 'click', 1), else_=0)).label('clicks')
         ).filter(
             AdEvent.campaign_id == campaign_id
         )

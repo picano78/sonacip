@@ -3,6 +3,7 @@ Automation Task Scheduler
 Celery tasks for automated operations
 """
 from celery import Celery
+from celery.schedules import crontab
 import os
 import logging
 
@@ -150,41 +151,41 @@ celery.conf.beat_schedule = {
     # Payment automation - daily at 9:00 AM
     'send-payment-reminders': {
         'task': 'automation.send_payment_reminders',
-        'schedule': '0 9 * * *',  # Cron: daily at 9:00 AM
+        'schedule': crontab(hour=9, minute=0),
     },
     # Invoice generation - every hour
     'generate-payment-invoices': {
         'task': 'automation.generate_payment_invoices',
-        'schedule': '0 * * * *',  # Cron: every hour
+        'schedule': crontab(minute=0),
     },
     # Subscription renewals - daily at 8:00 AM
     'process-subscription-renewals': {
         'task': 'automation.process_subscription_renewals',
-        'schedule': '0 8 * * *',  # Cron: daily at 8:00 AM
+        'schedule': crontab(hour=8, minute=0),
     },
-    # Ad rotation - every hour
+    # Ad rotation - every 15 minutes
     'rotate-ads-autopilot': {
         'task': 'automation.rotate_ads_autopilot',
-        'schedule': '*/15 * * * *',  # Cron: every 15 minutes
+        'schedule': crontab(minute='*/15'),
     },
     # Ad performance - daily at 1:00 AM
     'calculate-ad-performance': {
         'task': 'automation.calculate_ad_performance',
-        'schedule': '0 1 * * *',  # Cron: daily at 1:00 AM
+        'schedule': crontab(hour=1, minute=0),
     },
     # Ad targeting optimization - daily at 2:00 AM
     'optimize-ad-targeting': {
         'task': 'automation.optimize_ad_targeting',
-        'schedule': '0 2 * * *',  # Cron: daily at 2:00 AM
+        'schedule': crontab(hour=2, minute=0),
     },
     # Data cleanup - weekly on Sunday at 3:00 AM
     'cleanup-old-data': {
         'task': 'automation.cleanup_old_data',
-        'schedule': '0 3 * * 0',  # Cron: Sunday at 3:00 AM
+        'schedule': crontab(hour=3, minute=0, day_of_week=0),
     },
     # Database backup - daily at 4:00 AM
     'backup-database': {
         'task': 'automation.backup_database',
-        'schedule': '0 4 * * *',  # Cron: daily at 4:00 AM
+        'schedule': crontab(hour=4, minute=0),
     },
 }

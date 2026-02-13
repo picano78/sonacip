@@ -316,7 +316,7 @@ def stream_analytics(stream_id):
     # Calculate average watch time
     completed_viewers = LiveStreamViewer.query.filter(
         LiveStreamViewer.stream_id == stream_id,
-        LiveStreamViewer.left_at != None
+        LiveStreamViewer.left_at.is_not(None)
     ).all()
     
     if completed_viewers:

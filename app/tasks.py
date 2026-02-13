@@ -7,7 +7,7 @@ from app.models import User, Notification, AutomationRun, AutomationRule
 from app.notifications.utils import send_email as sync_send_email
 from flask import current_app
 from flask_mail import Message
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 import requests
 import traceback

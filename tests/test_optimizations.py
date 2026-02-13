@@ -36,11 +36,11 @@ def client(app):
 
 def test_validate_phone_number():
     """Test phone number validation"""
-    assert validate_phone_number('+393331234567') == True
-    assert validate_phone_number('+1234567890') == True
-    assert validate_phone_number('3331234567') == False
-    assert validate_phone_number('+39 333 123 4567') == False
-    assert validate_phone_number('invalid') == False
+    assert validate_phone_number('+393331234567')
+    assert validate_phone_number('+1234567890')
+    assert not validate_phone_number('3331234567')
+    assert not validate_phone_number('+39 333 123 4567')
+    assert not validate_phone_number('invalid')
 
 
 def test_format_phone_number():
@@ -173,7 +173,7 @@ def test_automation_rule_validation(app):
         )
         
         valid, error = rule.validate_actions()
-        assert valid == True
+        assert valid
         assert error is None
         
         # Invalid rule - missing user_id
@@ -186,7 +186,7 @@ def test_automation_rule_validation(app):
         )
         
         valid, error = rule2.validate_actions()
-        assert valid == False
+        assert not valid
         assert 'user_id' in error
 
 

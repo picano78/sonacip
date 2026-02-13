@@ -173,12 +173,12 @@ Description=SONACIP Celery Worker
 After=network.target redis.target
 
 [Service]
-Type=forking
+Type=simple
 User=$(whoami)
 Group=$(whoami)
 WorkingDirectory=$(pwd)
 Environment="PATH=$(pwd)/venv/bin"
-ExecStart=$(pwd)/venv/bin/celery -A celery_app.celery worker --detach --loglevel=info --pidfile=/tmp/celery_worker.pid
+ExecStart=$(pwd)/venv/bin/celery -A celery_app.celery worker --loglevel=info
 ExecStop=/bin/kill -TERM \$MAINPID
 Restart=always
 RestartSec=10

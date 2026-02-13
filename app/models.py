@@ -437,12 +437,12 @@ class User(UserMixin, db.Model):
 
 class Post(db.Model):
     """
-    Social post model - LinkedIn-style posts
+    Social post model - LinkedIn-style posts with hashtags and scheduling
     """
     __tablename__ = 'post'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     content = db.Column(db.Text, nullable=False)
     image = db.Column(db.String(255))  # optional image
     
@@ -453,6 +453,14 @@ class Post(db.Model):
     society_id = db.Column(db.Integer, db.ForeignKey('society.id'))  # owning society for scoped comms
     target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))  # direct-to user comms
     post_type = db.Column(db.String(50), default='personal')  # personal, official, tournament, match, automation
+
+    # Scheduling
+    is_scheduled = db.Column(db.Boolean, default=False)
+    scheduled_for = db.Column(db.DateTime, index=True)  # When to publish scheduled post
+    published_at = db.Column(db.DateTime)  # Actual publication time
+    
+    # Status
+    status = db.Column(db.String(20), default='published')  # draft, scheduled, published, archived
 
     # Promotion/ads
     is_promoted = db.Column(db.Boolean, default=False)
@@ -465,6 +473,8 @@ class Post(db.Model):
     # Engagement
     likes_count = db.Column(db.Integer, default=0)
     comments_count = db.Column(db.Integer, default=0)
+    shares_count = db.Column(db.Integer, default=0)
+    views_count = db.Column(db.Integer, default=0)
     
     created_at = db.Column(db.DateTime, default=utc_now, index=True)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
@@ -483,8 +493,115 @@ class Post(db.Model):
         """Check if user liked this post"""
         return self.liked_by.filter(post_likes.c.user_id == user.id).count() > 0
     
+    def extract_hashtags(self):
+        """Extract hashtags from post content"""
+        import re
+        return re.findall(r'#(\w+)', self.content)
+    
+    @property
+    def engagement_rate(self):
+        """Calculate engagement rate (likes + comments + shares) / views"""
+        if self.views_count == 0:
+            return 0.0
+        total_engagement = self.likes_count + self.comments_count + self.shares_count
+        return (total_engagement / self.views_count) * 100
+    
     def __repr__(self):
         return f'<Post {self.id} by {self.user_id}>'
+
+
+class Hashtag(db.Model):
+    """
+    Hashtag model for social posts
+    """
+    __tablename__ = 'hashtag'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tag = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    use_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    last_used_at = db.Column(db.DateTime, default=utc_now)
+    
+    def __repr__(self):
+        return f'<Hashtag #{self.tag} ({self.use_count} uses)>'
+
+
+# Association table for posts and hashtags
+post_hashtags = db.Table('post_hashtags',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True),
+    db.Column('hashtag_id', db.Integer, db.ForeignKey('hashtag.id'), primary_key=True),
+    db.Column('created_at', db.DateTime, default=utc_now)
+)
+
+
+class PostAnalytics(db.Model):
+    """
+    Analytics tracking for individual posts
+    """
+    __tablename__ = 'post_analytics'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False, index=True)
+    
+    # Daily metrics
+    date = db.Column(db.Date, nullable=False, index=True)
+    views = db.Column(db.Integer, default=0)
+    unique_views = db.Column(db.Integer, default=0)
+    likes = db.Column(db.Integer, default=0)
+    comments = db.Column(db.Integer, default=0)
+    shares = db.Column(db.Integer, default=0)
+    
+    # Audience insights
+    viewer_roles = db.Column(db.Text)  # JSON: breakdown by user role
+    viewer_locations = db.Column(db.Text)  # JSON: breakdown by location
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationship
+    post = db.relationship('Post', backref=db.backref('analytics', lazy='dynamic'))
+    
+    __table_args__ = (
+        db.UniqueConstraint('post_id', 'date', name='uq_post_analytics_date'),
+    )
+    
+    def __repr__(self):
+        return f'<PostAnalytics post={self.post_id} date={self.date}>'
+
+
+class UserSocialStats(db.Model):
+    """
+    Aggregated social statistics for users
+    """
+    __tablename__ = 'user_social_stats'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True, index=True)
+    
+    # Follower stats
+    followers_count = db.Column(db.Integer, default=0)
+    following_count = db.Column(db.Integer, default=0)
+    
+    # Content stats
+    posts_count = db.Column(db.Integer, default=0)
+    total_likes_received = db.Column(db.Integer, default=0)
+    total_comments_received = db.Column(db.Integer, default=0)
+    total_shares_received = db.Column(db.Integer, default=0)
+    total_views = db.Column(db.Integer, default=0)
+    
+    # Engagement metrics
+    avg_engagement_rate = db.Column(db.Float, default=0.0)
+    most_popular_post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
+    
+    # Activity
+    last_post_at = db.Column(db.DateTime)
+    last_updated = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('social_stats', uselist=False))
+    most_popular_post = db.relationship('Post', foreign_keys=[most_popular_post_id])
+    
+    def __repr__(self):
+        return f'<UserSocialStats user={self.user_id}>'
 
 
 class SocietyMembership(db.Model):
@@ -1446,27 +1563,112 @@ class WhatsappMessageLog(db.Model):
 
 class Message(db.Model):
     """
-    Direct messaging between users
+    Direct messaging between users with threading and attachment support
     """
     __tablename__ = 'message'
     
     id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     subject = db.Column(db.String(200))
     body = db.Column(db.Text, nullable=False)
     
+    # Threading support
+    thread_id = db.Column(db.String(50), index=True)  # Groups related messages
+    parent_id = db.Column(db.Integer, db.ForeignKey('message.id'))  # Reply to message
+    
+    # Attachment support
+    has_attachment = db.Column(db.Boolean, default=False)
+    attachment_count = db.Column(db.Integer, default=0)
+    
     # Status
-    is_read = db.Column(db.Boolean, default=False)
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    is_archived = db.Column(db.Boolean, default=False)
+    is_starred = db.Column(db.Boolean, default=False)
+    is_deleted_by_sender = db.Column(db.Boolean, default=False)
+    is_deleted_by_recipient = db.Column(db.Boolean, default=False)
+    
+    # Timestamps
     created_at = db.Column(db.DateTime, default=utc_now, index=True)
     read_at = db.Column(db.DateTime)
     
     # Relationships
     sender = db.relationship('User', foreign_keys=[sender_id], backref='messages_sent')
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref='messages_received')
+    parent = db.relationship('Message', remote_side=[id], backref='replies')
     
     def __repr__(self):
         return f'<Message {self.id} from {self.sender_id} to {self.recipient_id}>'
+    
+    def generate_thread_id(self):
+        """Generate unique thread ID for message conversation"""
+        import hashlib
+        # Create consistent thread ID based on sender and recipient
+        ids = sorted([self.sender_id, self.recipient_id])
+        thread_str = f"{ids[0]}-{ids[1]}-{self.created_at.strftime('%Y%m%d')}"
+        return hashlib.md5(thread_str.encode()).hexdigest()[:16]
+
+
+class MessageAttachment(db.Model):
+    """
+    File attachments for messages
+    """
+    __tablename__ = 'message_attachment'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=False, index=True)
+    
+    filename = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_size = db.Column(db.Integer)  # Size in bytes
+    mime_type = db.Column(db.String(100))
+    
+    uploaded_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationship
+    message = db.relationship('Message', backref=db.backref('attachments', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<MessageAttachment {self.id}: {self.original_filename}>'
+
+
+class MessageThread(db.Model):
+    """
+    Message thread/conversation tracking for improved organization
+    """
+    __tablename__ = 'message_thread'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    thread_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    
+    # Participants
+    user1_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user2_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Thread info
+    subject = db.Column(db.String(200))
+    last_message_at = db.Column(db.DateTime, default=utc_now, index=True)
+    message_count = db.Column(db.Integer, default=0)
+    
+    # Status for each participant
+    user1_archived = db.Column(db.Boolean, default=False)
+    user2_archived = db.Column(db.Boolean, default=False)
+    user1_deleted = db.Column(db.Boolean, default=False)
+    user2_deleted = db.Column(db.Boolean, default=False)
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationships
+    user1 = db.relationship('User', foreign_keys=[user1_id])
+    user2 = db.relationship('User', foreign_keys=[user2_id])
+    
+    __table_args__ = (
+        db.UniqueConstraint('user1_id', 'user2_id', name='uq_thread_participants'),
+    )
+    
+    def __repr__(self):
+        return f'<MessageThread {self.thread_id}: {self.user1_id} <-> {self.user2_id}>'
 
 
 class MedicalCertificate(db.Model):
@@ -1614,7 +1816,7 @@ class CRMPipelineStage(db.Model):
 class Contact(db.Model):
     """
     CRM Contact model
-    Lead, prospect, sponsor, partner contacts
+    Lead, prospect, sponsor, partner contacts with scoring
     """
     __tablename__ = 'contact'
     
@@ -1631,16 +1833,30 @@ class Contact(db.Model):
     status = db.Column(db.String(50), default='new')  # new, contacted, interested, converted, lost
     source = db.Column(db.String(50))  # website, social, referral, event, advertising, other
     
+    # Lead scoring
+    score = db.Column(db.Integer, default=0)  # 0-100 lead score
+    score_updated_at = db.Column(db.DateTime)
+    engagement_level = db.Column(db.String(20), default='cold')  # cold, warm, hot
+    
+    # Segmentation tags (JSON array)
+    tags = db.Column(db.Text)  # JSON: ["vip", "sponsor", "parent"]
+    
     # Address
     address = db.Column(db.String(255))
     city = db.Column(db.String(100))
     postal_code = db.Column(db.String(10))
+    country = db.Column(db.String(100))
     
     # Notes
     notes = db.Column(db.Text)
     
+    # Last interaction
+    last_contacted_at = db.Column(db.DateTime)
+    last_contacted_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
     # Ownership
-    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))  # Assigned sales rep
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Timestamps
@@ -1650,12 +1866,99 @@ class Contact(db.Model):
     # Relationships
     society = db.relationship('Society', foreign_keys=[society_id], backref='crm_contacts')
     creator = db.relationship('User', foreign_keys=[created_by])
+    assigned_user = db.relationship('User', foreign_keys=[assigned_to])
+    last_contact_user = db.relationship('User', foreign_keys=[last_contacted_by])
     
     def get_full_name(self):
         return f'{self.first_name} {self.last_name}'
     
+    def get_tags_list(self):
+        """Get tags as a list"""
+        import json
+        if self.tags:
+            try:
+                return json.loads(self.tags)
+            except:
+                return []
+        return []
+    
+    def add_tag(self, tag):
+        """Add a tag to contact"""
+        import json
+        tags = self.get_tags_list()
+        if tag not in tags:
+            tags.append(tag)
+            self.tags = json.dumps(tags)
+    
     def __repr__(self):
         return f'<Contact {self.id}: {self.get_full_name()}>'
+
+
+class ContactSegment(db.Model):
+    """
+    Contact segmentation for targeted communications
+    """
+    __tablename__ = 'contact_segment'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Filter criteria (JSON)
+    criteria = db.Column(db.Text, nullable=False)  # JSON: filters for segmentation
+    
+    # Statistics
+    contact_count = db.Column(db.Integer, default=0)
+    last_calculated_at = db.Column(db.DateTime)
+    
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    society = db.relationship('Society', backref='contact_segments')
+    creator = db.relationship('User', backref='created_segments')
+    
+    def __repr__(self):
+        return f'<ContactSegment {self.id}: {self.name}>'
+
+
+class LeadScoringRule(db.Model):
+    """
+    Rules for automatic lead scoring
+    """
+    __tablename__ = 'lead_scoring_rule'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), index=True)
+    
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Rule definition
+    rule_type = db.Column(db.String(50), nullable=False)  # demographic, behavioral, engagement, firmographic
+    attribute = db.Column(db.String(100), nullable=False)  # e.g., 'contact_type', 'source', 'activity_count'
+    operator = db.Column(db.String(20), nullable=False)  # equals, contains, greater_than, less_than
+    value = db.Column(db.String(200))
+    
+    # Scoring
+    points = db.Column(db.Integer, nullable=False)  # Points to add/subtract
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True)
+    
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    society = db.relationship('Society', backref='lead_scoring_rules')
+    creator = db.relationship('User', backref='created_scoring_rules')
+    
+    def __repr__(self):
+        return f'<LeadScoringRule {self.id}: {self.name} ({self.points} pts)>'
 
 
 class Opportunity(db.Model):
@@ -2933,6 +3236,114 @@ class ProfileSection(db.Model):
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
 
+class ProfileVerification(db.Model):
+    """
+    Profile verification requests and status
+    """
+    __tablename__ = 'profile_verification'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True, index=True)
+    
+    # Verification type
+    verification_type = db.Column(db.String(50), nullable=False)  # identity, athlete, society, professional
+    
+    # Status
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, under_review
+    
+    # Documents
+    document_1_path = db.Column(db.String(500))  # ID card, passport
+    document_2_path = db.Column(db.String(500))  # Additional proof
+    document_3_path = db.Column(db.String(500))  # Supporting document
+    
+    # Verification details
+    submitted_at = db.Column(db.DateTime, default=utc_now)
+    reviewed_at = db.Column(db.DateTime)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    
+    # Notes
+    applicant_notes = db.Column(db.Text)  # Why they want verification
+    reviewer_notes = db.Column(db.Text)  # Admin notes on verification
+    rejection_reason = db.Column(db.Text)
+    
+    # Badge information (if verified)
+    badge_type = db.Column(db.String(50))  # blue_check, gold_star, society_verified, athlete_verified
+    badge_expires_at = db.Column(db.DateTime)  # Some verifications may expire
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('verification', uselist=False))
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by])
+    
+    def __repr__(self):
+        return f'<ProfileVerification user={self.user_id} status={self.status}>'
+
+
+class ProfileAnalytics(db.Model):
+    """
+    Profile view and engagement analytics
+    """
+    __tablename__ = 'profile_analytics'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Daily metrics
+    date = db.Column(db.Date, nullable=False, index=True)
+    profile_views = db.Column(db.Integer, default=0)
+    unique_viewers = db.Column(db.Integer, default=0)
+    
+    # Engagement
+    new_followers = db.Column(db.Integer, default=0)
+    lost_followers = db.Column(db.Integer, default=0)
+    messages_received = db.Column(db.Integer, default=0)
+    
+    # Source tracking
+    view_sources = db.Column(db.Text)  # JSON: where views came from
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('profile_analytics', lazy='dynamic'))
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'date', name='uq_profile_analytics_date'),
+    )
+    
+    def __repr__(self):
+        return f'<ProfileAnalytics user={self.user_id} date={self.date}>'
+
+
+class CustomProfileField(db.Model):
+    """
+    Custom profile fields that users can add
+    """
+    __tablename__ = 'custom_profile_field'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Field definition
+    field_name = db.Column(db.String(100), nullable=False)
+    field_type = db.Column(db.String(20), default='text')  # text, url, date, number
+    field_value = db.Column(db.Text)
+    
+    # Display
+    is_visible = db.Column(db.Boolean, default=True)
+    display_order = db.Column(db.Integer, default=0)
+    
+    # Category
+    category = db.Column(db.String(50))  # contact, social, professional, personal
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('custom_fields', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<CustomProfileField {self.field_name} for user={self.user_id}>'
+
+
 class ModerationRule(db.Model):
     """
     Automatic moderation rules for social content
@@ -3637,6 +4048,189 @@ class FeePayment(db.Model):
 
     def __repr__(self):
         return f'<FeePayment {self.id} fee={self.fee_id} user={self.user_id} status={self.status}>'
+
+
+class Invoice(db.Model):
+    """
+    Invoice model for payments and fees
+    Links to payments and provides formal invoicing
+    """
+    __tablename__ = 'invoice'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    
+    # Links to payment or fee payment
+    payment_id = db.Column(db.Integer, db.ForeignKey('payment.id'), nullable=True)
+    fee_payment_id = db.Column(db.Integer, db.ForeignKey('fee_payment.id'), nullable=True)
+    
+    # Billing information
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=True)
+    
+    # Invoice details
+    amount = db.Column(db.Float, nullable=False)
+    tax_amount = db.Column(db.Float, default=0.0)
+    total_amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='EUR')
+    
+    # Billing address
+    billing_name = db.Column(db.String(200))
+    billing_address = db.Column(db.Text)
+    billing_city = db.Column(db.String(100))
+    billing_postal_code = db.Column(db.String(20))
+    billing_country = db.Column(db.String(100))
+    tax_id = db.Column(db.String(50))  # VAT/Tax ID
+    
+    # Invoice dates
+    invoice_date = db.Column(db.DateTime, default=utc_now, nullable=False)
+    due_date = db.Column(db.DateTime, nullable=True)
+    paid_date = db.Column(db.DateTime, nullable=True)
+    
+    # Status and notes
+    status = db.Column(db.String(20), default='draft')  # draft, sent, paid, cancelled, overdue
+    description = db.Column(db.Text)
+    notes = db.Column(db.Text)
+    
+    # PDF generation
+    pdf_path = db.Column(db.String(500))  # Path to generated PDF
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    user = db.relationship('User', backref='invoices')
+    society = db.relationship('Society', backref='invoices')
+    payment = db.relationship('Payment', backref='invoice', uselist=False)
+    fee_payment = db.relationship('FeePayment', backref='invoice', uselist=False)
+    
+    def __repr__(self):
+        return f'<Invoice {self.invoice_number}: {self.total_amount} {self.currency} - {self.status}>'
+    
+    def generate_invoice_number(self):
+        """Generate unique invoice number"""
+        from datetime import datetime
+        year = datetime.now().year
+        # Format: INV-YYYY-XXXXX (e.g., INV-2026-00001)
+        return f'INV-{year}-{str(self.id).zfill(5)}'
+
+
+class InvoiceLineItem(db.Model):
+    """
+    Line items for invoices (for detailed invoices with multiple items)
+    """
+    __tablename__ = 'invoice_line_item'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey('invoice.id'), nullable=False, index=True)
+    
+    description = db.Column(db.String(500), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    unit_price = db.Column(db.Float, nullable=False)
+    tax_rate = db.Column(db.Float, default=0.0)  # Tax rate percentage
+    amount = db.Column(db.Float, nullable=False)  # quantity * unit_price
+    
+    created_at = db.Column(db.DateTime, default=utc_now)
+    
+    # Relationship
+    invoice = db.relationship('Invoice', backref=db.backref('line_items', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<InvoiceLineItem {self.id}: {self.description} - {self.amount}>'
+
+
+class Expense(db.Model):
+    """
+    Expense tracking for societies and platform
+    """
+    __tablename__ = 'expense'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Expense details
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), default='EUR')
+    category = db.Column(db.String(50), nullable=False)  # travel, equipment, facility, marketing, etc.
+    description = db.Column(db.Text, nullable=False)
+    
+    # Vendor and receipt
+    vendor_name = db.Column(db.String(200))
+    receipt_path = db.Column(db.String(500))  # Path to uploaded receipt
+    
+    # Dates
+    expense_date = db.Column(db.DateTime, nullable=False, index=True)
+    
+    # Approval and reimbursement
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, reimbursed
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    approved_at = db.Column(db.DateTime)
+    reimbursed_at = db.Column(db.DateTime)
+    
+    notes = db.Column(db.Text)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    society = db.relationship('Society', backref='expenses')
+    user = db.relationship('User', foreign_keys=[user_id], backref='submitted_expenses')
+    approver = db.relationship('User', foreign_keys=[approved_by], backref='approved_expenses')
+    
+    def __repr__(self):
+        return f'<Expense {self.id}: {self.amount} {self.currency} - {self.category}>'
+
+
+class Budget(db.Model):
+    """
+    Budget planning and tracking for societies
+    """
+    __tablename__ = 'budget'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    
+    # Budget details
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    category = db.Column(db.String(50), nullable=False)  # operating, capital, project, event, etc.
+    
+    # Budget amounts
+    allocated_amount = db.Column(db.Float, nullable=False)
+    spent_amount = db.Column(db.Float, default=0.0)
+    currency = db.Column(db.String(3), default='EUR')
+    
+    # Period
+    period_start = db.Column(db.DateTime, nullable=False, index=True)
+    period_end = db.Column(db.DateTime, nullable=False, index=True)
+    
+    # Status
+    status = db.Column(db.String(20), default='active')  # active, closed, exceeded
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Relationships
+    society = db.relationship('Society', backref='budgets')
+    
+    @property
+    def remaining_amount(self):
+        """Calculate remaining budget"""
+        return self.allocated_amount - self.spent_amount
+    
+    @property
+    def percentage_spent(self):
+        """Calculate percentage of budget spent"""
+        if self.allocated_amount == 0:
+            return 0
+        return (self.spent_amount / self.allocated_amount) * 100
+    
+    def __repr__(self):
+        return f'<Budget {self.id}: {self.name} - {self.allocated_amount} {self.currency}>'
 
 
 class ContactMessage(db.Model):

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Accounting Dashboard - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1><i class="fas fa-calculator"></i> Accounting Dashboard</h1>
+    
+    <!-- Summary Cards -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Revenue</h5>
+                    <h3>€{{ "%.2f"|format(total_revenue) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Expenses</h5>
+                    <h3>€{{ "%.2f"|format(total_expenses) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Pending Invoices</h5>
+                    <h3>{{ pending_invoices }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Net Profit</h5>
+                    <h3>€{{ "%.2f"|format(total_revenue - total_expenses) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{{ url_for('accounting.invoices') }}" class="btn btn-primary"><i class="fas fa-file-invoice"></i> View Invoices</a>
+                    <a href="{{ url_for('accounting.expenses') }}" class="btn btn-secondary"><i class="fas fa-receipt"></i> View Expenses</a>
+                    {% if current_user.role in ['society_admin', 'super_admin'] %}
+                    <a href="{{ url_for('accounting.budgets') }}" class="btn btn-info"><i class="fas fa-piggy-bank"></i> Manage Budgets</a>
+                    <a href="{{ url_for('accounting.create_expense') }}" class="btn btn-success"><i class="fas fa-plus"></i> Add Expense</a>
+                    {% endif %}
+                    <a href="{{ url_for('accounting.financial_reports') }}" class="btn btn-warning"><i class="fas fa-chart-bar"></i> Financial Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Invoices -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recent Invoices</h5>
+                </div>
+                <div class="card-body">
+                    {% if invoices %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in invoices %}
+                                <tr>
+                                    <td>{{ invoice.invoice_number }}</td>
+                                    <td>{{ invoice.invoice_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>€{{ "%.2f"|format(invoice.total_amount) }}</td>
+                                    <td>
+                                        <span class="badge badge-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'sent' %}warning{% else %}secondary{% endif %}">
+                                            {{ invoice.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('accounting.view_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-info">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No recent invoices.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Expenses -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Recent Expenses</h5>
+                </div>
+                <div class="card-body">
+                    {% if expenses %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for expense in expenses %}
+                                <tr>
+                                    <td>{{ expense.expense_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ expense.category }}</td>
+                                    <td>€{{ "%.2f"|format(expense.amount) }}</td>
+                                    <td>
+                                        <span class="badge badge-{% if expense.status == 'approved' %}success{% elif expense.status == 'pending' %}warning{% else %}danger{% endif %}">
+                                            {{ expense.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No recent expenses.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Budgets -->
+    {% if budgets %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Active Budgets</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for budget in budgets %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>{{ budget.name }}</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar {% if budget.percentage_spent > 90 %}bg-danger{% elif budget.percentage_spent > 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                                             role="progressbar" 
+                                             style="width: {{ budget.percentage_spent }}%"
+                                             aria-valuenow="{{ budget.percentage_spent }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ "%.1f"|format(budget.percentage_spent) }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        Spent: €{{ "%.2f"|format(budget.spent_amount) }} / €{{ "%.2f"|format(budget.allocated_amount) }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

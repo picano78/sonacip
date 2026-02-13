@@ -33,11 +33,35 @@ redis==5.2.0
 stripe==11.2.0
 Authlib==1.6.5
 
+# Task Queue & Background Jobs
+celery==5.4.0
+celery[redis]==5.4.0
+flower==2.0.1
+
+# SMS Integration
+twilio==9.3.7
+
+# Real-time & WebSockets
+Flask-SocketIO==5.4.1
+python-socketio==5.11.4
+
+# API Documentation
+flasgger==0.9.7.1
+apispec==6.7.1
+
+# Performance & Monitoring
+flask-caching==2.3.0
+psutil==6.1.0
+
 # Production server
 gunicorn==23.0.0
 
 # File handling
 Pillow==11.0.0
+
+# Data Export
+openpyxl==3.1.5
+reportlab==4.2.5
 
 # Security - MIME type validation
 python-magic==0.4.27

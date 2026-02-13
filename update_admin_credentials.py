@@ -13,9 +13,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app import create_app, db
 from app.models import User
 
-# Nuove credenziali
-NEW_EMAIL = "picano78@gmail.com"
-NEW_PASSWORD = "Simone78"
+# Nuove credenziali - Da configurare tramite variabili d'ambiente in produzione
+# SECURITY NOTE: Queste sono credenziali di default. 
+# In produzione, usa variabili d'ambiente: ADMIN_EMAIL e ADMIN_PASSWORD
+NEW_EMAIL = os.environ.get("ADMIN_EMAIL", "picano78@gmail.com")
+NEW_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Simone78")
 
 def update_admin_credentials():
     """Aggiorna le credenziali del super admin"""

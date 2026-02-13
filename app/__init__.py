@@ -20,6 +20,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 from werkzeug.exceptions import BadRequest, Forbidden, InternalServerError, NotFound, TooManyRequests, RequestEntityTooLarge, RequestURITooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_compress import Compress
 from authlib.integrations.flask_client import OAuth
 
 from app.core.config import config
@@ -759,6 +760,25 @@ def create_app(config_name: str | None = None) -> Flask:
     csrf.init_app(app)
     limiter.init_app(app)
     oauth.init_app(app)
+    
+    # Initialize compression for better performance
+    try:
+        compress = Compress()
+        compress.init_app(app)
+        app.config.setdefault('COMPRESS_MIMETYPES', [
+            'text/html', 'text/css', 'text/xml', 'text/plain',
+            'application/json', 'application/javascript', 'application/xml',
+            'application/x-javascript', 'text/javascript'
+        ])
+        app.config.setdefault('COMPRESS_LEVEL', 6)
+        app.config.setdefault('COMPRESS_MIN_SIZE', 500)
+    except Exception:
+        # Compression is optional; app should work without it
+        try:
+            app.logger.warning("Flask-Compress not available, compression disabled")
+        except Exception:
+            pass
+    
     if session_ext is not None:
         try:
             session_ext.init_app(app)
@@ -1118,6 +1138,14 @@ def create_app(config_name: str | None = None) -> Flask:
             resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
             resp.headers.setdefault("X-Frame-Options", "DENY")
             resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+
+            # Add caching headers for static files to improve performance
+            if request.path.startswith('/static/'):
+                # Static files can be cached for longer periods
+                resp.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+            elif request.path.startswith('/uploads/'):
+                # Uploaded files cache for moderate time
+                resp.headers.setdefault("Cache-Control", "public, max-age=86400")
 
             # HSTS only on HTTPS
             try:

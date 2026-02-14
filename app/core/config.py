@@ -214,7 +214,7 @@ class Config:
     # CSP policy - restrictive but allows common CDNs
     CSP_POLICY = {
         'default-src': ["'self'"],
-        'script-src': ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+        'script-src': ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
         'style-src': ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"],
         'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
         'img-src': ["'self'", "data:", "https:"],

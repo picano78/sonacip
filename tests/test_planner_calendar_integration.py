@@ -94,15 +94,16 @@ def test_field_planner_shows_in_calendar(app, db_session, test_user_and_society)
         db_session.add(facility)
         db_session.flush()
         
-        # Create field planner event
+        # Create field planner event with consistent timestamps
+        base_time = datetime.now(timezone.utc) + timedelta(days=1)
         event = FieldPlannerEvent(
             society_id=society.id,
             facility_id=facility.id,
             created_by=user.id,
             event_type='training',
             title='Test Training',
-            start_datetime=datetime.now(timezone.utc) + timedelta(days=1),
-            end_datetime=datetime.now(timezone.utc) + timedelta(days=1, hours=2),
+            start_datetime=base_time,
+            end_datetime=base_time + timedelta(hours=2),
             color='#28a745'
         )
         db_session.add(event)
@@ -135,15 +136,16 @@ def test_audit_logging_for_planner_changes(app, db_session, test_user_and_societ
         db_session.add(facility)
         db_session.flush()
         
-        # Create event
+        # Create event with consistent timestamps
+        base_time = datetime.now(timezone.utc) + timedelta(days=1)
         event = FieldPlannerEvent(
             society_id=society.id,
             facility_id=facility.id,
             created_by=user.id,
             event_type='training',
             title='Test Training',
-            start_datetime=datetime.now(timezone.utc) + timedelta(days=1),
-            end_datetime=datetime.now(timezone.utc) + timedelta(days=1, hours=2)
+            start_datetime=base_time,
+            end_datetime=base_time + timedelta(hours=2)
         )
         db_session.add(event)
         db_session.commit()

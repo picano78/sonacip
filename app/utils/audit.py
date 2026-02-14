@@ -2,10 +2,13 @@
 Audit logging utilities for tracking planner and calendar changes
 """
 from flask import request
+import logging
 from app import db
 from app.models import AuditLog
 from datetime import datetime, timezone
 import json
+
+logger = logging.getLogger(__name__)
 
 
 def log_planner_change(user_id, society_id, action, entity_type, entity_id, details=None):
@@ -47,7 +50,7 @@ def log_planner_change(user_id, society_id, action, entity_type, entity_id, deta
         return audit_entry
     except Exception as e:
         db.session.rollback()
-        print(f"Error logging audit entry: {e}")
+        logger.error(f"Error logging audit entry: {e}", exc_info=True)
         return None
 
 
@@ -74,5 +77,5 @@ def get_planner_changes(society_id, limit=100, entity_type=None):
         
         return query.order_by(AuditLog.created_at.desc()).limit(limit).all()
     except Exception as e:
-        print(f"Error getting planner changes: {e}")
+        logger.error(f"Error getting planner changes: {e}", exc_info=True)
         return []

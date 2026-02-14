@@ -43,21 +43,25 @@ def get_conversations():
                     'type': 'direct',
                     'user': other_user,
                     'last_message': msg,
-                    'unread_count': unread_count
+                    'unread_count': unread_count,
+                    'sort_time': msg.created_at
                 })
     
-    # Get group chat conversations
+    # Get group chat conversations with eager loading
+    from sqlalchemy.orm import joinedload
     group_memberships = MessageGroupMembership.query.filter_by(
         user_id=current_user.id,
         is_active=True
-    ).all()
+    ).options(joinedload(MessageGroupMembership.group)).all()
     
     for membership in group_memberships:
-        group = MessageGroup.query.get(membership.group_id)
+        group = membership.group
         if group:
             last_message = MessageGroupMessage.query.filter_by(
                 group_id=group.id
-            ).order_by(MessageGroupMessage.created_at.desc()).first()
+            ).options(joinedload(MessageGroupMessage.sender)).order_by(
+                MessageGroupMessage.created_at.desc()
+            ).first()
             
             # Count unread messages (simplified - in real app would track read status per user)
             unread_count = 0
@@ -67,13 +71,12 @@ def get_conversations():
                 'group': group,
                 'last_message': last_message,
                 'unread_count': unread_count,
-                'member_count': group.member_count()
+                'member_count': group.member_count(),
+                'sort_time': last_message.created_at if last_message else group.created_at
             })
     
     # Sort all conversations by last message time
-    conversations.sort(key=lambda x: (
-        x['last_message'].created_at if x['last_message'] else datetime.min.replace(tzinfo=timezone.utc)
-    ), reverse=True)
+    conversations.sort(key=lambda x: x['sort_time'], reverse=True)
     
     return conversations
 
@@ -487,23 +490,25 @@ def group_chat(group_id):
         flash('Non sei membro di questo gruppo.', 'warning')
         return redirect(url_for('messages.inbox'))
     
-    # Get messages
+    # Get messages with sender info (eager loading)
+    from sqlalchemy.orm import joinedload
     messages = MessageGroupMessage.query.filter_by(
         group_id=group.id
-    ).order_by(MessageGroupMessage.created_at.asc()).all()
+    ).options(joinedload(MessageGroupMessage.sender)).order_by(
+        MessageGroupMessage.created_at.asc()
+    ).all()
     
-    # Get members
+    # Get members with user info (eager loading)
     members = MessageGroupMembership.query.filter_by(
         group_id=group.id,
         is_active=True
-    ).all()
+    ).options(joinedload(MessageGroupMembership.user)).all()
     
     member_users = []
     for m in members:
-        user = User.query.get(m.user_id)
-        if user:
+        if m.user:
             member_users.append({
-                'user': user,
+                'user': m.user,
                 'is_admin': m.is_admin,
                 'membership': m
             })

@@ -29,7 +29,7 @@
                                         <input class="form-check-input me-3" type="checkbox" name="user_ids" value="{{ user.id }}">
                                         {% if user.avatar %}
                                         <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}" 
-                                             class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="">
+                                             class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="{{ user.get_full_name() }}">
                                         {% else %}
                                         <div class="rounded-circle bg-secondary text-white me-2 d-flex align-items-center justify-content-center" 
                                              style="width: 40px; height: 40px;">

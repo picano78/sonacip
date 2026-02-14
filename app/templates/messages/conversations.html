@@ -339,7 +339,7 @@
                 <a href="{{ url_for('messages.group_chat', group_id=conv.group.id) }}" 
                    class="conversation-item">
                     {% if conv.group.avatar %}
-                        <img src="{{ url_for('static', filename='uploads/' + conv.group.avatar) }}" class="conversation-avatar" alt="">
+                        <img src="{{ url_for('static', filename='uploads/' + conv.group.avatar) }}" class="conversation-avatar" alt="{{ conv.group.name }}">
                     {% else %}
                         <div class="conversation-avatar-placeholder" style="background: #42b72a;">
                             <i class="bi bi-people-fill text-white"></i>

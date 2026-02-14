@@ -321,7 +321,7 @@
                 {% if conv.type == 'direct' %}
                 <a href="{{ url_for('messages.chat', user_id=conv.user.id) }}" class="conversation-item">
                     {% if conv.user.avatar %}
-                        <img src="{{ url_for('static', filename='uploads/' + conv.user.avatar) }}" class="conversation-avatar" alt="">
+                        <img src="{{ url_for('static', filename='uploads/' + conv.user.avatar) }}" class="conversation-avatar" alt="{{ conv.user.get_full_name() }}">
                     {% else %}
                         <div class="conversation-avatar-placeholder">
                             <i class="bi bi-person-fill text-white"></i>
@@ -336,7 +336,7 @@
                 <a href="{{ url_for('messages.group_chat', group_id=conv.group.id) }}" 
                    class="conversation-item {{ 'active' if group and group.id == conv.group.id else '' }}">
                     {% if conv.group.avatar %}
-                        <img src="{{ url_for('static', filename='uploads/' + conv.group.avatar) }}" class="conversation-avatar" alt="">
+                        <img src="{{ url_for('static', filename='uploads/' + conv.group.avatar) }}" class="conversation-avatar" alt="{{ conv.group.name }}">
                     {% else %}
                         <div class="conversation-avatar-placeholder" style="background: var(--group-green);">
                             <i class="bi bi-people-fill text-white"></i>
@@ -373,7 +373,7 @@
                         <i class="bi bi-arrow-left"></i>
                     </a>
                     {% if group.avatar %}
-                        <img src="{{ url_for('static', filename='uploads/' + group.avatar) }}" class="conversation-avatar" alt="">
+                        <img src="{{ url_for('static', filename='uploads/' + group.avatar) }}" class="conversation-avatar" alt="{{ group.name }}">
                     {% else %}
                         <div class="conversation-avatar-placeholder" style="background: var(--group-green);">
                             <i class="bi bi-people-fill text-white"></i>
@@ -454,7 +454,7 @@
                 {% for member in members %}
                 <div class="member-item">
                     {% if member.user.avatar %}
-                        <img src="{{ url_for('static', filename='uploads/' + member.user.avatar) }}" class="member-avatar" alt="">
+                        <img src="{{ url_for('static', filename='uploads/' + member.user.avatar) }}" class="member-avatar" alt="{{ member.user.get_full_name() }}">
                     {% else %}
                         <div class="member-avatar-placeholder">
                             <i class="bi bi-person-fill text-white" style="font-size: 0.9rem;"></i>

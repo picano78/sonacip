@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Convoca Atleti - {{ event.title }}{% endblock %}
 {% block content %}
+<style>
+    .athlete-item.hidden {
+        display: none;
+    }
+</style>
 <div class="container my-4">
     <h1 class="mb-4">Convoca Atleti</h1>
     <div class="card mb-3">
@@ -25,6 +30,7 @@
                 </div>
                 
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <button type="button" id="selectAll" class="btn btn-sm btn-outline-primary me-2">Seleziona Tutti</button>
                         <button type="button" id="deselectAll" class="btn btn-sm btn-outline-secondary">Deseleziona Tutti</button>
@@ -81,16 +87,16 @@
             athletes.forEach(function(item) {
                 const itemCategory = item.getAttribute('data-category');
                 if (selectedCategory === '' || itemCategory === selectedCategory) {
-                    item.style.display = '';
+                    item.classList.remove('hidden');
                 } else {
-                    item.style.display = 'none';
+                    item.classList.add('hidden');
                 }
             });
         });
         
         // Select/Deselect all visible athletes
         document.getElementById('selectAll').addEventListener('click', function() {
-            document.querySelectorAll('.athlete-item:not([style*="display: none"]) .athlete-checkbox').forEach(function(checkbox) {
+            document.querySelectorAll('.athlete-item:not(.hidden) .athlete-checkbox').forEach(function(checkbox) {
                 checkbox.checked = true;
             });
         });

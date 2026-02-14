@@ -353,6 +353,122 @@ def create():
     return render_template('field_planner/create.html', form=form, facilities=facilities)
 
 
+@bp.route('/event/<int:event_id>/edit', methods=['GET', 'POST'])
+@login_required
+@permission_required('field_planner', 'manage', society_id_func=_event_scope_id)
+def edit(event_id):
+    """Edit field planner event"""
+    event = FieldPlannerEvent.query.get_or_404(event_id)
+    
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('field_planner.index'))
+    
+    # Check permissions
+    if not check_permission(current_user, 'admin', 'access'):
+        if event.society_id != get_active_society_id(current_user):
+            abort(403)
+    
+    # Populate facility choices
+    facilities = Facility.query.filter_by(society_id=society.id).order_by(Facility.name.asc()).all()
+    
+    form = FieldPlannerEventForm()
+    form.facility_id.choices = [(f.id, f.name) for f in facilities]
+    
+    if form.validate_on_submit():
+        # Store old values for logging
+        old_values = {
+            'title': event.title,
+            'facility_id': event.facility_id,
+            'start_datetime': event.start_datetime,
+            'end_datetime': event.end_datetime
+        }
+        
+        start_dt = datetime.combine(form.start_date.data, form.start_time.data)
+        end_dt = datetime.combine(form.start_date.data, form.end_time.data)
+        
+        # Check for conflicts on the same facility (excluding current event)
+        conflict = (
+            FieldPlannerEvent.query.filter(
+                FieldPlannerEvent.id != event.id,
+                FieldPlannerEvent.society_id == society.id,
+                FieldPlannerEvent.facility_id == form.facility_id.data,
+                FieldPlannerEvent.start_datetime < end_dt,
+                FieldPlannerEvent.end_datetime > start_dt,
+            )
+            .order_by(FieldPlannerEvent.start_datetime.asc())
+            .first()
+        )
+        if conflict:
+            flash(
+                f'Sovraccaricamento campo: il campo è già occupato da "{conflict.title}" '
+                f'({conflict.start_datetime.strftime("%d/%m %H:%M")} - {conflict.end_datetime.strftime("%H:%M")}). '
+                f'Il planner campo permette un solo impegno per campo alla volta.',
+                'danger',
+            )
+            return render_template('field_planner/edit.html', form=form, event=event, facilities=facilities)
+        
+        # Update event fields
+        event.facility_id = form.facility_id.data
+        event.event_type = form.event_type.data
+        event.title = form.title.data
+        event.team = form.team.data
+        event.category = form.category.data
+        event.start_datetime = start_dt
+        event.end_datetime = end_dt
+        event.notes = form.notes.data
+        event.color = form.color.data or '#28a745'
+        
+        db.session.commit()
+        
+        # Log the modification
+        log_planner_change(
+            user_id=current_user.id,
+            society_id=event.society_id,
+            action='field_planner_updated',
+            entity_type='FieldPlannerEvent',
+            entity_id=event.id,
+            details={
+                'old_values': old_values,
+                'new_values': {
+                    'title': event.title,
+                    'facility_id': event.facility_id,
+                    'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
+                    'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M')
+                }
+            }
+        )
+        
+        # Notify society members
+        facility = Facility.query.get(form.facility_id.data)
+        if facility:
+            notify_planner_change(
+                society.id,
+                f"Impegno modificato: {event.title}",
+                f"L'impegno '{event.title}' sul campo {facility.name} è stato modificato per il {event.start_datetime.strftime('%d/%m/%Y')} alle {event.start_datetime.strftime('%H:%M')}.",
+                link=url_for('field_planner.detail', event_id=event.id)
+            )
+        
+        flash('Evento aggiornato nel Planner Campo.', 'success')
+        return redirect(url_for('field_planner.detail', event_id=event.id))
+    
+    # Pre-fill form with existing event data
+    if request.method == 'GET':
+        form.facility_id.data = event.facility_id
+        form.event_type.data = event.event_type
+        form.title.data = event.title
+        form.team.data = event.team
+        form.category.data = event.category
+        form.start_date.data = event.start_datetime.date()
+        form.start_time.data = event.start_datetime.time()
+        form.end_time.data = event.end_datetime.time()
+        form.notes.data = event.notes
+        form.color.data = event.color
+    
+    return render_template('field_planner/edit.html', form=form, event=event, facilities=facilities)
+
+
 @bp.route('/event/<int:event_id>/delete', methods=['POST'])
 @login_required
 @permission_required('field_planner', 'manage', society_id_func=_event_scope_id)

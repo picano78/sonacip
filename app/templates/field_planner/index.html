@@ -87,22 +87,31 @@
                                 {% for event in cell_events %}
                                 <div class="card mb-1" style="border-left: 4px solid {{ event.color }};">
                                     <div class="card-body p-2">
-                                        <a href="{{ url_for('field_planner.detail', event_id=event.id) }}" 
-                                           class="text-decoration-none text-dark">
-                                            <div class="small fw-bold">{{ event.title }}</div>
-                                            <div class="small text-muted">
-                                                <i class="bi bi-clock"></i> 
-                                                {{ event.start_datetime.strftime('%H:%M') }} - {{ event.end_datetime.strftime('%H:%M') }}
-                                            </div>
-                                            {% if event.facility %}
-                                            <div class="small text-muted">
-                                                <i class="bi bi-geo-alt"></i> {{ event.facility.name }}
-                                            </div>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <a href="{{ url_for('field_planner.detail', event_id=event.id) }}" 
+                                               class="text-decoration-none text-dark flex-grow-1">
+                                                <div class="small fw-bold">{{ event.title }}</div>
+                                                <div class="small text-muted">
+                                                    <i class="bi bi-clock"></i> 
+                                                    {{ event.start_datetime.strftime('%H:%M') }} - {{ event.end_datetime.strftime('%H:%M') }}
+                                                </div>
+                                                {% if event.facility %}
+                                                <div class="small text-muted">
+                                                    <i class="bi bi-geo-alt"></i> {{ event.facility.name }}
+                                                </div>
+                                                {% endif %}
+                                                <span class="badge bg-{% if event.event_type == 'training' %}success{% else %}primary{% endif %} mt-1">
+                                                    {% if event.event_type == 'training' %}Allenamento{% else %}Partita{% endif %}
+                                                </span>
+                                            </a>
+                                            {% if can('field_planner', 'manage') %}
+                                            <a href="{{ url_for('field_planner.edit', event_id=event.id) }}" 
+                                               class="btn btn-sm btn-link text-primary p-0 ms-1" 
+                                               title="Modifica evento">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
                                             {% endif %}
-                                            <span class="badge bg-{% if event.event_type == 'training' %}success{% else %}primary{% endif %} mt-1">
-                                                {% if event.event_type == 'training' %}Allenamento{% else %}Partita{% endif %}
-                                            </span>
-                                        </a>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}

@@ -386,27 +386,27 @@ def social_feed_algorithm():
         db.session.commit()
 
     if request.method == 'POST':
-        def _int(name, default):
+        def _parse_int_from_form(name, default):
             try:
                 return int(request.form.get(name, default))
             except Exception:
                 return default
 
-        def _float(name, default):
+        def _parse_float_from_form(name, default):
             try:
                 return float(request.form.get(name, default))
             except Exception:
                 return default
 
-        settings.priority_followed = _int('priority_followed', settings.priority_followed or 0)
-        settings.priority_friends = _int('priority_friends', settings.priority_friends or 1)
-        settings.priority_others = _int('priority_others', settings.priority_others or 2)
-        settings.weight_engagement = _float('weight_engagement', settings.weight_engagement or 1.0)
-        settings.weight_recency = _float('weight_recency', settings.weight_recency or 1.0)
-        settings.weight_promoted = _float('weight_promoted', settings.weight_promoted or 20.0)
-        settings.weight_official = _float('weight_official', settings.weight_official or 30.0)
-        settings.weight_tournament = _float('weight_tournament', settings.weight_tournament or 20.0)
-        settings.weight_automation = _float('weight_automation', settings.weight_automation or 10.0)
+        settings.priority_followed = _parse_int_from_form('priority_followed', settings.priority_followed or 0)
+        settings.priority_friends = _parse_int_from_form('priority_friends', settings.priority_friends or 1)
+        settings.priority_others = _parse_int_from_form('priority_others', settings.priority_others or 2)
+        settings.weight_engagement = _parse_float_from_form('weight_engagement', settings.weight_engagement or 1.0)
+        settings.weight_recency = _parse_float_from_form('weight_recency', settings.weight_recency or 1.0)
+        settings.weight_promoted = _parse_float_from_form('weight_promoted', settings.weight_promoted or 20.0)
+        settings.weight_official = _parse_float_from_form('weight_official', settings.weight_official or 30.0)
+        settings.weight_tournament = _parse_float_from_form('weight_tournament', settings.weight_tournament or 20.0)
+        settings.weight_automation = _parse_float_from_form('weight_automation', settings.weight_automation or 10.0)
         settings.updated_by = current_user.id
         settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
@@ -454,17 +454,17 @@ def storage_settings():
         settings.preferred_image_format = form.preferred_image_format.data or settings.preferred_image_format
         settings.preferred_video_format = form.preferred_video_format.data or settings.preferred_video_format
 
-        def _int(value, default):
+        def _safe_int_conversion(value, default):
             try:
                 return int(value)
             except Exception:
                 return default
 
-        settings.image_quality = _int(form.image_quality.data, settings.image_quality)
-        settings.video_bitrate = _int(form.video_bitrate.data, settings.video_bitrate)
-        settings.video_max_width = _int(form.video_max_width.data, settings.video_max_width)
-        settings.max_image_mb = _int(form.max_image_mb.data, settings.max_image_mb)
-        settings.max_video_mb = _int(form.max_video_mb.data, settings.max_video_mb)
+        settings.image_quality = _safe_int_conversion(form.image_quality.data, settings.image_quality)
+        settings.video_bitrate = _safe_int_conversion(form.video_bitrate.data, settings.video_bitrate)
+        settings.video_max_width = _safe_int_conversion(form.video_max_width.data, settings.video_max_width)
+        settings.max_image_mb = _safe_int_conversion(form.max_image_mb.data, settings.max_image_mb)
+        settings.max_video_mb = _safe_int_conversion(form.max_video_mb.data, settings.max_video_mb)
 
         settings.updated_by = current_user.id
         settings.updated_at = datetime.now(timezone.utc)
@@ -1588,13 +1588,13 @@ def ads_manager():
     campaigns = AdCampaign.query.order_by(AdCampaign.created_at.desc()).all()
     creatives = AdCreative.query.order_by(AdCreative.created_at.desc()).limit(200).all()
 
-    def _ctr(clicks: int | None, imps: int | None) -> float:
-        i = float(imps or 0)
-        c = float(clicks or 0)
-        return round((c / i) * 100.0, 2) if i > 0 else 0.0
+    def _calculate_ctr(clicks: int | None, imps: int | None) -> float:
+        impressions = float(imps or 0)
+        click_count = float(clicks or 0)
+        return round((click_count / impressions) * 100.0, 2) if impressions > 0 else 0.0
 
-    campaign_stats = {c.id: {"ctr": _ctr(c.clicks_count, c.impressions_count)} for c in campaigns}
-    creative_stats = {c.id: {"ctr": _ctr(c.clicks_count, c.impressions_count)} for c in creatives}
+    campaign_stats = {c.id: {"ctr": _calculate_ctr(c.clicks_count, c.impressions_count)} for c in campaigns}
+    creative_stats = {c.id: {"ctr": _calculate_ctr(c.clicks_count, c.impressions_count)} for c in creatives}
 
     # Recent events for debugging
     recent_events = AdEvent.query.order_by(AdEvent.created_at.desc()).limit(50).all()

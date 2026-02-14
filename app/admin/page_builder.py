@@ -21,11 +21,11 @@ from app.models import CustomizationKV
 PAGE_REGISTRY: dict[str, dict[str, Any]] = {}
 
 
-def _r(slug: str, *, label: str, sections: list[dict]) -> None:
+def _register_page(slug: str, *, label: str, sections: list[dict]) -> None:
     PAGE_REGISTRY[slug] = {'label': label, 'sections': sections}
 
 
-def _sec(id: str, type: str, label: str, content: dict | None = None, visible: bool = True) -> dict:
+def _create_section(id: str, type: str, label: str, content: dict | None = None, visible: bool = True) -> dict:
     return {'id': id, 'type': type, 'label': label, 'visible': visible, 'content': content or {}}
 
 
@@ -78,15 +78,15 @@ SECTION_FIELD_SCHEMA: dict[str, list[dict]] = {
     ],
 }
 
-_r('main.index', label='Homepage', sections=[
-    _sec('hero', 'hero', 'Sezione Hero', {
+_register_page('main.index', label='Homepage', sections=[
+    _create_section('hero', 'hero', 'Sezione Hero', {
         'title': 'Benvenuto su SONACIP',
         'subtitle': 'La piattaforma completa per la gestione delle società sportive, atleti e appassionati di sport in Italia.',
         'btn1_text': 'Accedi', 'btn1_url': '/auth/login',
         'btn2_text': 'Registrati come Appassionato', 'btn2_url': '/auth/register',
         'btn3_text': 'Registra Società', 'btn3_url': '/auth/register-society',
     }),
-    _sec('features', 'features_grid', 'Funzionalità Principali', {
+    _create_section('features', 'features_grid', 'Funzionalità Principali', {
         'title': 'Funzionalità Principali',
         'subtitle': 'Tutto ciò che serve per gestire le tue società sportive in un\'unica piattaforma',
         'items': [
@@ -98,19 +98,19 @@ _r('main.index', label='Homepage', sections=[
             {'icon': 'bi-trophy', 'title': 'Gestione Tornei', 'text': 'Organizza tornei e competizioni con tabelloni e classifiche.'},
         ],
     }),
-    _sec('cta_users', 'cta', 'CTA Appassionati', {
+    _create_section('cta_users', 'cta', 'CTA Appassionati', {
         'title': 'Sei un Appassionato di Sport?',
         'text': 'Unisciti a migliaia di atleti e appassionati che già usano SONACIP per connettersi, competere e crescere nello sport.',
         'btn1_text': 'Registrati Subito', 'btn1_url': '/auth/register',
         'btn2_text': 'Leggi la Guida', 'btn2_url': '/contatto',
     }),
-    _sec('cta_societies', 'cta', 'CTA Società', {
+    _create_section('cta_societies', 'cta', 'CTA Società', {
         'title': 'Gestisci la Tua Società Sportiva',
         'text': 'SONACIP è lo strumento completo per le società sportive italiane.',
         'btn1_text': 'Registra la Tua Società', 'btn1_url': '/auth/register-society',
         'btn2_text': 'Scopri di Più', 'btn2_url': '/contatto',
     }),
-    _sec('why_us', 'checklist', 'Perché Scegliere SONACIP', {
+    _create_section('why_us', 'checklist', 'Perché Scegliere SONACIP', {
         'title': 'Perché Scegliere SONACIP?',
         'items': [
             {'title': 'Piattaforma Italiana', 'text': 'Sviluppata per le esigenze specifiche delle società sportive italiane'},
@@ -121,16 +121,16 @@ _r('main.index', label='Homepage', sections=[
     }),
 ])
 
-_r('main.about', label='Chi Siamo', sections=[
-    _sec('hero', 'hero', 'Sezione Hero', {
+_register_page('main.about', label='Chi Siamo', sections=[
+    _create_section('hero', 'hero', 'Sezione Hero', {
         'title': 'Chi Siamo',
         'subtitle': 'SONACIP è la piattaforma italiana dedicata alla gestione delle società sportive.',
     }),
-    _sec('mission', 'rich_html', 'Missione', {
+    _create_section('mission', 'rich_html', 'Missione', {
         'title': 'La Nostra Missione',
         'html': '<p>Facilitare la gestione delle società sportive italiane, offrendo strumenti digitali moderni e accessibili a tutti.</p>',
     }),
-    _sec('values', 'values', 'I Nostri Valori', {
+    _create_section('values', 'values', 'I Nostri Valori', {
         'title': 'I Nostri Valori',
         'items': [
             {'icon': 'bi-heart-fill', 'title': 'Passione', 'text': 'Lo sport è il cuore di tutto ciò che facciamo.'},
@@ -139,7 +139,7 @@ _r('main.about', label='Chi Siamo', sections=[
             {'icon': 'bi-lightbulb-fill', 'title': 'Innovazione', 'text': 'Sempre alla ricerca di soluzioni migliori per i nostri utenti.'},
         ],
     }),
-    _sec('stats', 'stats', 'Statistiche', {
+    _create_section('stats', 'stats', 'Statistiche', {
         'items': [
             {'value': '1000+', 'label': 'Utenti Registrati'},
             {'value': '50+', 'label': 'Società Sportive'},
@@ -149,12 +149,12 @@ _r('main.about', label='Chi Siamo', sections=[
     }),
 ])
 
-_r('main.contact', label='Contatti', sections=[
-    _sec('hero', 'hero', 'Sezione Hero', {
+_register_page('main.contact', label='Contatti', sections=[
+    _create_section('hero', 'hero', 'Sezione Hero', {
         'title': 'Contattaci',
         'subtitle': 'Siamo qui per aiutarti. Scegli il metodo che preferisci per metterti in contatto con noi.',
     }),
-    _sec('contact_cards', 'contact_cards', 'Schede Contatto', {
+    _create_section('contact_cards', 'contact_cards', 'Schede Contatto', {
         'title': 'Come Raggiungerci',
         'items': [
             {'icon': 'bi-envelope-fill', 'title': 'Email', 'text': 'info@sonacip.it', 'link': 'mailto:info@sonacip.it'},
@@ -162,7 +162,7 @@ _r('main.contact', label='Contatti', sections=[
             {'icon': 'bi-geo-alt-fill', 'title': 'Sede', 'text': 'Italia', 'link': ''},
         ],
     }),
-    _sec('cta', 'cta', 'CTA Assistenza', {
+    _create_section('cta', 'cta', 'CTA Assistenza', {
         'title': 'Hai Bisogno di Assistenza?',
         'text': 'Il nostro team è pronto ad aiutarti con qualsiasi domanda o problema.',
         'btn1_text': 'Scrivi al Supporto', 'btn1_url': '/contatta-admin',
@@ -170,37 +170,37 @@ _r('main.contact', label='Contatti', sections=[
     }),
 ])
 
-_r('main.privacy_policy', label='Privacy Policy', sections=[
-    _sec('content', 'rich_html', 'Contenuto Privacy', {
+_register_page('main.privacy_policy', label='Privacy Policy', sections=[
+    _create_section('content', 'rich_html', 'Contenuto Privacy', {
         'title': 'Informativa sulla Privacy',
         'html': '',
     }),
 ])
 
-_r('main.terms', label='Termini di Servizio', sections=[
-    _sec('content', 'rich_html', 'Contenuto Termini', {
+_register_page('main.terms', label='Termini di Servizio', sections=[
+    _create_section('content', 'rich_html', 'Contenuto Termini', {
         'title': 'Termini e Condizioni',
         'html': '',
     }),
 ])
 
-_r('main.guide_user', label='Guida Utente', sections=[
-    _sec('hero', 'hero', 'Sezione Hero', {
+_register_page('main.guide_user', label='Guida Utente', sections=[
+    _create_section('hero', 'hero', 'Sezione Hero', {
         'title': 'Guida Utente',
         'subtitle': 'Tutto quello che devi sapere per usare SONACIP al meglio.',
     }),
-    _sec('content', 'rich_html', 'Contenuto Guida', {
+    _create_section('content', 'rich_html', 'Contenuto Guida', {
         'title': '',
         'html': '',
     }),
 ])
 
-_r('main.guide_society', label='Guida Società', sections=[
-    _sec('hero', 'hero', 'Sezione Hero', {
+_register_page('main.guide_society', label='Guida Società', sections=[
+    _create_section('hero', 'hero', 'Sezione Hero', {
         'title': 'Guida per le Società',
         'subtitle': 'Impara a gestire la tua società sportiva con SONACIP.',
     }),
-    _sec('content', 'rich_html', 'Contenuto Guida', {
+    _create_section('content', 'rich_html', 'Contenuto Guida', {
         'title': '',
         'html': '',
     }),

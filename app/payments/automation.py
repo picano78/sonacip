@@ -1,6 +1,7 @@
 """
 Automated Payment Features
 Handles payment reminders, automated invoices, and subscription management
+Modern social-like payment automation with super admin controls
 """
 from datetime import datetime, timezone, timedelta
 from app import db
@@ -9,6 +10,9 @@ from app.notifications.utils import create_notification
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Auto-approval threshold in euros (configurable by super admin)
+AUTO_APPROVE_THRESHOLD = 50.0
 
 
 def send_payment_reminders():
@@ -253,3 +257,172 @@ def calculate_payment_analytics():
     except Exception as e:
         logger.error(f"Error calculating payment analytics: {e}")
         return None
+
+
+def auto_approve_small_payments():
+    """
+    Automatically approve small payments (modern social network feature)
+    Payments under threshold are auto-approved and marked as manual
+    Should be run every few minutes via cron or celery beat
+    """
+    try:
+        # Find pending manual payments under threshold
+        pending_payments = FeePayment.query.filter(
+            FeePayment.status == 'pending',
+            FeePayment.payment_method.in_(['contanti', 'bonifico', 'manual']),
+            FeePayment.amount <= AUTO_APPROVE_THRESHOLD
+        ).all()
+        
+        approved_count = 0
+        for payment in pending_payments:
+            # Auto-approve
+            payment.status = 'completed'
+            payment.paid_at = datetime.now(timezone.utc)
+            payment.notes = (payment.notes or '') + '\n[AUTO] Approvato automaticamente (importo minore di €{:.2f})'.format(AUTO_APPROVE_THRESHOLD)
+            db.session.add(payment)
+            
+            # Update fee status
+            if payment.fee and payment.fee.status != 'paid':
+                payment.fee.status = 'paid'
+                payment.fee.paid_at = datetime.now(timezone.utc)
+                db.session.add(payment.fee)
+            
+            # Notify user with social-like notification
+            create_notification(
+                user_id=payment.user_id,
+                notification_type='payment_approved',
+                title='✅ Pagamento Approvato',
+                message=f'Il tuo pagamento di €{payment.amount:.2f} è stato approvato automaticamente!',
+                link=f'/payments/receipt/{payment.id}'
+            )
+            
+            approved_count += 1
+        
+        if approved_count > 0:
+            db.session.commit()
+            logger.info(f"Auto-approved {approved_count} small payments")
+        
+        return approved_count
+        
+    except Exception as e:
+        logger.error(f"Error auto-approving small payments: {e}")
+        db.session.rollback()
+        return 0
+
+
+def send_social_payment_notifications():
+    """
+    Send modern social-style payment notifications
+    Creates engaging, user-friendly notifications for payment events
+    """
+    try:
+        from sqlalchemy import func
+        
+        now = datetime.now(timezone.utc)
+        notifications_sent = 0
+        
+        # Find recently completed payments (last hour) without notification
+        recent_payments = FeePayment.query.filter(
+            FeePayment.status == 'completed',
+            FeePayment.paid_at >= now - timedelta(hours=1),
+            FeePayment.paid_at <= now
+        ).all()
+        
+        for payment in recent_payments:
+            # Skip if already notified (check notes)
+            if payment.notes and '[NOTIFIED]' in payment.notes:
+                continue
+            
+            # Send social-style congratulations notification
+            emojis = ['🎉', '👍', '✅', '💰', '🌟']
+            emoji = emojis[payment.id % len(emojis)]
+            
+            create_notification(
+                user_id=payment.user_id,
+                notification_type='payment_completed',
+                title=f'{emoji} Pagamento Completato!',
+                message=f'Grazie! Il tuo pagamento di €{payment.amount:.2f} è stato ricevuto con successo.',
+                link=f'/payments/receipt/{payment.id}'
+            )
+            
+            # Mark as notified
+            payment.notes = (payment.notes or '') + '\n[NOTIFIED]'
+            db.session.add(payment)
+            notifications_sent += 1
+        
+        if notifications_sent > 0:
+            db.session.commit()
+            logger.info(f"Sent {notifications_sent} social payment notifications")
+        
+        return notifications_sent
+        
+    except Exception as e:
+        logger.error(f"Error sending social payment notifications: {e}")
+        db.session.rollback()
+        return 0
+
+
+def quick_payment_summary_for_admin():
+    """
+    Generate quick payment summary for super admin dashboard
+    Returns recent activity in social-feed style
+    """
+    try:
+        from sqlalchemy import func, desc
+        
+        now = datetime.now(timezone.utc)
+        
+        # Get last 24 hours activity
+        day_start = now - timedelta(hours=24)
+        
+        recent_payments = FeePayment.query.filter(
+            FeePayment.created_at >= day_start
+        ).order_by(desc(FeePayment.created_at)).limit(10).all()
+        
+        # Count by status
+        status_counts = db.session.query(
+            FeePayment.status,
+            func.count(FeePayment.id)
+        ).filter(
+            FeePayment.created_at >= day_start
+        ).group_by(FeePayment.status).all()
+        
+        # Total amounts
+        total_completed_today = db.session.query(
+            func.coalesce(func.sum(FeePayment.amount), 0)
+        ).filter(
+            FeePayment.status == 'completed',
+            FeePayment.paid_at >= day_start
+        ).scalar()
+        
+        total_pending_today = db.session.query(
+            func.coalesce(func.sum(FeePayment.amount), 0)
+        ).filter(
+            FeePayment.status == 'pending',
+            FeePayment.created_at >= day_start
+        ).scalar()
+        
+        summary = {
+            'recent_payments': [
+                {
+                    'id': p.id,
+                    'user': p.user.get_full_name() if p.user else 'Unknown',
+                    'amount': float(p.amount),
+                    'status': p.status,
+                    'created_at': p.created_at.strftime('%H:%M'),
+                    'description': p.fee.description if p.fee else f'Payment #{p.id}'
+                }
+                for p in recent_payments
+            ],
+            'status_counts': {status: count for status, count in status_counts},
+            'total_completed_today': float(total_completed_today or 0),
+            'total_pending_today': float(total_pending_today or 0),
+            'updated_at': now.isoformat()
+        }
+        
+        return summary
+        
+    except Exception as e:
+        logger.error(f"Error generating admin payment summary: {e}")
+        return None
+

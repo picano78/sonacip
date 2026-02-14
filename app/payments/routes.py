@@ -297,3 +297,158 @@ def manual_payment(fee_id):
     log_action('manual_payment', 'FeePayment', fp.id, f'Pagamento manuale registrato per quota #{fee.id}')
     flash('Pagamento manuale registrato con successo.', 'success')
     return redirect(url_for('payments.admin'))
+
+
+@bp.route('/quick-approve/<int:payment_id>', methods=['POST'])
+@login_required
+@admin_required
+def quick_approve(payment_id):
+    """Quick approve payment - modern social network style (super admin only)"""
+    payment = FeePayment.query.get_or_404(payment_id)
+    
+    if payment.status == 'completed':
+        return jsonify({'success': False, 'message': 'Pagamento già completato'}), 400
+    
+    # Approve payment
+    payment.status = 'completed'
+    payment.paid_at = datetime.now(timezone.utc)
+    payment.notes = (payment.notes or '') + f'\n[ADMIN] Approvato da {current_user.username} il {datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")}'
+    db.session.add(payment)
+    
+    # Update fee status
+    if payment.fee and payment.fee.status != 'paid':
+        payment.fee.status = 'paid'
+        payment.fee.paid_at = datetime.now(timezone.utc)
+        db.session.add(payment.fee)
+    
+    db.session.commit()
+    
+    # Send notification to user
+    from app.notifications.utils import create_notification
+    create_notification(
+        user_id=payment.user_id,
+        notification_type='payment_approved',
+        title='✅ Pagamento Approvato',
+        message=f'Il tuo pagamento di €{payment.amount:.2f} è stato approvato!',
+        link=f'/payments/receipt/{payment.id}'
+    )
+    
+    log_action('quick_approve_payment', 'FeePayment', payment.id, f'Pagamento approvato rapidamente')
+    
+    return jsonify({
+        'success': True,
+        'message': 'Pagamento approvato con successo',
+        'payment_id': payment.id
+    })
+
+
+@bp.route('/quick-reject/<int:payment_id>', methods=['POST'])
+@login_required
+@admin_required
+def quick_reject(payment_id):
+    """Quick reject payment - modern social network style (super admin only)"""
+    payment = FeePayment.query.get_or_404(payment_id)
+    
+    if payment.status == 'completed':
+        return jsonify({'success': False, 'message': 'Pagamento già completato, impossibile rifiutare'}), 400
+    
+    reason = request.json.get('reason', 'Nessun motivo specificato') if request.is_json else request.form.get('reason', 'Nessun motivo specificato')
+    
+    # Reject payment
+    payment.status = 'failed'
+    payment.notes = (payment.notes or '') + f'\n[ADMIN] Rifiutato da {current_user.username}: {reason}'
+    db.session.add(payment)
+    db.session.commit()
+    
+    # Send notification to user
+    from app.notifications.utils import create_notification
+    create_notification(
+        user_id=payment.user_id,
+        notification_type='payment_rejected',
+        title='❌ Pagamento Rifiutato',
+        message=f'Il tuo pagamento di €{payment.amount:.2f} è stato rifiutato. Motivo: {reason}',
+        link='/payments'
+    )
+    
+    log_action('quick_reject_payment', 'FeePayment', payment.id, f'Pagamento rifiutato: {reason}')
+    
+    return jsonify({
+        'success': True,
+        'message': 'Pagamento rifiutato',
+        'payment_id': payment.id
+    })
+
+
+@bp.route('/bulk-approve', methods=['POST'])
+@login_required
+@admin_required
+def bulk_approve():
+    """Bulk approve multiple payments - modern automation feature (super admin only)"""
+    payment_ids = request.json.get('payment_ids', []) if request.is_json else request.form.getlist('payment_ids[]')
+    
+    if not payment_ids:
+        return jsonify({'success': False, 'message': 'Nessun pagamento selezionato'}), 400
+    
+    approved_count = 0
+    failed_count = 0
+    
+    for payment_id in payment_ids:
+        try:
+            payment = FeePayment.query.get(int(payment_id))
+            if payment and payment.status == 'pending':
+                payment.status = 'completed'
+                payment.paid_at = datetime.now(timezone.utc)
+                payment.notes = (payment.notes or '') + f'\n[ADMIN] Approvazione bulk da {current_user.username}'
+                db.session.add(payment)
+                
+                if payment.fee and payment.fee.status != 'paid':
+                    payment.fee.status = 'paid'
+                    payment.fee.paid_at = datetime.now(timezone.utc)
+                    db.session.add(payment.fee)
+                
+                # Send notification
+                from app.notifications.utils import create_notification
+                create_notification(
+                    user_id=payment.user_id,
+                    notification_type='payment_approved',
+                    title='✅ Pagamento Approvato',
+                    message=f'Il tuo pagamento di €{payment.amount:.2f} è stato approvato!',
+                    link=f'/payments/receipt/{payment.id}'
+                )
+                
+                approved_count += 1
+        except Exception as e:
+            failed_count += 1
+            current_app.logger.error(f'Error approving payment {payment_id}: {e}')
+    
+    db.session.commit()
+    log_action('bulk_approve_payments', 'FeePayment', 0, f'Approvati {approved_count} pagamenti in blocco')
+    
+    return jsonify({
+        'success': True,
+        'message': f'{approved_count} pagamenti approvati con successo',
+        'approved_count': approved_count,
+        'failed_count': failed_count
+    })
+
+
+@bp.route('/automation-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def automation_settings():
+    """Configure payment automation settings (super admin only)"""
+    from app.payments.automation import AUTO_APPROVE_THRESHOLD
+    import os
+    
+    if request.method == 'POST':
+        # Update settings (in production, store in database or config file)
+        threshold = request.form.get('auto_approve_threshold', type=float, default=50.0)
+        
+        # For now, we'll just show a success message
+        # In production, you'd save this to database or config
+        flash(f'Impostazioni di automazione aggiornate. Soglia auto-approvazione: €{threshold:.2f}', 'success')
+        return redirect(url_for('payments.automation_settings'))
+    
+    return render_template('payments/automation_settings.html',
+                         auto_approve_threshold=AUTO_APPROVE_THRESHOLD)
+

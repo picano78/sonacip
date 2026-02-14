@@ -27,8 +27,8 @@
                     </li>
                     {% if feature_enabled('planner') %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('calendar.grid') }}">
-                            <i class="bi bi-calendar-check"></i> Planner
+                        <a class="nav-link" href="{{ url_for('field_planner.index') }}">
+                            <i class="bi bi-calendar-check"></i> Planner Campo
                         </a>
                     </li>
                     <li class="nav-item">
@@ -116,8 +116,8 @@
                         
                         {% if feature_enabled('planner') %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('calendar.grid') }}">
-                                <i class="bi bi-calendar-check"></i> Planner
+                            <a class="nav-link" href="{{ url_for('field_planner.index') }}">
+                                <i class="bi bi-calendar-check"></i> Planner Campo
                             </a>
                         </li>
                         <li class="nav-item">

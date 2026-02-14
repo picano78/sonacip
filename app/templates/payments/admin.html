@@ -33,8 +33,11 @@
     </div>
 
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h6 class="mb-0"><i class="bi bi-funnel"></i> Filtri</h6>
+            <a href="{{ url_for('payments.automation_settings') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-gear-fill"></i> Impostazioni Automazione
+            </a>
         </div>
         <div class="card-body">
             <form method="get" class="row g-2 align-items-end">
@@ -107,6 +110,14 @@
                         </td>
                         <td>{{ p.created_at.strftime('%d/%m/%Y') if p.created_at else '-' }}</td>
                         <td>
+                            {% if p.status == 'pending' %}
+                                <button class="btn btn-sm btn-success quick-approve-btn" data-payment-id="{{ p.id }}" title="Approva rapidamente">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger quick-reject-btn" data-payment-id="{{ p.id }}" title="Rifiuta">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            {% endif %}
                             <a href="{{ url_for('payments.receipt', payment_id=p.id) }}" class="btn btn-sm btn-outline-primary" title="Ricevuta">
                                 <i class="bi bi-receipt"></i>
                             </a>
@@ -197,4 +208,111 @@
     </div>
     {% endif %}
 </div>
+
+{% block extra_js %}
+<script>
+// Modern social-style quick approve/reject for payments
+document.addEventListener('DOMContentLoaded', function() {
+    // Quick approve buttons
+    document.querySelectorAll('.quick-approve-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const paymentId = this.dataset.paymentId;
+            
+            if (!confirm('Approvare questo pagamento?')) return;
+            
+            fetch(`/payments/quick-approve/${paymentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success feedback
+                    const row = this.closest('tr');
+                    row.style.backgroundColor = '#d1e7dd';
+                    
+                    // Update status badge
+                    const statusCell = row.querySelector('td:nth-child(6)');
+                    statusCell.innerHTML = '<span class="badge bg-success">Completato</span>';
+                    
+                    // Remove action buttons
+                    this.parentElement.querySelectorAll('.quick-approve-btn, .quick-reject-btn').forEach(b => b.remove());
+                    
+                    // Show toast notification
+                    showToast('✅ Pagamento approvato con successo!', 'success');
+                } else {
+                    showToast('❌ ' + data.message, 'error');
+                }
+            })
+            .catch(err => {
+                showToast('❌ Errore durante l\'approvazione', 'error');
+                console.error(err);
+            });
+        });
+    });
+    
+    // Quick reject buttons
+    document.querySelectorAll('.quick-reject-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const paymentId = this.dataset.paymentId;
+            
+            const reason = prompt('Motivo del rifiuto:');
+            if (!reason) return;
+            
+            fetch(`/payments/quick-reject/${paymentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ reason: reason })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Show feedback
+                    const row = this.closest('tr');
+                    row.style.backgroundColor = '#f8d7da';
+                    
+                    // Update status badge
+                    const statusCell = row.querySelector('td:nth-child(6)');
+                    statusCell.innerHTML = '<span class="badge bg-danger">Fallito</span>';
+                    
+                    // Remove action buttons
+                    this.parentElement.querySelectorAll('.quick-approve-btn, .quick-reject-btn').forEach(b => b.remove());
+                    
+                    // Show toast notification
+                    showToast('❌ Pagamento rifiutato', 'warning');
+                } else {
+                    showToast('❌ ' + data.message, 'error');
+                }
+            })
+            .catch(err => {
+                showToast('❌ Errore durante il rifiuto', 'error');
+                console.error(err);
+            });
+        });
+    });
+    
+    // Toast notification function (simple implementation)
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'warning'} position-fixed top-0 start-50 translate-middle-x mt-3`;
+        toast.style.zIndex = '9999';
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

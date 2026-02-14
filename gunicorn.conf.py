@@ -30,7 +30,9 @@ worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gthread" if threads > 1 
 
 # Robustness
 preload_app = os.environ.get("GUNICORN_PRELOAD_APP", "true").lower() in ("1", "true", "on", "yes")
-timeout = _env_int("GUNICORN_TIMEOUT", 60)
+# Increased timeout from 60s to 90s to prevent 502 Bad Gateway errors during registration
+# This provides a safety margin under nginx's 120s timeout
+timeout = _env_int("GUNICORN_TIMEOUT", 90)
 graceful_timeout = _env_int("GUNICORN_GRACEFUL_TIMEOUT", 30)
 keepalive = _env_int("GUNICORN_KEEPALIVE", 5)
 

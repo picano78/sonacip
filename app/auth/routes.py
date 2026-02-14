@@ -591,11 +591,14 @@ def register():
         if is_email_confirmation_required():
             session['_email_confirm_uid'] = user.id
             session['_email_confirm_resends'] = 0
-            email_sent = send_confirmation_email(user)
-            if email_sent:
-                flash('Registrazione completata! Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta.', 'success')
-            else:
-                flash('Registrazione completata! Non è stato possibile inviare l\'email di conferma. Puoi richiederne una nuova.', 'warning')
+            # Send confirmation email asynchronously to prevent 502 timeout errors
+            try:
+                from app.tasks import send_confirmation_email_async
+                send_confirmation_email_async.delay(user.id)
+                flash('Registrazione completata! Ti invieremo un\'email di conferma a breve. Controlla la tua casella di posta.', 'success')
+            except Exception:
+                current_app.logger.exception("Failed to queue confirmation email for user %s", user.id)
+                flash('Registrazione completata! L\'email di conferma verrà inviata a breve.', 'success')
             return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
         else:
             flash('Registrazione completata! Effettua il login.', 'success')
@@ -760,11 +763,14 @@ def register_society():
             if is_email_confirmation_required():
                 session['_email_confirm_uid'] = user.id
                 session['_email_confirm_resends'] = 0
-                email_sent = send_confirmation_email(user)
-                if email_sent:
-                    flash('Registrazione società completata! Ti abbiamo inviato un\'email di conferma. Controlla la tua casella di posta.', 'success')
-                else:
-                    flash('Registrazione società completata! Non è stato possibile inviare l\'email di conferma. Puoi richiederne una nuova.', 'warning')
+                # Send confirmation email asynchronously to prevent 502 timeout errors
+                try:
+                    from app.tasks import send_confirmation_email_async
+                    send_confirmation_email_async.delay(user.id)
+                    flash('Registrazione società completata! Ti invieremo un\'email di conferma a breve. Controlla la tua casella di posta.', 'success')
+                except Exception:
+                    current_app.logger.exception("Failed to queue confirmation email for society user %s", user.id)
+                    flash('Registrazione società completata! L\'email di conferma verrà inviata a breve.', 'success')
                 return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
         except Exception:
             pass

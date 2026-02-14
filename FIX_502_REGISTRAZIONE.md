@@ -36,9 +36,9 @@ send_confirmation_email_async.delay(user.id)
 - `migrations/versions/add_role_name_index_502_fix.py`
 
 **Cambiamento:**
-Aggiunto indice sulla colonna `role.name` per lookup O(1) invece di O(n).
+Aggiunto indice sulla colonna `role.name` per lookup O(log n) invece di O(n).
 
-**Beneficio:** Le query `Role.query.filter_by(name=role_name).first()` sono ora istantanee.
+**Beneficio:** Le query `Role.query.filter_by(name=role_name).first()` sono ora molto più veloci (lookup logaritmico invece di scansione completa della tabella).
 
 ### 3. Aumento Timeout Gunicorn ✅
 
@@ -252,7 +252,7 @@ cat /opt/sonacip/logs/celery.log
 | Metrica | Prima del Fix | Dopo il Fix |
 |---------|--------------|-------------|
 | Tempo registrazione | 60-120s (timeout) | < 2s |
-| Lookup role.name | 50-100ms (full scan) | < 1ms (indexed) |
+| Lookup role.name | 50-100ms (full scan) | < 1ms (B-tree index, O(log n)) |
 | Invio email | Bloccante (3-30s) | Asincrono (0s) |
 
 ## Checklist Deployment

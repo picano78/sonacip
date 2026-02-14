@@ -11,7 +11,7 @@ Without this index, the Role.query.filter_by(name=role_name).first()
 lookup in registration endpoints performs a full table scan, which
 can cause slow queries that exceed gunicorn's timeout threshold.
 
-The index ensures O(1) lookups instead of O(n), dramatically improving
+The index ensures O(log n) lookups instead of O(n), dramatically improving
 registration performance and preventing timeout errors.
 """
 from alembic import op

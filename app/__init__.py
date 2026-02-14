@@ -1248,7 +1248,8 @@ def create_app(config_name: str | None = None) -> Flask:
 
     # Auto-seed database to ensure required roles and admin exist
     # This is idempotent and safe to run on every startup
-    if not app.config.get("TESTING"):
+    # Skip if SKIP_AUTO_SEED is set (used by init_db.py to avoid conflicts)
+    if not app.config.get("TESTING") and not os.environ.get("SKIP_AUTO_SEED"):
         _auto_seed(app)
 
     return app

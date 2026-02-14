@@ -43,6 +43,19 @@ def create_notification(user_id, title, message, notification_type='system', lin
         except Exception as e:
             logger.error(f"Error sending real-time notification: {e}", exc_info=True)
         
+        # Send push notification (with sound)
+        try:
+            from app.notifications.push_utils import send_push_notification
+            send_push_notification(
+                user_id=user_id,
+                title=title,
+                body=message,
+                url=link,
+                icon='/static/icons/icon-192x192.png'
+            )
+        except Exception as e:
+            logger.error(f"Error sending push notification: {e}", exc_info=True)
+        
         return notification
     except Exception as e:
         db.session.rollback()

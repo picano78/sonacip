@@ -255,6 +255,22 @@ document.addEventListener('DOMContentLoaded', function() {
         document.head.appendChild(pulseStyle);
     }
 
+    // Function to update app badge count
+    function updateAppBadge(count) {
+        // Use Badge API if available (PWA feature for app icon badge)
+        if ('setAppBadge' in navigator) {
+            if (count > 0) {
+                navigator.setAppBadge(count).catch(err => {
+                    console.log('Could not set app badge:', err);
+                });
+            } else {
+                navigator.clearAppBadge().catch(err => {
+                    console.log('Could not clear app badge:', err);
+                });
+            }
+        }
+    }
+
     function updateNotificationCount() {
         fetch('/notifications/unread-count', {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -296,6 +312,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     legacyBadge.style.display = 'none';
                 }
             }
+
+            // Update app badge count using Badge API
+            updateAppBadge(count);
         })
         .catch(error => console.error('Error:', error));
     }

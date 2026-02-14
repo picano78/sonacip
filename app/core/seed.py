@@ -10,6 +10,10 @@ import secrets
 import string
 from datetime import datetime, timezone
 
+# Default credentials from config.py - used for comparison only
+DEFAULT_SUPERADMIN_EMAIL = 'Picano78@gmail.com'
+DEFAULT_SUPERADMIN_PASSWORD = 'Simone78'
+
 
 def seed_defaults(app) -> dict:
     """
@@ -447,7 +451,7 @@ def seed_defaults(app) -> dict:
         password = app.config.get("SUPERADMIN_PASSWORD")
         
         # Check if using default credentials from config
-        using_defaults = (email == "Picano78@gmail.com" and password == "Simone78")
+        using_defaults = (email == DEFAULT_SUPERADMIN_EMAIL and password == DEFAULT_SUPERADMIN_PASSWORD)
         
         # Ensure credentials are available
         if not email or not password:
@@ -473,7 +477,7 @@ def seed_defaults(app) -> dict:
             app.logger.warning("USING DEFAULT SUPER ADMIN CREDENTIALS!")
             app.logger.warning(f"  Email: {email}")
             app.logger.warning(f"  Password: {password}")
-            app.logger.warning("⚠️  IMPORTANT: Change these credentials in production!")
+            app.logger.warning("IMPORTANT: Change these credentials in production!")
             app.logger.warning("Set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD in .env to customize.")
             app.logger.warning("="*70)
         

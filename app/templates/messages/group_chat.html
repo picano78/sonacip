@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Messaggi{% endblock %}
+{% block title %}{{ group.name }} - Messaggi{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -9,6 +9,7 @@
     --msg-primary-light: #e7f3ff;
     --msg-accent: #0084ff;
     --msg-gray: #f0f2f5;
+    --group-green: #42b72a;
 }
 .chat-container {
     display: flex;
@@ -48,24 +49,6 @@
 .conversations-header .btn:hover {
     background: rgba(255,255,255,0.3);
     color: white;
-}
-.search-box {
-    padding: 10px 16px;
-    background: var(--bs-body-bg);
-    border-bottom: 1px solid var(--bs-border-color);
-}
-.search-box input {
-    border-radius: 20px;
-    padding-left: 36px;
-    background: var(--bs-tertiary-bg);
-    border: none;
-}
-.search-box .search-icon {
-    position: absolute;
-    left: 28px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--bs-secondary-color);
 }
 .conversation-items {
     flex: 1;
@@ -124,28 +107,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.conversation-meta {
-    text-align: right;
-    flex-shrink: 0;
-    margin-left: 8px;
-}
-.conversation-time {
-    font-size: 0.75rem;
-    color: var(--bs-secondary-color);
-}
-.unread-badge {
-    background: var(--bs-primary);
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    margin-top: 4px;
-    margin-left: auto;
-}
 .chat-area {
     flex: 1;
     display: flex;
@@ -157,6 +118,12 @@
     border-bottom: 1px solid var(--bs-border-color);
     display: flex;
     align-items: center;
+    justify-content: space-between;
+}
+.chat-header-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
 }
 .chat-messages {
     flex: 1;
@@ -186,11 +153,22 @@
     border-bottom-left-radius: 4px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.08);
 }
-.message-sent .message-time {
-    color: #667781;
+.message-system {
+    align-self: center;
+    background: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    font-style: italic;
+    padding: 6px 12px;
+    border-radius: 12px;
+    max-width: 80%;
+    text-align: center;
 }
-.message-sent .bi-check2, .message-sent .bi-check2-all {
-    color: var(--msg-accent);
+.message-sender {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+    color: var(--group-green);
 }
 .message-time {
     font-size: 0.7rem;
@@ -207,23 +185,6 @@
     gap: 10px;
     align-items: flex-end;
 }
-.emoji-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: none;
-    background: transparent;
-    color: var(--bs-secondary-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-.emoji-btn:hover {
-    color: var(--msg-primary-dark);
-}
 .chat-input {
     flex: 1;
     border-radius: 24px;
@@ -234,10 +195,6 @@
     background: white;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
-.chat-input:focus {
-    outline: none;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
-}
 .chat-send-btn {
     width: 44px;
     height: 44px;
@@ -246,43 +203,95 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    background: var(--msg-primary);
+    background: var(--group-green);
     border: none;
     color: white;
     transition: background 0.2s;
 }
 .chat-send-btn:hover {
-    background: var(--msg-primary-dark);
+    background: #36a124;
     color: white;
 }
-.online-status {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #31a24c;
-    display: inline-block;
-    margin-left: 6px;
-}
-.empty-chat {
-    flex: 1;
+.members-sidebar {
+    width: 300px;
+    border-left: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
     display: flex;
     flex-direction: column;
+}
+.members-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--bs-border-color);
+    font-weight: 600;
+}
+.members-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+.member-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+.member-item:hover {
+    background: var(--bs-secondary-bg);
+}
+.member-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+}
+.member-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    display: flex;
     align-items: center;
     justify-content: center;
+    margin-right: 10px;
+}
+.member-info {
+    flex: 1;
+    min-width: 0;
+}
+.member-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.member-role {
+    font-size: 0.75rem;
     color: var(--bs-secondary-color);
 }
-.empty-chat i {
-    font-size: 4rem;
-    margin-bottom: 16px;
-    opacity: 0.5;
+.admin-badge {
+    background: var(--group-green);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    margin-left: auto;
+}
+@media (max-width: 992px) {
+    .members-sidebar {
+        display: none;
+    }
 }
 @media (max-width: 768px) {
     .conversations-list {
         width: 100%;
-        display: {{ 'none' if chat_user else 'flex' }};
+        display: none;
     }
     .chat-area {
-        display: {{ 'flex' if chat_user else 'none' }};
+        display: flex;
     }
     .chat-container {
         height: calc(100vh - 80px);
@@ -294,6 +303,7 @@
 {% block content %}
 <div class="container-fluid my-3">
     <div class="chat-container">
+        <!-- Conversations List -->
         <div class="conversations-list">
             <div class="conversations-header">
                 <h5><i class="bi bi-chat-dots-fill"></i> Messaggi</h5>
@@ -306,15 +316,10 @@
                     </a>
                 </div>
             </div>
-            <div class="search-box position-relative">
-                <i class="bi bi-search search-icon"></i>
-                <input type="text" class="form-control" id="searchConversations" placeholder="Cerca conversazione...">
-            </div>
             <div class="conversation-items">
                 {% for conv in conversations %}
                 {% if conv.type == 'direct' %}
-                <a href="{{ url_for('messages.chat', user_id=conv.user.id) }}" 
-                   class="conversation-item {{ 'active' if chat_user and chat_user.id == conv.user.id else '' }}">
+                <a href="{{ url_for('messages.chat', user_id=conv.user.id) }}" class="conversation-item">
                     {% if conv.user.avatar %}
                         <img src="{{ url_for('static', filename='uploads/' + conv.user.avatar) }}" class="conversation-avatar" alt="">
                     {% else %}
@@ -326,22 +331,14 @@
                         <div class="conversation-name">{{ conv.user.get_full_name() }}</div>
                         <div class="conversation-preview">{{ conv.last_message.body|truncate(30) if conv.last_message else 'Inizia una conversazione' }}</div>
                     </div>
-                    <div class="conversation-meta">
-                        {% if conv.last_message %}
-                        <div class="conversation-time">{{ conv.last_message.created_at.strftime('%H:%M') }}</div>
-                        {% endif %}
-                        {% if conv.unread_count > 0 %}
-                        <div class="unread-badge">{{ conv.unread_count }}</div>
-                        {% endif %}
-                    </div>
                 </a>
                 {% elif conv.type == 'group' %}
                 <a href="{{ url_for('messages.group_chat', group_id=conv.group.id) }}" 
-                   class="conversation-item">
+                   class="conversation-item {{ 'active' if group and group.id == conv.group.id else '' }}">
                     {% if conv.group.avatar %}
                         <img src="{{ url_for('static', filename='uploads/' + conv.group.avatar) }}" class="conversation-avatar" alt="">
                     {% else %}
-                        <div class="conversation-avatar-placeholder" style="background: #42b72a;">
+                        <div class="conversation-avatar-placeholder" style="background: var(--group-green);">
                             <i class="bi bi-people-fill text-white"></i>
                         </div>
                     {% endif %}
@@ -362,103 +359,150 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="conversation-meta">
-                        {% if conv.last_message %}
-                        <div class="conversation-time">{{ conv.last_message.created_at.strftime('%H:%M') }}</div>
-                        {% endif %}
-                        {% if conv.unread_count > 0 %}
-                        <div class="unread-badge">{{ conv.unread_count }}</div>
-                        {% endif %}
-                    </div>
                 </a>
                 {% endif %}
-                {% else %}
-                <div class="p-4 text-center text-muted">
-                    <i class="bi bi-chat-square-dots" style="font-size: 2rem;"></i>
-                    <p class="mt-2 mb-0">Nessuna conversazione</p>
-                </div>
                 {% endfor %}
             </div>
         </div>
         
+        <!-- Chat Area -->
         <div class="chat-area">
-            {% if chat_user %}
             <div class="chat-header">
-                <a href="{{ url_for('messages.inbox') }}" class="btn btn-link d-md-none me-2">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                {% if chat_user.avatar %}
-                    <img src="{{ url_for('static', filename='uploads/' + chat_user.avatar) }}" class="conversation-avatar" alt="">
-                {% else %}
-                    <div class="conversation-avatar-placeholder">
-                        <i class="bi bi-person-fill text-white"></i>
+                <div class="chat-header-info">
+                    <a href="{{ url_for('messages.inbox') }}" class="btn btn-link d-lg-none me-2">
+                        <i class="bi bi-arrow-left"></i>
+                    </a>
+                    {% if group.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + group.avatar) }}" class="conversation-avatar" alt="">
+                    {% else %}
+                        <div class="conversation-avatar-placeholder" style="background: var(--group-green);">
+                            <i class="bi bi-people-fill text-white"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <div class="fw-semibold">{{ group.name }}</div>
+                        <small class="text-muted">{{ members|length }} membri</small>
                     </div>
-                {% endif %}
-                <div>
-                    <div class="fw-semibold">{{ chat_user.get_full_name() }}</div>
-                    <small class="text-muted">@{{ chat_user.username }}</small>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-link text-dark" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Opzioni Gruppo</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('messages.add_group_members', group_id=group.id) }}">
+                            <i class="bi bi-person-plus"></i> Aggiungi membri
+                        </a></li>
+                        {% if membership.is_admin %}
+                        <li><a class="dropdown-item" href="{{ url_for('messages.edit_group', group_id=group.id) }}">
+                            <i class="bi bi-gear"></i> Modifica gruppo
+                        </a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="{{ url_for('messages.leave_group', group_id=group.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Sei sicuro di voler lasciare questo gruppo?')">
+                                    <i class="bi bi-box-arrow-right"></i> Lascia gruppo
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
                 </div>
             </div>
+            
             <div class="chat-messages" id="chatMessages">
                 {% for msg in messages %}
-                <div class="message-bubble {{ 'message-sent' if msg.sender_id == current_user.id else 'message-received' }}">
-                    <div class="message-text">{{ msg.body }}</div>
-                    <div class="message-time">
-                        {{ msg.created_at.strftime('%H:%M') }}
-                        {% if msg.sender_id == current_user.id %}
-                            {% if msg.is_read %}
-                                <i class="bi bi-check2-all"></i>
-                            {% else %}
-                                <i class="bi bi-check2"></i>
-                            {% endif %}
-                        {% endif %}
-                    </div>
+                {% if msg.is_system_message %}
+                <div class="message-system">
+                    {{ msg.body }}
                 </div>
                 {% else %}
+                <div class="message-bubble {{ 'message-sent' if msg.sender_id == current_user.id else 'message-received' }}">
+                    {% if msg.sender_id != current_user.id %}
+                    <div class="message-sender">{{ msg.sender.get_full_name() }}</div>
+                    {% endif %}
+                    <div class="message-text">{{ msg.body }}</div>
+                    <div class="message-time">{{ msg.created_at.strftime('%H:%M') }}</div>
+                </div>
+                {% endif %}
+                {% else %}
                 <div class="text-center text-muted py-4">
-                    <p>Inizia la conversazione con {{ chat_user.get_full_name() }}</p>
+                    <i class="bi bi-people" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="mt-2">Inizia la conversazione nel gruppo</p>
                 </div>
                 {% endfor %}
             </div>
+            
             <div class="chat-input-area">
-                <form action="{{ url_for('messages.send_message', user_id=chat_user.id) }}" method="POST" class="chat-input-form">
+                <form action="{{ url_for('messages.send_group_message', group_id=group.id) }}" method="POST" class="chat-input-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="button" class="emoji-btn" id="emojiBtn" title="Emoji">
-                        <i class="bi bi-emoji-smile"></i>
-                    </button>
                     <textarea name="body" class="form-control chat-input" id="messageInput" placeholder="Scrivi un messaggio..." rows="1" required></textarea>
                     <button type="submit" class="chat-send-btn">
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </form>
-                <div class="emoji-picker" id="emojiPicker" style="display:none; position:absolute; bottom:70px; left:16px; background:white; padding:10px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); z-index:100;">
-                    <div style="display:grid; grid-template-columns:repeat(8,1fr); gap:4px; font-size:1.4rem;">
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">😊</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">😂</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">❤️</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">👍</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🎉</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🔥</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">⚽</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🏆</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">💪</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🏃</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🎯</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">✅</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">👋</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🙏</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">💯</span>
-                        <span class="emoji-item" style="cursor:pointer; padding:4px;">🤝</span>
-                    </div>
-                </div>
             </div>
-            {% else %}
-            <div class="empty-chat">
-                <i class="bi bi-chat-square-text"></i>
-                <h5>Seleziona una chat</h5>
-                <p>Scegli una conversazione o iniziane una nuova</p>
-                <a href="{{ url_for('messages.new_chat') }}" class="btn btn-primary mt-2">
-                    <i class="bi bi-plus-lg"></i> Nuova chat
+        </div>
+        
+        <!-- Members Sidebar -->
+        <div class="members-sidebar">
+            <div class="members-header">
+                <i class="bi bi-people-fill"></i> Membri ({{ members|length }})
+            </div>
+            <div class="members-list">
+                {% for member in members %}
+                <div class="member-item">
+                    {% if member.user.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + member.user.avatar) }}" class="member-avatar" alt="">
+                    {% else %}
+                        <div class="member-avatar-placeholder">
+                            <i class="bi bi-person-fill text-white" style="font-size: 0.9rem;"></i>
+                        </div>
+                    {% endif %}
+                    <div class="member-info">
+                        <div class="member-name">{{ member.user.get_full_name() }}</div>
+                        <div class="member-role">@{{ member.user.username }}</div>
+                    </div>
+                    {% if member.is_admin %}
+                    <span class="admin-badge">Admin</span>
+                    {% endif %}
+                    {% if membership.is_admin and member.user.id != current_user.id %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-link text-secondary p-0 ms-2" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <form method="POST" action="{{ url_for('messages.promote_group_member', group_id=group.id, user_id=member.user.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="dropdown-item">
+                                        {% if member.is_admin %}
+                                        <i class="bi bi-arrow-down-circle"></i> Rimuovi admin
+                                        {% else %}
+                                        <i class="bi bi-arrow-up-circle"></i> Promuovi admin
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <form method="POST" action="{{ url_for('messages.remove_group_member', group_id=group.id, user_id=member.user.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Sei sicuro di voler rimuovere questo membro?')">
+                                        <i class="bi bi-person-dash"></i> Rimuovi
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if membership.is_admin %}
+            <div class="p-3 border-top">
+                <a href="{{ url_for('messages.add_group_members', group_id=group.id) }}" class="btn btn-primary w-100">
+                    <i class="bi bi-person-plus"></i> Aggiungi membri
                 </a>
             </div>
             {% endif %}
@@ -485,46 +529,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 this.closest('form').submit();
             }
-        });
-    }
-    
-    // Emoji picker
-    const emojiBtn = document.getElementById('emojiBtn');
-    const emojiPicker = document.getElementById('emojiPicker');
-    const messageInput = document.getElementById('messageInput');
-    
-    if (emojiBtn && emojiPicker) {
-        emojiBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
-        });
-        
-        document.querySelectorAll('.emoji-item').forEach(item => {
-            item.addEventListener('click', function() {
-                if (messageInput) {
-                    messageInput.value += this.textContent;
-                    messageInput.focus();
-                }
-                emojiPicker.style.display = 'none';
-            });
-        });
-        
-        document.addEventListener('click', function(e) {
-            if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
-                emojiPicker.style.display = 'none';
-            }
-        });
-    }
-    
-    // Search conversations
-    const searchInput = document.getElementById('searchConversations');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase();
-            document.querySelectorAll('.conversation-item').forEach(item => {
-                const name = item.querySelector('.conversation-name').textContent.toLowerCase();
-                item.style.display = name.includes(query) ? 'flex' : 'none';
-            });
         });
     }
 });

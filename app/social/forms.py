@@ -16,7 +16,6 @@ class PostForm(FlaskForm):
     image = FileField('Immagine', validators=[
         FileAllowed(['jpg', 'jpeg', 'png', 'gif'], 'Solo immagini!')
     ])
-    is_public = BooleanField('Pubblico', default=True)
 
 
 class CommentForm(FlaskForm):

@@ -258,7 +258,16 @@ Le variabili ambiente sono documentate nel file .env.example.
    - ✅ Usa variabili ambiente o secret manager per valori sensibili
    - ✅ Valida che tutte le variabili obbligatorie siano impostate
 
-Per maggiori dettagli, consulta la [Security Checklist](#security-features) e il file `.env.example`.
+Per maggiori dettagli, consulta:
+- 📋 [Security Checklist completa](docs/SECURITY_CHECKLIST.md) - Checklist dettagliata per deployment sicuro
+- 🔒 [Security Features](#security-features) - Funzionalità di sicurezza integrate
+- ⚙️ File `.env.example` - Template configurazione
+
+## 📚 Documentazione Sviluppatori
+
+- [Code Quality Guidelines](docs/CODE_QUALITY_GUIDELINES.md) - Best practices per codice di qualità
+- [Performance Best Practices](docs/PERFORMANCE_BEST_PRACTICES.md) - Ottimizzazione performance
+- [Security Checklist](docs/SECURITY_CHECKLIST.md) - Checklist sicurezza produzione
 
 ## 🧹 Manutenzione Repository
 

@@ -16,12 +16,27 @@
                 <h5 class="mb-0">Seleziona Atleti da Convocare</h5>
             </div>
             <div class="card-body">
+                <!-- Category Filter -->
+                <div class="mb-3">
+                    <label for="categoryFilter" class="form-label">Filtra per Categoria:</label>
+                    <select id="categoryFilter" class="form-select" style="max-width: 300px;">
+                        <option value="">Tutte le categorie</option>
+                    </select>
+                </div>
+                
                 <form method="POST">
-                    <div class="list-group mb-3">
+                    <div class="mb-3">
+                        <button type="button" id="selectAll" class="btn btn-sm btn-outline-primary me-2">Seleziona Tutti</button>
+                        <button type="button" id="deselectAll" class="btn btn-sm btn-outline-secondary">Deseleziona Tutti</button>
+                    </div>
+                    <div class="list-group mb-3" id="athletesList">
                         {% for athlete in athletes %}
-                            <label class="list-group-item">
-                                <input type="checkbox" name="athletes" value="{{ athlete.id }}" class="form-check-input me-2">
+                            <label class="list-group-item athlete-item" data-category="{{ athlete.category or '' }}">
+                                <input type="checkbox" name="athletes" value="{{ athlete.id }}" class="form-check-input me-2 athlete-checkbox">
                                 {{ athlete.get_full_name() }} - @{{ athlete.username }}
+                                {% if athlete.category %}
+                                    <span class="badge bg-secondary ms-2">{{ athlete.category }}</span>
+                                {% endif %}
                             </label>
                         {% endfor %}
                     </div>
@@ -37,4 +52,54 @@
         <a href="{{ url_for('events.detail', event_id=event.id) }}" class="btn btn-secondary">Torna all'Evento</a>
     {% endif %}
 </div>
+
+<script>
+    // Populate category filter with unique categories
+    document.addEventListener('DOMContentLoaded', function() {
+        const athletes = document.querySelectorAll('.athlete-item');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const categories = new Set();
+        
+        athletes.forEach(function(item) {
+            const category = item.getAttribute('data-category');
+            if (category) {
+                categories.add(category);
+            }
+        });
+        
+        // Add categories to filter dropdown
+        Array.from(categories).sort().forEach(function(category) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categoryFilter.appendChild(option);
+        });
+        
+        // Filter functionality
+        categoryFilter.addEventListener('change', function() {
+            const selectedCategory = this.value;
+            athletes.forEach(function(item) {
+                const itemCategory = item.getAttribute('data-category');
+                if (selectedCategory === '' || itemCategory === selectedCategory) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+        
+        // Select/Deselect all visible athletes
+        document.getElementById('selectAll').addEventListener('click', function() {
+            document.querySelectorAll('.athlete-item:not([style*="display: none"]) .athlete-checkbox').forEach(function(checkbox) {
+                checkbox.checked = true;
+            });
+        });
+        
+        document.getElementById('deselectAll').addEventListener('click', function() {
+            document.querySelectorAll('.athlete-checkbox').forEach(function(checkbox) {
+                checkbox.checked = false;
+            });
+        });
+    });
+</script>
 {% endblock %}

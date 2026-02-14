@@ -364,10 +364,11 @@ def create_post():
                     flash('La pubblicazione di video è stata disabilitata dall\'amministratore.', 'warning')
                     return redirect(url_for('social.feed'))
 
-            audience = 'public' if form.is_public.data else 'followers'
+            # All posts are public
+            audience = 'public'
             society_id = None
             if current_user.is_society():
-                audience = 'public' if form.is_public.data else 'society'
+                audience = 'public'
                 try:
                     society_id = get_active_society_id(current_user)
                 except Exception:
@@ -376,7 +377,7 @@ def create_post():
             post = Post(
                 user_id=current_user.id,
                 content=form.content.data,
-                is_public=form.is_public.data,
+                is_public=True,
                 audience=audience,
                 society_id=society_id,
                 post_type='official' if current_user.is_society() else 'personal',

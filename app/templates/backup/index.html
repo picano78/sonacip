@@ -427,6 +427,7 @@ input:checked + .toggle-slider:before {
                 </div>
                 <div class="backup-card-body">
                     <form method="POST" action="{{ url_for('backup.create') }}" id="createBackupForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="backup_type" id="selectedBackupType" value="full">
                         
                         <label class="form-label fw-semibold mb-3">{{ t('select_backup_type') }}</label>
@@ -479,6 +480,7 @@ input:checked + .toggle-slider:before {
                 </div>
                 <div class="backup-card-body">
                     <form method="POST" action="{{ url_for('backup.upload_restore') }}" enctype="multipart/form-data" id="uploadForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="upload-zone" id="uploadZone">
                             <i class="bi bi-cloud-upload"></i>
                             <h4>{{ t('drag_drop_backup') }}</h4>
@@ -516,6 +518,7 @@ input:checked + .toggle-slider:before {
                 </div>
                 <div class="backup-card-body">
                     <form method="POST" action="{{ url_for('backup.save_settings') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
                             <div>
                                 <div class="fw-semibold">{{ t('enable_auto_backup') }}</div>
@@ -634,17 +637,20 @@ input:checked + .toggle-slider:before {
                     </a>
                     <form method="POST" action="{{ url_for('backup.restore', backup_id=backup.id) }}" class="d-inline" 
                           onsubmit="return confirm('{{ t('confirm_restore') }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-outline-success" title="{{ t('restore') }}">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </button>
                     </form>
                     <form method="POST" action="{{ url_for('backup.validate', backup_id=backup.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-outline-info" title="{{ t('validate') }}">
                             <i class="bi bi-check2-circle"></i>
                         </button>
                     </form>
                     <form method="POST" action="{{ url_for('backup.delete', backup_id=backup.id) }}" class="d-inline"
                           onsubmit="return confirm('{{ t('confirm_delete') }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-outline-danger" title="{{ t('delete') }}">
                             <i class="bi bi-trash"></i>
                         </button>

@@ -940,7 +940,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         try {
                             fetch('/analytics/performance', {
                                 method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCsrfToken()
+                                },
                                 body: JSON.stringify({
                                     pageLoadTime: pageLoadTime,
                                     connectTime: connectTime,

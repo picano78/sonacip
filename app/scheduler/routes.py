@@ -532,6 +532,184 @@ def create():
     return render_template('calendar/create.html', form=form)
 
 
+@bp.route('/calendar/<int:event_id>/edit', methods=['GET', 'POST'])
+@login_required
+@permission_required('calendar', 'manage', society_id_func=_event_scope_id)
+def edit(event_id):
+    """Edit society calendar event"""
+    event = SocietyCalendarEvent.query.get_or_404(event_id)
+    
+    scope = current_user.get_primary_society()
+    scope_id = scope.id if scope else None
+    
+    # Check permissions
+    if not check_permission(current_user, 'admin', 'access'):
+        if event.society_id != get_active_society_id(current_user):
+            abort(403)
+    
+    form = SocietyCalendarEventForm(current_user=current_user, obj=event)
+    
+    if form.validate_on_submit():
+        # Store old values for logging
+        old_values = {
+            'title': event.title,
+            'facility_id': event.facility_id,
+            'start_datetime': event.start_datetime,
+            'end_datetime': event.end_datetime
+        }
+        
+        if scope_id and not check_permission(current_user, 'admin', 'access') and form.society_id.data != scope_id:
+            flash('Non puoi modificare eventi per una società diversa.', 'danger')
+            return redirect(url_for('calendar.detail', event_id=event.id))
+        
+        start_dt = datetime.combine(form.start_date.data, form.start_time.data)
+        end_dt = None
+        if form.end_date.data and form.end_time.data:
+            end_dt = datetime.combine(form.end_date.data, form.end_time.data)
+        if not end_dt:
+            end_dt = start_dt + timedelta(hours=2)
+        
+        facility_id = form.facility_id.data if form.facility_id.data and form.facility_id.data != -1 else None
+        if facility_id:
+            # Verify facility belongs to this society
+            facility = Facility.query.filter_by(id=facility_id, society_id=form.society_id.data).first()
+            if not facility:
+                flash('Risorsa/palestra non valida per questa società.', 'danger')
+                return render_template('calendar/edit.html', form=form, event=event)
+            
+            # Conflict detection: same facility overlapping time range (excluding current event)
+            conflict = (
+                SocietyCalendarEvent.query.filter(
+                    SocietyCalendarEvent.id != event.id,
+                    SocietyCalendarEvent.society_id == form.society_id.data,
+                    SocietyCalendarEvent.facility_id == facility_id,
+                    SocietyCalendarEvent.start_datetime < end_dt,
+                    SocietyCalendarEvent.end_datetime > start_dt,
+                )
+                .order_by(SocietyCalendarEvent.start_datetime.asc())
+                .first()
+            )
+            if conflict:
+                flash(
+                    f'Conflitto: la risorsa è già occupata da "{conflict.title}" '
+                    f'({conflict.start_datetime.strftime("%d/%m %H:%M")} - {conflict.end_datetime.strftime("%H:%M")}).',
+                    'danger',
+                )
+                return render_template('calendar/edit.html', form=form, event=event)
+        
+        # Update event fields
+        event.society_id = form.society_id.data
+        event.facility_id = facility_id
+        event.title = form.title.data
+        event.team = form.team.data
+        event.category = form.category.data
+        event.event_type = form.event_type.data
+        event.competition_name = form.competition_name.data
+        event.start_datetime = start_dt
+        event.end_datetime = end_dt
+        event.color = (form.color.data or '').strip() or '#212529'
+        event.location_text = form.location_text.data
+        event.notes = form.notes.data
+        event.share_to_social = form.share_to_social.data
+        
+        # Update staff associations
+        event.staff_members.clear()
+        if form.staff_ids.data:
+            staff_members = User.query.filter(User.id.in_(form.staff_ids.data)).all()
+            for member in staff_members:
+                event.staff_members.append(member)
+        
+        # Update athlete associations
+        event.athletes.clear()
+        if form.athlete_ids.data:
+            athletes = User.query.filter(User.id.in_(form.athlete_ids.data)).all()
+            for athlete in athletes:
+                event.athletes.append(athlete)
+        
+        db.session.commit()
+        
+        # Update RSVP rows for athletes (add new ones, keep existing)
+        try:
+            for athlete in event.athletes.all():
+                if not SocietyCalendarAttendance.query.filter_by(event_id=event.id, user_id=athlete.id).first():
+                    db.session.add(SocietyCalendarAttendance(event_id=event.id, user_id=athlete.id, status='pending'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        
+        # Notify staff and athletes linked to the event
+        try:
+            recipients = event.staff_members.all() + event.athletes.all()
+            for recipient in recipients:
+                notification = Notification(
+                    user_id=recipient.id,
+                    title='Evento calendario modificato',
+                    message=f'{event.title} - {event.start_datetime.strftime("%d/%m/%Y %H:%M")}',
+                    notification_type='calendar',
+                    link=url_for('calendar.detail', event_id=event.id)
+                )
+                db.session.add(notification)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        
+        # Notify all society members about planner change if facility is used
+        if facility_id:
+            facility_name = event.facility.name if event.facility else "risorsa"
+            notify_planner_change(
+                event.society_id,
+                f"Evento modificato: {event.title}",
+                f"L'evento '{event.title}' sul {facility_name} è stato modificato per il {event.start_datetime.strftime('%d/%m/%Y')} alle {event.start_datetime.strftime('%H:%M')}.",
+                link=url_for('calendar.detail', event_id=event.id)
+            )
+        
+        # Log the modification
+        log_planner_change(
+            user_id=current_user.id,
+            society_id=event.society_id,
+            action='calendar_event_updated',
+            entity_type='SocietyCalendarEvent',
+            entity_id=event.id,
+            details={
+                'old_values': old_values,
+                'new_values': {
+                    'title': event.title,
+                    'facility_id': facility_id,
+                    'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
+                    'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else None
+                }
+            }
+        )
+        
+        flash('Evento aggiornato nel Calendario Società.', 'success')
+        return redirect(url_for('calendar.detail', event_id=event.id))
+    
+    # Pre-fill form with existing event data
+    if request.method == 'GET':
+        form.society_id.data = event.society_id
+        form.facility_id.data = event.facility_id if event.facility_id else -1
+        form.title.data = event.title
+        form.team.data = event.team
+        form.category.data = event.category
+        form.event_type.data = event.event_type
+        form.competition_name.data = event.competition_name
+        form.start_date.data = event.start_datetime.date()
+        form.start_time.data = event.start_datetime.time()
+        if event.end_datetime:
+            form.end_date.data = event.end_datetime.date()
+            form.end_time.data = event.end_datetime.time()
+        form.color.data = event.color
+        form.location_text.data = event.location_text
+        form.notes.data = event.notes
+        form.share_to_social.data = event.share_to_social
+        
+        # Pre-fill staff and athlete IDs
+        form.staff_ids.data = [member.id for member in event.staff_members.all()]
+        form.athlete_ids.data = [athlete.id for athlete in event.athletes.all()]
+    
+    return render_template('calendar/edit.html', form=form, event=event)
+
+
 @bp.route('/calendar/<int:event_id>/respond/<string:response>', methods=['POST'])
 @login_required
 @permission_required('calendar', 'view', society_id_func=lambda event_id, response: _event_scope_id(event_id))

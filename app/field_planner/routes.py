@@ -386,8 +386,8 @@ def edit(event_id):
         old_values = {
             'title': event.title,
             'facility_id': event.facility_id,
-            'start_datetime': event.start_datetime,
-            'end_datetime': event.end_datetime
+            'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
+            'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M')
         }
         
         start_dt = datetime.combine(form.start_date.data, form.start_time.data)

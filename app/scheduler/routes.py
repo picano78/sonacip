@@ -554,8 +554,8 @@ def edit(event_id):
         old_values = {
             'title': event.title,
             'facility_id': event.facility_id,
-            'start_datetime': event.start_datetime,
-            'end_datetime': event.end_datetime
+            'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
+            'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else None
         }
         
         if scope_id and not check_permission(current_user, 'admin', 'access') and form.society_id.data != scope_id:
@@ -639,7 +639,10 @@ def edit(event_id):
         
         # Notify staff and athletes linked to the event
         try:
-            recipients = [*event.staff_members, *event.athletes]
+            # Materialize the lists to avoid N+1 queries
+            staff_list = list(event.staff_members)
+            athlete_list = list(event.athletes)
+            recipients = staff_list + athlete_list
             for recipient in recipients:
                 notification = Notification(
                     user_id=recipient.id,

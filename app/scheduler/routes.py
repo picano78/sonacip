@@ -630,7 +630,7 @@ def edit(event_id):
         
         # Update RSVP rows for athletes (add new ones, keep existing)
         try:
-            for athlete in event.athletes.all():
+            for athlete in event.athletes:
                 if not SocietyCalendarAttendance.query.filter_by(event_id=event.id, user_id=athlete.id).first():
                     db.session.add(SocietyCalendarAttendance(event_id=event.id, user_id=athlete.id, status='pending'))
             db.session.commit()
@@ -639,7 +639,7 @@ def edit(event_id):
         
         # Notify staff and athletes linked to the event
         try:
-            recipients = event.staff_members.all() + event.athletes.all()
+            recipients = list(event.staff_members) + list(event.athletes)
             for recipient in recipients:
                 notification = Notification(
                     user_id=recipient.id,
@@ -704,8 +704,8 @@ def edit(event_id):
         form.share_to_social.data = event.share_to_social
         
         # Pre-fill staff and athlete IDs
-        form.staff_ids.data = [member.id for member in event.staff_members.all()]
-        form.athlete_ids.data = [athlete.id for athlete in event.athletes.all()]
+        form.staff_ids.data = [member.id for member in event.staff_members]
+        form.athlete_ids.data = [athlete.id for athlete in event.athletes]
     
     return render_template('calendar/edit.html', form=form, event=event)
 

@@ -21,7 +21,7 @@ def csp_report():
         report = None
         try:
             report = request.get_json(force=True, silent=True)
-        except:
+        except Exception:
             pass
         
         if report and 'csp-report' in report:

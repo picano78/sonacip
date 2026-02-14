@@ -547,8 +547,13 @@ def download_invoice(invoice_id):
     # Add company logo if available
     if settings and settings.logo_path:
         try:
-            logo_full_path = os.path.join(current_app.root_path, 'static', 'uploads', settings.logo_path)
-            if os.path.exists(logo_full_path):
+            # Sanitize logo path to prevent directory traversal
+            logo_filename = os.path.basename(settings.logo_path)
+            logo_full_path = os.path.join(current_app.root_path, 'static', 'uploads', 'invoice_logos', logo_filename)
+            
+            # Verify the path is within the expected directory
+            uploads_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'invoice_logos')
+            if os.path.commonpath([logo_full_path, uploads_dir]) == uploads_dir and os.path.exists(logo_full_path):
                 img = Image(logo_full_path, width=2*inch, height=1*inch)
                 elements.append(img)
                 elements.append(Spacer(1, 0.3*inch))

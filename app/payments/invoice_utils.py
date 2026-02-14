@@ -54,9 +54,13 @@ def generate_invoice_for_payment(fee_payment_id):
             description=f"Pagamento quota - {fee_payment.fee.description if fee_payment.fee else 'Fee Payment'}"
         )
         
-        # Add billing information from settings if available
-        if settings:
-            invoice.billing_name = settings.company_name or (user.get_full_name() if hasattr(user, 'get_full_name') else user.username)
+        # Add customer billing information
+        if user:
+            # Use user's full name or username as billing name
+            if hasattr(user, 'first_name') and hasattr(user, 'last_name'):
+                invoice.billing_name = f"{user.first_name} {user.last_name}".strip() or user.username
+            else:
+                invoice.billing_name = user.username
             
         db.session.add(invoice)
         db.session.flush()  # Get invoice ID

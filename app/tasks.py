@@ -45,6 +45,38 @@ def send_sms_async(self, phone_number, message):
         raise self.retry(exc=exc, countdown=retry_delay)
 
 
+@celery.task(name='app.tasks.send_confirmation_email_async', bind=True, max_retries=3)
+def send_confirmation_email_async(self, user_id):
+    """
+    Send email confirmation asynchronously to avoid blocking registration
+    
+    This task is critical for preventing 502 Bad Gateway errors during registration.
+    By sending confirmation emails in the background, the registration endpoint
+    can respond immediately without waiting for SMTP operations.
+    """
+    try:
+        from app.models import User
+        from app.auth.email_confirm import send_confirmation_email
+        
+        user = User.query.get(user_id)
+        if not user:
+            raise Exception(f"User {user_id} not found")
+        
+        # Skip if already confirmed
+        if user.email_confirmed:
+            return {'status': 'already_confirmed', 'user_id': user_id}
+        
+        success = send_confirmation_email(user)
+        if not success:
+            raise Exception("Email sending failed")
+        
+        return {'status': 'sent', 'user_id': user_id, 'email': user.email}
+    except Exception as exc:
+        # Retry with exponential backoff: 60s, 120s, 240s
+        retry_delay = 60 * (2 ** self.request.retries)
+        raise self.retry(exc=exc, countdown=retry_delay)
+
+
 @celery.task(name='app.tasks.process_webhook_async', bind=True, max_retries=3)
 def process_webhook_async(self, url, payload, headers=None):
     """

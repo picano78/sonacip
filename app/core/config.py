@@ -181,12 +181,43 @@ class Config:
     APP_NAME = 'SONACIP'
 
     # Bootstrap admin (used by manage.py seed)
-    # Default credentials match .env.example for development/testing
-    # IMPORTANT: These MUST be changed in production via environment variables
-    # Note: These defaults are used when env vars are not set, to match .env.example
-    # and ensure users can log in after installation even if they don't create .env file
-    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL') or 'Picano78@gmail.com'
-    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD') or 'Simone78'
+    # ⚠️ SECURITY WARNING: Default credentials are for DEVELOPMENT/TESTING ONLY
+    # PRODUCTION DEPLOYMENTS MUST set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD
+    # environment variables to secure, unique values.
+    # 
+    # These defaults exist ONLY to allow local development without .env setup.
+    # They match .env.example to provide a consistent development experience.
+    _default_admin_email = 'Picano78@gmail.com'
+    _default_admin_password = 'Simone78'
+    
+    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL') or _default_admin_email
+    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD') or _default_admin_password
+    
+    # Validate in production mode
+    if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production':
+        if SUPERADMIN_EMAIL == _default_admin_email or SUPERADMIN_PASSWORD == _default_admin_password:
+            import warnings
+            warnings.warn(
+                "\n" + "="*80 + "\n"
+                "⚠️  CRITICAL SECURITY WARNING ⚠️\n"
+                "="*80 + "\n"
+                "Default admin credentials detected in PRODUCTION mode!\n"
+                "This is a SEVERE SECURITY RISK.\n\n"
+                "IMMEDIATE ACTION REQUIRED:\n"
+                "1. Stop the application\n"
+                "2. Set unique credentials via environment variables:\n"
+                "   export SUPERADMIN_EMAIL='your-secure-email@domain.com'\n"
+                "   export SUPERADMIN_PASSWORD='your-strong-password'\n"
+                "3. Restart the application\n"
+                "4. Change the password immediately after first login\n"
+                "\n"
+                "Current (INSECURE) defaults:\n"
+                f"  Email: {_default_admin_email}\n"
+                "  Password: [shown in .env.example]\n"
+                "="*80 + "\n",
+                RuntimeWarning,
+                stacklevel=2
+            )
 
     # Stripe (payments)
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')

@@ -50,9 +50,9 @@
                             {% if feature_enabled('planner') and can('calendar', 'view') %}
                             {% if not current_user.is_society() %}
                             <li class="sidebar-item">
-                                <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner" title="Planner">
+                                <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner Campo" title="Planner Campo">
                                     <i class="bi bi-calendar-check"></i>
-                                    <span class="sidebar-text">Planner</span>
+                                    <span class="sidebar-text">Planner Campo</span>
                                 </a>
                             </li>
                             {% endif %}
@@ -227,9 +227,9 @@
             {% if feature_enabled('planner') and can('calendar', 'view') %}
             {% if not current_user.is_society() %}
             <li class="sidebar-item">
-                <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner" title="Planner">
+                <a href="{{ url_for('calendar.grid') }}" class="sidebar-link" data-tooltip="Planner Campo" title="Planner Campo">
                     <i class="bi bi-calendar-check"></i>
-                    <span class="sidebar-text">Planner</span>
+                    <span class="sidebar-text">Planner Campo</span>
                 </a>
             </li>
             <li class="sidebar-item">

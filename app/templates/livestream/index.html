@@ -213,6 +213,20 @@
 
 {% block extra_js %}
 <script>
+function getCsrfToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    if (token) {
+        return token.content;
+    }
+    
+    const input = document.querySelector('input[name="csrf_token"]');
+    if (input) {
+        return input.value;
+    }
+    
+    return '';
+}
+
 function startStream() {
     const title = document.getElementById('streamTitle').value.trim();
     const description = document.getElementById('streamDescription').value.trim();
@@ -221,6 +235,7 @@ function startStream() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
         },
         body: JSON.stringify({ title, description })
     })
@@ -243,6 +258,9 @@ function stopMyStream(streamId) {
     
     fetch(`/livestream/${streamId}/stop`, {
         method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
     })
     .then(response => response.json())
     .then(data => {

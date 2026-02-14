@@ -1,7 +1,7 @@
 """Add invoice_settings table
 
 Revision ID: e1f2a3b4c5d6
-Revises: 
+Revises: l5m6n7p8q9r0
 Create Date: 2026-02-14 18:10:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'e1f2a3b4c5d6'
-down_revision = None  # Will be set to latest migration ID
+down_revision = 'l5m6n7p8q9r0'
 branch_labels = None
 depends_on = None
 

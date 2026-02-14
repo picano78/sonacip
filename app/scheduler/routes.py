@@ -639,7 +639,7 @@ def edit(event_id):
         
         # Notify staff and athletes linked to the event
         try:
-            recipients = list(event.staff_members) + list(event.athletes)
+            recipients = [*event.staff_members, *event.athletes]
             for recipient in recipients:
                 notification = Notification(
                     user_id=recipient.id,

@@ -22,6 +22,11 @@ def _event_scope_id(event_id: int):
     return ev.society_id if ev else None
 
 
+def _get_facilities_for_society(society_id):
+    """Get facilities for a society, ordered by name"""
+    return Facility.query.filter_by(society_id=society_id).order_by(Facility.name.asc()).all()
+
+
 @bp.route('/')
 @login_required
 @permission_required('field_planner', 'view', society_id_func=lambda: _scope_id())
@@ -164,7 +169,7 @@ def create():
         return redirect(url_for('field_planner.index'))
     
     # Populate facility choices
-    facilities = Facility.query.filter_by(society_id=society.id).order_by(Facility.name.asc()).all()
+    facilities = _get_facilities_for_society(society.id)
     form.facility_id.choices = [(f.id, f.name) for f in facilities]
     
     if not facilities:
@@ -371,7 +376,7 @@ def edit(event_id):
             abort(403)
     
     # Populate facility choices
-    facilities = Facility.query.filter_by(society_id=society.id).order_by(Facility.name.asc()).all()
+    facilities = _get_facilities_for_society(society.id)
     
     form = FieldPlannerEventForm()
     form.facility_id.choices = [(f.id, f.name) for f in facilities]

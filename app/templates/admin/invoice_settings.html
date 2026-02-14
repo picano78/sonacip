@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+{% block title %}Impostazioni Fattura{% endblock %}
+
+{% block extra_css %}
+<style>
+.invoice-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.invoice-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+.invoice-section h5 {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f2f5;
+    color: #667eea;
+    font-weight: 600;
+}
+.form-label-custom {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+.form-control-custom {
+    border: 2px solid #e4e6eb;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+}
+.form-control-custom:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+.info-card {
+    background: #f8f9ff;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border-left: 4px solid #667eea;
+    margin-bottom: 16px;
+}
+.stats-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.stat-card {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+}
+.stat-label {
+    color: #65676b;
+    font-size: 0.9rem;
+}
+.btn-save {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 12px 32px;
+    border-radius: 10px;
+    font-weight: 600;
+    color: white;
+    transition: all 0.2s;
+}
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+.logo-preview {
+    max-width: 300px;
+    max-height: 150px;
+    margin-top: 10px;
+    border: 2px solid #e4e6eb;
+    border-radius: 8px;
+    padding: 8px;
+}
+.provider-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-right: 8px;
+}
+.provider-badge.fatture-in-cloud {
+    background: #e7f3ff;
+    color: #1877f2;
+}
+.provider-badge.aruba {
+    background: #fff3e0;
+    color: #f57c00;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="invoice-header">
+        <h3 class="mb-2">
+            <i class="bi bi-receipt"></i> Impostazioni Fattura
+        </h3>
+        <p class="mb-0 opacity-90">Configura i dati aziendali e le impostazioni per la fatturazione elettronica</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value">{{ total_invoices }}</div>
+            <div class="stat-label">Fatture Totali</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ invoices_this_month }}</div>
+            <div class="stat-label">Fatture Questo Mese</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">
+                {% if settings.enable_electronic_invoice %}
+                <i class="bi bi-check-circle-fill text-success"></i>
+                {% else %}
+                <i class="bi bi-x-circle-fill text-muted"></i>
+                {% endif %}
+            </div>
+            <div class="stat-label">Fatturazione Elettronica</div>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        {{ csrf_token() }}
+        
+        <!-- Company Information Section -->
+        <div class="invoice-section">
+            <h5><i class="bi bi-building"></i> Informazioni Aziendali</h5>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label-custom">Nome Azienda</label>
+                    <input type="text" name="company_name" class="form-control form-control-custom" 
+                           value="{{ settings.company_name or '' }}" placeholder="Es. SONACIP S.r.l.">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label-custom">Email Aziendale</label>
+                    <input type="email" name="company_email" class="form-control form-control-custom" 
+                           value="{{ settings.company_email or '' }}" placeholder="info@azienda.it">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label class="form-label-custom">Indirizzo</label>
+                    <input type="text" name="company_address" class="form-control form-control-custom" 
+                           value="{{ settings.company_address or '' }}" placeholder="Via Roma, 123">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label-custom">Città</label>
+                    <input type="text" name="company_city" class="form-control form-control-custom" 
+                           value="{{ settings.company_city or '' }}" placeholder="Milano">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label-custom">CAP</label>
+                    <input type="text" name="company_postal_code" class="form-control form-control-custom" 
+                           value="{{ settings.company_postal_code or '' }}" placeholder="20100">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label-custom">Paese</label>
+                    <input type="text" name="company_country" class="form-control form-control-custom" 
+                           value="{{ settings.company_country or 'Italia' }}">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label-custom">Partita IVA</label>
+                    <input type="text" name="company_vat" class="form-control form-control-custom" 
+                           value="{{ settings.company_vat or '' }}" placeholder="IT12345678901">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label-custom">Codice Fiscale</label>
+                    <input type="text" name="company_tax_code" class="form-control form-control-custom" 
+                           value="{{ settings.company_tax_code or '' }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label-custom">Telefono</label>
+                    <input type="text" name="company_phone" class="form-control form-control-custom" 
+                           value="{{ settings.company_phone or '' }}" placeholder="+39 02 1234567">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label-custom">Sito Web</label>
+                    <input type="url" name="company_website" class="form-control form-control-custom" 
+                           value="{{ settings.company_website or '' }}" placeholder="https://www.azienda.it">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label-custom">Logo Aziendale</label>
+                    <input type="file" name="logo_file" class="form-control form-control-custom" accept="image/*">
+                    {% if settings.logo_path %}
+                    <img src="{{ url_for('static', filename='uploads/' + settings.logo_path) }}" 
+                         class="logo-preview" alt="Company Logo">
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Settings Section -->
+        <div class="invoice-section">
+            <h5><i class="bi bi-file-text"></i> Impostazioni Fattura</h5>
+            
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label-custom">Prefisso Numero Fattura</label>
+                    <input type="text" name="invoice_prefix" class="form-control form-control-custom" 
+                           value="{{ settings.invoice_prefix or 'INV' }}" placeholder="INV">
+                    <small class="text-muted">Es. INV-2026-00001</small>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label-custom">Aliquota IVA Predefinita (%)</label>
+                    <input type="number" step="0.01" name="default_tax_rate" class="form-control form-control-custom" 
+                           value="{{ settings.default_tax_rate or 22.0 }}">
+                    <small class="text-muted">IVA ordinaria in Italia: 22%</small>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label class="form-label-custom">Note Piè di Pagina Fattura</label>
+                    <textarea name="invoice_footer" class="form-control form-control-custom" rows="2" 
+                              placeholder="Grazie per il vostro business!">{{ settings.invoice_footer or '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label class="form-label-custom">Note Aggiuntive (Opzionali)</label>
+                    <textarea name="invoice_notes" class="form-control form-control-custom" rows="3" 
+                              placeholder="Informazioni aggiuntive che appariranno su tutte le fatture">{{ settings.invoice_notes or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Electronic Invoice Section -->
+        <div class="invoice-section">
+            <h5><i class="bi bi-cloud-upload"></i> Fatturazione Elettronica</h5>
+            
+            <div class="info-card">
+                <i class="bi bi-info-circle"></i>
+                <strong>Fatturazione Elettronica B2B/B2C</strong><br>
+                Configura l'integrazione con provider esterni per l'invio automatico delle fatture elettroniche al Sistema di Interscambio (SDI).
+            </div>
+
+            <div class="form-check form-switch mb-4">
+                <input class="form-check-input" type="checkbox" name="enable_electronic_invoice" id="enable_electronic_invoice"
+                       {% if settings.enable_electronic_invoice %}checked{% endif %}>
+                <label class="form-check-label" for="enable_electronic_invoice">
+                    <strong>Abilita Fatturazione Elettronica</strong>
+                </label>
+            </div>
+
+            <div id="electronic-invoice-fields" style="display: {% if settings.enable_electronic_invoice %}block{% else %}none{% endif %}">
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label-custom">Provider Fatturazione Elettronica</label>
+                        <select name="e_invoice_provider" class="form-select form-control-custom">
+                            <option value="">-- Seleziona Provider --</option>
+                            <option value="fatture_in_cloud" {% if settings.e_invoice_provider == 'fatture_in_cloud' %}selected{% endif %}>
+                                <span class="provider-badge fatture-in-cloud">Fatture in Cloud</span>
+                            </option>
+                            <option value="aruba" {% if settings.e_invoice_provider == 'aruba' %}selected{% endif %}>
+                                <span class="provider-badge aruba">Aruba Fatturazione Elettronica</span>
+                            </option>
+                            <option value="custom" {% if settings.e_invoice_provider == 'custom' %}selected{% endif %}>Personalizzato</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label-custom">API Key</label>
+                        <input type="text" name="e_invoice_api_key" class="form-control form-control-custom" 
+                               value="{{ settings.e_invoice_api_key or '' }}" placeholder="API Key del provider">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label-custom">API Secret</label>
+                        <input type="password" name="e_invoice_api_secret" class="form-control form-control-custom" 
+                               value="{{ settings.e_invoice_api_secret or '' }}" placeholder="API Secret del provider">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label-custom">Company ID (Provider)</label>
+                        <input type="text" name="e_invoice_company_id" class="form-control form-control-custom" 
+                               value="{{ settings.e_invoice_company_id or '' }}" placeholder="ID azienda sul provider">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label-custom">Codice Destinatario SDI</label>
+                        <input type="text" name="sdi_code" class="form-control form-control-custom" 
+                               value="{{ settings.sdi_code or '' }}" placeholder="7 caratteri" maxlength="7">
+                        <small class="text-muted">Codice a 7 caratteri per SDI</small>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label-custom">Email PEC</label>
+                        <input type="email" name="pec_email" class="form-control form-control-custom" 
+                               value="{{ settings.pec_email or '' }}" placeholder="pec@pec.it">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-save">
+                <i class="bi bi-check-circle"></i> Salva Impostazioni
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Toggle electronic invoice fields
+document.getElementById('enable_electronic_invoice').addEventListener('change', function() {
+    document.getElementById('electronic-invoice-fields').style.display = this.checked ? 'block' : 'none';
+});
+</script>
+{% endblock %}

@@ -32,6 +32,11 @@
                     </div>
 
                     <div class="d-flex gap-2 justify-content-center">
+                        {% if invoice %}
+                        <a href="{{ url_for('payments.download_invoice', invoice_id=invoice.id) }}" class="btn btn-success">
+                            <i class="bi bi-download"></i> Scarica Fattura
+                        </a>
+                        {% endif %}
                         <a href="{{ url_for('payments.receipt', payment_id=payment.id) }}" class="btn btn-outline-primary">
                             <i class="bi bi-receipt"></i> Visualizza Ricevuta
                         </a>

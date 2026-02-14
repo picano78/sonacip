@@ -25,6 +25,21 @@ def create_notification(user_id, title, message, notification_type='system', lin
         )
         db.session.add(notification)
         db.session.commit()
+        
+        # Send real-time notification
+        try:
+            from app.realtime import send_realtime_notification
+            send_realtime_notification(user_id, {
+                'id': notification.id,
+                'title': title,
+                'message': message,
+                'notification_type': notification_type,
+                'link': link,
+                'created_at': notification.created_at.isoformat() if notification.created_at else None
+            })
+        except Exception as e:
+            print(f"Error sending real-time notification: {e}")
+        
         return notification
     except Exception as e:
         db.session.rollback()

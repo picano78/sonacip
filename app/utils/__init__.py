@@ -510,6 +510,72 @@ def log_action(action, entity_type=None, entity_id=None, details=None, society_i
             print(f"Warning: Failed to log action: {e}")
 
 
+def safe_int(value, default=0, field_name=None):
+    """
+    Safely convert a value to integer with proper error handling.
+    
+    Args:
+        value: Value to convert (can be str, int, float, or None)
+        default: Default value to return if conversion fails
+        field_name: Optional field name for better error logging
+        
+    Returns:
+        int: Converted value or default
+        
+    Example:
+        user_id = safe_int(request.args.get('user_id'), default=0)
+        page = safe_int(request.args.get('page'), default=1, field_name='page')
+    """
+    if value is None:
+        return default
+    
+    try:
+        return int(value)
+    except (ValueError, TypeError) as e:
+        if current_app:
+            field_info = f" for field '{field_name}'" if field_name else ""
+            current_app.logger.warning(
+                f"Invalid integer conversion{field_info}: {value!r} - using default {default}. Error: {e}"
+            )
+        return default
+
+
+def safe_json_get(data, key, default=None, expected_type=None):
+    """
+    Safely get a value from JSON/dict data with type validation.
+    
+    Args:
+        data: Dictionary or JSON data
+        key: Key to retrieve
+        default: Default value if key missing or type mismatch
+        expected_type: Expected type (e.g., str, int, list)
+        
+    Returns:
+        Value from data or default
+        
+    Example:
+        status = safe_json_get(request.json, 'status', default='pending', expected_type=str)
+        user_id = safe_json_get(request.json, 'user_id', expected_type=int)
+    """
+    if not isinstance(data, dict):
+        if current_app:
+            current_app.logger.warning(f"safe_json_get called with non-dict data: {type(data)}")
+        return default
+    
+    value = data.get(key, default)
+    
+    if expected_type is not None and value is not None:
+        if not isinstance(value, expected_type):
+            if current_app:
+                current_app.logger.warning(
+                    f"Type mismatch for key '{key}': expected {expected_type.__name__}, "
+                    f"got {type(value).__name__} - using default"
+                )
+            return default
+    
+    return value
+
+
 # Make submodules available for import
 # These are lazily loaded to avoid circular imports
 
@@ -535,6 +601,8 @@ __all__ = [
     'escape_like',
     'datetime_format',
     'log_action',
+    'safe_int',
+    'safe_json_get',
     # Submodules
     'caching',
     'search',

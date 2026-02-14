@@ -36,7 +36,9 @@ def _task_scope_id(*args, **kwargs):
     try:
         from app.utils import get_active_society_id
         return get_active_society_id(current_user)
-    except Exception:
+    except (ImportError, AttributeError) as e:
+        # Fallback to primary society if utils not available or user has no active society
+        current_app.logger.debug(f"Could not get active society ID: {e}, using primary society")
         society = current_user.get_primary_society()
         return society.id if society else None
 
@@ -273,37 +275,55 @@ def view_task(task_id):
 @permission_required('tasks', 'manage', society_id_func=_task_scope_id)
 def update_task(task_id):
     """Update task (AJAX)"""
+    from app.utils import safe_json_get, safe_int
+    
     task = Task.query.get_or_404(task_id)
     
     if not can_edit_task(current_user, task):
         return jsonify({'success': False, 'message': 'Access denied'}), 403
     
-    # Update fields
-    if 'status' in request.json:
-        task.status = request.json['status']
-        if request.json['status'] == 'done' and not task.completed_at:
-            task.completed_at = datetime.now(timezone.utc)
+    if not request.json:
+        return jsonify({'success': False, 'message': 'Invalid request: JSON data required'}), 400
     
-    if 'priority' in request.json:
-        task.priority = request.json['priority']
-    
-    if 'progress' in request.json:
-        task.progress_percentage = int(request.json['progress'])
-    
-    if 'assigned_to' in request.json:
-        task.assigned_to = request.json['assigned_to']
-    
-    if 'position' in request.json:
-        task.position = request.json['position']
-    
-    task.updated_at = datetime.now(timezone.utc)
-    db.session.commit()
+    try:
+        # Update fields with safe JSON access and validation
+        status = safe_json_get(request.json, 'status', expected_type=str)
+        if status:
+            task.status = status
+            if status == 'done' and not task.completed_at:
+                task.completed_at = datetime.now(timezone.utc)
+        
+        priority = safe_json_get(request.json, 'priority', expected_type=str)
+        if priority:
+            task.priority = priority
+        
+        progress = safe_json_get(request.json, 'progress')
+        if progress is not None:
+            task.progress_percentage = safe_int(progress, default=0, field_name='progress')
+        
+        assigned_to = safe_json_get(request.json, 'assigned_to')
+        if assigned_to is not None:
+            task.assigned_to = safe_int(assigned_to, default=None, field_name='assigned_to')
+        
+        position = safe_json_get(request.json, 'position')
+        if position is not None:
+            task.position = safe_int(position, default=0, field_name='position')
+        
+        task.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
 
-    # Fire automations for task updates
-    execute_automations('task_updated', society_id=task.society_id or current_user.society_id, payload={'task_id': task.id, 'status': task.status})
-    execute_rules('task_updated', payload={'task_id': task.id, 'status': task.status, 'assigned_to': task.assigned_to})
+        # Fire automations for task updates
+        execute_automations('task_updated', society_id=task.society_id or current_user.society_id, 
+                          payload={'task_id': task.id, 'status': task.status})
+        execute_rules('task_updated', payload={'task_id': task.id, 'status': task.status, 
+                                              'assigned_to': task.assigned_to})
+        
+        return jsonify({'success': True, 'message': 'Task updated'})
     
-    return jsonify({'success': True, 'message': 'Task updated'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating task {task_id}: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Error updating task'}), 500
 
 
 @bp.route('/project/create', methods=['GET', 'POST'])

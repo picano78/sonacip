@@ -222,6 +222,44 @@ Esegui la suite completa di test di sicurezza:
 
 Le variabili ambiente sono documentate nel file .env.example.
 
+### ⚠️ Security Best Practices for Production
+
+**CRITICAL - Prima del deployment in produzione:**
+
+1. **Credenziali Admin Univoche**
+   - ⛔ NON utilizzare MAI le credenziali di default (`Picano78@gmail.com` / `Simone78`)
+   - ✅ Imposta `SUPERADMIN_EMAIL` e `SUPERADMIN_PASSWORD` con valori univoci e sicuri
+   - ✅ Usa una password forte (min. 12 caratteri, mix maiuscole/minuscole/numeri/simboli)
+   - ✅ Cambia la password immediatamente dopo il primo accesso
+
+2. **SECRET_KEY Sicura**
+   - ⛔ NON usare valori di default o placeholder
+   - ✅ Genera con: `python3 -c "import secrets; print(secrets.token_hex(32))"`
+   - ✅ Conserva in modo sicuro (gestore password, vault)
+   - ✅ NON committare mai nel repository
+
+3. **HTTPS Obbligatorio**
+   - ✅ Usa sempre HTTPS in produzione (tramite Nginx/Caddy con Let's Encrypt)
+   - ✅ Imposta `SESSION_COOKIE_SECURE=true` nel file `.env`
+   - ✅ Verifica che HSTS sia abilitato (default: attivo)
+
+4. **Database PostgreSQL**
+   - ✅ Usa PostgreSQL in produzione (non SQLite)
+   - ✅ Imposta password forte per l'utente database
+   - ✅ Limita accesso al database solo da localhost o IP trusted
+
+5. **Monitoraggio e Backup**
+   - ✅ Configura backup automatici giornalieri
+   - ✅ Monitora i log di sicurezza: `logs/security.log`
+   - ✅ Configura alert per tentativi di accesso sospetti
+
+6. **Variabili Ambiente**
+   - ✅ NON committare mai il file `.env` nel repository (verificare `.gitignore`)
+   - ✅ Usa variabili ambiente o secret manager per valori sensibili
+   - ✅ Valida che tutte le variabili obbligatorie siano impostate
+
+Per maggiori dettagli, consulta la [Security Checklist](#security-features) e il file `.env.example`.
+
 ## 🧹 Manutenzione Repository
 
 Per mantenere il repository Git pulito e ottimizzato:

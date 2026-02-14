@@ -586,6 +586,11 @@
                         <a href="{{ url_for('social.edit_profile') }}" class="btn-prof-primary">
                             <i class="bi bi-pencil"></i> Modifica Profilo
                         </a>
+                        {% if feature_enabled('livestream') %}
+                        <a href="{{ url_for('livestream.index') }}" class="btn-prof-outline" style="border-color: #dc3545; color: #dc3545;">
+                            <i class="bi bi-broadcast"></i> Inizia Diretta
+                        </a>
+                        {% endif %}
                         {% else %}
                         {% if connection_status == 'blocked_by_other' %}
                         <span class="conn-status-badge pending"><i class="bi bi-shield-lock me-1"></i>Non disponibile</span>

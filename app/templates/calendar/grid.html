@@ -81,13 +81,23 @@
           <div class="gcal-day-num {{ 'gcal-today-circle' if d == today else '' }}">{{ d.day }}</div>
           <div class="gcal-events-wrap">
             {% for ev in day_events[:2] %}
-              <a href="{{ url_for('calendar.detail', event_id=ev.id) }}"
-                 class="gcal-event-pill"
-                 style="background-color: {{ ev.color or '#4285f4' }};"
-                 title="{{ ev.title }}"
-                 onclick="event.stopPropagation();">
-                {{ ev.title|truncate(14) }}
-              </a>
+              {% if ev.__class__.__name__ == 'FieldPlannerEvent' %}
+                <a href="{{ url_for('field_planner.detail', event_id=ev.id) }}"
+                   class="gcal-event-pill"
+                   style="background-color: {{ ev.color or '#28a745' }}; border-left: 3px solid #155724;"
+                   title="{{ ev.title }} (Planner Campo)"
+                   onclick="event.stopPropagation();">
+                  <i class="bi bi-diagram-3" style="font-size: 0.8em;"></i> {{ ev.title|truncate(12) }}
+                </a>
+              {% else %}
+                <a href="{{ url_for('calendar.detail', event_id=ev.id) }}"
+                   class="gcal-event-pill"
+                   style="background-color: {{ ev.color or '#4285f4' }};"
+                   title="{{ ev.title }}"
+                   onclick="event.stopPropagation();">
+                  {{ ev.title|truncate(14) }}
+                </a>
+              {% endif %}
             {% endfor %}
             {% if day_events|length > 2 %}
               <span class="gcal-more-label">+{{ day_events|length - 2 }}</span>

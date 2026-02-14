@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Registro Modifiche | SONACIP{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="section-hero mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <div class="pill mb-2"><i class="bi bi-clock-history"></i> Registro modifiche</div>
+                <h1 class="h3 mb-1">Registro Modifiche Calendario e Planner</h1>
+                <p class="text-muted mb-0">Cronologia completa di tutte le modifiche agli eventi del calendario società e del planner campo.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('calendar.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-calendar3"></i> Torna al Calendario
+                </a>
+                <a href="{{ url_for('field_planner.index') }}" class="btn btn-outline-success">
+                    <i class="bi bi-diagram-3"></i> Planner Campo
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if changes %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-list-ul"></i> Ultime {{ changes|length }} modifiche</h5>
+                    <span class="badge bg-primary">{{ changes|length }} registrazioni</span>
+                </div>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for change in changes %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    {% if change.entity_type == 'FieldPlannerEvent' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-diagram-3"></i> Planner Campo
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-primary">
+                                            <i class="bi bi-calendar-event"></i> Calendario Società
+                                        </span>
+                                    {% endif %}
+                                    
+                                    {% if 'created' in change.action %}
+                                        <span class="badge bg-success-subtle text-success">
+                                            <i class="bi bi-plus-circle"></i> Creato
+                                        </span>
+                                    {% elif 'updated' in change.action %}
+                                        <span class="badge bg-warning-subtle text-warning">
+                                            <i class="bi bi-pencil"></i> Modificato
+                                        </span>
+                                    {% elif 'deleted' in change.action %}
+                                        <span class="badge bg-danger-subtle text-danger">
+                                            <i class="bi bi-trash"></i> Eliminato
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info-subtle text-info">
+                                            <i class="bi bi-info-circle"></i> {{ change.action }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="fw-semibold mb-1">
+                                    {% if change.user %}
+                                        <i class="bi bi-person"></i> {{ change.user.first_name }} {{ change.user.last_name }}
+                                        <span class="text-muted small">({{ change.user.username }})</span>
+                                    {% else %}
+                                        <i class="bi bi-person"></i> Utente non disponibile
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="small text-muted mb-2">
+                                    <i class="bi bi-clock"></i> {{ change.created_at.strftime('%d/%m/%Y %H:%M:%S') }}
+                                    {% if change.ip_address %}
+                                        &middot; <i class="bi bi-globe"></i> {{ change.ip_address }}
+                                    {% endif %}
+                                </div>
+                                
+                                {% if change.details %}
+                                    <div class="small">
+                                        <strong>Dettagli:</strong>
+                                        <pre class="mb-0 p-2 bg-light rounded" style="font-size: 0.85em; max-height: 150px; overflow-y: auto;">{{ change.details }}</pre>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="text-end">
+                                {% if change.entity_id and 'deleted' not in change.action %}
+                                    {% if change.entity_type == 'FieldPlannerEvent' %}
+                                        <a href="{{ url_for('field_planner.detail', event_id=change.entity_id) }}" 
+                                           class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-eye"></i> Vedi
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('calendar.detail', event_id=change.entity_id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> Vedi
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-4">
+            <i class="bi bi-info-circle"></i> 
+            <strong>Nota:</strong> Questo registro mostra tutte le modifiche agli eventi del calendario società e del planner campo. 
+            Vengono registrati creazioni, modifiche ed eliminazioni con l'utente che ha eseguito l'azione e il timestamp.
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Nessuna modifica registrata per questa società.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

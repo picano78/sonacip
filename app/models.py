@@ -4199,6 +4199,57 @@ class InvoiceLineItem(db.Model):
         return f'<InvoiceLineItem {self.id}: {self.description} - {self.amount}>'
 
 
+class InvoiceSettings(db.Model):
+    """
+    Super admin configurable invoice settings
+    Company details, branding, electronic invoice configuration
+    """
+    __tablename__ = 'invoice_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Company information
+    company_name = db.Column(db.String(200), nullable=True)
+    company_address = db.Column(db.Text, nullable=True)
+    company_city = db.Column(db.String(100), nullable=True)
+    company_postal_code = db.Column(db.String(20), nullable=True)
+    company_country = db.Column(db.String(100), default='Italia')
+    company_vat = db.Column(db.String(50), nullable=True)  # Partita IVA
+    company_tax_code = db.Column(db.String(50), nullable=True)  # Codice Fiscale
+    company_phone = db.Column(db.String(50), nullable=True)
+    company_email = db.Column(db.String(120), nullable=True)
+    company_website = db.Column(db.String(200), nullable=True)
+    
+    # Invoice settings
+    invoice_prefix = db.Column(db.String(20), default='INV')
+    invoice_footer = db.Column(db.Text, nullable=True)
+    invoice_notes = db.Column(db.Text, nullable=True)
+    default_tax_rate = db.Column(db.Float, default=22.0)  # IVA 22% default in Italy
+    
+    # Logo and branding
+    logo_path = db.Column(db.String(500), nullable=True)
+    
+    # Electronic invoice settings (Fatturazione Elettronica)
+    enable_electronic_invoice = db.Column(db.Boolean, default=False)
+    e_invoice_provider = db.Column(db.String(50), nullable=True)  # 'fatture_in_cloud', 'aruba', etc.
+    e_invoice_api_key = db.Column(db.String(500), nullable=True)
+    e_invoice_api_secret = db.Column(db.String(500), nullable=True)
+    e_invoice_company_id = db.Column(db.String(100), nullable=True)
+    sdi_code = db.Column(db.String(7), nullable=True)  # Codice Destinatario SDI
+    pec_email = db.Column(db.String(120), nullable=True)  # PEC for electronic invoices
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    # Relationship
+    updater = db.relationship('User', foreign_keys=[updated_by])
+    
+    def __repr__(self):
+        return f'<InvoiceSettings {self.company_name}>'
+
+
 class Expense(db.Model):
     """
     Expense tracking for societies and platform

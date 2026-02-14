@@ -73,6 +73,9 @@ from app.models import (
     EmailConfirmationSetting,
     AutomationRule,
     AutomationRun,
+    InvoiceSettings,
+    FeePayment,
+    Invoice,
 )
 from datetime import datetime, timedelta, timezone
 import os
@@ -691,6 +694,89 @@ def payment_settings():
     return render_template('admin/payment_settings.html', settings=settings,
                            total_payments=total_payments, total_revenue=float(total_revenue),
                            active_promotions=active_promotions)
+
+
+@bp.route('/invoice-settings', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def invoice_settings():
+    """Invoice configuration and electronic invoice settings"""
+    settings = InvoiceSettings.query.first()
+    if not settings:
+        settings = InvoiceSettings(
+            company_country='Italia',
+            invoice_prefix='INV',
+            default_tax_rate=22.0,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
+        db.session.add(settings)
+        db.session.commit()
+
+    if request.method == 'POST':
+        # Company information
+        settings.company_name = (request.form.get('company_name') or '').strip() or None
+        settings.company_address = (request.form.get('company_address') or '').strip() or None
+        settings.company_city = (request.form.get('company_city') or '').strip() or None
+        settings.company_postal_code = (request.form.get('company_postal_code') or '').strip() or None
+        settings.company_country = (request.form.get('company_country') or 'Italia').strip()
+        settings.company_vat = (request.form.get('company_vat') or '').strip() or None
+        settings.company_tax_code = (request.form.get('company_tax_code') or '').strip() or None
+        settings.company_phone = (request.form.get('company_phone') or '').strip() or None
+        settings.company_email = (request.form.get('company_email') or '').strip() or None
+        settings.company_website = (request.form.get('company_website') or '').strip() or None
+
+        # Invoice settings
+        settings.invoice_prefix = (request.form.get('invoice_prefix') or 'INV').strip()
+        settings.invoice_footer = (request.form.get('invoice_footer') or '').strip() or None
+        settings.invoice_notes = (request.form.get('invoice_notes') or '').strip() or None
+        
+        try:
+            settings.default_tax_rate = float(request.form.get('default_tax_rate') or 22.0)
+        except (ValueError, TypeError):
+            settings.default_tax_rate = 22.0
+
+        # Electronic invoice settings
+        settings.enable_electronic_invoice = bool(request.form.get('enable_electronic_invoice'))
+        settings.e_invoice_provider = (request.form.get('e_invoice_provider') or '').strip() or None
+        settings.e_invoice_api_key = (request.form.get('e_invoice_api_key') or '').strip() or None
+        settings.e_invoice_api_secret = (request.form.get('e_invoice_api_secret') or '').strip() or None
+        settings.e_invoice_company_id = (request.form.get('e_invoice_company_id') or '').strip() or None
+        settings.sdi_code = (request.form.get('sdi_code') or '').strip() or None
+        settings.pec_email = (request.form.get('pec_email') or '').strip() or None
+
+        # Handle logo upload
+        if 'logo_file' in request.files:
+            file = request.files['logo_file']
+            if file and file.filename:
+                try:
+                    # save_picture validates file type, resizes image, and saves to uploads folder
+                    # Returns relative path or None if validation fails
+                    # May raise exceptions for invalid files or disk errors
+                    logo_path = save_picture(file, folder='invoice_logos', resize=(400, 200))
+                    if logo_path:
+                        settings.logo_path = logo_path
+                except Exception as e:
+                    flash(f'Errore nel caricamento del logo: {str(e)}', 'warning')
+
+        settings.updated_by = current_user.id
+        settings.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        
+        log_action('update_invoice_settings', 'InvoiceSettings', settings.id, 'Impostazioni fattura aggiornate')
+        flash('Impostazioni fattura salvate con successo.', 'success')
+        return redirect(url_for('admin.invoice_settings'))
+
+    # Stats for the page
+    total_invoices = Invoice.query.count()
+    invoices_this_month = Invoice.query.filter(
+        Invoice.created_at >= datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    ).count()
+
+    return render_template('admin/invoice_settings.html', 
+                         settings=settings,
+                         total_invoices=total_invoices,
+                         invoices_this_month=invoices_this_month)
 
 
 @bp.route('/promotion-tiers', methods=['GET', 'POST'])

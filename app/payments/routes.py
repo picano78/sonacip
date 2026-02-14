@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, send_file
 from flask_login import login_required, current_user
 from app import db, csrf
 from app.models import FeePayment, SocietyFee, User
@@ -130,6 +130,8 @@ def success():
     fp_id = request.args.get('fp_id', type=int)
     session_id = request.args.get('session_id', '')
     fp = None
+    invoice = None
+    
     if fp_id:
         fp = FeePayment.query.get(fp_id)
         if fp and fp.user_id == current_user.id and fp.status == 'pending':
@@ -142,7 +144,12 @@ def success():
                 fp.fee.paid_at = datetime.now(timezone.utc)
                 db.session.add(fp.fee)
             db.session.commit()
-    return render_template('payments/success.html', payment=fp)
+            
+            # Automatically generate invoice
+            from app.payments.invoice_utils import generate_invoice_for_payment
+            invoice = generate_invoice_for_payment(fp.id)
+            
+    return render_template('payments/success.html', payment=fp, invoice=invoice)
 
 
 @bp.route('/cancel')
@@ -187,6 +194,10 @@ def webhook():
                     fp.fee.paid_at = datetime.now(timezone.utc)
                     db.session.add(fp.fee)
                 db.session.commit()
+                
+                # Automatically generate invoice
+                from app.payments.invoice_utils import generate_invoice_for_payment
+                generate_invoice_for_payment(fp.id)
 
     return ('ok', 200)
 
@@ -454,4 +465,225 @@ def automation_settings():
     
     return render_template('payments/automation_settings.html',
                          auto_approve_threshold=AUTO_APPROVE_THRESHOLD)
+
+
+@bp.route('/invoices')
+@login_required
+def invoices():
+    """List user's invoices"""
+    from app.models import Invoice
+    
+    # Get user's invoices
+    user_invoices = Invoice.query.filter_by(user_id=current_user.id).order_by(Invoice.created_at.desc()).all()
+    
+    return render_template('payments/invoices.html', invoices=user_invoices)
+
+
+@bp.route('/invoice/<int:invoice_id>')
+@login_required
+def invoice_detail(invoice_id):
+    """View invoice details"""
+    from app.models import Invoice
+    
+    invoice = Invoice.query.get_or_404(invoice_id)
+    
+    # Check permissions - user must own the invoice or be admin
+    if invoice.user_id != current_user.id and not current_user.is_admin():
+        flash('Accesso negato.', 'danger')
+        return redirect(url_for('payments.invoices'))
+    
+    return render_template('payments/invoice_detail.html', invoice=invoice)
+
+
+@bp.route('/invoice/<int:invoice_id>/download')
+@login_required
+def download_invoice(invoice_id):
+    """Download invoice PDF"""
+    from app.models import Invoice
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+    from reportlab.lib.units import inch
+    from reportlab.lib.enums import TA_RIGHT, TA_CENTER
+    import io
+    from flask import send_file
+    
+    invoice = Invoice.query.get_or_404(invoice_id)
+    
+    # Check permissions
+    if invoice.user_id != current_user.id and not current_user.is_admin():
+        flash('Accesso negato.', 'danger')
+        return redirect(url_for('payments.invoices'))
+    
+    # Get invoice settings for company info
+    from app.models import InvoiceSettings
+    settings = InvoiceSettings.query.first()
+    
+    # Generate PDF
+    buffer = io.BytesIO()
+    pdf = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    elements = []
+    
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#667eea'),
+        spaceAfter=30,
+        alignment=TA_CENTER
+    )
+    
+    header_style = ParagraphStyle(
+        'Header',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor('#333333')
+    )
+    
+    # Add company logo if available
+    if settings and settings.logo_path:
+        try:
+            # Sanitize logo path to prevent directory traversal
+            logo_filename = os.path.basename(settings.logo_path)
+            logo_full_path = os.path.join(current_app.root_path, 'static', 'uploads', 'invoice_logos', logo_filename)
+            
+            # Verify the path is within the expected directory
+            uploads_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'invoice_logos')
+            if os.path.commonpath([logo_full_path, uploads_dir]) == uploads_dir and os.path.exists(logo_full_path):
+                img = Image(logo_full_path, width=2*inch, height=1*inch)
+                elements.append(img)
+                elements.append(Spacer(1, 0.3*inch))
+        except Exception:
+            pass
+    
+    # Title
+    elements.append(Paragraph(f"<b>FATTURA {invoice.invoice_number}</b>", title_style))
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Company and invoice info table
+    company_info = []
+    if settings:
+        company_info.append([Paragraph('<b>Da:</b>', header_style), ''])
+        if settings.company_name:
+            company_info.append(['', Paragraph(f'<b>{settings.company_name}</b>', header_style)])
+        if settings.company_address:
+            company_info.append(['', settings.company_address])
+        if settings.company_city and settings.company_postal_code:
+            company_info.append(['', f'{settings.company_postal_code} {settings.company_city}, {settings.company_country or "Italia"}'])
+        if settings.company_vat:
+            company_info.append(['', f'P.IVA: {settings.company_vat}'])
+        if settings.company_tax_code:
+            company_info.append(['', f'C.F.: {settings.company_tax_code}'])
+    
+    if company_info:
+        company_table = Table(company_info, colWidths=[0.8*inch, 5*inch])
+        company_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(company_table)
+        elements.append(Spacer(1, 0.2*inch))
+    
+    # Client info
+    client_info = [
+        [Paragraph('<b>A:</b>', header_style), ''],
+        ['', Paragraph(f'<b>{invoice.billing_name or invoice.user.username}</b>', header_style)],
+    ]
+    if invoice.billing_address:
+        client_info.append(['', invoice.billing_address])
+    if invoice.billing_city:
+        client_info.append(['', f'{invoice.billing_postal_code or ""} {invoice.billing_city}'])
+    if invoice.tax_id:
+        client_info.append(['', f'P.IVA/C.F.: {invoice.tax_id}'])
+    
+    client_table = Table(client_info, colWidths=[0.8*inch, 5*inch])
+    client_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(client_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Invoice details
+    details_data = [
+        ['Data Fattura:', invoice.invoice_date.strftime('%d/%m/%Y')],
+        ['Numero Fattura:', invoice.invoice_number],
+        ['Stato:', invoice.status.upper()],
+    ]
+    
+    if invoice.paid_date:
+        details_data.append(['Data Pagamento:', invoice.paid_date.strftime('%d/%m/%Y')])
+    
+    details_table = Table(details_data, colWidths=[2*inch, 4*inch])
+    details_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(details_table)
+    elements.append(Spacer(1, 0.4*inch))
+    
+    # Line items
+    items_data = [['Descrizione', 'Importo']]
+    items_data.append([invoice.description or 'Servizio', f'€ {invoice.amount:.2f}'])
+    
+    items_table = Table(items_data, colWidths=[4*inch, 2*inch])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    elements.append(items_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Totals
+    totals_data = [
+        ['Imponibile:', f'€ {invoice.amount:.2f}'],
+        ['IVA:', f'€ {invoice.tax_amount:.2f}'],
+        ['<b>TOTALE:</b>', f'<b>€ {invoice.total_amount:.2f}</b>'],
+    ]
+    
+    totals_table = Table(totals_data, colWidths=[4.5*inch, 1.5*inch])
+    totals_table.setStyle(TableStyle([
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (0, 1), 'Helvetica'),
+        ('FONTNAME', (1, 0), (1, 1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('LINEABOVE', (0, 2), (-1, 2), 2, colors.black),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(totals_table)
+    
+    # Notes
+    if invoice.notes or (settings and settings.invoice_footer):
+        elements.append(Spacer(1, 0.4*inch))
+        if invoice.notes:
+            elements.append(Paragraph(f"<b>Note:</b> {invoice.notes}", styles['Normal']))
+        if settings and settings.invoice_footer:
+            elements.append(Spacer(1, 0.2*inch))
+            elements.append(Paragraph(settings.invoice_footer, styles['Normal']))
+    
+    # Build PDF
+    pdf.build(elements)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'fattura_{invoice.invoice_number}.pdf',
+        mimetype='application/pdf'
+    )
+
 

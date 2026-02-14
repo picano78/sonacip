@@ -476,6 +476,13 @@ class Post(db.Model):
     shares_count = db.Column(db.Integer, default=0)
     views_count = db.Column(db.Integer, default=0)
     
+    # Link preview (for external URLs like YouTube, Instagram, TikTok)
+    link_url = db.Column(db.String(500))  # The extracted URL
+    link_title = db.Column(db.String(255))  # Title from metadata
+    link_description = db.Column(db.Text)  # Description from metadata
+    link_image = db.Column(db.String(500))  # Preview image URL
+    link_provider = db.Column(db.String(50))  # Provider name (youtube, instagram, tiktok, etc.)
+    
     created_at = db.Column(db.DateTime, default=utc_now, index=True)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     

@@ -381,6 +381,25 @@ def create_post():
                 post_type='official' if current_user.is_society() else 'personal',
             )
             
+            # Extract and fetch link preview for supported platforms
+            from app.social.link_preview import extract_url_from_content, fetch_link_preview
+            extracted_url = extract_url_from_content(form.content.data)
+            if extracted_url:
+                try:
+                    preview_data = fetch_link_preview(extracted_url)
+                    if preview_data and preview_data.get('title'):
+                        post.link_url = extracted_url
+                        post.link_title = preview_data.get('title')
+                        post.link_description = preview_data.get('description')
+                        post.link_image = preview_data.get('image')
+                        post.link_provider = preview_data.get('provider')
+                except Exception as e:
+                    # Log error but don't fail post creation
+                    try:
+                        current_app.logger.error(f"Link preview fetch failed: {str(e)}")
+                    except Exception:
+                        pass
+            
             if has_media_file:
                 try:
                     image_file = save_picture(form.image.data, folder='posts', size=(800, 800))

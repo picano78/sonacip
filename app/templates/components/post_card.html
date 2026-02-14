@@ -62,6 +62,34 @@
             </div>
         </div>
         <p class="card-text">{{ post.content }}</p>
+        {% if post.link_url and post.link_title %}
+            <div class="card mb-3 border">
+                <div class="row g-0">
+                    {% if post.link_image %}
+                    <div class="col-md-4">
+                        <img src="{{ post.link_image }}" class="img-fluid rounded-start h-100 object-fit-cover" alt="Link preview" loading="lazy" decoding="async" style="max-height: 200px; object-fit: cover;">
+                    </div>
+                    {% endif %}
+                    <div class="col-md-{{ '8' if post.link_image else '12' }}">
+                        <div class="card-body">
+                            <a href="{{ post.link_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                                <h6 class="card-title text-dark mb-1">{{ post.link_title }}</h6>
+                            </a>
+                            {% if post.link_description %}
+                                <p class="card-text small text-muted mb-2">{{ post.link_description[:150] }}{% if post.link_description|length > 150 %}...{% endif %}</p>
+                            {% endif %}
+                            {% if post.link_provider %}
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <i class="bi bi-link-45deg"></i> {{ post.link_provider|capitalize }}
+                                    </small>
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
         {% if post.image %}
             {% set fn = post.image.lower() %}
             {% if fn.endswith('.mp4') or fn.endswith('.webm') or fn.endswith('.mov') or fn.endswith('.mkv') %}

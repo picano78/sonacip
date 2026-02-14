@@ -278,7 +278,7 @@ def auto_approve_small_payments():
             # Auto-approve
             payment.status = 'completed'
             payment.paid_at = datetime.now(timezone.utc)
-            payment.notes = (payment.notes or '') + '\n[AUTO] Approvato automaticamente (importo minore di €{:.2f})'.format(AUTO_APPROVE_THRESHOLD)
+            payment.notes = (payment.notes or '') + f'\n[AUTO] Approvato automaticamente (importo minore di €{AUTO_APPROVE_THRESHOLD:.2f})'
             db.session.add(payment)
             
             # Update fee status

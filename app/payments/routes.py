@@ -309,16 +309,19 @@ def quick_approve(payment_id):
     if payment.status == 'completed':
         return jsonify({'success': False, 'message': 'Pagamento già completato'}), 400
     
+    # Get current time once for consistency
+    now = datetime.now(timezone.utc)
+    
     # Approve payment
     payment.status = 'completed'
-    payment.paid_at = datetime.now(timezone.utc)
-    payment.notes = (payment.notes or '') + f'\n[ADMIN] Approvato da {current_user.username} il {datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")}'
+    payment.paid_at = now
+    payment.notes = (payment.notes or '') + f'\n[ADMIN] Approvato da {current_user.username} il {now.strftime("%d/%m/%Y %H:%M")}'
     db.session.add(payment)
     
     # Update fee status
     if payment.fee and payment.fee.status != 'paid':
         payment.fee.status = 'paid'
-        payment.fee.paid_at = datetime.now(timezone.utc)
+        payment.fee.paid_at = now
         db.session.add(payment.fee)
     
     db.session.commit()

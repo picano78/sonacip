@@ -303,7 +303,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toast notification function (simple implementation)
     function showToast(message, type) {
         const toast = document.createElement('div');
-        toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'warning'} position-fixed top-0 start-50 translate-middle-x mt-3`;
+        const alertType = type === 'success' ? 'success' : type === 'error' ? 'danger' : 'warning';
+        toast.className = `alert alert-${alertType} position-fixed top-0 start-50 translate-middle-x mt-3`;
         toast.style.zIndex = '9999';
         toast.innerHTML = message;
         document.body.appendChild(toast);

@@ -106,13 +106,8 @@ self.addEventListener('push', (event) => {
     data: { url: data.url },
     vibrate: [200, 100, 200],
     requireInteraction: false,
-    silent: false
+    silent: data.sound === false ? true : false  // Enable sound unless explicitly disabled
   };
-
-  // Add sound to notification (browsers will use default notification sound)
-  if (data.sound !== false) {
-    notificationOptions.silent = false;
-  }
 
   event.waitUntil(
     self.registration.showNotification(data.title, notificationOptions).then(() => {
@@ -162,8 +157,10 @@ async function updateBadgeCount() {
           await navigator.clearAppBadge();
         }
       }
+    } else {
+      console.log('Could not update badge - API returned status:', response.status);
     }
   } catch (error) {
-    console.log('Could not update badge:', error);
+    console.log('Could not update badge - Network or API error:', error);
   }
 }

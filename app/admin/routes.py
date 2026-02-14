@@ -750,7 +750,9 @@ def invoice_settings():
             file = request.files['logo_file']
             if file and file.filename:
                 try:
-                    # Save logo using existing picture save function
+                    # save_picture validates file type, resizes image, and saves to uploads folder
+                    # Returns relative path or None if validation fails
+                    # May raise exceptions for invalid files or disk errors
                     logo_path = save_picture(file, folder='invoice_logos', resize=(400, 200))
                     if logo_path:
                         settings.logo_path = logo_path

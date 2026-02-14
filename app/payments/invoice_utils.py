@@ -58,7 +58,8 @@ def generate_invoice_for_payment(fee_payment_id):
         if user:
             # Use user's full name or username as billing name
             if hasattr(user, 'first_name') and hasattr(user, 'last_name'):
-                invoice.billing_name = f"{user.first_name} {user.last_name}".strip() or user.username
+                full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+                invoice.billing_name = full_name if full_name else user.username
             else:
                 invoice.billing_name = user.username
             

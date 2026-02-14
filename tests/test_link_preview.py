@@ -2,10 +2,13 @@
 Test link preview functionality for YouTube, Instagram, and TikTok
 """
 import unittest
+from unittest.mock import patch, Mock
 from app.social.link_preview import (
     extract_url_from_content,
     detect_platform,
     fetch_link_preview,
+    get_youtube_oembed,
+    fetch_open_graph_metadata,
     SUPPORTED_PLATFORMS
 )
 
@@ -127,6 +130,88 @@ class TestLinkPreview(unittest.TestCase):
                     expected_platform,
                     f"URL {url} should be detected as {expected_platform}, got {platform}"
                 )
+    
+    @patch('app.social.link_preview.requests.get')
+    def test_get_youtube_oembed_success(self, mock_get):
+        """Test successful YouTube oEmbed fetch"""
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            'title': 'Test Video',
+            'author_name': 'Test Author',
+            'thumbnail_url': 'https://example.com/thumb.jpg'
+        }
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+        
+        result = get_youtube_oembed('https://www.youtube.com/watch?v=test')
+        
+        self.assertEqual(result['title'], 'Test Video')
+        self.assertEqual(result['description'], 'By Test Author')
+        self.assertEqual(result['image'], 'https://example.com/thumb.jpg')
+        self.assertEqual(result['provider'], 'YouTube')
+    
+    @patch('app.social.link_preview.requests.get')
+    def test_get_youtube_oembed_error(self, mock_get):
+        """Test YouTube oEmbed fetch with error handling"""
+        mock_get.side_effect = Exception('Network error')
+        
+        result = get_youtube_oembed('https://www.youtube.com/watch?v=test')
+        
+        # Should return metadata with None values on error
+        self.assertIsNone(result['title'])
+        self.assertIsNone(result['description'])
+        self.assertIsNone(result['image'])
+        self.assertEqual(result['provider'], 'YouTube')
+    
+    @patch('app.social.link_preview.fetch_open_graph_metadata')
+    @patch('app.social.link_preview.get_youtube_oembed')
+    def test_fetch_link_preview_youtube(self, mock_oembed, mock_og):
+        """Test fetch_link_preview for YouTube URLs"""
+        mock_oembed.return_value = {
+            'title': 'Video Title',
+            'description': 'By Author',
+            'image': 'thumb.jpg',
+            'provider': 'YouTube'
+        }
+        
+        result = fetch_link_preview('https://www.youtube.com/watch?v=test')
+        
+        # Should use oEmbed for YouTube
+        mock_oembed.assert_called_once()
+        self.assertEqual(result['title'], 'Video Title')
+        self.assertEqual(result['provider'], 'YouTube')
+    
+    @patch('app.social.link_preview.fetch_open_graph_metadata')
+    def test_fetch_link_preview_instagram(self, mock_og):
+        """Test fetch_link_preview for Instagram URLs"""
+        mock_og.return_value = {
+            'title': 'Instagram Post',
+            'description': 'Test description',
+            'image': 'image.jpg',
+            'provider': 'instagram'
+        }
+        
+        result = fetch_link_preview('https://www.instagram.com/p/test/')
+        
+        # Should use Open Graph for Instagram
+        mock_og.assert_called_once()
+        self.assertEqual(result['title'], 'Instagram Post')
+    
+    @patch('app.social.link_preview.fetch_open_graph_metadata')
+    def test_fetch_link_preview_tiktok(self, mock_og):
+        """Test fetch_link_preview for TikTok URLs"""
+        mock_og.return_value = {
+            'title': 'TikTok Video',
+            'description': 'Test description',
+            'image': 'image.jpg',
+            'provider': 'tiktok'
+        }
+        
+        result = fetch_link_preview('https://www.tiktok.com/@user/video/123')
+        
+        # Should use Open Graph for TikTok
+        mock_og.assert_called_once()
+        self.assertEqual(result['title'], 'TikTok Video')
 
 
 if __name__ == '__main__':

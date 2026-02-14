@@ -7,6 +7,13 @@ import requests
 from bs4 import BeautifulSoup
 from typing import Optional, Dict
 from urllib.parse import urlparse
+import logging
+
+# Set up logger
+logger = logging.getLogger(__name__)
+
+# User agent for web requests (updated to current version)
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 
 # Supported platforms with their URL patterns
@@ -88,7 +95,7 @@ def fetch_open_graph_metadata(url: str, timeout: int = 5) -> Dict[str, Optional[
     try:
         # Set a user agent to avoid blocking
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': USER_AGENT
         }
         
         # Fetch the page
@@ -132,7 +139,7 @@ def fetch_open_graph_metadata(url: str, timeout: int = 5) -> Dict[str, Optional[
         
     except Exception as e:
         # Log error but don't crash - we'll return empty metadata
-        print(f"Error fetching metadata for {url}: {str(e)}")
+        logger.error(f"Error fetching metadata for {url}: {str(e)}")
     
     return metadata
 
@@ -165,7 +172,7 @@ def get_youtube_oembed(url: str) -> Dict[str, Optional[str]]:
         metadata['image'] = data.get('thumbnail_url')
         
     except Exception as e:
-        print(f"Error fetching YouTube oEmbed for {url}: {str(e)}")
+        logger.error(f"Error fetching YouTube oEmbed for {url}: {str(e)}")
     
     return metadata
 

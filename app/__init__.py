@@ -95,6 +95,7 @@ CORE_MODULES = [
     'tournaments',
     'tasks',
     'scheduler',
+    'field_planner',
     'subscription',
     'marketplace',
     'groups',

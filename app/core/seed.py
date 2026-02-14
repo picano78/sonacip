@@ -107,6 +107,8 @@ def seed_defaults(app) -> dict:
             ("tournaments:manage", "tournaments", "manage", "Gestire tornei"),
             ("calendar:view", "calendar", "view", "Vedere calendario società"),
             ("calendar:manage", "calendar", "manage", "Gestire calendario società"),
+            ("field_planner:view", "field_planner", "view", "Vedere planner campo"),
+            ("field_planner:manage", "field_planner", "manage", "Gestire planner campo"),
             ("crm:access", "crm", "access", "Accedere al CRM"),
             ("crm:manage", "crm", "manage", "Gestire CRM"),
             ("tasks:manage", "tasks", "manage", "Gestire task e planner"),
@@ -170,6 +172,8 @@ def seed_defaults(app) -> dict:
                 "tournaments:manage",
                 "calendar:view",
                 "calendar:manage",
+                "field_planner:view",
+                "field_planner:manage",
                 "crm:access",
                 "crm:manage",
                 "tasks:manage",
@@ -192,6 +196,8 @@ def seed_defaults(app) -> dict:
                 "tournaments:manage",
                 "calendar:view",
                 "calendar:manage",
+                "field_planner:view",
+                "field_planner:manage",
                 "crm:access",
                 "crm:manage",
                 "tasks:manage",
@@ -202,8 +208,8 @@ def seed_defaults(app) -> dict:
                 "users:view_all",
             ],
         )
-        _grant(role_staff, ["social:comment", "events:view", "tournaments:view", "calendar:view", "tasks:manage"])
-        _grant(role_coach, ["social:comment", "events:view", "tournaments:view", "calendar:view", "tasks:manage"])
+        _grant(role_staff, ["social:comment", "events:view", "tournaments:view", "calendar:view", "field_planner:view", "tasks:manage"])
+        _grant(role_coach, ["social:comment", "events:view", "tournaments:view", "calendar:view", "field_planner:view", "tasks:manage"])
         _grant(role_user, ["social:comment"])
 
         db.session.commit()

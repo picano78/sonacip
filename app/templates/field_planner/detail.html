@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} - Dettaglio Impegno Campo{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">{{ event.title }}</h4>
+                        <span class="badge bg-light text-dark">
+                            {% if event.event_type == 'training' %}Allenamento{% else %}Partita{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-muted">Data e Orario</h6>
+                        <p class="mb-0">
+                            <i class="bi bi-calendar"></i> {{ event.start_datetime.strftime('%d/%m/%Y') }}<br>
+                            <i class="bi bi-clock"></i> 
+                            {{ event.start_datetime.strftime('%H:%M') }} - {{ event.end_datetime.strftime('%H:%M') }}
+                        </p>
+                    </div>
+
+                    {% if event.facility %}
+                    <div class="mb-3">
+                        <h6 class="text-muted">Campo</h6>
+                        <p class="mb-0">
+                            <i class="bi bi-geo-alt"></i> {{ event.facility.name }}
+                            {% if event.facility.address %}
+                            <br><small class="text-muted">{{ event.facility.address }}</small>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    {% if event.team %}
+                    <div class="mb-3">
+                        <h6 class="text-muted">Squadra</h6>
+                        <p class="mb-0">{{ event.team }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if event.category %}
+                    <div class="mb-3">
+                        <h6 class="text-muted">Categoria</h6>
+                        <p class="mb-0">{{ event.category }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if event.is_recurring %}
+                    <div class="mb-3">
+                        <div class="alert alert-info">
+                            <i class="bi bi-arrow-repeat"></i>
+                            <strong>Evento Ricorrente</strong><br>
+                            Questo allenamento si ripete settimanalmente fino al 
+                            {% if event.recurrence_end_date %}
+                                {{ event.recurrence_end_date.strftime('%d/%m/%Y') }}
+                            {% else %}
+                                31/07 (fine stagione)
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if event.notes %}
+                    <div class="mb-3">
+                        <h6 class="text-muted">Note</h6>
+                        <p class="mb-0">{{ event.notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <h6 class="text-muted">Creato da</h6>
+                        <p class="mb-0">
+                            {{ event.creator.get_full_name() if event.creator else 'N/A' }}
+                            <br><small class="text-muted">{{ event.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('field_planner.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Torna al Planner
+                        </a>
+                        {% if can('field_planner', 'manage') %}
+                        <form method="POST" action="{{ url_for('field_planner.delete', event_id=event.id) }}" 
+                              onsubmit="return confirm('Sei sicuro di voler eliminare questo impegno?{% if event.is_recurring %} Verranno eliminate anche tutte le ricorrenze.{% endif %}')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Elimina
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if event.is_recurring %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Ricorrenze Generate</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Questo evento ricorrente genera automaticamente gli allenamenti per tutta la stagione. 
+                        Le ricorrenze vengono create fino al {{ event.recurrence_end_date.strftime('%d/%m/%Y') if event.recurrence_end_date else '31/07' }}.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

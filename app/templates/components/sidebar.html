@@ -66,6 +66,15 @@
                                 </a>
                             </li>
                             {% endif %}
+                        {% elif item_id == 'planner_campo' %}
+                            {% if feature_enabled('planner') and can('field_planner', 'view') %}
+                            <li class="sidebar-item">
+                                <a href="{{ url_for('field_planner.index') }}" class="sidebar-link" data-tooltip="Planner Campo" title="Planner Campo">
+                                    <i class="bi bi-calendar2-check"></i>
+                                    <span class="sidebar-text">Planner Campo</span>
+                                </a>
+                            </li>
+                            {% endif %}
                         {% elif item_id == 'social' %}
                             {% if feature_enabled('social_feed') %}
                             <li class="sidebar-item">

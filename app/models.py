@@ -881,6 +881,58 @@ class Facility(db.Model):
         return f'<Facility {self.name} society={self.society_id}>'
 
 
+class FieldPlannerEvent(db.Model):
+    """
+    Field Planner Events - Only for field/facility usage (training, matches)
+    Enforces single occupancy per field per time slot (no overlaps allowed)
+    Distinct from SocietyCalendarEvent which allows multiple concurrent events
+    """
+    __tablename__ = 'field_planner_event'
+
+    id = db.Column(db.Integer, primary_key=True)
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id'), nullable=False, index=True)
+    facility_id = db.Column(db.Integer, db.ForeignKey('facility.id'), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    event_type = db.Column(db.String(50), nullable=False)  # training, match
+    title = db.Column(db.String(200), nullable=False)
+    team = db.Column(db.String(100))
+    category = db.Column(db.String(100))
+    
+    start_datetime = db.Column(db.DateTime, nullable=False, index=True)
+    end_datetime = db.Column(db.DateTime, nullable=False)
+
+    # For recurring events (e.g., training sessions for entire season)
+    is_recurring = db.Column(db.Boolean, default=False)
+    recurrence_pattern = db.Column(db.String(50))  # weekly, daily
+    recurrence_end_date = db.Column(db.Date)  # When recurring pattern ends
+    parent_event_id = db.Column(db.Integer, db.ForeignKey('field_planner_event.id'), nullable=True)  # For recurring instances
+
+    notes = db.Column(db.Text)
+    color = db.Column(db.String(20), default='#28a745')
+
+    created_at = db.Column(db.DateTime, default=utc_now)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+
+    # Relationships
+    society = db.relationship('Society', backref=db.backref('field_planner_events', lazy='dynamic'))
+    facility = db.relationship('Facility', backref=db.backref('field_events', lazy='dynamic'))
+    creator = db.relationship('User', foreign_keys=[created_by])
+    
+    def is_visible_to(self, user):
+        """Check if user can view this field planner event."""
+        if not user or not user.is_authenticated:
+            return False
+        if check_permission(user, 'admin', 'access'):
+            return True
+        if check_permission(user, 'field_planner', 'view', self.society_id):
+            return True
+        return False
+
+    def __repr__(self):
+        return f'<FieldPlannerEvent {self.title} ({self.event_type}) facility={self.facility_id}>'
+
+
 class Notification(db.Model):
     """
     Internal notification system

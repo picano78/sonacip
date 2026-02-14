@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Planner Campo - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-calendar-check"></i> Planner Campo</h2>
+            <p class="text-muted mb-0">Gestione occupazione campi - Un solo impegno per campo alla volta</p>
+        </div>
+        {% if can('field_planner', 'manage') %}
+        <a href="{{ url_for('field_planner.create') }}" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Nuovo Impegno Campo
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Filters and View Selector -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <label class="form-label">Campo/Risorsa:</label>
+                    <select class="form-select" id="facilityFilter" onchange="filterByFacility()">
+                        <option value="">Tutti i campi</option>
+                        {% for facility in facilities %}
+                            <option value="{{ facility.id }}" {% if facility_id == facility.id %}selected{% endif %}>
+                                {{ facility.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Vista:</label>
+                    <div class="btn-group w-100" role="group">
+                        <a href="{{ url_for('field_planner.index', view='day', start=start_date.isoformat(), facility_id=facility_id) }}" 
+                           class="btn btn-outline-primary {% if view == 'day' %}active{% endif %}">Giorno</a>
+                        <a href="{{ url_for('field_planner.index', view='week', start=start_date.isoformat(), facility_id=facility_id) }}" 
+                           class="btn btn-outline-primary {% if view == 'week' %}active{% endif %}">Settimana</a>
+                        <a href="{{ url_for('field_planner.index', view='month', start=start_date.isoformat(), facility_id=facility_id) }}" 
+                           class="btn btn-outline-primary {% if view == 'month' %}active{% endif %}">Mese</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Navigazione:</label>
+                    <div class="btn-group w-100" role="group">
+                        <a href="{{ url_for('field_planner.index', view=view, start=prev_nav.isoformat(), facility_id=facility_id) }}" 
+                           class="btn btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+                        <a href="{{ url_for('field_planner.index', view=view, facility_id=facility_id) }}" 
+                           class="btn btn-outline-secondary">Oggi</a>
+                        <a href="{{ url_for('field_planner.index', view=view, start=next_nav.isoformat(), facility_id=facility_id) }}" 
+                           class="btn btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">{{ nav_title }} <small>{{ nav_subtitle }}</small></h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">Ora</th>
+                            {% for day in days %}
+                            <th class="text-center {% if day == today %}bg-primary bg-opacity-10{% endif %}">
+                                <div>{{ day.strftime('%a') }}</div>
+                                <div class="fw-bold">{{ day.strftime('%d/%m') }}</div>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hour in hours %}
+                        <tr>
+                            <td class="text-center align-middle">
+                                <strong>{{ '%02d:00' % hour }}</strong>
+                            </td>
+                            {% for day in days %}
+                            <td class="p-1 {% if day == today %}bg-primary bg-opacity-10{% endif %}" 
+                                style="min-height: 60px; vertical-align: top;">
+                                {% set cell_events = grid_map.get((day, hour), []) %}
+                                {% for event in cell_events %}
+                                <div class="card mb-1" style="border-left: 4px solid {{ event.color }};">
+                                    <div class="card-body p-2">
+                                        <a href="{{ url_for('field_planner.detail', event_id=event.id) }}" 
+                                           class="text-decoration-none text-dark">
+                                            <div class="small fw-bold">{{ event.title }}</div>
+                                            <div class="small text-muted">
+                                                <i class="bi bi-clock"></i> 
+                                                {{ event.start_datetime.strftime('%H:%M') }} - {{ event.end_datetime.strftime('%H:%M') }}
+                                            </div>
+                                            {% if event.facility %}
+                                            <div class="small text-muted">
+                                                <i class="bi bi-geo-alt"></i> {{ event.facility.name }}
+                                            </div>
+                                            {% endif %}
+                                            <span class="badge bg-{% if event.event_type == 'training' %}success{% else %}primary{% endif %} mt-1">
+                                                {% if event.event_type == 'training' %}Allenamento{% else %}Partita{% endif %}
+                                            </span>
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                {% if can('field_planner', 'manage') and not cell_events %}
+                                <a href="{{ url_for('field_planner.create', date=day.isoformat(), hour=hour) }}" 
+                                   class="btn btn-sm btn-outline-success w-100">
+                                    <i class="bi bi-plus"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>Nota:</strong> Il Planner Campo gestisce l'occupazione fisica dei campi. 
+            È permesso un solo impegno per campo alla volta per evitare sovraccarichi. 
+            Per eventi società che non occupano campi, usa il <a href="{{ url_for('calendar.index') }}">Calendario Società</a>.
+        </div>
+    </div>
+</div>
+
+<script>
+function filterByFacility() {
+    const facilityId = document.getElementById('facilityFilter').value;
+    const url = new URL(window.location);
+    if (facilityId) {
+        url.searchParams.set('facility_id', facilityId);
+    } else {
+        url.searchParams.delete('facility_id');
+    }
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

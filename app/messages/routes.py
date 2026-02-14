@@ -170,7 +170,14 @@ def sent():
 @bp.route('/compose', methods=['GET', 'POST'])
 @login_required
 def compose():
-    """Redirect to new chat"""
+    """Redirect to chat with user or new chat search"""
+    to_user_id = request.args.get('to', type=int)
+    if to_user_id:
+        # Redirect to chat with specific user
+        recipient = User.query.get(to_user_id)
+        if recipient:
+            return redirect(url_for('messages.chat', user_id=to_user_id))
+        flash('Utente non trovato.', 'warning')
     return redirect(url_for('messages.new_chat'))
 
 

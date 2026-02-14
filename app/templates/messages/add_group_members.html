@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Aggiungi Membri - {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-person-plus"></i> Aggiungi Membri a "{{ group.name }}"
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Seleziona utenti da aggiungere:</label>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Seleziona uno o più utenti da aggiungere al gruppo
+                            </div>
+                            
+                            {% if available_users %}
+                            <div class="list-group" style="max-height: 400px; overflow-y: auto;">
+                                {% for user in available_users %}
+                                <label class="list-group-item">
+                                    <div class="d-flex align-items-center">
+                                        <input class="form-check-input me-3" type="checkbox" name="user_ids" value="{{ user.id }}">
+                                        {% if user.avatar %}
+                                        <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}" 
+                                             class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;" alt="{{ user.get_full_name() }}">
+                                        {% else %}
+                                        <div class="rounded-circle bg-secondary text-white me-2 d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <i class="bi bi-person-fill"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-semibold">{{ user.get_full_name() }}</div>
+                                            <small class="text-muted">@{{ user.username }}</small>
+                                        </div>
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> Nessun utente disponibile da aggiungere al momento.
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            {% if available_users %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Aggiungi Selezionati
+                            </button>
+                            {% endif %}
+                            <a href="{{ url_for('messages.group_chat', group_id=group.id) }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Torna al Gruppo
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all checkbox functionality
+    const checkboxes = document.querySelectorAll('input[name="user_ids"]');
+    
+    // Add select all button
+    if (checkboxes.length > 0) {
+        const selectAllBtn = document.createElement('button');
+        selectAllBtn.type = 'button';
+        selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-2';
+        selectAllBtn.innerHTML = '<i class="bi bi-check-square"></i> Seleziona Tutti';
+        
+        const listGroup = document.querySelector('.list-group');
+        listGroup.parentElement.insertBefore(selectAllBtn, listGroup);
+        
+        selectAllBtn.addEventListener('click', function() {
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+            this.innerHTML = allChecked ? 
+                '<i class="bi bi-check-square"></i> Seleziona Tutti' : 
+                '<i class="bi bi-square"></i> Deseleziona Tutti';
+        });
+    }
+});
+</script>
+{% endblock %}

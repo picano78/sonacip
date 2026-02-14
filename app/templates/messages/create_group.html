@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Crea Gruppo - Messaggi{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-people-fill"></i> Crea Nuovo Gruppo
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Il nome del gruppo sarà visibile a tutti i membri</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="3") }}
+                            <small class="form-text text-muted">Opzionale - Descrivi lo scopo del gruppo</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.avatar.label(class="form-label") }}
+                            {{ form.avatar(class="form-control") }}
+                            {% if form.avatar.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.avatar.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Opzionale - Carica un'immagine per il gruppo (max 5MB)</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.max_members.label(class="form-label") }}
+                            {{ form.max_members(class="form-control") }}
+                            <small class="form-text text-muted">Massimo 256 membri (predefinito)</small>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.is_announcement_only(class="form-check-input") }}
+                            {{ form.is_announcement_only.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">Se attivato, solo gli amministratori potranno inviare messaggi</small>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Crea Gruppo
+                            </button>
+                            <a href="{{ url_for('messages.inbox') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Annulla
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-info-circle"></i> Informazioni sui Gruppi</h6>
+                    <ul class="mb-0">
+                        <li>Crea gruppi per chattare con più persone contemporaneamente</li>
+                        <li>Come creatore, sarai automaticamente amministratore del gruppo</li>
+                        <li>Gli amministratori possono aggiungere/rimuovere membri e modificare le impostazioni</li>
+                        <li>I membri possono inviare messaggi e lasciare il gruppo quando vogliono</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

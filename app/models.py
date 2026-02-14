@@ -1730,6 +1730,115 @@ class MessageThread(db.Model):
         return f'<MessageThread {self.thread_id}: {self.user1_id} <-> {self.user2_id}>'
 
 
+class MessageGroup(db.Model):
+    """
+    WhatsApp-style group chats within the messaging system
+    """
+    __tablename__ = 'message_group'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    avatar = db.Column(db.String(255))
+    
+    # Creator and admin management
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Group settings
+    max_members = db.Column(db.Integer, default=256)  # WhatsApp allows 256
+    is_announcement_only = db.Column(db.Boolean, default=False)  # Only admins can post
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    last_message_at = db.Column(db.DateTime, default=utc_now, index=True)
+    
+    # Relationships
+    creator = db.relationship('User', foreign_keys=[creator_id], backref=db.backref('created_message_groups', lazy='dynamic'))
+    
+    def __repr__(self):
+        return f'<MessageGroup {self.id}: {self.name}>'
+    
+    def member_count(self):
+        """Get total number of members"""
+        return MessageGroupMembership.query.filter_by(group_id=self.id).count()
+    
+    def is_admin(self, user_id):
+        """Check if user is admin of this group"""
+        membership = MessageGroupMembership.query.filter_by(
+            group_id=self.id, 
+            user_id=user_id
+        ).first()
+        return membership and membership.is_admin
+
+
+class MessageGroupMembership(db.Model):
+    """
+    Membership in message group chats
+    """
+    __tablename__ = 'message_group_membership'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('message_group.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Role in group
+    is_admin = db.Column(db.Boolean, default=False)
+    
+    # Notification settings
+    is_muted = db.Column(db.Boolean, default=False)
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True)  # False if user left the group
+    
+    # Timestamps
+    joined_at = db.Column(db.DateTime, default=utc_now)
+    left_at = db.Column(db.DateTime)
+    
+    # Relationships
+    group = db.relationship('MessageGroup', backref=db.backref('memberships', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('message_group_memberships', lazy='dynamic'))
+    
+    __table_args__ = (
+        db.UniqueConstraint('group_id', 'user_id', name='uq_message_group_membership'),
+    )
+    
+    def __repr__(self):
+        return f'<MessageGroupMembership group={self.group_id} user={self.user_id} admin={self.is_admin}>'
+
+
+class MessageGroupMessage(db.Model):
+    """
+    Messages within group chats
+    """
+    __tablename__ = 'message_group_message'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('message_group.id'), nullable=False, index=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    
+    # Message content
+    body = db.Column(db.Text, nullable=False)
+    
+    # Attachments
+    has_attachment = db.Column(db.Boolean, default=False)
+    attachment_path = db.Column(db.String(500))
+    
+    # System messages (e.g., "User joined", "User left")
+    is_system_message = db.Column(db.Boolean, default=False)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    edited_at = db.Column(db.DateTime)
+    
+    # Relationships
+    group = db.relationship('MessageGroup', backref=db.backref('group_messages', lazy='dynamic'))
+    sender = db.relationship('User', foreign_keys=[sender_id])
+    
+    def __repr__(self):
+        return f'<MessageGroupMessage {self.id} group={self.group_id} sender={self.sender_id}>'
+
+
 class MedicalCertificate(db.Model):
     """
     Medical certificate for an athlete (society-managed), used for automated expiry reminders.

@@ -297,9 +297,14 @@
         <div class="conversations-list">
             <div class="conversations-header">
                 <h5><i class="bi bi-chat-dots-fill"></i> Messaggi</h5>
-                <a href="{{ url_for('messages.new_chat') }}" class="btn btn-sm" title="Nuova chat">
-                    <i class="bi bi-plus-lg"></i>
-                </a>
+                <div class="d-flex gap-1">
+                    <a href="{{ url_for('messages.create_group') }}" class="btn btn-sm" title="Nuovo gruppo">
+                        <i class="bi bi-people-fill"></i>
+                    </a>
+                    <a href="{{ url_for('messages.new_chat') }}" class="btn btn-sm" title="Nuova chat">
+                        <i class="bi bi-plus-lg"></i>
+                    </a>
+                </div>
             </div>
             <div class="search-box position-relative">
                 <i class="bi bi-search search-icon"></i>
@@ -307,6 +312,7 @@
             </div>
             <div class="conversation-items">
                 {% for conv in conversations %}
+                {% if conv.type == 'direct' %}
                 <a href="{{ url_for('messages.chat', user_id=conv.user.id) }}" 
                    class="conversation-item {{ 'active' if chat_user and chat_user.id == conv.user.id else '' }}">
                     {% if conv.user.avatar %}
@@ -329,6 +335,43 @@
                         {% endif %}
                     </div>
                 </a>
+                {% elif conv.type == 'group' %}
+                <a href="{{ url_for('messages.group_chat', group_id=conv.group.id) }}" 
+                   class="conversation-item">
+                    {% if conv.group.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + conv.group.avatar) }}" class="conversation-avatar" alt="{{ conv.group.name }}">
+                    {% else %}
+                        <div class="conversation-avatar-placeholder" style="background: #42b72a;">
+                            <i class="bi bi-people-fill text-white"></i>
+                        </div>
+                    {% endif %}
+                    <div class="conversation-info">
+                        <div class="conversation-name">
+                            {{ conv.group.name }}
+                            <small class="text-muted">({{ conv.member_count }})</small>
+                        </div>
+                        <div class="conversation-preview">
+                            {% if conv.last_message %}
+                                {% if conv.last_message.is_system_message %}
+                                    <i>{{ conv.last_message.body|truncate(30) }}</i>
+                                {% else %}
+                                    {{ conv.last_message.sender.first_name }}: {{ conv.last_message.body|truncate(25) }}
+                                {% endif %}
+                            {% else %}
+                                Nessun messaggio
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="conversation-meta">
+                        {% if conv.last_message %}
+                        <div class="conversation-time">{{ conv.last_message.created_at.strftime('%H:%M') }}</div>
+                        {% endif %}
+                        {% if conv.unread_count > 0 %}
+                        <div class="unread-badge">{{ conv.unread_count }}</div>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endif %}
                 {% else %}
                 <div class="p-4 text-center text-muted">
                     <i class="bi bi-chat-square-dots" style="font-size: 2rem;"></i>

@@ -99,13 +99,20 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const notificationOptions = {
+    body: data.body,
+    icon: data.icon,
+    badge: '/static/icons/icon-192x192.png',
+    data: { url: data.url },
+    vibrate: [200, 100, 200],
+    requireInteraction: false,
+    silent: data.sound === false ? true : false  // Enable sound unless explicitly disabled
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon,
-      badge: '/static/icons/icon-192x192.png',
-      data: { url: data.url },
-      vibrate: [200, 100, 200]
+    self.registration.showNotification(data.title, notificationOptions).then(() => {
+      // Update app badge count
+      return updateBadgeCount();
     })
   );
 });
@@ -123,6 +130,37 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       return clients.openWindow(urlToOpen);
+    }).then(() => {
+      // Update badge count when notification is clicked
+      return updateBadgeCount();
     })
   );
 });
+
+// Function to update app badge count
+async function updateBadgeCount() {
+  try {
+    // Try to get unread count from the API
+    const response = await fetch('/notifications/unread-count', {
+      credentials: 'same-origin'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const count = data.count || 0;
+      
+      // Update badge using Badge API if available
+      if ('setAppBadge' in navigator) {
+        if (count > 0) {
+          await navigator.setAppBadge(count);
+        } else {
+          await navigator.clearAppBadge();
+        }
+      }
+    } else {
+      console.log('Could not update badge - API returned status:', response.status);
+    }
+  } catch (error) {
+    console.log('Could not update badge - Network or API error:', error);
+  }
+}

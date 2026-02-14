@@ -17,7 +17,12 @@ def csp_report():
     Endpoint per ricevere report di violazioni CSP
     """
     try:
-        report = request.get_json()
+        # Try to get JSON, but also handle empty or malformed requests
+        report = None
+        try:
+            report = request.get_json(force=True, silent=True)
+        except Exception:
+            pass
         
         if report and 'csp-report' in report:
             csp_violation = report['csp-report']
@@ -39,8 +44,10 @@ def csp_report():
                     severity='warning'
                 )
         
+        # Always return 204 No Content to acknowledge receipt
         return '', 204
     
     except Exception as e:
         current_app.logger.error(f"CSP report error: {e}")
-        return '', 400
+        # Still return 204 to prevent browser retries
+        return '', 204

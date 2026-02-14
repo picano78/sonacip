@@ -845,8 +845,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Form validation feedback improvements
-    const forms = document.querySelectorAll('form.needs-validation');
-    forms.forEach(form => {
+    const validationForms = document.querySelectorAll('form.needs-validation');
+    validationForms.forEach(form => {
         form.addEventListener('submit', function(event) {
             if (!form.checkValidity()) {
                 event.preventDefault();

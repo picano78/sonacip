@@ -3,12 +3,15 @@ Notification utilities
 """
 from flask import current_app
 from flask_mail import Message
+import logging
 from app import mail, db
 from app.models import Notification, User, SmtpSetting
 from datetime import datetime, timedelta, timezone
 import os
 import smtplib
 from email.message import EmailMessage
+
+logger = logging.getLogger(__name__)
 
 
 def create_notification(user_id, title, message, notification_type='system', link=None):
@@ -25,10 +28,25 @@ def create_notification(user_id, title, message, notification_type='system', lin
         )
         db.session.add(notification)
         db.session.commit()
+        
+        # Send real-time notification
+        try:
+            from app.realtime import send_realtime_notification
+            send_realtime_notification(user_id, {
+                'id': notification.id,
+                'title': title,
+                'message': message,
+                'notification_type': notification_type,
+                'link': link,
+                'created_at': notification.created_at.isoformat() if notification.created_at else None
+            })
+        except Exception as e:
+            logger.error(f"Error sending real-time notification: {e}", exc_info=True)
+        
         return notification
     except Exception as e:
         db.session.rollback()
-        print(f"Error creating notification: {e}")
+        logger.error(f"Error creating notification: {e}", exc_info=True)
         return None
 
 

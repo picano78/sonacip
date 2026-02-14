@@ -7,6 +7,7 @@ from app.field_planner import bp
 from app.field_planner.forms import FieldPlannerEventForm
 from app.models import FieldPlannerEvent, Facility, Notification
 from app.utils import permission_required, check_permission, get_active_society_id
+from app.utils.audit import log_planner_change
 from app.notifications.utils import notify_planner_change
 
 
@@ -282,6 +283,23 @@ def create():
                 current_dt += timedelta(days=7)
             
             db.session.commit()
+            
+            # Log the creation
+            log_planner_change(
+                user_id=current_user.id,
+                society_id=society.id,
+                action='field_planner_created_recurring',
+                entity_type='FieldPlannerEvent',
+                entity_id=event.id,
+                details={
+                    'title': event.title,
+                    'facility_id': event.facility_id,
+                    'event_type': event.event_type,
+                    'instances_created': created_count,
+                    'season_end': season_end.strftime('%Y-%m-%d')
+                }
+            )
+            
             flash(f'Allenamento ricorrente creato: {created_count} sessioni programmate fino al {season_end.strftime("%d/%m/%Y")}.', 'success')
             
         else:
@@ -301,6 +319,23 @@ def create():
             )
             db.session.add(event)
             db.session.commit()
+            
+            # Log the creation
+            log_planner_change(
+                user_id=current_user.id,
+                society_id=society.id,
+                action='field_planner_created',
+                entity_type='FieldPlannerEvent',
+                entity_id=event.id,
+                details={
+                    'title': event.title,
+                    'facility_id': event.facility_id,
+                    'event_type': event.event_type,
+                    'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
+                    'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M')
+                }
+            )
+            
             flash('Evento inserito nel Planner Campo.', 'success')
 
         # Notify society members
@@ -332,6 +367,21 @@ def delete(event_id):
     # If it's a recurring parent, delete all children too
     if event.is_recurring:
         FieldPlannerEvent.query.filter_by(parent_event_id=event.id).delete()
+    
+    # Log before deletion
+    log_planner_change(
+        user_id=current_user.id,
+        society_id=event.society_id,
+        action='field_planner_deleted',
+        entity_type='FieldPlannerEvent',
+        entity_id=event.id,
+        details={
+            'title': event.title,
+            'facility_id': event.facility_id,
+            'event_type': event.event_type,
+            'was_recurring': event.is_recurring
+        }
+    )
     
     db.session.delete(event)
     db.session.commit()

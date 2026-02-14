@@ -15,6 +15,9 @@
                     <div class="small text-muted">Filtro attivo</div>
                     <div class="fw-bold">{{ view|capitalize }}</div>
                 </div>
+                <a href="{{ url_for('calendar.modifications') }}" class="btn btn-outline-info" title="Registro modifiche">
+                    <i class="bi bi-clock-history"></i> Modifiche
+                </a>
                 <a href="{{ url_for('calendar.grid') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-grid-3x3-gap"></i> Griglia
                 </a>
@@ -72,30 +75,58 @@
                             <div class="timeline-line rounded"></div>
                             <div class="flex-grow-1 d-flex flex-column gap-3">
                                 {% for event in events %}
-                                    <a href="{{ url_for('calendar.detail', event_id=event.id) }}" class="text-decoration-none text-dark">
-                                        <div class="d-flex gap-3 align-items-start card-hover p-3 border rounded">
-                                            <div class="timeline-dot mt-1"></div>
-                                            <div class="flex-grow-1">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <div class="fw-semibold">{{ event.title }}</div>
-                                                    <span class="badge text-uppercase" style="background-color: {{ event.color or '#212529' }}; color: #fff;">
-                                                        {{ event.event_type }}
-                                                    </span>
-                                                </div>
-                                                <div class="small text-muted mb-2">
-                                                    <i class="bi bi-clock"></i> {{ event.start_datetime.strftime('%H:%M') }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%H:%M') }}{% endif %}
-                                                    &middot; <i class="bi bi-geo-alt"></i>
-                                                    {% if event.facility %}{{ event.facility.name }}{% else %}{{ event.location_text or 'Luogo da definire' }}{% endif %}
-                                                </div>
-                                                <div class="d-flex flex-wrap gap-1 small">
-                                                    {% if event.team %}<span class="badge bg-primary-subtle text-primary">{{ event.team }}</span>{% endif %}
-                                                    {% if event.category %}<span class="badge bg-secondary">{{ event.category }}</span>{% endif %}
-                                                    {% if event.competition_name %}<span class="badge bg-warning text-dark">{{ event.competition_name }}</span>{% endif %}
-                                                    {% if event.share_to_social %}<span class="badge bg-success"><i class="bi bi-megaphone"></i> Social</span>{% endif %}
+                                    {% if event.__class__.__name__ == 'FieldPlannerEvent' %}
+                                        <a href="{{ url_for('field_planner.detail', event_id=event.id) }}" class="text-decoration-none text-dark">
+                                            <div class="d-flex gap-3 align-items-start card-hover p-3 border rounded" style="border-left: 3px solid {{ event.color or '#28a745' }} !important;">
+                                                <div class="timeline-dot mt-1" style="background-color: {{ event.color or '#28a745' }};"></div>
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="fw-semibold">
+                                                            <i class="bi bi-calendar-event text-success"></i> {{ event.title }}
+                                                        </div>
+                                                        <span class="badge text-uppercase" style="background-color: {{ event.color or '#28a745' }}; color: #fff;">
+                                                            {{ event.event_type }} (Planner)
+                                                        </span>
+                                                    </div>
+                                                    <div class="small text-muted mb-2">
+                                                        <i class="bi bi-clock"></i> {{ event.start_datetime.strftime('%H:%M') }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%H:%M') }}{% endif %}
+                                                        &middot; <i class="bi bi-geo-alt"></i>
+                                                        {% if event.facility %}{{ event.facility.name }}{% else %}Struttura non specificata{% endif %}
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1 small">
+                                                        {% if event.team %}<span class="badge bg-success-subtle text-success">{{ event.team }}</span>{% endif %}
+                                                        {% if event.category %}<span class="badge bg-secondary">{{ event.category }}</span>{% endif %}
+                                                        <span class="badge bg-info"><i class="bi bi-diagram-3"></i> Campo</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </a>
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('calendar.detail', event_id=event.id) }}" class="text-decoration-none text-dark">
+                                            <div class="d-flex gap-3 align-items-start card-hover p-3 border rounded">
+                                                <div class="timeline-dot mt-1"></div>
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="fw-semibold">{{ event.title }}</div>
+                                                        <span class="badge text-uppercase" style="background-color: {{ event.color or '#212529' }}; color: #fff;">
+                                                            {{ event.event_type }}
+                                                        </span>
+                                                    </div>
+                                                    <div class="small text-muted mb-2">
+                                                        <i class="bi bi-clock"></i> {{ event.start_datetime.strftime('%H:%M') }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%H:%M') }}{% endif %}
+                                                        &middot; <i class="bi bi-geo-alt"></i>
+                                                        {% if event.facility %}{{ event.facility.name }}{% else %}{{ event.location_text or 'Luogo da definire' }}{% endif %}
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1 small">
+                                                        {% if event.team %}<span class="badge bg-primary-subtle text-primary">{{ event.team }}</span>{% endif %}
+                                                        {% if event.category %}<span class="badge bg-secondary">{{ event.category }}</span>{% endif %}
+                                                        {% if event.competition_name %}<span class="badge bg-warning text-dark">{{ event.competition_name }}</span>{% endif %}
+                                                        {% if event.share_to_social %}<span class="badge bg-success"><i class="bi bi-megaphone"></i> Social</span>{% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    {% endif %}
                                 {% endfor %}
                             </div>
                         </div>

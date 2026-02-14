@@ -14,8 +14,10 @@ from app.models import (
     Post,
     Facility,
     SocietyCalendarAttendance,
+    FieldPlannerEvent,
 )
 from app.utils import permission_required, check_permission, get_active_society_id
+from app.utils.audit import log_planner_change
 from app.notifications.utils import notify_planner_change
 
 bp = Blueprint('calendar', __name__, url_prefix='/scheduler')
@@ -83,9 +85,27 @@ def index():
 
     events = query.order_by(SocietyCalendarEvent.start_datetime.asc()).all()
 
+    # Also get field planner events for the same period and society
+    sid = get_active_society_id(current_user)
+    field_planner_events = []
+    if sid or check_permission(current_user, 'admin', 'access'):
+        fp_query = FieldPlannerEvent.query
+        if sid:
+            fp_query = fp_query.filter(FieldPlannerEvent.society_id == sid)
+        fp_query = fp_query.filter(
+            FieldPlannerEvent.start_datetime >= datetime.combine(start_date, datetime.min.time()),
+            FieldPlannerEvent.start_datetime < datetime.combine(end_date, datetime.min.time())
+        )
+        field_planner_events = fp_query.order_by(FieldPlannerEvent.start_datetime.asc()).all()
+
     # Group events by date for the view
     grouped = {}
     for ev in events:
+        key = ev.start_datetime.date()
+        grouped.setdefault(key, []).append(ev)
+    
+    # Add field planner events to grouped dict with a marker
+    for ev in field_planner_events:
         key = ev.start_datetime.date()
         grouped.setdefault(key, []).append(ev)
 
@@ -146,6 +166,20 @@ def grid():
 
     events = q.order_by(SocietyCalendarEvent.start_datetime.asc()).all()
 
+    # Also get field planner events for the same period
+    field_planner_events = []
+    if sid or check_permission(current_user, 'admin', 'access'):
+        fp_query = FieldPlannerEvent.query
+        if sid:
+            fp_query = fp_query.filter(FieldPlannerEvent.society_id == sid)
+        fp_query = fp_query.filter(
+            FieldPlannerEvent.start_datetime < datetime.combine(end_date, datetime.min.time()),
+            FieldPlannerEvent.end_datetime > datetime.combine(start_date, datetime.min.time()),
+        )
+        if facility_id:
+            fp_query = fp_query.filter(FieldPlannerEvent.facility_id == facility_id)
+        field_planner_events = fp_query.order_by(FieldPlannerEvent.start_datetime.asc()).all()
+
     days = []
     d = start_date
     while d < end_date:
@@ -157,6 +191,18 @@ def grid():
     # Map: day -> hour -> list[events]
     grid_map = {(day, hour): [] for day in days for hour in hours}
     for ev in events:
+        day = ev.start_datetime.date()
+        if day < start_date or day >= end_date:
+            continue
+        h = ev.start_datetime.hour
+        if h < hours[0]:
+            h = hours[0]
+        if h > hours[-1]:
+            h = hours[-1]
+        grid_map[(day, h)].append(ev)
+    
+    # Add field planner events to grid
+    for ev in field_planner_events:
         day = ev.start_datetime.date()
         if day < start_date or day >= end_date:
             continue
@@ -464,6 +510,22 @@ def create():
                 link=url_for('calendar.detail', event_id=event.id)
             )
         
+        # Log the creation
+        log_planner_change(
+            user_id=current_user.id,
+            society_id=event.society_id,
+            action='calendar_event_created',
+            entity_type='SocietyCalendarEvent',
+            entity_id=event.id,
+            details={
+                'title': event.title,
+                'facility_id': facility_id,
+                'event_type': event.event_type,
+                'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
+                'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M') if event.end_datetime else None
+            }
+        )
+        
         flash('Evento inserito nel Calendario Società.', 'success')
         return redirect(url_for('calendar.index'))
 
@@ -525,3 +587,21 @@ def facilities():
 
     facilities = Facility.query.filter_by(society_id=society.id).order_by(Facility.name.asc()).all()
     return render_template('calendar/facilities.html', facilities=facilities, form=form, society=society)
+
+
+@bp.route('/modifications')
+@login_required
+@permission_required('calendar', 'view', society_id_func=lambda: _scope_id())
+def modifications():
+    """View modification log for calendar and field planner events."""
+    from app.utils.audit import get_planner_changes
+    
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('calendar.index'))
+    
+    # Get modification logs for this society
+    changes = get_planner_changes(society.id, limit=100)
+    
+    return render_template('calendar/modifications.html', changes=changes, society=society)

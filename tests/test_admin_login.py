@@ -7,6 +7,11 @@ from app import create_app, db
 from app.models import User, Role
 
 
+# Test credentials (as configured in config.py for non-production)
+TEST_ADMIN_EMAIL = 'Picano78@gmail.com'
+TEST_ADMIN_PASSWORD = 'Simone78'
+
+
 class TestSuperAdminInitialization:
     """Test super admin user creation and login"""
     
@@ -34,9 +39,9 @@ class TestSuperAdminInitialization:
     def test_super_admin_exists(self, app):
         """Test that super admin user is created with correct credentials"""
         with app.app_context():
-            admin = User.query.filter_by(email='Picano78@gmail.com').first()
+            admin = User.query.filter_by(email=TEST_ADMIN_EMAIL).first()
             assert admin is not None, "Super admin user not found"
-            assert admin.username == 'Picano78@gmail.com'
+            assert admin.username == TEST_ADMIN_EMAIL
             assert admin.role == 'super_admin'
             assert admin.is_active is True
             assert admin.is_verified is True
@@ -45,16 +50,16 @@ class TestSuperAdminInitialization:
     def test_super_admin_password(self, app):
         """Test that super admin password is correct"""
         with app.app_context():
-            admin = User.query.filter_by(email='Picano78@gmail.com').first()
+            admin = User.query.filter_by(email=TEST_ADMIN_EMAIL).first()
             assert admin is not None
-            assert admin.check_password('Simone78'), "Password verification failed"
+            assert admin.check_password(TEST_ADMIN_PASSWORD), "Password verification failed"
             # Verify wrong password doesn't work
             assert not admin.check_password('wrongpassword')
     
     def test_super_admin_role_methods(self, app):
         """Test that super admin has correct role methods"""
         with app.app_context():
-            admin = User.query.filter_by(email='Picano78@gmail.com').first()
+            admin = User.query.filter_by(email=TEST_ADMIN_EMAIL).first()
             assert admin is not None
             assert admin.is_admin() is True
             assert admin.role_display_name == 'Super Admin'
@@ -62,7 +67,7 @@ class TestSuperAdminInitialization:
     def test_no_is_superadmin_attribute(self, app):
         """Test that User model doesn't have is_superadmin attribute"""
         with app.app_context():
-            admin = User.query.filter_by(email='Picano78@gmail.com').first()
+            admin = User.query.filter_by(email=TEST_ADMIN_EMAIL).first()
             assert admin is not None
             # Verify that is_superadmin attribute doesn't exist
             assert not hasattr(User, 'is_superadmin'), "User model should not have is_superadmin attribute"
@@ -71,11 +76,11 @@ class TestSuperAdminInitialization:
             assert admin.role == 'super_admin'
     
     def test_login_with_fixed_credentials(self, app, client):
-        """Test login with the fixed credentials Picano78@gmail.com / Simone78"""
+        """Test login with the fixed credentials"""
         # Test login endpoint
         response = client.post('/auth/login', data={
-            'email': 'Picano78@gmail.com',
-            'password': 'Simone78'
+            'email': TEST_ADMIN_EMAIL,
+            'password': TEST_ADMIN_PASSWORD
         }, follow_redirects=False)
         
         # Should redirect on successful login (302) or show success

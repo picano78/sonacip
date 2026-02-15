@@ -29,6 +29,7 @@ from app.admin.forms import (
     UserSearchForm,
     AdCampaignForm,
     AdCreativeForm,
+    ModuleUploadForm,
 )
 from app.models import (
     AdsSetting,
@@ -76,6 +77,7 @@ from app.models import (
     InvoiceSettings,
     FeePayment,
     Invoice,
+    SystemModule,
 )
 from datetime import datetime, timedelta, timezone
 import os
@@ -2454,3 +2456,161 @@ def menu_order_reset():
     log_action('reset_menu_order', 'CustomizationKV', 0, 'Reset sidebar menu order to default')
     flash('Ordine menu ripristinato ai valori predefiniti.', 'success')
     return redirect(url_for('admin.menu_order'))
+
+
+# ============================================================================
+# SYSTEM MODULES MANAGEMENT
+# ============================================================================
+
+@bp.route('/modules')
+@login_required
+@admin_required
+def modules():
+    """List all system modules"""
+    modules_list = SystemModule.query.order_by(SystemModule.uploaded_at.desc()).all()
+    return render_template('admin/modules.html', modules=modules_list)
+
+
+@bp.route('/modules/upload', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def module_upload():
+    """Upload a new system module"""
+    form = ModuleUploadForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Get the uploaded file
+            module_file = form.module_file.data
+            if not module_file:
+                flash('Nessun file selezionato.', 'danger')
+                return redirect(url_for('admin.module_upload'))
+            
+            # Secure the filename
+            from werkzeug.utils import secure_filename
+            filename = secure_filename(module_file.filename)
+            
+            # Create aggiornamento directory if it doesn't exist
+            upload_dir = os.path.join(current_app.root_path, '..', 'aggiornamento')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Save the file
+            filepath = os.path.join(upload_dir, filename)
+            module_file.save(filepath)
+            
+            # Create database record
+            module = SystemModule(
+                name=form.name.data,
+                version=form.version.data,
+                filename=filename,
+                description=form.description.data,
+                uploaded_by=current_user.id,
+                enabled=False
+            )
+            
+            db.session.add(module)
+            db.session.commit()
+            
+            log_action('upload_module', 'SystemModule', module.id, f'Uploaded module {module.name} v{module.version}')
+            flash(f'Modulo {module.name} v{module.version} caricato con successo!', 'success')
+            return redirect(url_for('admin.modules'))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Error uploading module: {e}')
+            flash(f'Errore durante il caricamento del modulo: {str(e)}', 'danger')
+            return redirect(url_for('admin.module_upload'))
+    
+    return render_template('admin/module_upload.html', form=form)
+
+
+@bp.route('/modules/<int:module_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def module_toggle(module_id):
+    """Enable or disable a module"""
+    module = SystemModule.query.get_or_404(module_id)
+    
+    try:
+        module.enabled = not module.enabled
+        if module.enabled:
+            module.enabled_at = datetime.now(timezone.utc)
+            module.disabled_at = None
+            action_msg = f'Enabled module {module.name} v{module.version}'
+            flash_msg = f'Modulo {module.name} attivato con successo!'
+        else:
+            module.disabled_at = datetime.now(timezone.utc)
+            action_msg = f'Disabled module {module.name} v{module.version}'
+            flash_msg = f'Modulo {module.name} disattivato con successo!'
+        
+        db.session.commit()
+        log_action('toggle_module', 'SystemModule', module.id, action_msg)
+        flash(flash_msg, 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error toggling module: {e}')
+        flash(f'Errore durante la modifica dello stato del modulo: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin.modules'))
+
+
+@bp.route('/modules/<int:module_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def module_delete(module_id):
+    """Delete a module"""
+    module = SystemModule.query.get_or_404(module_id)
+    
+    try:
+        # Delete the file from disk
+        upload_dir = os.path.join(current_app.root_path, '..', 'aggiornamento')
+        filepath = os.path.join(upload_dir, module.filename)
+        
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        
+        # Delete the database record
+        module_name = module.name
+        module_version = module.version
+        db.session.delete(module)
+        db.session.commit()
+        
+        log_action('delete_module', 'SystemModule', module_id, f'Deleted module {module_name} v{module_version}')
+        flash(f'Modulo {module_name} eliminato con successo!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error deleting module: {e}')
+        flash(f'Errore durante l\'eliminazione del modulo: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin.modules'))
+
+
+@bp.route('/modules/<int:module_id>/download')
+@login_required
+@admin_required
+def module_download(module_id):
+    """Download a module file"""
+    module = SystemModule.query.get_or_404(module_id)
+    
+    try:
+        upload_dir = os.path.join(current_app.root_path, '..', 'aggiornamento')
+        filepath = os.path.join(upload_dir, module.filename)
+        
+        if not os.path.exists(filepath):
+            flash('File del modulo non trovato.', 'danger')
+            return redirect(url_for('admin.modules'))
+        
+        from flask import send_file
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=module.filename
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f'Error downloading module: {e}')
+        flash(f'Errore durante il download del modulo: {str(e)}', 'danger')
+        return redirect(url_for('admin.modules'))
+

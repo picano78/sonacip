@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Gestione Moduli di Sistema{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-puzzle"></i> Gestione Moduli di Sistema</h2>
+        <a href="{{ url_for('admin.module_upload') }}" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Carica Nuovo Modulo
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            {% if modules %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Versione</th>
+                                <th>Descrizione</th>
+                                <th>Stato</th>
+                                <th>Caricato il</th>
+                                <th>Caricato da</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for module in modules %}
+                            <tr>
+                                <td><strong>{{ module.name }}</strong></td>
+                                <td><span class="badge bg-info">v{{ module.version }}</span></td>
+                                <td>{{ module.description or '-' }}</td>
+                                <td>
+                                    {% if module.enabled %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Attivo
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-dash-circle"></i> Disattivato
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ module.uploaded_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ module.uploader.username }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <!-- Toggle Enable/Disable -->
+                                        <form method="POST" action="{{ url_for('admin.module_toggle', module_id=module.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm {% if module.enabled %}btn-warning{% else %}btn-success{% endif %}" 
+                                                    title="{% if module.enabled %}Disattiva{% else %}Attiva{% endif %}">
+                                                <i class="bi {% if module.enabled %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+                                                {% if module.enabled %}Disattiva{% else %}Attiva{% endif %}
+                                            </button>
+                                        </form>
+                                        
+                                        <!-- Download -->
+                                        <a href="{{ url_for('admin.module_download', module_id=module.id) }}" 
+                                           class="btn btn-sm btn-info" title="Scarica">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        
+                                        <!-- Delete -->
+                                        <form method="POST" action="{{ url_for('admin.module_delete', module_id=module.id) }}" 
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Sei sicuro di voler eliminare questo modulo?');">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Elimina">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                    <p class="mt-3 text-muted">Nessun modulo caricato.</p>
+                    <a href="{{ url_for('admin.module_upload') }}" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Carica il Primo Modulo
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="alert alert-info mt-4">
+        <h5><i class="bi bi-info-circle"></i> Informazioni sui Moduli</h5>
+        <p>I moduli di sistema permettono di caricare aggiornamenti e estensioni del programma in modo modulare.</p>
+        <ul>
+            <li>I moduli vengono salvati nella cartella <code>aggiornamento/</code></li>
+            <li>Puoi attivare o disattivare i moduli in qualsiasi momento</li>
+            <li>I moduli disattivati non vengono caricati all'avvio del sistema</li>
+            <li>Solo file ZIP sono supportati per il caricamento</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

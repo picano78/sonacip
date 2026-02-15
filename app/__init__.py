@@ -971,7 +971,7 @@ def create_app(config_name: str | None = None) -> Flask:
     def load_user(user_id):
         try:
             from app.models import User
-            return User.query.get(int(user_id))
+            return db.session.get(User, int(user_id))
         except Exception:
             return None
 
@@ -1116,7 +1116,7 @@ def create_app(config_name: str | None = None) -> Flask:
                     society_scopes = list(uniq.values())
                     active_society_id = get_active_society_id(current_user)
                     if active_society_id:
-                        active_society = uniq.get(int(active_society_id)) or Society.query.get(int(active_society_id))
+                        active_society = uniq.get(int(active_society_id)) or db.session.get(Society, int(active_society_id))
             except Exception:
                 society_scopes = []
                 active_society = None

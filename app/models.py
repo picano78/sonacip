@@ -126,12 +126,12 @@ class User(UserMixin, db.Model):
     
     # For Staff
     staff_role = db.Column(db.String(50))     # coach, dirigente, etc.
-    society_id = db.Column(db.Integer, db.ForeignKey('society.id'))  # Link to società
+    society_id = db.Column(db.Integer, db.ForeignKey('society.id', use_alter=True))  # Link to società
     
     # For Atleta
     birth_date = db.Column(db.Date)
     sport = db.Column(db.String(100))
-    athlete_society_id = db.Column(db.Integer, db.ForeignKey('society.id'))  # Link to società
+    athlete_society_id = db.Column(db.Integer, db.ForeignKey('society.id', use_alter=True))  # Link to società
     
     # Account status
     is_active = db.Column(db.Boolean, default=True)

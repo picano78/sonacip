@@ -259,6 +259,13 @@ def login():
             flash('Credenziali non valide', 'danger')
             return redirect(url_for('auth.login'))
 
+        # Debug logging for super admin login attempts
+        try:
+            if user.role_obj and user.role_obj.name == 'super_admin':
+                current_app.logger.info(f"Super admin login attempt: {user.email} (ID: {user.id})")
+        except Exception:
+            pass
+
         if not user.check_password(form.password.data):
             current_app.logger.warning("Login failed: wrong password for user id=%s email=%s", user.id, user.email)
             if hasattr(current_app, 'security_logger'):

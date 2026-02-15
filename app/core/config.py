@@ -181,42 +181,30 @@ class Config:
     APP_NAME = 'SONACIP'
 
     # Bootstrap admin (used by manage.py seed)
-    # ⚠️ SECURITY WARNING: Default credentials are for DEVELOPMENT/TESTING ONLY
-    # PRODUCTION DEPLOYMENTS MUST set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD
-    # environment variables to secure, unique values.
+    # SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be set via environment variables
+    # NO hardcoded defaults are provided for security reasons
     # 
-    # These defaults exist ONLY to allow local development without .env setup.
-    # They match .env.example to provide a consistent development experience.
-    _default_admin_email = 'Picano78@gmail.com'
-    _default_admin_password = 'Simone78'
+    # For development: set these in your .env file
+    # For production: MUST be set via secure environment variables
+    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL')
+    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD')
     
-    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL') or _default_admin_email
-    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD') or _default_admin_password
-    
-    # Validate in production mode
+    # Validate that credentials are set in production mode
     if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production':
-        if SUPERADMIN_EMAIL == _default_admin_email or SUPERADMIN_PASSWORD == _default_admin_password:
-            import warnings
-            warnings.warn(
+        if not SUPERADMIN_EMAIL or not SUPERADMIN_PASSWORD:
+            raise RuntimeError(
                 "\n" + "="*80 + "\n"
-                "⚠️  CRITICAL SECURITY WARNING ⚠️\n"
+                "⚠️  CRITICAL CONFIGURATION ERROR ⚠️\n"
                 "="*80 + "\n"
-                "Default admin credentials detected in PRODUCTION mode!\n"
-                "This is a SEVERE SECURITY RISK.\n\n"
-                "IMMEDIATE ACTION REQUIRED:\n"
-                "1. Stop the application\n"
-                "2. Set unique credentials via environment variables:\n"
+                "SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be set in production!\n\n"
+                "REQUIRED ACTION:\n"
+                "1. Set secure credentials via environment variables:\n"
                 "   export SUPERADMIN_EMAIL='your-secure-email@domain.com'\n"
                 "   export SUPERADMIN_PASSWORD='your-strong-password'\n"
-                "3. Restart the application\n"
-                "4. Change the password immediately after first login\n"
+                "2. Start/restart the application\n"
                 "\n"
-                "Current (INSECURE) defaults:\n"
-                f"  Email: {_default_admin_email}\n"
-                "  Password: [shown in .env.example]\n"
-                "="*80 + "\n",
-                RuntimeWarning,
-                stacklevel=2
+                "See MIGRATION_GUIDE.md for more information.\n"
+                "="*80 + "\n"
             )
 
     # Stripe (payments)

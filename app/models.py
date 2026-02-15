@@ -2046,7 +2046,6 @@ class Contact(db.Model):
     def get_tags_list(self):
         """Get tags as a list"""
         import json
-        
         if self.tags:
             try:
                 return json.loads(self.tags)

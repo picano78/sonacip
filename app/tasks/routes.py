@@ -419,7 +419,6 @@ def can_edit_task(user, task):
 
 def is_team_member(user_id, team_members_json):
     """Check if user is in team"""
-    
     if not team_members_json:
         return False
     try:

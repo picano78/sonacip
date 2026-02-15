@@ -211,7 +211,6 @@ def segment_contacts(segment):
     """
     Get contacts matching a segment's criteria
     """
-    
     try:
         criteria = json.loads(segment.criteria)
     except (json.JSONDecodeError, TypeError, ValueError) as e:

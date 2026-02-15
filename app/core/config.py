@@ -186,12 +186,9 @@ class Config:
     # 
     # For development: set these in your .env file
     # For production: MUST be set via secure environment variables
-    @staticmethod
-    def _safe_cred(val: str | None) -> str | None:
-        return val if val else None
-
-    SUPERADMIN_EMAIL = _safe_cred.__func__(os.environ.get('SUPERADMIN_EMAIL'))
-    SUPERADMIN_PASSWORD = _safe_cred.__func__(os.environ.get('SUPERADMIN_PASSWORD'))
+    # Treat missing or empty credentials as unset so tests can enforce explicit overrides
+    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL') or None
+    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD') or None
     
     # Validate that credentials are set in production mode
     if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production':

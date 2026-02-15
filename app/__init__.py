@@ -135,6 +135,11 @@ def _register_blueprints(app: Flask, modules: list[str] | None = None) -> None:
 
         app.register_blueprint(blueprint)
 
+        # Optional legacy/alias blueprint support
+        legacy_blueprint = getattr(routes_module, 'legacy_bp', None)
+        if legacy_blueprint is not None:
+            app.register_blueprint(legacy_blueprint)
+
 
 def _load_dotenv_if_present() -> None:
     """

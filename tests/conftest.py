@@ -21,7 +21,7 @@ def reset_config_module():
         import app.core  # type: ignore
         if hasattr(app.core, 'config'):
             delattr(app.core, 'config')
-    except Exception:
+    except (ImportError, AttributeError):
         pass
     yield
     sys.modules.pop('app.core.config', None)
@@ -29,7 +29,7 @@ def reset_config_module():
         import app.core  # type: ignore
         if hasattr(app.core, 'config'):
             delattr(app.core, 'config')
-    except Exception:
+    except (ImportError, AttributeError):
         pass
 
 

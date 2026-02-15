@@ -76,16 +76,10 @@ def test_user_and_society(app, db_session):
     db_session.add(membership)
     db_session.commit()
     
-    # Store IDs before objects might be detached
-    user_id = user.id
-    society_id = society.id
-    
-    # Return a dict with both objects and IDs for flexibility
+    # Return IDs to avoid detached instance errors
     return {
-        'user': user,
-        'society': society,
-        'user_id': user_id,
-        'society_id': society_id
+        'user_id': user.id,
+        'society_id': society.id
     }
 
 

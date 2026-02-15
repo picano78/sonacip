@@ -77,7 +77,6 @@ class SecurityEventLogger:
             # Request context not available (e.g., background tasks)
             if self.logger:
                 self.logger.debug(f"Could not get request info: {e}")
-            pass
         
         # Log con il livello appropriato
         if self.logger:

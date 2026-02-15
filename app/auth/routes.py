@@ -881,10 +881,13 @@ def resend_confirmation(user_id):
         flash(msg, 'warning')
         return redirect(url_for('auth.email_confirm_pending', user_id=user.id))
 
-    email_sent = send_confirmation_email(user)
-    if email_sent:
+    # Send confirmation email asynchronously to prevent 502 timeout errors
+    try:
+        from app.celery_tasks import send_confirmation_email_async
+        send_confirmation_email_async.delay(user.id)
         session['_email_confirm_resends'] = resend_count + 1
         flash('Email di conferma inviata! Controlla la tua casella di posta.', 'success')
-    else:
+    except Exception:
+        current_app.logger.exception("Failed to queue confirmation email for user %s", user.id)
         flash('Non è stato possibile inviare l\'email. Riprova più tardi.', 'danger')
     return redirect(url_for('auth.email_confirm_pending', user_id=user.id))

@@ -510,6 +510,7 @@ def seed_defaults(app) -> dict:
             db.session.add(user)
             db.session.commit()
             summary["admin_created"] += 1
+            app.logger.info(f"Created super admin user: {email} (ID: {user.id})")
         else:
             # Keep the seeded super admin consistent on re-runs (idempotent).
             changed = False
@@ -534,8 +535,16 @@ def seed_defaults(app) -> dict:
                     if not existing_admin.check_password(password):
                         existing_admin.set_password(password)
                         changed = True
-                except Exception:
-                    pass
+                        app.logger.info("Super admin password updated during seed")
+                except Exception as e:
+                    app.logger.error(f"Failed to update super admin password during seed: {e}")
+                    # Still attempt to set password even if check failed
+                    try:
+                        existing_admin.set_password(password)
+                        changed = True
+                        app.logger.info("Super admin password force-set after check failure")
+                    except Exception as e2:
+                        app.logger.error(f"Failed to force-set super admin password: {e2}")
             if changed:
                 db.session.add(existing_admin)
                 db.session.commit()

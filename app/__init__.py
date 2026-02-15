@@ -28,7 +28,8 @@ from app.core.config import config
 from app.core.logging import configure_logging
 
 # Single source of truth for extensions
-db = SQLAlchemy()
+# Keep sessions alive after commit to avoid DetachedInstanceError in tests/async flows.
+db = SQLAlchemy(session_options={"expire_on_commit": False})
 login_manager = LoginManager()
 migrate = Migrate()
 mail = Mail()
@@ -68,6 +69,9 @@ oauth = OAuth()
 def _set_sqlite_pragmas(dbapi_connection, _connection_record):
     try:
         if not isinstance(dbapi_connection, sqlite3.Connection):
+            return
+        # During pytest runs we need to allow teardown to drop tables with FKs.
+        if os.environ.get("PYTEST_CURRENT_TEST"):
             return
         cur = dbapi_connection.cursor()
         # Enable WAL for better concurrent reads/writes under gunicorn.
@@ -131,6 +135,11 @@ def _register_blueprints(app: Flask, modules: list[str] | None = None) -> None:
             )
 
         app.register_blueprint(blueprint)
+
+        # Optional legacy/alias blueprint support
+        legacy_blueprint = getattr(routes_module, 'legacy_bp', None)
+        if legacy_blueprint is not None:
+            app.register_blueprint(legacy_blueprint)
 
 
 def _load_dotenv_if_present() -> None:

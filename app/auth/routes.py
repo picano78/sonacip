@@ -87,6 +87,16 @@ def _verify_reset_token(token: str, max_age_seconds: int = 3600) -> int | None:
         return None
 
 
+def _apply_confirm_password_alias(form):
+    """
+    Accept legacy clients that submit `confirm_password` instead of WTForms `password2`.
+    """
+    if request.method == "POST" and not request.form.get("password2"):
+        alt_confirm = request.form.get("confirm_password")
+        if alt_confirm:
+            form.password2.data = alt_confirm
+
+
 @bp.route("/reset-password", methods=["GET", "POST"])
 @limiter.limit("3 per 15 minutes", methods=["POST"])
 def reset_password_request():
@@ -479,6 +489,7 @@ def register():
         return redirect(url_for('social.feed'))
     
     form = RegistrationForm()
+    _apply_confirm_password_alias(form)
     try:
         valid = form.validate_on_submit()
     except Exception:
@@ -620,8 +631,9 @@ def register_society():
     """Registration page for societies (CRM-style)."""
     if current_user.is_authenticated:
         return redirect(url_for('social.feed'))
-
+    
     form = SocietyRegistrationForm()
+    _apply_confirm_password_alias(form)
     try:
         valid = form.validate_on_submit()
     except Exception:

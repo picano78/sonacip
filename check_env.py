@@ -11,6 +11,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
+def _is_placeholder(var_name: str, value: str, placeholders: dict[str, list[str]]) -> bool:
+    return var_name in placeholders and value in placeholders[var_name]
+
+
 def check_environment():
     """Check if all required environment variables are properly configured."""
     
@@ -42,8 +46,8 @@ def check_environment():
             print(f"{RED}   ✗ .env.example not found - cannot create .env{RESET}")
             return False
     
-    # Load environment variables from .env
-    load_dotenv()
+    # Load environment variables from .env (allow .env to override defaults during checks)
+    load_dotenv(override=True)
     
     # Detect environment mode
     app_env = os.getenv('APP_ENV', '').lower()
@@ -86,7 +90,7 @@ def check_environment():
         'SUPERADMIN_EMAIL': ['Picano78@gmail.com', ''],  # Only the default example email
         'SUPERADMIN_PASSWORD': ['Simone78', ''],  # Only the default example password
     }
-    
+
     errors = []
     warnings = []
     
@@ -101,7 +105,7 @@ def check_environment():
             print(f"  {RED}✗{RESET} {var:<25} - {RED}NOT SET{RESET}")
             print(f"    {description}")
         # Check if variable has an invalid placeholder value
-        elif var in invalid_placeholders and value in invalid_placeholders[var]:
+        elif _is_placeholder(var, value, invalid_placeholders):
             errors.append(f"{var} has placeholder value")
             print(f"  {RED}✗{RESET} {var:<25} - {RED}PLACEHOLDER VALUE{RESET}")
             print(f"    {description}")
@@ -124,7 +128,7 @@ def check_environment():
                 warnings.append(f"{var} is not set (optional)")
                 print(f"  {YELLOW}⚠{RESET}  {var:<25} - {YELLOW}NOT SET{RESET}")
                 print(f"    {description}")
-            elif var in invalid_placeholders and value in invalid_placeholders[var]:
+            elif _is_placeholder(var, value, invalid_placeholders):
                 warnings.append(f"{var} has placeholder value")
                 print(f"  {YELLOW}⚠{RESET}  {var:<25} - {YELLOW}PLACEHOLDER{RESET}")
                 print(f"    {description}")
@@ -179,7 +183,11 @@ def check_environment():
         print(f"  • Never commit .env file to version control")
     else:
         print(f"\n{BOLD}Development Mode{RESET}")
-        if not os.getenv('SUPERADMIN_EMAIL') or not os.getenv('SUPERADMIN_PASSWORD'):
+        dev_email = os.getenv('SUPERADMIN_EMAIL', '')
+        dev_password = os.getenv('SUPERADMIN_PASSWORD', '')
+        email_missing = not dev_email or _is_placeholder('SUPERADMIN_EMAIL', dev_email, invalid_placeholders)
+        password_missing = not dev_password or _is_placeholder('SUPERADMIN_PASSWORD', dev_password, invalid_placeholders)
+        if email_missing or password_missing:
             print(f"{YELLOW}Note: Super admin credentials not set.{RESET}")
             print(f"{YELLOW}Random credentials will be generated on first startup.{RESET}")
             print(f"{YELLOW}Check the logs for the generated credentials.{RESET}")

@@ -186,8 +186,9 @@ class Config:
     # 
     # For development: set these in your .env file
     # For production: MUST be set via secure environment variables
-    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL')
-    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD')
+    # Treat missing or empty credentials as unset so tests can enforce explicit overrides
+    SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL') or None
+    SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD') or None
     
     # Validate that credentials are set in production mode
     if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production':
@@ -295,6 +296,7 @@ class TestingConfig(Config):
     # Use in-memory rate limit storage
     RATELIMIT_STORAGE_URI = 'memory://'
     SESSION_TYPE = None
+    SQLALCHEMY_SESSION_OPTIONS = {"expire_on_commit": False}
 
 
 config = {

@@ -47,13 +47,12 @@ def client(app):
 @pytest.fixture
 def auth_client(client, app):
     """Create authenticated client"""
-    with app.app_context():
-        # Login
-        response = client.post('/auth/login', data={
-            'email': 'admin@test.com',
-            'password': 'password123'
-        }, follow_redirects=True)
-        assert response.status_code == 200
+    # Login (note: login form uses 'identifier' not 'email')
+    response = client.post('/auth/login', data={
+        'identifier': 'admin@test.com',
+        'password': 'password123'
+    }, follow_redirects=True)
+    assert response.status_code == 200
     return client
 
 

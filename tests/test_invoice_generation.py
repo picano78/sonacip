@@ -110,7 +110,7 @@ def test_automatic_invoice_generation(app):
             amount_cents=10000,  # €100.00
             status='pending',
             currency='EUR',
-            due_on=datetime.now().date()
+            due_on=datetime.now(timezone.utc).date()
         )
         db.session.add(fee)
         db.session.flush()
@@ -186,7 +186,7 @@ def test_invoice_not_duplicated(app):
             amount_cents=10000,
             status='paid',
             currency='EUR',
-            due_on=datetime.now().date()
+            due_on=datetime.now(timezone.utc).date()
         )
         db.session.add(fee)
         db.session.flush()

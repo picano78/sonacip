@@ -56,7 +56,9 @@ def test_user_and_society(app, db_session):
         db_session.add(user)
         db_session.flush()
         
+        # Society.id must be same as a User.id (FK constraint)
         society = Society(
+            id=user.id,  # Society.id is FK to User.id
             legal_name='Test Society',
             vat_number='12345678901'
         )

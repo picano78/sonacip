@@ -593,7 +593,7 @@ def register():
             session['_email_confirm_resends'] = 0
             # Send confirmation email asynchronously to prevent 502 timeout errors
             try:
-                from app.tasks import send_confirmation_email_async
+                from app.celery_tasks import send_confirmation_email_async
                 send_confirmation_email_async.delay(user.id)
                 flash('Registrazione completata! Ti invieremo un\'email di conferma a breve. Controlla la tua casella di posta.', 'success')
             except Exception:
@@ -765,7 +765,7 @@ def register_society():
                 session['_email_confirm_resends'] = 0
                 # Send confirmation email asynchronously to prevent 502 timeout errors
                 try:
-                    from app.tasks import send_confirmation_email_async
+                    from app.celery_tasks import send_confirmation_email_async
                     send_confirmation_email_async.delay(user.id)
                     flash('Registrazione società completata! Ti invieremo un\'email di conferma a breve. Controlla la tua casella di posta.', 'success')
                 except Exception:

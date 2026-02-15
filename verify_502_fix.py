@@ -37,7 +37,7 @@ def verify_async_email_task():
     print("✓ Checking async email task...")
     
     try:
-        from app.tasks import send_confirmation_email_async
+        from app.celery_tasks import send_confirmation_email_async
         
         if hasattr(send_confirmation_email_async, 'delay'):
             print("  ✓ Async email task is properly defined with .delay() method")

@@ -32,26 +32,29 @@ def client(app):
 def auth_user(app):
     """Create an authenticated user with a society"""
     with app.app_context():
-        # Create a society
-        society = Society(
-            name='Test Society',
-            description='Test',
-            sport_type='football'
-        )
-        db.session.add(society)
-        db.session.flush()
-        
-        # Create a user
+        # Create a user first (Society.id is a foreign key to User.id)
         user = User(
             email='test@example.com',
             username='testuser',
             first_name='Test',
             last_name='User',
-            role='director'
+            role='societa'  # Society role
         )
         user.set_password('password123')
-        user.society_id = society.id
         db.session.add(user)
+        db.session.flush()  # Get user.id
+        
+        # Create a society linked to the user
+        society = Society(
+            id=user.id,  # Society.id is FK to User.id
+            legal_name='Test Society',
+            company_type='ASD'
+        )
+        db.session.add(society)
+        db.session.flush()
+        
+        # Update user's society_id
+        user.society_id = society.id
         
         # Create a facility
         facility = Facility(

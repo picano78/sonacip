@@ -69,11 +69,18 @@ def test_generate_invoice_number(app):
 def test_automatic_invoice_generation(app):
     """Test automatic invoice generation after payment"""
     with app.app_context():
+        # Create a role first
+        from app.models import Role
+        role = Role(name='appassionato', display_name='Appassionato', level=10)
+        db.session.add(role)
+        db.session.flush()
+        
         # Create a test user
         user = User(
             email='test@example.com',
             username='testuser',
-            password_hash='hashed_password'
+            password_hash='hashed_password',
+            role_id=role.id
         )
         db.session.add(user)
         db.session.flush()
@@ -127,11 +134,18 @@ def test_automatic_invoice_generation(app):
 def test_invoice_not_duplicated(app):
     """Test that invoice is not created twice for same payment"""
     with app.app_context():
+        # Create a role first
+        from app.models import Role
+        role = Role(name='appassionato', display_name='Appassionato', level=10)
+        db.session.add(role)
+        db.session.flush()
+        
         # Create test user
         user = User(
             email='test@example.com',
             username='testuser',
-            password_hash='hashed_password'
+            password_hash='hashed_password',
+            role_id=role.id
         )
         db.session.add(user)
         db.session.flush()

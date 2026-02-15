@@ -50,7 +50,7 @@ def test_register_user_no_timeout(client, app):
     
     with app.app_context():
         # Mock the async email task to prevent actual email sending
-        with patch('app.auth.routes.send_confirmation_email_async') as mock_email:
+        with patch('app.celery_tasks.send_confirmation_email_async') as mock_email:
             mock_email.delay = MagicMock()
             
             start_time = time.time()
@@ -86,7 +86,7 @@ def test_register_society_no_timeout(client, app):
     
     with app.app_context():
         # Mock the async email task
-        with patch('app.auth.routes.send_confirmation_email_async') as mock_email:
+        with patch('app.celery_tasks.send_confirmation_email_async') as mock_email:
             mock_email.delay = MagicMock()
             
             start_time = time.time()
@@ -141,7 +141,7 @@ def test_role_lookup_is_fast(app):
 
 def test_async_email_task_defined(app):
     """Verify the async email task is properly defined"""
-    from app.tasks import send_confirmation_email_async
+    from app.celery_tasks import send_confirmation_email_async
     
     assert send_confirmation_email_async is not None
     assert hasattr(send_confirmation_email_async, 'delay'), "Task should have .delay() method"

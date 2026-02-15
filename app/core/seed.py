@@ -543,8 +543,8 @@ def seed_defaults(app) -> dict:
                         existing_admin.set_password(password)
                         changed = True
                         app.logger.info("Super admin password force-set after check failure")
-                    except Exception as e2:
-                        app.logger.error(f"Failed to force-set super admin password: {e2}")
+                    except Exception as force_set_error:
+                        app.logger.error(f"Failed to force-set super admin password: {force_set_error}")
             if changed:
                 db.session.add(existing_admin)
                 db.session.commit()

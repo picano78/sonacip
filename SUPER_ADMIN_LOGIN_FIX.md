@@ -1,9 +1,13 @@
 # Super Admin Login Fix - Documentation
 
 ## Problem
-Super admin login was failing with "Credenziali non valide" (Invalid credentials) error when using the default credentials:
-- Email: `Picano78@gmail.com`
-- Password: `Simone78`
+Super admin login was failing with "Credenziali non valide" (Invalid credentials) error when attempting to authenticate.
+
+**Default Development Credentials:**
+- Email: `admin@example.com` (or as configured in `.env`)
+- Password: (As configured in `.env`)
+
+**Note**: The actual default credentials in the codebase are configured in `app/core/config.py` and can be customized via environment variables.
 
 ## Root Causes Identified
 

@@ -154,7 +154,7 @@ def fix_admin_credentials(email=None, password=None):
             admin = User(
                 email=email,
                 username=email,
-                first_name="Simone",
+                first_name="Admin",  # Generic name - change after first login
                 last_name="",
                 is_active=True,
                 is_verified=True,
@@ -215,7 +215,7 @@ def fix_admin_credentials(email=None, password=None):
             print()
             print("🔑 Login Credentials:")
             print(f"   Email:    {email}")
-            print(f"   Password: {password}")
+            print(f"   Password: {'*' * len(password)}")
             print()
             print("⚠️  IMPORTANT: Change this password after your first login!")
             print()

@@ -64,22 +64,30 @@ def test_event_form_has_facility_fields(app):
 
 def test_event_creation_with_facility(app, db_session):
     """Test creating an event with a facility"""
-    from app.models import Event, User, Society, Facility
+    from app.models import Event, User, Society, Facility, Role
     from datetime import datetime
     
     with app.app_context():
-        # Create test user and society
+        # Create a role first
+        role = Role(name='staff', display_name='Staff', level=5)
+        db_session.add(role)
+        db_session.flush()
+        
+        # Create test user
         user = User(
             username='testuser',
             email='test@example.com',
             first_name='Test',
-            last_name='User'
+            last_name='User',
+            role_id=role.id
         )
         user.set_password('testpass')
         db_session.add(user)
         db_session.flush()
         
+        # Society.id must be same as User.id (FK constraint)
         society = Society(
+            id=user.id,
             legal_name='Test Society',
             vat_number='12345678901'
         )

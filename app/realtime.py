@@ -2,13 +2,16 @@
 Real-time Notification System with WebSockets
 Provides instant notifications to users without page refresh
 """
+import json
+import logging
 from flask import request
 from flask_socketio import emit, join_room, leave_room, rooms
 from flask_login import current_user
 from app import socketio, db
 from app.models import Notification, User
 from datetime import datetime, timezone
-import json
+
+logger = logging.getLogger(__name__)
 
 
 # Track connected users

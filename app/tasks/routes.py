@@ -4,7 +4,7 @@ Advanced planning with Kanban, Gantt, Calendar views
 """
 import json
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app import db
 from app.models import Task, Project, User, Team

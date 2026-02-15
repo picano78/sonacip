@@ -51,13 +51,38 @@ gunicorn wsgi:app
 
 ## 🔑 Credenziali Super Admin
 
-📖 **Per informazioni complete sulle credenziali del Super Admin, consulta:** [FAQ_CREDENZIALI_ADMIN.md](FAQ_CREDENZIALI_ADMIN.md)
+📖 **Per informazioni complete sulle credenziali del Super Admin, consulta:** 
+- [FAQ_CREDENZIALI_ADMIN.md](FAQ_CREDENZIALI_ADMIN.md)
+- [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) - Guida di migrazione per deployment esistenti
 
-⭐ **CREDENZIALI PREDEFINITE**:
-- **Email**: Picano78@gmail.com
-- **Password**: Simone78
+⚠️ **IMPORTANTE**: Le credenziali hardcoded sono state rimosse per sicurezza!
 
-Queste credenziali sono configurate nel file `.env.example` e verranno utilizzate quando copi il file in `.env`.
+### Configurazione Obbligatoria
+
+Le credenziali del Super Admin **devono** essere configurate tramite variabili d'ambiente:
+
+1. Copia il file di esempio:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Modifica il file `.env` e imposta credenziali sicure:
+   ```bash
+   # Per sviluppo locale
+   SUPERADMIN_EMAIL=admin@localhost
+   SUPERADMIN_PASSWORD=DevPassword123!
+   
+   # Per produzione (usa credenziali FORTI e UNICHE!)
+   SUPERADMIN_EMAIL=admin@tuodominio.it
+   SUPERADMIN_PASSWORD=Una!Password1Molto2Sicura3E4Lunga
+   ```
+
+3. Avvia l'applicazione:
+   ```bash
+   python run.py
+   # oppure
+   sudo systemctl start sonacip
+   ```
 
 ### 🔧 Risoluzione Problemi di Login
 
@@ -74,9 +99,12 @@ python3 fix_admin_credentials.py --fix
 📖 **Guida dettagliata:** [SUPER_ADMIN_QUICK_START.md](SUPER_ADMIN_QUICK_START.md)  
 📖 **Documentazione tecnica del fix:** [SUPER_ADMIN_LOGIN_FIX.md](SUPER_ADMIN_LOGIN_FIX.md)
 
-### Configurazione Rapida
+### Credenziali Generate Automaticamente (Solo Sviluppo)
 
-Al primo avvio, se non specifichi credenziali personalizzate tramite variabili d'ambiente, l'applicazione genererà automaticamente credenziali sicure casuali e le mostrerà nei log.
+Al primo avvio in **sviluppo**, se non specifichi credenziali tramite variabili d'ambiente, 
+l'applicazione genererà automaticamente credenziali sicure casuali e le mostrerà nei log.
+
+⚠️ **ATTENZIONE**: In **produzione** l'app NON si avvia senza credenziali configurate!
 
 ⚠️ **IMPORTANTE PER LA SICUREZZA**: 
 - Imposta sempre credenziali personalizzate PRIMA del primo avvio in produzione
@@ -84,28 +112,9 @@ Al primo avvio, se non specifichi credenziali personalizzate tramite variabili d
 - Copia immediatamente le credenziali generate e conservale in modo sicuro
 - Cambia la password dopo il primo accesso
 
-Per personalizzare le credenziali del Super Admin, imposta le variabili d'ambiente PRIMA del primo avvio:
-
-```bash
-export SUPERADMIN_EMAIL="tuaemail@esempio.it"
-export SUPERADMIN_PASSWORD="TuaPasswordSicura"
-```
-
-oppure aggiungile al file `.env`:
-
-```
-# Il file .env.example contiene già le credenziali predefinite:
-# SUPERADMIN_EMAIL=Picano78@gmail.com
-# SUPERADMIN_PASSWORD=Simone78
-
-# Puoi usarle così come sono, o modificarle:
-SUPERADMIN_EMAIL=tuaemail@esempio.it
-SUPERADMIN_PASSWORD=TuaPasswordSicura
-```
-
 ### Come recuperare le credenziali generate
 
-Se le credenziali sono state generate automaticamente, cerca nei log di avvio:
+Se le credenziali sono state generate automaticamente (solo in sviluppo), cerca nei log di avvio:
 
 ```bash
 # Con systemd
@@ -127,10 +136,8 @@ source venv/bin/activate
 python update_admin_credentials.py
 ```
 
-Lo script aggiornerà:
-- Email a: picano78@gmail.com
-- Username a: picano78@gmail.com
-- Password a: Simone78
+Lo script aggiornerà le credenziali del super admin alle nuove credenziali che hai configurato
+nel file `.env` (variabili SUPERADMIN_EMAIL e SUPERADMIN_PASSWORD).
 
 ## 🚀 Deploy VPS (Ubuntu 24.04)
 
@@ -242,10 +249,11 @@ Le variabili ambiente sono documentate nel file .env.example.
 **CRITICAL - Prima del deployment in produzione:**
 
 1. **Credenziali Admin Univoche**
-   - ⛔ NON utilizzare MAI le credenziali di default (`Picano78@gmail.com` / `Simone78`)
+   - ⚠️ Le credenziali hardcoded sono state rimosse - devi configurarle!
    - ✅ Imposta `SUPERADMIN_EMAIL` e `SUPERADMIN_PASSWORD` con valori univoci e sicuri
    - ✅ Usa una password forte (min. 12 caratteri, mix maiuscole/minuscole/numeri/simboli)
    - ✅ Cambia la password immediatamente dopo il primo accesso
+   - ⛔ L'app NON si avvia in produzione senza credenziali configurate
 
 2. **SECRET_KEY Sicura**
    - ⛔ NON usare valori di default o placeholder

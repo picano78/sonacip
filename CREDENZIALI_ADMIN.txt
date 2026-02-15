@@ -2,37 +2,43 @@
   SONACIP - CREDENZIALI SUPER ADMIN - GUIDA RAPIDA
 ═══════════════════════════════════════════════════════════════════════
 
-⭐ CREDENZIALI PREDEFINITE:
-   Email:    Picano78@gmail.com
-   Password: Simone78
+⚠️  IMPORTANTE: Le credenziali hardcoded sono state rimosse per sicurezza!
+   Devi configurare SUPERADMIN_EMAIL e SUPERADMIN_PASSWORD nel file .env
 
-📖 DOCUMENTAZIONE COMPLETA: Vedi FAQ_CREDENZIALI_ADMIN.md
-
-═══════════════════════════════════════════════════════════════════════
-  OPZIONE 1: CREDENZIALI PERSONALIZZATE (RACCOMANDATA)
-═══════════════════════════════════════════════════════════════════════
-
-Se hai configurato le variabili d'ambiente PRIMA del primo avvio:
-
-  Email:    Il valore che hai impostato in SUPERADMIN_EMAIL
-  Password: Il valore che hai impostato in SUPERADMIN_PASSWORD
-
-Come configurarle nel file .env:
-  
-  1. cp .env.example .env
-  2. Il file contiene già le credenziali predefinite:
-     SUPERADMIN_EMAIL=Picano78@gmail.com
-     SUPERADMIN_PASSWORD=Simone78
-  3. Puoi usarle così o modificarle per maggiore sicurezza
+📖 DOCUMENTAZIONE COMPLETA: Vedi FAQ_CREDENZIALI_ADMIN.md e MIGRATION_GUIDE.md
 
 ═══════════════════════════════════════════════════════════════════════
-  OPZIONE 2: CREDENZIALI GENERATE AUTOMATICAMENTE
+  CONFIGURAZIONE CREDENZIALI (OBBLIGATORIA)
 ═══════════════════════════════════════════════════════════════════════
 
-Se NON hai configurato le variabili d'ambiente, le credenziali sono 
-state generate automaticamente e mostrate NEI LOG DI AVVIO.
+1. Copia il file di esempio:
+   cp .env.example .env
 
-Come trovarle:
+2. Modifica il file .env e imposta credenziali sicure:
+   
+   # Per sviluppo locale
+   SUPERADMIN_EMAIL=admin@localhost
+   SUPERADMIN_PASSWORD=DevPassword123!
+   
+   # Per produzione (usa credenziali FORTI e UNICHE!)
+   SUPERADMIN_EMAIL=admin@tuodominio.it
+   SUPERADMIN_PASSWORD=Una!Password1Molto2Sicura3E4Lunga
+
+3. Avvia l'applicazione:
+   python run.py
+   # oppure
+   sudo systemctl start sonacip
+
+═══════════════════════════════════════════════════════════════════════
+  CREDENZIALI GENERATE AUTOMATICAMENTE (SOLO SVILUPPO)
+═══════════════════════════════════════════════════════════════════════
+
+Se NON hai configurato le variabili d'ambiente in SVILUPPO, le credenziali
+vengono generate automaticamente e mostrate NEI LOG DI AVVIO (UNA SOLA VOLTA).
+
+⚠️  ATTENZIONE: In PRODUZIONE l'app NON si avvia senza credenziali configurate!
+
+Come trovarle nei log:
 
   METODO FACILE - Script automatico (raccomandato):
     python recupera_credenziali.py

@@ -6,8 +6,11 @@ Gestisce la rotazione automatica dei file di log
 import os
 import gzip
 import shutil
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 class LogRotator:
     """Gestisce rotazione e compressione log"""
@@ -48,7 +51,7 @@ class LogRotator:
         # Svuota il file originale
         log_file.write_text('')
         
-        print(f"✅ Log rotated: {log_file} -> {backup_name}")
+        logger.info(f"Log rotated: {log_file} -> {backup_name}")
         
         # Pulisci vecchi backup
         self.cleanup_old_backups(log_file.stem)
@@ -61,7 +64,7 @@ class LogRotator:
         # Rimuovi i backup oltre il limite
         for backup in backups[self.backup_count:]:
             backup.unlink()
-            print(f"🗑️  Removed old backup: {backup.name}")
+            logger.info(f"Removed old backup: {backup.name}")
     
     def rotate_all(self):
         """Ruota tutti i file di log nella directory"""
@@ -75,7 +78,7 @@ class LogRotator:
         for gz_file in self.log_dir.glob('*.log.gz'):
             if datetime.fromtimestamp(gz_file.stat().st_mtime) < cutoff:
                 gz_file.unlink()
-                print(f"🗑️  Removed old log: {gz_file.name}")
+                logger.info(f"Removed old log: {gz_file.name}")
 
 # Comando CLI per la rotazione manuale
 if __name__ == '__main__':

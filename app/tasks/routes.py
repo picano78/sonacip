@@ -2,6 +2,8 @@
 Tasks and Project Management Routes
 Advanced planning with Kanban, Gantt, Calendar views
 """
+import json
+import logging
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
@@ -10,7 +12,8 @@ from app.utils import permission_required, check_permission
 from app.models import Event
 from app.automation.utils import execute_automations, execute_rules
 from datetime import datetime, timedelta, timezone
-import json
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('tasks', __name__, url_prefix='/tasks')
 
@@ -421,7 +424,8 @@ def is_team_member(user_id, team_members_json):
     try:
         members = json.loads(team_members_json)
         return user_id in members
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.warning(f"Failed to parse team members JSON: {e}")
         return False
 
 

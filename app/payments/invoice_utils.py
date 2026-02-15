@@ -2,9 +2,12 @@
 Invoice generation utilities
 Automatic invoice generation after payment completion
 """
+import logging
 from datetime import datetime, timezone
 from app import db
 from app.models import Invoice, InvoiceSettings, FeePayment, User
+
+logger = logging.getLogger(__name__)
 
 
 def generate_invoice_for_payment(fee_payment_id):
@@ -75,7 +78,7 @@ def generate_invoice_for_payment(fee_payment_id):
         
     except Exception as e:
         db.session.rollback()
-        print(f"Error generating invoice: {e}")
+        logger.error(f"Error generating invoice: {e}", exc_info=True)
         return None
 
 

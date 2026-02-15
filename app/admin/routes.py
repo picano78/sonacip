@@ -3,6 +3,9 @@ Admin routes
 """
 import csv
 import io
+import logging
+
+logger = logging.getLogger(__name__)
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, Response, make_response
 from flask_login import login_required, current_user
@@ -1694,7 +1697,7 @@ def stats():
                 if d in signup_map:
                     signup_map[d] += 1
     except Exception as e:
-        print(f"Error fetching signup stats: {e}")
+        logger.error(f"Error fetching signup stats: {e}", exc_info=True)
 
     signup_data = [{'date': k, 'count': v} for k, v in sorted(signup_map.items())]
 
@@ -1707,7 +1710,7 @@ def stats():
         ).group_by(User.role).all()
         role_data = [{'role': r, 'count': c} for r, c in user_stats_query]
     except Exception as e:
-        print(f"Error fetching user stats: {e}")
+        logger.error(f"Error fetching user stats: {e}", exc_info=True)
     
     # 3. Activity Summary & Growth
     activity_summary = {'posts': 0, 'events': 0, 'comments': 0}
@@ -1762,7 +1765,7 @@ def stats():
         activity_trend = [{'date': k, 'posts': v['posts'], 'events': v['events']} for k, v in sorted(activity_map.items())]
 
     except Exception as e:
-        print(f"Error fetching activity stats: {e}")
+        logger.error(f"Error fetching activity stats: {e}", exc_info=True)
         activity_trend = []
         growth_stats = {
             'users': {'value': 0, 'percent': 0, 'trend': 'up'},
@@ -1778,7 +1781,7 @@ def stats():
             func.count(Post.id).label('post_count')
         ).join(Post, Post.user_id == User.id).group_by(User.id).order_by(desc('post_count')).limit(10).all()
     except Exception as e:
-        print(f"Error fetching top posters: {e}")
+        logger.error(f"Error fetching top posters: {e}", exc_info=True)
     
     # 5. Top societies by followers
     top_societies = []
@@ -1790,7 +1793,7 @@ def stats():
             reverse=True
         )[:10]
     except Exception as e:
-        print(f"Error fetching societies: {e}")
+        logger.error(f"Error fetching societies: {e}", exc_info=True)
     
     # 6. Business metrics (revenue, add-ons, marketplace, take-rate, ads, retention)
     business = {}
@@ -1840,7 +1843,7 @@ def stats():
             "retention_avg_score": round(float(retention_avg or 0), 1) if retention_avg is not None else None,
         }
     except Exception as e:
-        print(f"Error fetching business stats: {e}")
+        logger.error(f"Error fetching business stats: {e}", exc_info=True)
         business = {}
 
     payload = {

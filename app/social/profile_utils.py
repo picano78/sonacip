@@ -2,11 +2,14 @@
 Profile Enhancement Utilities
 Verification, analytics, and custom fields
 """
+import json
+import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, desc
 from app import db
 from app.models import User, ProfileVerification, ProfileAnalytics, CustomProfileField
-import json
+
+logger = logging.getLogger(__name__)
 
 
 def track_profile_view(profile_user_id, viewer_id=None, source='direct'):
@@ -42,7 +45,8 @@ def track_profile_view(profile_user_id, viewer_id=None, source='direct'):
         # Update sources
         try:
             sources = json.loads(analytics.view_sources) if analytics.view_sources else {}
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Failed to parse view sources JSON: {e}")
             sources = {}
         
         sources[source] = sources.get(source, 0) + 1

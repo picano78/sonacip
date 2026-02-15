@@ -2,12 +2,15 @@
 Database Models
 All SQLAlchemy models for SONACIP platform
 """
+import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.utils import check_permission
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now():
@@ -2046,7 +2049,8 @@ class Contact(db.Model):
         if self.tags:
             try:
                 return json.loads(self.tags)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to parse tags JSON for contact: {e}")
                 return []
         return []
     

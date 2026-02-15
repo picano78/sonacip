@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 
 @pytest.fixture(autouse=True)
-def reset_config_module():
+def clean_config_state():
     """Ensure app.core.config is reloaded fresh for each test."""
     sys.modules.pop('app.core.config', None)
     try:

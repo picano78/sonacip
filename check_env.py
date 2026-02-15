@@ -11,6 +11,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
+def _is_placeholder(var_name: str, value: str, placeholders: dict[str, list[str]]) -> bool:
+    return var_name in placeholders and value in placeholders[var_name]
+
+
 def check_environment():
     """Check if all required environment variables are properly configured."""
     
@@ -87,9 +91,6 @@ def check_environment():
         'SUPERADMIN_PASSWORD': ['Simone78', ''],  # Only the default example password
     }
 
-    def _is_placeholder(var_name: str, value: str, placeholders: dict[str, list[str]]) -> bool:
-        return var_name in placeholders and value in placeholders[var_name]
-    
     errors = []
     warnings = []
     

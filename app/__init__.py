@@ -28,6 +28,7 @@ from app.core.config import config
 from app.core.logging import configure_logging
 
 # Single source of truth for extensions
+# Keep sessions alive after commit to avoid DetachedInstanceError in tests/async flows.
 db = SQLAlchemy(session_options={"expire_on_commit": False})
 login_manager = LoginManager()
 migrate = Migrate()

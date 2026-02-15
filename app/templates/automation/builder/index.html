@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Automazioni - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .rule-card {
+    border: none; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+    margin-bottom: 12px;
+  }
+  .rule-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-gear-wide-connected me-2"></i>Automazioni</h1>
+        <p>Regole di automazione del sistema</p>
+      </div>
+      <a href="{{ url_for('automation.create_rule') }}" class="btn btn-light text-primary fw-bold"><i class="bi bi-plus-lg"></i> Nuova Regola</a>
+    </div>
+  </div>
+
+  {% for rule in rules %}
+  <div class="rule-card card">
+    <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h6 class="fw-bold mb-1">
+          <i class="bi bi-lightning-charge me-1 text-warning"></i>{{ rule.name }}
+        </h6>
+        <span class="badge bg-info me-1">{{ rule.event_type }}</span>
+        {% if rule.is_active %}
+        <span class="badge bg-success">Attiva</span>
+        {% else %}
+        <span class="badge bg-secondary">Disattiva</span>
+        {% endif %}
+        <small class="text-muted ms-2">Creata: {{ rule.created_at.strftime('%d/%m/%Y') if rule.created_at else '—' }}</small>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('automation.edit_rule', rule_id=rule.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+        <form method="POST" action="{{ url_for('automation.delete_rule', rule_id=rule.id) }}" class="d-inline" onsubmit="return confirm('Eliminare questa regola?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-gear-wide-connected fs-1 d-block mb-2"></i>
+    Nessuna regola di automazione configurata.
+    <br><a href="{{ url_for('automation.create_rule') }}" class="btn btn-primary mt-3"><i class="bi bi-plus-lg"></i> Crea la prima regola</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

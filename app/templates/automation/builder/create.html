@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Nuova Regola - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .form-card { border: none; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <h1><i class="bi bi-plus-square me-2"></i>Nuova Regola di Automazione</h1>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="form-card card p-4">
+        <form method="POST" action="{{ url_for('automation.create_rule') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="mb-3">
+            <label for="name" class="form-label fw-semibold">Nome regola *</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="event_type" class="form-label fw-semibold">Tipo evento *</label>
+            <select class="form-select" id="event_type" name="event_type" required>
+              <option value="">— Seleziona —</option>
+              <option value="user_registered">Registrazione utente</option>
+              <option value="payment_received">Pagamento ricevuto</option>
+              <option value="event_created">Evento creato</option>
+              <option value="task_completed">Task completato</option>
+              <option value="message_sent">Messaggio inviato</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="condition" class="form-label fw-semibold">Condizione (JSON)</label>
+            <textarea class="form-control font-monospace" id="condition" name="condition" rows="3" placeholder='{"field": "value"}'></textarea>
+            <div class="form-text">Definisci la condizione in formato JSON.</div>
+          </div>
+          <div class="mb-3">
+            <label for="actions" class="form-label fw-semibold">Azioni (JSON) *</label>
+            <textarea class="form-control font-monospace" id="actions" name="actions" rows="3" required placeholder='[{"type": "send_email", "to": "admin"}]'></textarea>
+            <div class="form-text">Definisci le azioni da eseguire in formato JSON.</div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <a href="{{ url_for('automation.builder_index') }}" class="btn btn-outline-secondary">Annulla</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Crea Regola</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

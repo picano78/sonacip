@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Post di {{ user.full_name or user.username }} - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .post-card {
+    border: none; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+    margin-bottom: 16px;
+  }
+  .post-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-person-lines-fill me-2"></i>{{ user.full_name or user.username }}</h1>
+        <p>Tutti i post</p>
+      </div>
+      <a href="{{ url_for('social.feed') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Feed</a>
+    </div>
+  </div>
+
+  {% for post in posts %}
+  <div class="post-card card">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;font-weight:700;">
+          {{ user.username[0]|upper }}
+        </div>
+        <div>
+          <strong>{{ user.full_name or user.username }}</strong>
+          <div class="text-muted small">{{ post.created_at.strftime('%d/%m/%Y %H:%M') if post.created_at else '' }}</div>
+        </div>
+      </div>
+      <p class="mb-2">{{ post.content }}</p>
+      {% if post.image_url %}
+      <img src="{{ post.image_url }}" class="img-fluid rounded-3 mb-2" alt="Post image" loading="lazy">
+      {% endif %}
+      <div class="d-flex gap-3 text-muted small">
+        {% if post.likes_count is defined %}<span><i class="bi bi-heart"></i> {{ post.likes_count }}</span>{% endif %}
+        {% if post.comments_count is defined %}<span><i class="bi bi-chat"></i> {{ post.comments_count }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-file-post fs-1 d-block mb-2"></i>
+    Nessun post pubblicato.
+  </div>
+  {% endfor %}
+
+  {% if pagination and pagination.pages > 1 %}
+  <nav class="mt-4">
+    <ul class="pagination justify-content-center">
+      <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+        <a class="page-link" href="{{ url_for('social.user_posts', user_id=user.id, page=pagination.prev_num) }}"><i class="bi bi-chevron-left"></i></a>
+      </li>
+      {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+        {% if p %}
+        <li class="page-item {{ 'active' if p == pagination.page }}">
+          <a class="page-link" href="{{ url_for('social.user_posts', user_id=user.id, page=p) }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+        <a class="page-link" href="{{ url_for('social.user_posts', user_id=user.id, page=pagination.next_num) }}"><i class="bi bi-chevron-right"></i></a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

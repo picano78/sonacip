@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, {{ project.color or '#1877f2' }} 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .proj-card {
+    border: none; border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+  .task-row { transition: background .15s; }
+  .task-row:hover { background: #f8f9fa; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-folder me-2"></i>{{ project.name }}</h1>
+        <p>{{ project.description or '' }}</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('tasks.kanban', project_id=project.id) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-kanban"></i> Kanban</a>
+        <a href="{{ url_for('tasks.timeline', project_id=project.id) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-bar-chart-steps"></i> Timeline</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-8">
+      <div class="proj-card card p-3">
+        <h6 class="fw-bold mb-2">Avanzamento</h6>
+        <div class="progress" style="height: 22px; border-radius: 12px;">
+          <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100">{{ progress }}%</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="proj-card card p-3 text-center">
+        <div class="row g-2">
+          <div class="col-4">
+            <div class="fs-5 fw-bold text-secondary">{{ task_stats.todo|default(0) }}</div>
+            <small class="text-muted">Da fare</small>
+          </div>
+          <div class="col-4">
+            <div class="fs-5 fw-bold text-primary">{{ task_stats.in_progress|default(0) }}</div>
+            <small class="text-muted">In corso</small>
+          </div>
+          <div class="col-4">
+            <div class="fs-5 fw-bold text-success">{{ task_stats.done|default(0) }}</div>
+            <small class="text-muted">Fatti</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="proj-card card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-list-task me-1"></i> Task del progetto</h5>
+      <a href="{{ url_for('tasks.create_task') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nuovo</a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Titolo</th><th>Stato</th><th>Priorità</th><th>Scadenza</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tasks %}
+          <tr class="task-row">
+            <td><a href="{{ url_for('tasks.view_task', task_id=t.id) }}" class="text-decoration-none fw-semibold">{{ t.title }}</a></td>
+            <td><span class="badge bg-{{ 'success' if t.status == 'done' else 'primary' if t.status == 'in_progress' else 'warning' if t.status == 'review' else 'danger' if t.status == 'blocked' else 'secondary' }}">{{ t.status|replace('_',' ')|title }}</span></td>
+            <td>{{ t.priority|default('—')|title }}</td>
+            <td>{{ t.due_date.strftime('%d/%m/%Y') if t.due_date else '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-1"></i>Nessun task nel progetto.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -70,7 +70,7 @@ def test_automatic_invoice_generation(app):
     """Test automatic invoice generation after payment"""
     with app.app_context():
         # Create a role first
-        from app.models import Role
+        from app.models import Role, Society
         role = Role(name='appassionato', display_name='Appassionato', level=10)
         db.session.add(role)
         db.session.flush()
@@ -85,6 +85,15 @@ def test_automatic_invoice_generation(app):
         db.session.add(user)
         db.session.flush()
         
+        # Create a society
+        society = Society(
+            id=user.id,
+            legal_name='Test Society',
+            company_type='ASD'
+        )
+        db.session.add(society)
+        db.session.flush()
+        
         # Create invoice settings
         settings = InvoiceSettings(
             company_name='SONACIP S.r.l.',
@@ -95,11 +104,13 @@ def test_automatic_invoice_generation(app):
         
         # Create a society fee
         fee = SocietyFee(
+            society_id=society.id,
             user_id=user.id,
             description='Test Fee',
             amount_cents=10000,  # €100.00
             status='pending',
-            currency='EUR'
+            currency='EUR',
+            due_on=datetime.now().date()
         )
         db.session.add(fee)
         db.session.flush()
@@ -135,7 +146,7 @@ def test_invoice_not_duplicated(app):
     """Test that invoice is not created twice for same payment"""
     with app.app_context():
         # Create a role first
-        from app.models import Role
+        from app.models import Role, Society
         role = Role(name='appassionato', display_name='Appassionato', level=10)
         db.session.add(role)
         db.session.flush()
@@ -150,6 +161,15 @@ def test_invoice_not_duplicated(app):
         db.session.add(user)
         db.session.flush()
         
+        # Create a society
+        society = Society(
+            id=user.id,
+            legal_name='Test Society',
+            company_type='ASD'
+        )
+        db.session.add(society)
+        db.session.flush()
+        
         # Create invoice settings
         settings = InvoiceSettings(
             company_name='SONACIP S.r.l.',
@@ -160,11 +180,13 @@ def test_invoice_not_duplicated(app):
         
         # Create fee and payment
         fee = SocietyFee(
+            society_id=society.id,
             user_id=user.id,
             description='Test Fee',
             amount_cents=10000,
             status='paid',
-            currency='EUR'
+            currency='EUR',
+            due_on=datetime.now().date()
         )
         db.session.add(fee)
         db.session.flush()

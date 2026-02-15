@@ -54,7 +54,8 @@ def generate_invoice_for_payment(fee_payment_id):
             status='paid',
             invoice_date=datetime.now(timezone.utc),
             paid_date=fee_payment.paid_at,
-            description=f"Pagamento quota - {fee_payment.fee.description if fee_payment.fee else 'Fee Payment'}"
+            description=f"Pagamento quota - {fee_payment.fee.description if fee_payment.fee else 'Fee Payment'}",
+            invoice_number='TEMP'  # Temporary value, will be updated after getting ID
         )
         
         # Add customer billing information
@@ -69,7 +70,7 @@ def generate_invoice_for_payment(fee_payment_id):
         db.session.add(invoice)
         db.session.flush()  # Get invoice ID
         
-        # Generate invoice number
+        # Generate invoice number using the ID
         invoice.invoice_number = generate_invoice_number(invoice.id, settings)
         
         db.session.commit()

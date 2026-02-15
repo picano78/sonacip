@@ -59,6 +59,21 @@ gunicorn wsgi:app
 
 Queste credenziali sono configurate nel file `.env.example` e verranno utilizzate quando copi il file in `.env`.
 
+### 🔧 Risoluzione Problemi di Login
+
+**Se riscontri problemi di accesso come super admin** (errore "Credenziali non valide"), usa il nostro strumento diagnostico:
+
+```bash
+# Verifica lo stato delle credenziali
+python3 fix_admin_credentials.py
+
+# Se trova problemi, correggili automaticamente
+python3 fix_admin_credentials.py --fix
+```
+
+📖 **Guida dettagliata:** [SUPER_ADMIN_QUICK_START.md](SUPER_ADMIN_QUICK_START.md)  
+📖 **Documentazione tecnica del fix:** [SUPER_ADMIN_LOGIN_FIX.md](SUPER_ADMIN_LOGIN_FIX.md)
+
 ### Configurazione Rapida
 
 Al primo avvio, se non specifichi credenziali personalizzate tramite variabili d'ambiente, l'applicazione genererà automaticamente credenziali sicure casuali e le mostrerà nei log.

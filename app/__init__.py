@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import logging
 import os
 import secrets
 import sqlite3
@@ -714,7 +715,9 @@ def create_app(config_name: str | None = None) -> Flask:
 
             if isinstance(raw, str):
                 safe = re.sub(r"://([^:/@]+):([^@]+)@", r"://\1:***@", raw)
-        print("Database connected to:", safe)
+        
+        logger = logging.getLogger(__name__)
+        logger.info(f"Database connected to: {safe}")
     except Exception:
         pass
 

@@ -42,7 +42,7 @@ def handle_connect():
             'unread_count': unread_count
         })
         
-        print(f"User {user_id} connected to notifications (session: {request.sid})")
+        logger.debug(f"User {user_id} connected to notifications (session: {request.sid})")
     else:
         emit('error', {'message': 'Authentication required'})
         return False
@@ -65,7 +65,7 @@ def handle_disconnect():
             if not connected_users[user_id]:
                 del connected_users[user_id]
         
-        print(f"User {user_id} disconnected from notifications")
+        logger.debug(f"User {user_id} disconnected from notifications")
 
 
 @socketio.on('mark_read', namespace='/notifications')

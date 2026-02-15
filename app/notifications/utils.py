@@ -153,7 +153,7 @@ def cleanup_old_notifications(days=90):
         return count
     except Exception as e:
         db.session.rollback()
-        print(f"Error cleaning up notifications: {e}")
+        logger.error(f"Error cleaning up notifications: {e}", exc_info=True)
         return 0
 
 
@@ -186,7 +186,7 @@ def notify_planner_change(society_id, title, message, link=None):
         
         return notifications
     except Exception as e:
-        print(f"Error sending planner notifications: {e}")
+        logger.error(f"Error sending planner notifications: {e}", exc_info=True)
         return []
 
 
@@ -229,7 +229,7 @@ def notify_event_change(event_id, title, message, include_creator=True):
         
         return notifications
     except Exception as e:
-        print(f"Error sending event notifications: {e}")
+        logger.error(f"Error sending event notifications: {e}", exc_info=True)
         return []
 
 

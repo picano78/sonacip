@@ -72,7 +72,9 @@ def publish_scheduled_posts():
             
         except Exception as e:
             # Log error but continue with other posts
-            print(f"Error publishing post {post.id}: {str(e)}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error publishing post {post.id}: {str(e)}", exc_info=True)
             continue
     
     if published_count > 0:

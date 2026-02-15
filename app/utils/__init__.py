@@ -1,10 +1,13 @@
 """
 Common utilities and decorators for the application
 """
+import logging
 from functools import wraps
 from flask import flash, redirect, url_for, abort, current_app, request, session, g
 from flask_login import current_user
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 
 def check_feature_enabled(feature_key):
@@ -507,7 +510,7 @@ def log_action(action, entity_type=None, entity_id=None, details=None, society_i
         except Exception as e:
             db.session.rollback()
             # Log to console but don't fail the main operation
-            print(f"Warning: Failed to log action: {e}")
+            logger.warning(f"Failed to log action: {e}")
 
 
 def safe_int(value, default=0, field_name=None):

@@ -416,12 +416,16 @@ def can_edit_task(user, task):
 
 def is_team_member(user_id, team_members_json):
     """Check if user is in team"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if not team_members_json:
         return False
     try:
         members = json.loads(team_members_json)
         return user_id in members
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.warning(f"Failed to parse team members JSON: {e}")
         return False
 
 

@@ -66,12 +66,18 @@ def evaluate_scoring_rule(contact, rule):
     elif rule.operator == 'greater_than':
         try:
             return float(attribute_value) > float(rule_value)
-        except:
+        except (ValueError, TypeError) as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Cannot compare values as numbers: {e}")
             return False
     elif rule.operator == 'less_than':
         try:
             return float(attribute_value) < float(rule_value)
-        except:
+        except (ValueError, TypeError) as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Cannot compare values as numbers: {e}")
             return False
     elif rule.operator == 'not_equals':
         return attribute_value != rule_value
@@ -133,13 +139,19 @@ def get_pipeline_forecast(society_id, period_months=3):
         # Parse value
         try:
             value = float(opp.value) if opp.value else 0.0
-        except:
+        except (ValueError, TypeError) as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Invalid opportunity value '{opp.value}': {e}")
             value = 0.0
         
         # Parse probability
         try:
             prob = float(opp.probability) / 100 if opp.probability else 0.5
-        except:
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Invalid opportunity probability '{opp.probability}': {e}")
             prob = 0.5
         
         weighted = value * prob
@@ -204,9 +216,13 @@ def segment_contacts(segment):
     """
     Get contacts matching a segment's criteria
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         criteria = json.loads(segment.criteria)
-    except:
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.error(f"Failed to parse segment criteria JSON: {e}", exc_info=True)
         return []
     
     query = Contact.query.filter_by(society_id=segment.society_id)

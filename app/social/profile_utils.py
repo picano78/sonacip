@@ -42,7 +42,10 @@ def track_profile_view(profile_user_id, viewer_id=None, source='direct'):
         # Update sources
         try:
             sources = json.loads(analytics.view_sources) if analytics.view_sources else {}
-        except:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to parse view sources JSON: {e}")
             sources = {}
         
         sources[source] = sources.get(source, 0) + 1

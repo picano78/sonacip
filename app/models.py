@@ -2043,10 +2043,14 @@ class Contact(db.Model):
     def get_tags_list(self):
         """Get tags as a list"""
         import json
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if self.tags:
             try:
                 return json.loads(self.tags)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                logger.warning(f"Failed to parse tags JSON for contact: {e}")
                 return []
         return []
     

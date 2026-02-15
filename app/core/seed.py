@@ -10,10 +10,6 @@ import secrets
 import string
 from datetime import datetime, timezone
 
-# Default credentials from config.py - used for comparison only
-DEFAULT_SUPERADMIN_EMAIL = 'Picano78@gmail.com'
-DEFAULT_SUPERADMIN_PASSWORD = 'Simone78'
-
 
 def seed_defaults(app) -> dict:
     """
@@ -456,34 +452,23 @@ def seed_defaults(app) -> dict:
         email = app.config.get("SUPERADMIN_EMAIL")
         password = app.config.get("SUPERADMIN_PASSWORD")
         
-        # Check if using default credentials from config
-        using_defaults = (email == DEFAULT_SUPERADMIN_EMAIL and password == DEFAULT_SUPERADMIN_PASSWORD)
-        
         # Ensure credentials are available
         if not email or not password:
-            # This should not happen with current config.py, but keep as fallback
+            # Generate secure random credentials if not provided
             if not email:
                 email = "admin@sonacip.local"
             if not password:
                 # Generate a secure random password
                 alphabet = string.ascii_letters + string.digits + string.punctuation
                 password = ''.join(secrets.choice(alphabet) for _ in range(16))
-                # Log the generated credentials ONCE at startup
-                app.logger.warning("="*70)
-                app.logger.warning("NO SUPERADMIN CREDENTIALS PROVIDED!")
-                app.logger.warning(f"Generated Super Admin credentials:")
-                app.logger.warning(f"  Email: {email}")
-                app.logger.warning(f"  Password: {password}")
-                app.logger.warning("COPY THESE CREDENTIALS NOW - They will not be shown again!")
-                app.logger.warning("Set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD in .env to customize.")
-                app.logger.warning("="*70)
-        elif using_defaults:
-            # Warn about using default credentials
+            
+            # Log the generated credentials ONCE at startup
             app.logger.warning("="*70)
-            app.logger.warning("USING DEFAULT SUPER ADMIN CREDENTIALS!")
+            app.logger.warning("NO SUPERADMIN CREDENTIALS PROVIDED!")
+            app.logger.warning(f"Generated Super Admin credentials:")
             app.logger.warning(f"  Email: {email}")
             app.logger.warning(f"  Password: {password}")
-            app.logger.warning("IMPORTANT: Change these credentials in production!")
+            app.logger.warning("COPY THESE CREDENTIALS NOW - They will not be shown again!")
             app.logger.warning("Set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD in .env to customize.")
             app.logger.warning("="*70)
         

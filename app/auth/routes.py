@@ -479,6 +479,8 @@ def register():
         return redirect(url_for('social.feed'))
     
     form = RegistrationForm()
+    # Some clients submit `confirm_password` instead of the WTForms `password2` field;
+    # copy it over to keep the validator happy without changing the templates.
     if request.method == "POST" and not request.form.get("password2"):
         alt_confirm = request.form.get("confirm_password")
         if alt_confirm:

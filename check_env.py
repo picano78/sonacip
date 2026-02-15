@@ -87,8 +87,8 @@ def check_environment():
         'SUPERADMIN_PASSWORD': ['Simone78', ''],  # Only the default example password
     }
 
-    def _is_placeholder(var_name: str, value: str) -> bool:
-        return var_name in invalid_placeholders and value in invalid_placeholders[var_name]
+    def _is_placeholder(var_name: str, value: str, placeholders: dict[str, list[str]]) -> bool:
+        return var_name in placeholders and value in placeholders[var_name]
     
     errors = []
     warnings = []
@@ -104,7 +104,7 @@ def check_environment():
             print(f"  {RED}✗{RESET} {var:<25} - {RED}NOT SET{RESET}")
             print(f"    {description}")
         # Check if variable has an invalid placeholder value
-        elif _is_placeholder(var, value):
+        elif _is_placeholder(var, value, invalid_placeholders):
             errors.append(f"{var} has placeholder value")
             print(f"  {RED}✗{RESET} {var:<25} - {RED}PLACEHOLDER VALUE{RESET}")
             print(f"    {description}")
@@ -127,7 +127,7 @@ def check_environment():
                 warnings.append(f"{var} is not set (optional)")
                 print(f"  {YELLOW}⚠{RESET}  {var:<25} - {YELLOW}NOT SET{RESET}")
                 print(f"    {description}")
-            elif _is_placeholder(var, value):
+            elif _is_placeholder(var, value, invalid_placeholders):
                 warnings.append(f"{var} has placeholder value")
                 print(f"  {YELLOW}⚠{RESET}  {var:<25} - {YELLOW}PLACEHOLDER{RESET}")
                 print(f"    {description}")
@@ -184,8 +184,8 @@ def check_environment():
         print(f"\n{BOLD}Development Mode{RESET}")
         dev_email = os.getenv('SUPERADMIN_EMAIL', '')
         dev_password = os.getenv('SUPERADMIN_PASSWORD', '')
-        email_missing = not dev_email or _is_placeholder('SUPERADMIN_EMAIL', dev_email)
-        password_missing = not dev_password or _is_placeholder('SUPERADMIN_PASSWORD', dev_password)
+        email_missing = not dev_email or _is_placeholder('SUPERADMIN_EMAIL', dev_email, invalid_placeholders)
+        password_missing = not dev_password or _is_placeholder('SUPERADMIN_PASSWORD', dev_password, invalid_placeholders)
         if email_missing or password_missing:
             print(f"{YELLOW}Note: Super admin credentials not set.{RESET}")
             print(f"{YELLOW}Random credentials will be generated on first startup.{RESET}")

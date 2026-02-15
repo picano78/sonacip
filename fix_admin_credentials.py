@@ -17,6 +17,10 @@ import sys
 import os
 import argparse
 
+# Load .env file FIRST before any app imports to ensure credentials are available
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add the current directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

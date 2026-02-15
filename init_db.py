@@ -3,11 +3,25 @@
 from __future__ import annotations
 
 import os
+import sys
 from sqlalchemy import text, inspect
 
 # Load .env file FIRST before any app imports to ensure credentials are available
 from dotenv import load_dotenv
 load_dotenv()
+
+# Check environment before proceeding
+print("Checking environment configuration...")
+try:
+    import subprocess
+    result = subprocess.run([sys.executable, 'check_env.py'], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(result.stdout)
+        print("\n❌ Environment check failed. Please fix the issues above before initializing the database.")
+        sys.exit(1)
+    print("✓ Environment check passed")
+except FileNotFoundError:
+    print("⚠️  Warning: check_env.py not found, skipping environment validation")
 
 # Prevent auto-seed during init_db to avoid conflicts with migrations
 os.environ['SKIP_AUTO_SEED'] = '1'

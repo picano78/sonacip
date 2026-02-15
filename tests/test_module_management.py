@@ -92,7 +92,7 @@ def test_module_upload_functionality(auth_client, app):
         module = SystemModule.query.filter_by(name='Test Module').first()
         assert module is not None
         assert module.version == '1.0.0'
-        assert module.enabled == False  # Should be disabled by default
+        assert module.enabled is False  # Should be disabled by default
 
 
 def test_module_toggle(auth_client, app):
@@ -119,7 +119,7 @@ def test_module_toggle(auth_client, app):
     # Verify it's enabled
     with app.app_context():
         module = SystemModule.query.get(module_id)
-        assert module.enabled == True
+        assert module.enabled is True
     
     # Toggle it off
     response = auth_client.post(f'/admin/modules/{module_id}/toggle',
@@ -129,7 +129,7 @@ def test_module_toggle(auth_client, app):
     # Verify it's disabled
     with app.app_context():
         module = SystemModule.query.get(module_id)
-        assert module.enabled == False
+        assert module.enabled is False
 
 
 def test_module_delete(auth_client, app):

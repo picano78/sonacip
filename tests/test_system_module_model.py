@@ -43,7 +43,7 @@ def test_system_module_model():
         retrieved = SystemModule.query.filter_by(name='Test Module').first()
         assert retrieved is not None
         assert retrieved.version == '1.0.0'
-        assert retrieved.enabled == False
+        assert retrieved.enabled is False
         assert retrieved.uploader.username == 'admin'
         
         # Test enable/disable
@@ -51,7 +51,7 @@ def test_system_module_model():
         db.session.commit()
         
         retrieved = SystemModule.query.filter_by(name='Test Module').first()
-        assert retrieved.enabled == True
+        assert retrieved.enabled is True
         
         # Test deletion
         db.session.delete(retrieved)

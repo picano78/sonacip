@@ -167,7 +167,7 @@ class DataExporter:
         # Create response
         response = Response(
             json_str,
-            mimetype='application/json',
+            mimetype='application/json; charset=utf-8',
             headers={
                 'Content-Disposition': f'attachment; filename={filename}'
             }

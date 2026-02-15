@@ -3926,7 +3926,13 @@ class LiveStream(db.Model):
     def duration_seconds(self):
         if self.ended_at:
             return int((self.ended_at - self.started_at).total_seconds())
-        return int((datetime.now(timezone.utc) - self.started_at).total_seconds())
+        # Handle both timezone-aware and naive datetimes
+        now = datetime.now(timezone.utc)
+        start = self.started_at
+        # If started_at is naive, assume it's UTC
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        return int((now - start).total_seconds())
 
     def __repr__(self):
         return f'<LiveStream {self.id} by user={self.user_id} active={self.is_active}>'

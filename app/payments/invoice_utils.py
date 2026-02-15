@@ -43,10 +43,16 @@ def generate_invoice_for_payment(fee_payment_id):
         tax_amount = round(amount * tax_rate / 100, 2)
         total_amount = round(amount + tax_amount, 2)
         
-        # Create invoice
+        # Create invoice with temporary invoice number
+        # We'll update it after flush to get the actual ID
+        year = datetime.now(timezone.utc).year
+        prefix = settings.invoice_prefix if settings and settings.invoice_prefix else 'INV'
+        temp_invoice_number = f'{prefix}-{year}-TEMP-{fee_payment_id}'
+        
         invoice = Invoice(
             user_id=fee_payment.user_id,
             fee_payment_id=fee_payment_id,
+            invoice_number=temp_invoice_number,
             amount=amount,
             tax_amount=tax_amount,
             total_amount=total_amount,
@@ -69,7 +75,7 @@ def generate_invoice_for_payment(fee_payment_id):
         db.session.add(invoice)
         db.session.flush()  # Get invoice ID
         
-        # Generate invoice number
+        # Update with actual invoice number based on ID
         invoice.invoice_number = generate_invoice_number(invoice.id, settings)
         
         db.session.commit()

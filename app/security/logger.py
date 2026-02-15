@@ -75,8 +75,8 @@ class SecurityEventLogger:
             log_message += f" - IP: {ip_address} - UA: {user_agent}"
         except (RuntimeError, AttributeError) as e:
             # Request context not available (e.g., background tasks)
-            logger.debug(f"Could not get request info: {e}")
-            pass
+            if self.logger:
+                self.logger.debug(f"Could not get request info: {e}")
         
         # Log con il livello appropriato
         if self.logger:

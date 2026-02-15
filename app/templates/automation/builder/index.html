@@ -27,7 +27,7 @@
         <h1><i class="bi bi-gear-wide-connected me-2"></i>Automazioni</h1>
         <p>Regole di automazione del sistema</p>
       </div>
-      <a href="{{ url_for('automation.create_rule') }}" class="btn btn-light text-primary fw-bold"><i class="bi bi-plus-lg"></i> Nuova Regola</a>
+      <a href="{{ url_for('automation_builder.create') }}" class="btn btn-light text-primary fw-bold"><i class="bi bi-plus-lg"></i> Nuova Regola</a>
     </div>
   </div>
 
@@ -47,8 +47,8 @@
         <small class="text-muted ms-2">Creata: {{ rule.created_at.strftime('%d/%m/%Y') if rule.created_at else '—' }}</small>
       </div>
       <div class="d-flex gap-2">
-        <a href="{{ url_for('automation.edit_rule', rule_id=rule.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
-        <form method="POST" action="{{ url_for('automation.delete_rule', rule_id=rule.id) }}" class="d-inline" onsubmit="return confirm('Eliminare questa regola?');">
+        <a href="{{ url_for('automation_builder.edit', rule_id=rule.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
+        <form method="POST" action="{{ url_for('automation_builder.delete_rule', rule_id=rule.id) }}" class="d-inline" onsubmit="return confirm('Eliminare questa regola?');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
         </form>
@@ -59,7 +59,7 @@
   <div class="text-center text-muted py-5">
     <i class="bi bi-gear-wide-connected fs-1 d-block mb-2"></i>
     Nessuna regola di automazione configurata.
-    <br><a href="{{ url_for('automation.create_rule') }}" class="btn btn-primary mt-3"><i class="bi bi-plus-lg"></i> Crea la prima regola</a>
+    <br><a href="{{ url_for('automation_builder.create') }}" class="btn btn-primary mt-3"><i class="bi bi-plus-lg"></i> Crea la prima regola</a>
   </div>
   {% endfor %}
 </div>

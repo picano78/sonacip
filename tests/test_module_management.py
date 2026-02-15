@@ -153,7 +153,8 @@ def test_module_delete(auth_client, app):
     
     # Verify it's gone
     with app.app_context():
-        module = db.session.get(SystemModule, module_id)        assert module is None
+        module = db.session.get(SystemModule, module_id)
+        assert module is None
 
 
 if __name__ == '__main__':

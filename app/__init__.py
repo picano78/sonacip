@@ -1026,6 +1026,14 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.core.bootstrap import discover_and_register_modules
     _register_blueprints(app)
     discover_and_register_modules(app, strict=False)
+
+    # Register automation builder blueprint
+    try:
+        from app.automation.builder import automation_builder
+        app.register_blueprint(automation_builder)
+    except Exception:
+        app.logger.debug("Automation builder blueprint not loaded (non-fatal)")
+
     # External drop-in plugins (filesystem-based)
     try:
         from app.core.plugins import load_external_plugins

@@ -24,7 +24,7 @@ def _task_scope_id(*args, **kwargs):
     project_id = kwargs.get('project_id')
 
     if task_id:
-        task = Task.query.get(task_id)
+        task = db.session.get(Task, task_id)
         if task:
             if task.society_id:
                 return task.society_id
@@ -32,7 +32,7 @@ def _task_scope_id(*args, **kwargs):
                 return task.project.society_id
 
     if project_id:
-        project = Project.query.get(project_id)
+        project = db.session.get(Project, project_id)
         if project:
             return project.society_id
 

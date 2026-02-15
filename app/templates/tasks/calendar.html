@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Calendario Task{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .cal-card {
+    border: none; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s;
+  }
+  .cal-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-calendar3 me-2"></i>Calendario</h1>
+        <p>Task con scadenze</p>
+      </div>
+      <a href="{{ url_for('tasks.index') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Task</a>
+    </div>
+  </div>
+
+  <div id="calendar-list" class="row g-3">
+  </div>
+  <div id="empty-state" class="text-center text-muted py-5 d-none">
+    <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+    Nessun task con scadenza trovato.
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  var events = {{ events|safe }};
+  var container = document.getElementById('calendar-list');
+  var emptyState = document.getElementById('empty-state');
+  if (!events || events.length === 0) {
+    emptyState.classList.remove('d-none');
+    return;
+  }
+  events.sort(function(a, b) { return (a.start || '').localeCompare(b.start || ''); });
+  events.forEach(function(ev) {
+    var dt = ev.start ? new Date(ev.start) : null;
+    var dateStr = dt ? dt.toLocaleDateString('it-IT', {day:'2-digit', month:'short', year:'numeric'}) : 'N/D';
+    var col = document.createElement('div');
+    col.className = 'col-md-6 col-lg-4';
+    col.innerHTML =
+      '<div class="cal-card card p-3 h-100">' +
+        '<div class="d-flex justify-content-between align-items-start">' +
+          '<h6 class="fw-bold mb-1">' + (ev.title || 'Senza titolo') + '</h6>' +
+          '<span class="badge bg-primary">' + dateStr + '</span>' +
+        '</div>' +
+        (ev.description ? '<p class="text-muted small mb-0 mt-1">' + ev.description + '</p>' : '') +
+      '</div>';
+    container.appendChild(col);
+  });
+})();
+</script>
+{% endblock %}

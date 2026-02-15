@@ -141,7 +141,7 @@ def mark_thread_as_read(thread_id, user_id):
 
 def delete_message_for_user(message_id, user_id):
     """Soft delete message for a specific user"""
-    message = Message.query.get(message_id)
+    message = db.session.get(Message, message_id)
     if not message:
         return False
     

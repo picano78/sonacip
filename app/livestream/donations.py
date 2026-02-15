@@ -133,7 +133,7 @@ def tip_webhook():
             from app.notifications.utils import create_notification
             
             amount = intent.get('amount', 0) / 100.0
-            tipper = User.query.get(tipper_id) if tipper_id else None
+            tipper = db.session.get(User, tipper_id) if tipper_id else None
             tipper_name = tipper.get_full_name() if tipper else 'Anonymous'
             
             create_notification(

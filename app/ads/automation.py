@@ -289,7 +289,7 @@ def generate_ad_report(campaign_id, start_date=None, end_date=None):
     try:
         from app.models import AdEvent
         
-        campaign = AdCampaign.query.get(campaign_id)
+        campaign = db.session.get(AdCampaign, campaign_id)
         if not campaign:
             return None
         

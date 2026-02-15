@@ -117,7 +117,7 @@ def test_module_toggle(auth_client, app):
     
     # Verify it's enabled
     with app.app_context():
-        module = SystemModule.query.get(module_id)
+        module = db.session.get(SystemModule, module_id)
         assert module.enabled is True
     
     # Toggle it off
@@ -127,7 +127,7 @@ def test_module_toggle(auth_client, app):
     
     # Verify it's disabled
     with app.app_context():
-        module = SystemModule.query.get(module_id)
+        module = db.session.get(SystemModule, module_id)
         assert module.enabled is False
 
 
@@ -153,7 +153,7 @@ def test_module_delete(auth_client, app):
     
     # Verify it's gone
     with app.app_context():
-        module = SystemModule.query.get(module_id)
+        module = db.session.get(SystemModule, module_id)
         assert module is None
 
 

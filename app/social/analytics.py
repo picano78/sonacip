@@ -11,7 +11,7 @@ import json
 
 def track_post_view(post_id, user_id=None):
     """Track a post view"""
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return False
     
@@ -131,7 +131,7 @@ def update_user_social_stats(user_id):
         stats.last_post_at = latest_post.created_at
     
     # Count followers/following
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if user:
         stats.followers_count = user.followers.count()
         stats.following_count = user.following.count()
@@ -144,7 +144,7 @@ def update_user_social_stats(user_id):
 
 def get_post_performance_metrics(post_id):
     """Get detailed performance metrics for a post"""
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return None
     
@@ -240,7 +240,7 @@ def get_feed_analytics(user_id, days=7):
     ).count()
     
     # Posts user engaged with
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return {}
     

@@ -429,7 +429,7 @@ def convocate(event_id):
         athlete_ids = request.form.getlist('athletes')
         
         for athlete_id in athlete_ids:
-            athlete = User.query.get(int(athlete_id))
+            athlete = db.session.get(User, int(athlete_id))
             if athlete and athlete not in event.convocated_athletes:
                 event.convocated_athletes.append(athlete)
                 

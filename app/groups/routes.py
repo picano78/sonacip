@@ -120,7 +120,7 @@ def my_groups():
     memberships = GroupMembership.query.filter_by(user_id=current_user.id).all()
     groups_data = []
     for m in memberships:
-        group = Group.query.get(m.group_id)
+        group = db.session.get(Group, m.group_id)
         if group:
             groups_data.append({'group': group, 'role': m.role})
     return render_template('groups/my_groups.html', groups_data=groups_data)
@@ -190,7 +190,7 @@ def detail(group_id):
 
     member_users = []
     for m in members:
-        user = User.query.get(m.user_id)
+        user = db.session.get(User, m.user_id)
         if user:
             member_users.append({'user': user, 'role': m.role, 'membership': m})
 

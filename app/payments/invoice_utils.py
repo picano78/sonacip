@@ -27,7 +27,7 @@ def generate_invoice_for_payment(fee_payment_id):
             return existing
         
         # Get fee payment
-        fee_payment = FeePayment.query.get(fee_payment_id)
+        fee_payment = db.session.get(FeePayment, fee_payment_id)
         if not fee_payment or fee_payment.status != 'completed':
             return None
         
@@ -35,7 +35,7 @@ def generate_invoice_for_payment(fee_payment_id):
         settings = InvoiceSettings.query.first()
         
         # Get user billing information
-        user = User.query.get(fee_payment.user_id)
+        user = db.session.get(User, fee_payment.user_id)
         
         # Calculate tax
         tax_rate = settings.default_tax_rate if settings else 22.0
@@ -117,7 +117,7 @@ def send_to_electronic_invoice_provider(invoice_id):
         dict with success status and response
     """
     try:
-        invoice = Invoice.query.get(invoice_id)
+        invoice = db.session.get(Invoice, invoice_id)
         if not invoice:
             return {'success': False, 'error': 'Invoice not found'}
         

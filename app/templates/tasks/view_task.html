@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }} - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .detail-card {
+    border: none; border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+  .detail-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; color: #6c757d; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-check2-square me-2"></i>{{ task.title }}</h1>
+        <p>Dettaglio task</p>
+      </div>
+      <a href="{{ url_for('tasks.index') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Torna ai Task</a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="detail-card card p-4 mb-4">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="badge bg-{{ 'success' if task.status == 'done' else 'primary' if task.status == 'in_progress' else 'warning' if task.status == 'review' else 'danger' if task.status == 'blocked' else 'secondary' }} fs-6">{{ task.status|replace('_',' ')|title }}</span>
+          {% if task.priority %}
+          <span class="badge bg-{{ 'danger' if task.priority == 'alta' else 'warning text-dark' if task.priority == 'media' else 'success' }} fs-6">{{ task.priority|title }}</span>
+          {% endif %}
+        </div>
+        <h5 class="detail-label">Descrizione</h5>
+        <p>{{ task.description or 'Nessuna descrizione fornita.' }}</p>
+
+        <div class="row g-3 mt-2">
+          <div class="col-sm-6">
+            <div class="detail-label">Data inizio</div>
+            <div>{{ task.start_date.strftime('%d/%m/%Y') if task.start_date else '—' }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="detail-label">Scadenza</div>
+            <div>{{ task.due_date.strftime('%d/%m/%Y') if task.due_date else '—' }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="detail-label">Ore stimate</div>
+            <div>{{ task.estimated_hours or '—' }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="detail-label">Tag</div>
+            <div>{{ task.tags or '—' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-card card p-4">
+        <h5 class="mb-3"><i class="bi bi-list-nested me-1"></i> Sotto-attività</h5>
+        <ul class="list-group list-group-flush">
+          {% for st in subtasks %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ st.title }}</span>
+            <span class="badge bg-{{ 'success' if st.status == 'done' else 'secondary' }}">{{ st.status|replace('_',' ')|title }}</span>
+          </li>
+          {% else %}
+          <li class="list-group-item text-muted">Nessuna sotto-attività.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="detail-card card p-4 mb-4">
+        <h6 class="detail-label mb-2">Progetto</h6>
+        {% if task.project %}
+        <a href="{{ url_for('tasks.view_project', project_id=task.project.id) }}" class="text-decoration-none">{{ task.project.name }}</a>
+        {% else %}
+        <span class="text-muted">Nessuno</span>
+        {% endif %}
+      </div>
+
+      <div class="detail-card card p-4 mb-4">
+        <h6 class="detail-label mb-2">Assegnato a</h6>
+        <span>{{ task.assignee.full_name or task.assignee.username if task.assignee else '—' }}</span>
+      </div>
+
+      <div class="detail-card card p-4">
+        <h6 class="detail-label mb-2"><i class="bi bi-eye me-1"></i> Osservatori</h6>
+        <ul class="list-unstyled mb-0">
+          {% for w in watchers %}
+          <li class="mb-1"><i class="bi bi-person"></i> {{ w.full_name or w.username }}</li>
+          {% else %}
+          <li class="text-muted">Nessun osservatore.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

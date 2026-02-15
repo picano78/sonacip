@@ -95,7 +95,7 @@ def get_scheduled_posts(user_id):
 
 def cancel_scheduled_post(post_id, user_id):
     """Cancel a scheduled post"""
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     
     if not post or post.user_id != user_id:
         return False
@@ -114,7 +114,7 @@ def cancel_scheduled_post(post_id, user_id):
 
 def reschedule_post(post_id, new_datetime, user_id):
     """Reschedule a post to a new time"""
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     
     if not post or post.user_id != user_id:
         return False

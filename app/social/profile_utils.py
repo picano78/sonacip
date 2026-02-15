@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def track_profile_view(profile_user_id, viewer_id=None, source='direct'):
     """Track a profile view for analytics"""
-    user = User.query.get(profile_user_id)
+    user = db.session.get(User, profile_user_id)
     if not user:
         return False
     
@@ -219,7 +219,7 @@ def request_verification(user_id, verification_type, documents, notes=''):
 
 def approve_verification(verification_id, reviewer_id, badge_type='blue_check', notes=''):
     """Approve a verification request"""
-    verification = ProfileVerification.query.get(verification_id)
+    verification = db.session.get(ProfileVerification, verification_id)
     if not verification:
         return {'success': False, 'error': 'Verification not found'}
     
@@ -240,7 +240,7 @@ def approve_verification(verification_id, reviewer_id, badge_type='blue_check', 
 
 def reject_verification(verification_id, reviewer_id, reason):
     """Reject a verification request"""
-    verification = ProfileVerification.query.get(verification_id)
+    verification = db.session.get(ProfileVerification, verification_id)
     if not verification:
         return {'success': False, 'error': 'Verification not found'}
     
@@ -273,7 +273,7 @@ def add_custom_field(user_id, field_name, field_value, field_type='text', catego
 
 def update_custom_field(field_id, **kwargs):
     """Update a custom profile field"""
-    field = CustomProfileField.query.get(field_id)
+    field = db.session.get(CustomProfileField, field_id)
     if not field:
         return None
     
@@ -287,7 +287,7 @@ def update_custom_field(field_id, **kwargs):
 
 def delete_custom_field(field_id, user_id):
     """Delete a custom profile field"""
-    field = CustomProfileField.query.get(field_id)
+    field = db.session.get(CustomProfileField, field_id)
     if not field or field.user_id != user_id:
         return False
     
@@ -298,7 +298,7 @@ def delete_custom_field(field_id, user_id):
 
 def export_profile_data(user_id):
     """Export user profile data (GDPR compliance)"""
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return None
     

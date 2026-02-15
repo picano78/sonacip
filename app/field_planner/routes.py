@@ -18,7 +18,7 @@ def _scope_id():
 
 def _event_scope_id(event_id: int):
     """Get society ID for a specific event"""
-    ev = FieldPlannerEvent.query.get(event_id)
+    ev = db.session.get(FieldPlannerEvent, event_id)
     return ev.society_id if ev else None
 
 
@@ -344,7 +344,7 @@ def create():
             flash('Evento inserito nel Planner Campo.', 'success')
 
         # Notify society members
-        facility = Facility.query.get(form.facility_id.data)
+        facility = db.session.get(Facility, form.facility_id.data)
         if facility:
             notify_planner_change(
                 society.id,
@@ -446,7 +446,7 @@ def edit(event_id):
         )
         
         # Notify society members
-        facility = Facility.query.get(form.facility_id.data)
+        facility = db.session.get(Facility, form.facility_id.data)
         if facility:
             notify_planner_change(
                 society.id,

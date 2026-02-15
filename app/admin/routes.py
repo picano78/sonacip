@@ -823,14 +823,14 @@ def promotion_tiers():
                     flash('Slug già esistente.', 'danger')
 
         elif action == 'toggle' and tier_id:
-            tier = PromotionTier.query.get(int(tier_id))
+            tier = db.session.get(PromotionTier, int(tier_id))
             if tier:
                 tier.is_active = not tier.is_active
                 db.session.commit()
                 flash(f'Piano {"attivato" if tier.is_active else "disattivato"}.', 'success')
 
         elif action == 'update' and tier_id:
-            tier = PromotionTier.query.get(int(tier_id))
+            tier = db.session.get(PromotionTier, int(tier_id))
             if tier:
                 tier.name = (request.form.get('name') or tier.name).strip()
                 tier.description = (request.form.get('description') or '').strip() or None
@@ -850,7 +850,7 @@ def promotion_tiers():
                 flash('Piano aggiornato.', 'success')
 
         elif action == 'delete' and tier_id:
-            tier = PromotionTier.query.get(int(tier_id))
+            tier = db.session.get(PromotionTier, int(tier_id))
             if tier:
                 db.session.delete(tier)
                 db.session.commit()
@@ -1565,7 +1565,7 @@ def ads_manager():
     # Create creative
     if request.method == 'POST' and request.form.get('_action') == 'create_creative':
         if creative_form.validate_on_submit():
-            camp = AdCampaign.query.get(int(creative_form.campaign_id.data))
+            camp = db.session.get(AdCampaign, int(creative_form.campaign_id.data))
             if not camp:
                 flash('Campaign ID non valido.', 'danger')
                 return redirect(url_for('admin.ads_manager'))
@@ -2166,7 +2166,7 @@ def export_society_detail(society_id):
     writer.writerow(['ID Utente', 'Nome', 'Email', 'Ruolo', 'Data Iscrizione'])
     members = SocietyMembership.query.filter_by(society_id=society_id).all()
     for m in members:
-        user = User.query.get(m.user_id)
+        user = db.session.get(User, m.user_id)
         if user:
             writer.writerow([
                 user.id, user.get_full_name(), user.email,
@@ -2253,7 +2253,7 @@ def email_confirmation_settings():
         elif action == 'confirm_user':
             user_id = request.form.get('user_id', type=int)
             if user_id:
-                user = User.query.get(user_id)
+                user = db.session.get(User, user_id)
                 if user:
                     user.email_confirmed = True
                     user.email_confirm_token = None
@@ -2328,8 +2328,8 @@ def chat_monitor():
 
     conversations = []
     for conv in conversations_raw:
-        user_a = User.query.get(conv.user_a)
-        user_b = User.query.get(conv.user_b)
+        user_a = db.session.get(User, conv.user_a)
+        user_b = db.session.get(User, conv.user_b)
         if user_a and user_b:
             conversations.append({
                 'user_a': user_a,

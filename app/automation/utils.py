@@ -238,7 +238,7 @@ def _action_email(action: Dict[str, Any], payload: Dict[str, Any]):
     body = _render_template(action.get('body') or json.dumps(payload), payload)
     if not to_user_id:
         return
-    user = User.query.get(to_user_id)
+    user = db.session.get(User, to_user_id)
     if not user or not user.email:
         return
     try:
@@ -255,7 +255,7 @@ def _action_social_post(action: Dict[str, Any], payload: Dict[str, Any]):
     content = _render_template(action.get('content') or f"Aggiornamento automatico: {payload}", payload)
     if not user_id:
         return
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return
     post = Post(user_id=user.id, content=content, is_public=True)

@@ -971,7 +971,7 @@ def create_app(config_name: str | None = None) -> Flask:
     def load_user(user_id):
         try:
             from app.models import User
-            return User.query.get(int(user_id))
+            return db.session.get(User, int(user_id))
         except Exception:
             return None
 
@@ -1026,6 +1026,14 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.core.bootstrap import discover_and_register_modules
     _register_blueprints(app)
     discover_and_register_modules(app, strict=False)
+
+    # Register automation builder blueprint
+    try:
+        from app.automation.builder import automation_builder
+        app.register_blueprint(automation_builder)
+    except Exception:
+        app.logger.debug("Automation builder blueprint not loaded (non-fatal)")
+
     # External drop-in plugins (filesystem-based)
     try:
         from app.core.plugins import load_external_plugins
@@ -1116,7 +1124,7 @@ def create_app(config_name: str | None = None) -> Flask:
                     society_scopes = list(uniq.values())
                     active_society_id = get_active_society_id(current_user)
                     if active_society_id:
-                        active_society = uniq.get(int(active_society_id)) or Society.query.get(int(active_society_id))
+                        active_society = uniq.get(int(active_society_id)) or db.session.get(Society, int(active_society_id))
             except Exception:
                 society_scopes = []
                 active_society = None

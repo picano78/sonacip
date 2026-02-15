@@ -197,7 +197,7 @@ def notify_event_change(event_id, title, message, include_creator=True):
     try:
         from app.models import Event, event_athletes
         
-        event = Event.query.get(event_id)
+        event = db.session.get(Event, event_id)
         if not event:
             return []
         

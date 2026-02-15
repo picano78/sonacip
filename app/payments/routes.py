@@ -133,7 +133,7 @@ def success():
     invoice = None
     
     if fp_id:
-        fp = FeePayment.query.get(fp_id)
+        fp = db.session.get(FeePayment, fp_id)
         if fp and fp.user_id == current_user.id and fp.status == 'pending':
             fp.status = 'completed'
             fp.paid_at = datetime.now(timezone.utc)
@@ -183,7 +183,7 @@ def webhook():
         fp_id = meta.get('fee_payment_id')
         fee_id = meta.get('fee_id')
         if fp_id:
-            fp = FeePayment.query.get(int(fp_id))
+            fp = db.session.get(FeePayment, int(fp_id))
             if fp and fp.status == 'pending':
                 fp.status = 'completed'
                 fp.paid_at = datetime.now(timezone.utc)
@@ -408,7 +408,7 @@ def bulk_approve():
     
     for payment_id in payment_ids:
         try:
-            payment = FeePayment.query.get(int(payment_id))
+            payment = db.session.get(FeePayment, int(payment_id))
             if payment and payment.status == 'pending':
                 payment.status = 'completed'
                 payment.paid_at = datetime.now(timezone.utc)

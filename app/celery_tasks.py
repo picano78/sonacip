@@ -58,7 +58,7 @@ def send_confirmation_email_async(self, user_id):
         from app.models import User
         from app.auth.email_confirm import send_confirmation_email
         
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             raise Exception(f"User {user_id} not found")
         

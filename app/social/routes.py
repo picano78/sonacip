@@ -1212,7 +1212,7 @@ def society_export_data():
     writer.writerow(['ID', 'Nome', 'Email', 'Telefono', 'Ruolo Membro', 'Data Iscrizione'])
     members = SocietyMembership.query.filter_by(society_id=society.id, status='active').all()
     for m in members:
-        user = User.query.get(m.user_id)
+        user = db.session.get(User, m.user_id)
         if user:
             writer.writerow([
                 user.id, user.get_full_name(), user.email,
@@ -2042,9 +2042,9 @@ def connections_list(user_id):
     connected_users = []
     for conn in connections:
         if conn.requester_id == user.id:
-            connected_user = User.query.get(conn.addressee_id)
+            connected_user = db.session.get(User, conn.addressee_id)
         else:
-            connected_user = User.query.get(conn.requester_id)
+            connected_user = db.session.get(User, conn.requester_id)
         if connected_user and not (connected_user.is_admin() and not current_user.is_admin()):
             connected_users.append(connected_user)
     
@@ -2134,7 +2134,7 @@ def society_broadcast_compose():
         for m in memberships:
             if m.user_id == current_user.id:
                 continue
-            user = User.query.get(m.user_id)
+            user = db.session.get(User, m.user_id)
             if not user or not user.is_active or user.is_banned:
                 continue
             msg = Message(

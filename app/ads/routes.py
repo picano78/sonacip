@@ -19,7 +19,7 @@ def impression(token: str):
     data = parse_token(token)
     if not data:
         return ("", 204)
-    creative = AdCreative.query.get(data.get("creative_id"))
+    creative = db.session.get(AdCreative, data.get("creative_id"))
     if not creative or not creative.campaign:
         return ("", 204)
     try:
@@ -41,7 +41,7 @@ def click(token: str):
     data = parse_token(token)
     if not data:
         abort(404)
-    creative = AdCreative.query.get(data.get("creative_id"))
+    creative = db.session.get(AdCreative, data.get("creative_id"))
     if not creative or not creative.campaign:
         abort(404)
     try:

@@ -412,7 +412,8 @@ def safe_get_or_404(model, entity_id, error_message=None):
     """
     Safely get an entity or return 404
     """
-    entity = model.query.get(entity_id)
+    from app import db
+    entity = db.session.get(model, entity_id)
     if not entity:
         if error_message:
             flash(error_message, 'warning')

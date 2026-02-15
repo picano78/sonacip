@@ -83,8 +83,8 @@ def check_environment():
     # Placeholders that should be changed in production
     invalid_placeholders = {
         'SECRET_KEY': ['CHANGEME_GENERATE_WITH_PYTHON_SECRETS', 'your-secret-key-here', ''],
-        'SUPERADMIN_EMAIL': ['Picano78@gmail.com', ''],  # Only the default example email
-        'SUPERADMIN_PASSWORD': ['Simone78', ''],  # Only the default example password
+        'SUPERADMIN_EMAIL': ['Picano78@gmail.com'],  # Only the old hardcoded example email
+        'SUPERADMIN_PASSWORD': ['Simone78'],  # Only the old hardcoded example password
     }
     
     errors = []

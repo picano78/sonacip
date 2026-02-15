@@ -49,9 +49,10 @@ def test_config_loads_from_environment():
         import importlib
         import sys
         
-        # Remove the module from cache to force reload
-        if 'app.core.config' in sys.modules:
-            del sys.modules['app.core.config']
+        # Remove all app modules from cache to force complete reload
+        modules_to_delete = [m for m in sys.modules if m.startswith('app')]
+        for m in modules_to_delete:
+            del sys.modules[m]
         
         from app.core import config
         
@@ -74,9 +75,10 @@ def test_production_mode_requires_credentials():
         import importlib
         import sys
         
-        # Remove the module from cache to force reload
-        if 'app.core.config' in sys.modules:
-            del sys.modules['app.core.config']
+        # Remove all app modules from cache to force complete reload
+        modules_to_delete = [m for m in sys.modules if m.startswith('app')]
+        for m in modules_to_delete:
+            del sys.modules[m]
         
         # Should raise RuntimeError with message about missing credentials
         with pytest.raises(RuntimeError) as exc_info:
@@ -99,9 +101,10 @@ def test_development_mode_allows_missing_credentials():
         import importlib
         import sys
         
-        # Remove the module from cache to force reload
-        if 'app.core.config' in sys.modules:
-            del sys.modules['app.core.config']
+        # Remove all app modules from cache to force complete reload
+        modules_to_delete = [m for m in sys.modules if m.startswith('app')]
+        for m in modules_to_delete:
+            del sys.modules[m]
         
         from app.core import config
         

@@ -14,8 +14,8 @@ def pytest_configure(config):
     Note: Some tests explicitly test environment variable behavior and will
     override these defaults using mock.patch.dict.
     """
-    # Set default test credentials only if not in a test that explicitly
-    # tests environment variable handling
+    # Set default test credentials for tests that need them
+    # Use test-specific values that are clearly not production credentials
     # Only set if not already set (allows tests to override)
-    os.environ.setdefault('SUPERADMIN_EMAIL', 'Picano78@gmail.com')
-    os.environ.setdefault('SUPERADMIN_PASSWORD', 'Simone78')
+    os.environ.setdefault('SUPERADMIN_EMAIL', 'test@example.com')
+    os.environ.setdefault('SUPERADMIN_PASSWORD', 'TestPassword123!')

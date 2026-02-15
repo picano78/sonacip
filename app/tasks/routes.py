@@ -2,6 +2,8 @@
 Tasks and Project Management Routes
 Advanced planning with Kanban, Gantt, Calendar views
 """
+import json
+import logging
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
@@ -10,7 +12,8 @@ from app.utils import permission_required, check_permission
 from app.models import Event
 from app.automation.utils import execute_automations, execute_rules
 from datetime import datetime, timedelta, timezone
-import json
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('tasks', __name__, url_prefix='/tasks')
 
@@ -416,8 +419,6 @@ def can_edit_task(user, task):
 
 def is_team_member(user_id, team_members_json):
     """Check if user is in team"""
-    import logging
-    logger = logging.getLogger(__name__)
     
     if not team_members_json:
         return False

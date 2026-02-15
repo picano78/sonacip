@@ -1,11 +1,14 @@
 """
 CRM Analytics and Lead Scoring Utilities
 """
+import json
+import logging
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, desc, and_, or_
 from app import db
 from app.models import Contact, Opportunity, CRMActivity, LeadScoringRule, ContactSegment
-import json
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_lead_score(contact):
@@ -67,16 +70,12 @@ def evaluate_scoring_rule(contact, rule):
         try:
             return float(attribute_value) > float(rule_value)
         except (ValueError, TypeError) as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.debug(f"Cannot compare values as numbers: {e}")
             return False
     elif rule.operator == 'less_than':
         try:
             return float(attribute_value) < float(rule_value)
         except (ValueError, TypeError) as e:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.debug(f"Cannot compare values as numbers: {e}")
             return False
     elif rule.operator == 'not_equals':
@@ -148,7 +147,7 @@ def get_pipeline_forecast(society_id, period_months=3):
         # Parse probability
         try:
             prob = float(opp.probability) / 100 if opp.probability else 0.5
-        except (ValueError, TypeError, ZeroDivisionError) as e:
+        except (ValueError, TypeError) as e:
             import logging
             logger = logging.getLogger(__name__)
             logger.warning(f"Invalid opportunity probability '{opp.probability}': {e}")
@@ -216,8 +215,6 @@ def segment_contacts(segment):
     """
     Get contacts matching a segment's criteria
     """
-    import logging
-    logger = logging.getLogger(__name__)
     
     try:
         criteria = json.loads(segment.criteria)

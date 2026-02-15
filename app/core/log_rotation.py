@@ -52,7 +52,6 @@ class LogRotator:
         log_file.write_text('')
         
         logger.info(f"Log rotated: {log_file} -> {backup_name}")
-        print(f"✅ Log rotated: {log_file} -> {backup_name}")
         
         # Pulisci vecchi backup
         self.cleanup_old_backups(log_file.stem)
@@ -66,7 +65,6 @@ class LogRotator:
         for backup in backups[self.backup_count:]:
             backup.unlink()
             logger.info(f"Removed old backup: {backup.name}")
-            print(f"🗑️  Removed old backup: {backup.name}")
     
     def rotate_all(self):
         """Ruota tutti i file di log nella directory"""
@@ -81,7 +79,6 @@ class LogRotator:
             if datetime.fromtimestamp(gz_file.stat().st_mtime) < cutoff:
                 gz_file.unlink()
                 logger.info(f"Removed old log: {gz_file.name}")
-                print(f"🗑️  Removed old log: {gz_file.name}")
 
 # Comando CLI per la rotazione manuale
 if __name__ == '__main__':

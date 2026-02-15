@@ -2,10 +2,13 @@
 Post Scheduling Utilities
 Handle scheduled posts and publishing
 """
+import logging
 from datetime import datetime, timezone
 from app import db
 from app.models import Post
 from app.notifications.utils import create_notification
+
+logger = logging.getLogger(__name__)
 
 
 def schedule_post(user_id, content, scheduled_for, **kwargs):
@@ -72,8 +75,6 @@ def publish_scheduled_posts():
             
         except Exception as e:
             # Log error but continue with other posts
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Error publishing post {post.id}: {str(e)}", exc_info=True)
             continue
     

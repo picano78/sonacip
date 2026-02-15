@@ -89,7 +89,7 @@ GRANT ALL PRIVILEGES ON DATABASE sonacip TO sonacip;
 scp -r ./* tuouser@tuovps:/opt/sonacip/
 
 # Oppure con git
-sudo -u sonacip git clone <tuo-repo> /opt/sonacip
+sudo -u sonacip git clone https://github.com/picano78/sonacip.git /opt/sonacip
 ```
 
 ## 5. Configura l'Ambiente

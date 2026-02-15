@@ -1,5 +1,8 @@
 # 🏆 SONACIP - Piattaforma SaaS per Gestione Sportiva
 
+🇮🇹 **[Leggi questa guida in Italiano](README_IT.md)** | 🔐 **[Come accedere come Super Admin](ACCESSO_SUPER_ADMIN.md)**
+
+
 ⚠️ ENTRYPOINT DI PRODUZIONE: `wsgi:app`. `run.py` è mantenuto solo come alias legacy (compatibilità), ma non è l’entrypoint raccomandato.
 
 Sistema completo di gestione per società sportive, staff, atleti e appassionati.
@@ -51,30 +54,45 @@ gunicorn wsgi:app
 
 ## 🔑 Credenziali Super Admin
 
-📖 **Per informazioni complete sulle credenziali del Super Admin, consulta:** 
-- [FAQ_CREDENZIALI_ADMIN.md](FAQ_CREDENZIALI_ADMIN.md)
+🇮🇹 **[Guida completa in italiano: Come accedere come Super Admin](ACCESSO_SUPER_ADMIN.md)**
+
+📖 **Documentazione completa:** 
+- [ACCESSO_SUPER_ADMIN.md](ACCESSO_SUPER_ADMIN.md) - **Guida rapida in italiano**
+- [FAQ_CREDENZIALI_ADMIN.md](FAQ_CREDENZIALI_ADMIN.md) - FAQ complete
 - [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) - Guida di migrazione per deployment esistenti
 
-⚠️ **IMPORTANTE**: Le credenziali hardcoded sono state rimosse per sicurezza!
+### ⚡ Avvio Rapido (Sviluppo)
 
-### Configurazione Obbligatoria
+**Credenziali predefinite per sviluppo locale:**
+- **Email**: `Picano78@gmail.com`
+- **Password**: `Simone78`
 
-Le credenziali del Super Admin **devono** essere configurate tramite variabili d'ambiente:
+**Setup in 3 comandi:**
+```bash
+# 1. Copia le credenziali predefinite
+cp .env.example .env
 
-1. Copia il file di esempio:
+# 2. Inizializza il database
+python3 init_db.py
+
+# 3. Avvia l'applicazione
+python3 run.py
+```
+
+Poi accedi su: **http://localhost:5000/auth/login**
+
+⚠️ **IMPORTANTE**: Le credenziali predefinite sono **SOLO per sviluppo**. In produzione, modifica il file `.env` con credenziali sicure prima di eseguire `init_db.py`.
+
+### Configurazione Produzione
+
+Per ambienti di produzione, modifica il file `.env` **PRIMA** di inizializzare il database:
    ```bash
-   cp .env.example .env
-   ```
-
-2. Modifica il file `.env` e imposta credenziali sicure:
-   ```bash
-   # Per sviluppo locale
-   SUPERADMIN_EMAIL=admin@localhost
-   SUPERADMIN_PASSWORD=DevPassword123!
-   
-   # Per produzione (usa credenziali FORTI e UNICHE!)
+   # Modifica .env con credenziali FORTI e UNICHE
    SUPERADMIN_EMAIL=admin@tuodominio.it
    SUPERADMIN_PASSWORD=Una!Password1Molto2Sicura3E4Lunga
+   
+   # Poi inizializza
+   python3 init_db.py
    ```
 
 3. Avvia l'applicazione:

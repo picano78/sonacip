@@ -5,6 +5,10 @@ from __future__ import annotations
 import os
 from sqlalchemy import text, inspect
 
+# Load .env file FIRST before any app imports to ensure credentials are available
+from dotenv import load_dotenv
+load_dotenv()
+
 # Prevent auto-seed during init_db to avoid conflicts with migrations
 os.environ['SKIP_AUTO_SEED'] = '1'
 

@@ -94,15 +94,15 @@ class TestAdvancedSecurity:
     
     def test_rate_limiting(self, client):
         """Test rate limiting"""
-        # Simula brute force attack
+        # Simulate brute force attack
         for i in range(10):
             response = client.post('/auth/login', data={
                 'identifier': 'test@example.com',
                 'password': 'wrong_password'
             })
         
-        # Dopo molti tentativi dovrebbe essere bloccato o redirect per CSRF
-        # 200/302 = normale, 429 = rate limited
+        # After many attempts should be blocked or redirected for CSRF
+        # 200/302 = normal, 429 = rate limited
         assert response.status_code in [200, 302, 429]
     
     def test_path_traversal_protection(self, client):

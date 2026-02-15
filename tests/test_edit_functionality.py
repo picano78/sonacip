@@ -32,13 +32,19 @@ def client(app):
 def auth_user(app):
     """Create an authenticated user with a society"""
     with app.app_context():
+        # Create a role first
+        from app.models import Role
+        role = Role(name='societa', display_name='Società', level=40)
+        db.session.add(role)
+        db.session.flush()
+        
         # Create a user first (Society.id is a foreign key to User.id)
         user = User(
             email='test@example.com',
             username='testuser',
             first_name='Test',
             last_name='User',
-            role='societa'  # Society role
+            role_id=role.id  # Use role_id FK
         )
         user.set_password('password123')
         db.session.add(user)

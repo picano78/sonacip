@@ -16,14 +16,19 @@ import json
 @pytest.fixture
 def app():
     """Create and configure test app"""
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app = create_app('testing')
     
     with app.app_context():
         db.create_all()
+        # Seed roles for tests
+        from app.core.seed import seed_defaults
+        seed_defaults(app)
         yield app
-        db.drop_all()
+        # Close session before dropping
+        db.session.close()
+        db.session.remove()
+        # Dispose of the engine to close all connections
+        db.engine.dispose()
 
 
 @pytest.fixture
@@ -94,20 +99,26 @@ def test_memoize_request(app):
 def test_search_users(app):
     """Test user search"""
     with app.app_context():
+        # Get default role
+        from app.models import Role
+        user_role = Role.query.filter_by(name='user').first()
+        
         # Create test users
         user1 = User(
             username='john_doe',
             email='john@example.com',
             first_name='John',
             last_name='Doe',
-            password_hash='hash'
+            password_hash='hash',
+            role_obj=user_role
         )
         user2 = User(
             username='jane_smith',
             email='jane@example.com',
             first_name='Jane',
             last_name='Smith',
-            password_hash='hash'
+            password_hash='hash',
+            role_obj=user_role
         )
         db.session.add_all([user1, user2])
         db.session.commit()
@@ -193,12 +204,17 @@ def test_automation_rule_validation(app):
 def test_automation_event_types(app, client):
     """Test automation event types API"""
     with app.app_context():
+        # Get default role
+        from app.models import Role
+        admin_role = Role.query.filter_by(name='admin').first()
+        
         # Create a test user and login
         user = User(
             username='admin',
             email='admin@example.com',
             password_hash='hash',
-            is_active=True
+            is_active=True,
+            role_obj=admin_role
         )
         db.session.add(user)
         db.session.commit()
@@ -216,13 +232,18 @@ def test_query_performance(app):
     with app.app_context():
         import time
         
+        # Get default role
+        from app.models import Role
+        user_role = Role.query.filter_by(name='user').first()
+        
         # Create test data
         users = []
         for i in range(100):
             user = User(
                 username=f'user{i}',
                 email=f'user{i}@example.com',
-                password_hash='hash'
+                password_hash='hash',
+                role_obj=user_role
             )
             users.append(user)
         db.session.add_all(users)
@@ -242,11 +263,16 @@ def test_query_performance(app):
 def test_notification_creation_triggers_automation(app):
     """Test that notification creation can trigger automation"""
     with app.app_context():
+        # Get default role
+        from app.models import Role
+        user_role = Role.query.filter_by(name='user').first()
+        
         # Create user
         user = User(
             username='testuser',
             email='test@example.com',
-            password_hash='hash'
+            password_hash='hash',
+            role_obj=user_role
         )
         db.session.add(user)
         db.session.commit()

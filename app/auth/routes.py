@@ -163,7 +163,7 @@ def reset_password(token: str):
 
     if valid:
         try:
-            user = User.query.get(int(user_id))
+            user = db.session.get(User, int(user_id))
         except Exception:
             current_app.logger.exception("User load failed during reset")
             flash("Servizio temporaneamente non disponibile. Riprova tra qualche istante.", "danger")
@@ -853,7 +853,7 @@ def email_confirm_pending(user_id):
         flash('Effettua il login per continuare.', 'info')
         return redirect(url_for('auth.login'))
     try:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
     except Exception:
         db.session.rollback()
         flash('Effettua il login per continuare.', 'info')
@@ -877,7 +877,7 @@ def resend_confirmation(user_id):
         flash('Sessione scaduta. Effettua il login.', 'warning')
         return redirect(url_for('auth.login'))
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or user.email_confirmed:
         flash('Operazione non valida.', 'info')
         return redirect(url_for('auth.login'))

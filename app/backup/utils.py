@@ -183,7 +183,7 @@ def restore_backup(backup_id):
     Returns: (success: bool, message: str)
     """
     try:
-        backup = BackupModel.query.get(backup_id)
+        backup = db.session.get(BackupModel, backup_id)
         if not backup:
             return False, 'Backup non trovato'
         
@@ -268,7 +268,7 @@ def validate_backup(backup_id):
     Returns: (is_valid: bool, message: str)
     """
     try:
-        backup = BackupModel.query.get(backup_id)
+        backup = db.session.get(BackupModel, backup_id)
         if not backup:
             return False, 'Backup non trovato'
         
@@ -309,7 +309,7 @@ def delete_backup(backup_id):
     Returns: (success: bool, message: str)
     """
     try:
-        backup = BackupModel.query.get(backup_id)
+        backup = db.session.get(BackupModel, backup_id)
         if not backup:
             return False, 'Backup non trovato'
         

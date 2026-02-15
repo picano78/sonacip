@@ -467,7 +467,7 @@ def export_pdf():
     society_name = "Tutti i Documenti"
     if society_id:
         from app.models import Society
-        society = Society.query.get(society_id)
+        society = db.session.get(Society, society_id)
         if society:
             society_name = society.legal_name
         else:

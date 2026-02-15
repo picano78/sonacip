@@ -321,7 +321,7 @@ def handle_stripe_event(event: Any) -> None:
             user_id = int(meta.get("user_id")) if str(meta.get("user_id") or "").strip() else None
             society_id = int(meta.get("society_id")) if str(meta.get("society_id") or "").strip() else None
 
-            addon = AddOn.query.get(addon_id)
+            addon = db.session.get(AddOn, addon_id)
             if not addon:
                 return
             if user_id is None:
@@ -352,7 +352,7 @@ def handle_stripe_event(event: Any) -> None:
         if mode == "payment" and session_obj.get("metadata", {}).get("marketplace_purchase_id"):
             meta = session_obj.get("metadata") or {}
             purchase_id = int(meta.get("marketplace_purchase_id"))
-            purchase = MarketplacePurchase.query.get(purchase_id)
+            purchase = db.session.get(MarketplacePurchase, purchase_id)
             if not purchase:
                 return
             if purchase.status == "completed":
@@ -378,7 +378,7 @@ def handle_stripe_event(event: Any) -> None:
         if mode == "payment" and session_obj.get("metadata", {}).get("fee_id"):
             meta = session_obj.get("metadata") or {}
             fee_id = int(meta.get("fee_id"))
-            fee = SocietyFee.query.get(fee_id)
+            fee = db.session.get(SocietyFee, fee_id)
             if not fee:
                 return
             if fee.status == "paid":
@@ -420,7 +420,7 @@ def handle_stripe_event(event: Any) -> None:
             meta = session_obj.get("metadata") or {}
             promo_id = int(meta.get("listing_promotion_id"))
             user_id = int(meta.get("user_id")) if str(meta.get("user_id") or "").strip() else None
-            promo = ListingPromotion.query.get(promo_id)
+            promo = db.session.get(ListingPromotion, promo_id)
             if not promo:
                 return
             if promo.status == 'active':
@@ -436,7 +436,7 @@ def handle_stripe_event(event: Any) -> None:
         if mode == "payment" and session_obj.get("metadata", {}).get("ad_campaign_id"):
             meta = session_obj.get("metadata") or {}
             camp_id = int(meta.get("ad_campaign_id"))
-            camp = AdCampaign.query.get(camp_id)
+            camp = db.session.get(AdCampaign, camp_id)
             if not camp:
                 return
             p = _upsert_payment_from_checkout_session(
@@ -457,7 +457,7 @@ def handle_stripe_event(event: Any) -> None:
         client_ref = session_obj.get("client_reference_id")
         if not client_ref:
             return
-        local_sub = Subscription.query.get(int(client_ref))
+        local_sub = db.session.get(Subscription, int(client_ref))
         if not local_sub:
             return
         # pull subscription from Stripe to get customer + period_end

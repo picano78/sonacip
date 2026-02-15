@@ -86,7 +86,7 @@ def _recent_duplicate_post(user_id: int, post_type: str, content: str, minutes: 
 
 def _winner_of(match: TournamentMatch) -> TournamentTeam | None:
     if match and match.winner_team_id:
-        return TournamentTeam.query.get(match.winner_team_id)
+        return db.session.get(TournamentTeam, match.winner_team_id)
     return None
 
 
@@ -712,8 +712,8 @@ def generate_schedule(tournament_id):
             created += 1
             try:
                 # Link calendar event (society tournaments)
-                match.home_team = TournamentTeam.query.get(a)
-                match.away_team = TournamentTeam.query.get(b)
+                match.home_team = db.session.get(TournamentTeam, a)
+                match.away_team = db.session.get(TournamentTeam, b)
                 _create_calendar_event_for_match(tournament, match)
             except Exception:
                 pass

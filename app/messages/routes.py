@@ -32,7 +32,7 @@ def get_conversations():
         other_id = msg.recipient_id if msg.sender_id == current_user.id else msg.sender_id
         if other_id not in user_ids_seen:
             user_ids_seen.add(other_id)
-            other_user = User.query.get(other_id)
+            other_user = db.session.get(User, other_id)
             if other_user:
                 unread_count = Message.query.filter(
                     Message.sender_id == other_id,
@@ -210,7 +210,7 @@ def compose():
     to_user_id = request.args.get('to', type=int)
     if to_user_id:
         # Redirect to chat with specific user
-        recipient = User.query.get(to_user_id)
+        recipient = db.session.get(User, to_user_id)
         if recipient:
             return redirect(url_for('messages.chat', user_id=to_user_id))
         flash('Utente non trovato.', 'warning')
@@ -319,7 +319,7 @@ def upload_attachment():
     if not message_id:
         return jsonify({'error': 'Message ID required'}), 400
     
-    message = Message.query.get(message_id)
+    message = db.session.get(Message, message_id)
     if not message or (message.sender_id != current_user.id and message.recipient_id != current_user.id):
         return jsonify({'error': 'Unauthorized'}), 403
     
@@ -634,7 +634,7 @@ def add_group_members(group_id):
                 db.session.add(new_member)
                 
                 # Create system message
-                user = User.query.get(int(user_id))
+                user = db.session.get(User, int(user_id))
                 if user:
                     system_msg = MessageGroupMessage(
                         group_id=group.id,
@@ -765,7 +765,7 @@ def remove_group_member(group_id, user_id):
     membership.left_at = datetime.now(timezone.utc)
     
     # Create system message
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if user:
         system_msg = MessageGroupMessage(
             group_id=group.id,

@@ -114,7 +114,7 @@ def _get_user_stats(user_id):
         pass
     try:
         from app.models import User
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if user:
             stats['connections'] = user.followed.count()
     except Exception:

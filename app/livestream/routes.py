@@ -182,7 +182,7 @@ def leave_stream(stream_id):
         viewer.left_at = datetime.now(timezone.utc)
         
         # Update viewer count
-        stream = LiveStream.query.get(stream_id)
+        stream = db.session.get(LiveStream, stream_id)
         if stream:
             active_count = LiveStreamViewer.query.filter_by(
                 stream_id=stream_id,

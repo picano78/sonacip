@@ -26,7 +26,7 @@ def _scope_id():
     return get_active_society_id(current_user)
 
 def _event_scope_id(event_id: int):
-    ev = SocietyCalendarEvent.query.get(event_id)
+    ev = db.session.get(SocietyCalendarEvent, event_id)
     return ev.society_id if ev else None
 
 

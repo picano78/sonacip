@@ -89,7 +89,7 @@ def index():
             .all()
         )
         for user_id, cnt in top_q:
-            u = User.query.get(user_id)
+            u = db.session.get(User, user_id)
             if u:
                 top_athletes.append({'user': u, 'count': cnt})
 

@@ -31,7 +31,7 @@ if SOCKETIO_AVAILABLE and socketio:
             if not stream_id:
                 return {'error': 'Stream ID required'}
             
-            stream = LiveStream.query.get(stream_id)
+            stream = db.session.get(LiveStream, stream_id)
             if not stream or not stream.is_active:
                 return {'error': 'Stream not found or inactive'}
             
@@ -102,7 +102,7 @@ if SOCKETIO_AVAILABLE and socketio:
                     viewer.left_at = datetime.now(timezone.utc)
                     
                     # Update viewer count
-                    stream = LiveStream.query.get(stream_id)
+                    stream = db.session.get(LiveStream, stream_id)
                     if stream:
                         active_count = LiveStreamViewer.query.filter_by(
                             stream_id=stream_id,
@@ -212,7 +212,7 @@ if SOCKETIO_AVAILABLE and socketio:
             if len(message) > 500:
                 return {'error': 'Message too long'}
             
-            stream = LiveStream.query.get(stream_id)
+            stream = db.session.get(LiveStream, stream_id)
             if not stream or not stream.is_active:
                 return {'error': 'Stream not found or inactive'}
             
@@ -242,7 +242,7 @@ if SOCKETIO_AVAILABLE and socketio:
             if not stream_id or not quality:
                 return {'error': 'Invalid data'}
             
-            stream = LiveStream.query.get(stream_id)
+            stream = db.session.get(LiveStream, stream_id)
             if not stream or stream.user_id != current_user.id:
                 return {'error': 'Unauthorized'}
             
@@ -268,7 +268,7 @@ if SOCKETIO_AVAILABLE and socketio:
             if not stream_id:
                 return {'error': 'Stream ID required'}
             
-            stream = LiveStream.query.get(stream_id)
+            stream = db.session.get(LiveStream, stream_id)
             if not stream or stream.user_id != current_user.id:
                 return {'error': 'Unauthorized'}
             

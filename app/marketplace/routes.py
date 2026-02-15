@@ -430,7 +430,7 @@ def promotion_success(promotion_id):
 
 def _activate_promotion(promotion):
     now = datetime.now(timezone.utc)
-    tier = PromotionTier.query.get(promotion.tier_id)
+    tier = db.session.get(PromotionTier, promotion.tier_id)
     duration = tier.duration_days if tier else 7
 
     promotion.status = 'active'
@@ -453,7 +453,7 @@ def _activate_promotion(promotion):
         db.session.flush()
         promotion.payment_id = payment.id
 
-    listing = MarketplaceListing.query.get(promotion.listing_id)
+    listing = db.session.get(MarketplaceListing, promotion.listing_id)
     if listing:
         listing.is_promoted = True
         listing.promotion_expires_at = promotion.ends_at

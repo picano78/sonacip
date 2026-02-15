@@ -1,6 +1,6 @@
 # 🏆 SONACIP - Piattaforma SaaS per Gestione Sportiva
 
-🇮🇹 **[Leggi questa guida in Italiano](README_IT.md)** | 🔐 **[Come accedere come Super Admin](ACCESSO_SUPER_ADMIN.md)**
+🇮🇹 **[Leggi questa guida in Italiano](README_IT.md)** | 🔐 **[Come accedere come Super Admin](ACCESSO_SUPER_ADMIN.md)** | ⚙️ **[Guida Configurazione Ambiente](ENV_CONFIGURATION_GUIDE.md)**
 
 
 ⚠️ ENTRYPOINT DI PRODUZIONE: `wsgi:app`. `run.py` è mantenuto solo come alias legacy (compatibilità), ma non è l’entrypoint raccomandato.
@@ -57,9 +57,24 @@ gunicorn wsgi:app
 🇮🇹 **[Guida completa in italiano: Come accedere come Super Admin](ACCESSO_SUPER_ADMIN.md)**
 
 📖 **Documentazione completa:** 
-- [ACCESSO_SUPER_ADMIN.md](ACCESSO_SUPER_ADMIN.md) - **Guida rapida in italiano**
+- [ENV_CONFIGURATION_GUIDE.md](ENV_CONFIGURATION_GUIDE.md) - **Guida configurazione ambiente**
+- [ACCESSO_SUPER_ADMIN.md](ACCESSO_SUPER_ADMIN.md) - Guida rapida in italiano
 - [FAQ_CREDENZIALI_ADMIN.md](FAQ_CREDENZIALI_ADMIN.md) - FAQ complete
 - [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) - Guida di migrazione per deployment esistenti
+
+### ⚡ Controllo Configurazione
+
+Prima di avviare SONACIP, verifica che tutte le variabili d'ambiente siano configurate correttamente:
+
+```bash
+python3 check_env.py
+```
+
+Questo script:
+- ✓ Crea automaticamente `.env` da `.env.example` se mancante
+- ✓ Verifica che tutte le variabili richieste siano impostate
+- ✓ Identifica valori placeholder che devono essere modificati
+- ✓ Fornisce istruzioni chiare su come risolvere i problemi
 
 ### ⚡ Avvio Rapido (Sviluppo)
 
@@ -85,15 +100,29 @@ Poi accedi su: **http://localhost:5000/auth/login**
 
 ### Configurazione Produzione
 
-Per ambienti di produzione, modifica il file `.env` **PRIMA** di inizializzare il database:
-   ```bash
-   # Modifica .env con credenziali FORTI e UNICHE
-   SUPERADMIN_EMAIL=admin@tuodominio.it
-   SUPERADMIN_PASSWORD=Una!Password1Molto2Sicura3E4Lunga
-   
-   # Poi inizializza
-   python3 init_db.py
-   ```
+⚠️ **IMPORTANTE**: Prima di inizializzare il database in produzione, verifica la configurazione:
+
+```bash
+# 1. Controlla la configurazione ambiente
+python3 check_env.py
+
+# 2. Se necessario, modifica .env con credenziali FORTI e UNICHE
+nano .env
+
+# Esempio configurazione produzione:
+# APP_ENV=production
+# SECRET_KEY=<genera con: python3 -c "import secrets; print(secrets.token_hex(32))">
+# SUPERADMIN_EMAIL=admin@tuodominio.it
+# SUPERADMIN_PASSWORD=Una!Password1Molto2Sicura3E4Lunga
+
+# 3. Verifica nuovamente
+python3 check_env.py
+
+# 4. Se tutto è OK, inizializza il database
+python3 init_db.py
+```
+
+Per maggiori dettagli, vedi la **[Guida Configurazione Ambiente](ENV_CONFIGURATION_GUIDE.md)**.
 
 3. Avvia l'applicazione:
    ```bash

@@ -2,6 +2,8 @@
 
 Benvenuto in **SONACIP**, la piattaforma completa per la gestione sportiva.
 
+📖 **[Guida Configurazione Ambiente](ENV_CONFIGURATION_GUIDE.md)** - Come configurare le variabili d'ambiente
+
 ## 🚀 Installazione e Primo Avvio
 
 ### 1. Installazione Dipendenze
@@ -9,11 +11,23 @@ Benvenuto in **SONACIP**, la piattaforma completa per la gestione sportiva.
 pip3 install -r requirements.txt
 ```
 
-### 2. Configurazione
+### 2. Configurazione e Verifica
+
+⚠️ **IMPORTANTE**: Prima di inizializzare il database, verifica la configurazione ambiente:
+
 ```bash
-# Copia il file di configurazione con credenziali predefinite
-cp .env.example .env
+# Controlla la configurazione (crea .env se mancante)
+python3 check_env.py
+
+# Se necessario, modifica .env con le tue credenziali
+nano .env
 ```
+
+Lo script `check_env.py`:
+- ✓ Crea automaticamente `.env` da `.env.example` se mancante
+- ✓ Verifica che tutte le variabili richieste siano impostate
+- ✓ Identifica valori placeholder che devono essere modificati
+- ✓ Fornisce istruzioni chiare su come risolvere i problemi
 
 ### 3. Inizializzazione Database
 ```bash

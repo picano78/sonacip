@@ -24,14 +24,22 @@ fi
 
 echo "✓ Dependencies installed"
 
+# Check environment variables
+echo ""
+echo "🔍 Checking environment configuration..."
+python3 check_env.py
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Environment check failed. Please fix the issues above before starting."
+    exit 1
+fi
+
 # Start server
 echo ""
 echo "🌟 Starting SONACIP server..."
 echo ""
 echo "📍 Access the application at: http://localhost"
-echo "👤 Default admin login:"
-echo "   Email: admin@example.com"
-echo "   Password: Admin123!"
 echo ""
 echo "Press CTRL+C to stop the server"
 echo ""

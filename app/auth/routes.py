@@ -479,6 +479,10 @@ def register():
         return redirect(url_for('social.feed'))
     
     form = RegistrationForm()
+    if request.method == "POST" and not request.form.get("password2"):
+        alt_confirm = request.form.get("confirm_password")
+        if alt_confirm:
+            form.password2.data = alt_confirm
     try:
         valid = form.validate_on_submit()
     except Exception:
@@ -620,8 +624,12 @@ def register_society():
     """Registration page for societies (CRM-style)."""
     if current_user.is_authenticated:
         return redirect(url_for('social.feed'))
-
+    
     form = SocietyRegistrationForm()
+    if request.method == "POST" and not request.form.get("password2"):
+        alt_confirm = request.form.get("confirm_password")
+        if alt_confirm:
+            form.password2.data = alt_confirm
     try:
         valid = form.validate_on_submit()
     except Exception:

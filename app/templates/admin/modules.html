@@ -60,6 +60,7 @@
                                     <div class="btn-group btn-group-sm" role="group">
                                         <!-- Toggle Enable/Disable -->
                                         <form method="POST" action="{{ url_for('admin.module_toggle', module_id=module.id) }}" style="display: inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn btn-sm {% if module.enabled %}btn-warning{% else %}btn-success{% endif %}" 
                                                     title="{% if module.enabled %}Disattiva{% else %}Attiva{% endif %}">
                                                 <i class="bi {% if module.enabled %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
@@ -77,6 +78,7 @@
                                         <form method="POST" action="{{ url_for('admin.module_delete', module_id=module.id) }}" 
                                               style="display: inline;"
                                               onsubmit="return confirm('Sei sicuro di voler eliminare questo modulo?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn btn-sm btn-danger" title="Elimina">
                                                 <i class="bi bi-trash"></i>
                                             </button>

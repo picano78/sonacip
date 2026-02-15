@@ -213,3 +213,14 @@ class SmtpSettingsForm(FlaskForm):
     test_recipient = StringField('Invia test a (email)', validators=[Optional(), Email(), Length(max=255)])
 
 
+class ModuleUploadForm(FlaskForm):
+    """Form for uploading system modules"""
+    name = StringField('Nome modulo', validators=[DataRequired(), Length(max=100)])
+    version = StringField('Versione', validators=[DataRequired(), Length(max=50)])
+    description = TextAreaField('Descrizione', validators=[Optional(), Length(max=1000)])
+    module_file = FileField('File ZIP modulo', validators=[
+        DataRequired(),
+        FileAllowed(['zip'], 'Solo file ZIP sono consentiti!')
+    ])
+
+

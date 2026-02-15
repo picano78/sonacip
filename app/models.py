@@ -4465,3 +4465,28 @@ class ContactMessage(db.Model):
 
     def __repr__(self):
         return f'<ContactMessage {self.id} from={self.email}>'
+
+
+class SystemModule(db.Model):
+    """
+    System module for managing updates and extensions uploaded by admin.
+    Allows for modular system updates with enable/disable functionality.
+    """
+    __tablename__ = 'system_module'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    version = db.Column(db.String(50), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)  # Original zip filename
+    description = db.Column(db.Text)
+    enabled = db.Column(db.Boolean, default=False, index=True)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=utc_now, index=True)
+    enabled_at = db.Column(db.DateTime)
+    disabled_at = db.Column(db.DateTime)
+    
+    # Relationships
+    uploader = db.relationship('User', backref='uploaded_modules')
+
+    def __repr__(self):
+        return f'<SystemModule {self.name} v{self.version} enabled={self.enabled}>'

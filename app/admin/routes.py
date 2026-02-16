@@ -2624,3 +2624,28 @@ def module_download(module_id):
         flash(f'Errore durante il download del modulo: {str(e)}', 'danger')
         return redirect(url_for('admin.modules'))
 
+
+@bp.route('/restart-site', methods=['POST'])
+@login_required
+@admin_required
+def restart_site():
+    """Restart the site by clearing caches and touching the WSGI file."""
+    try:
+        # Clear application cache
+        cache = get_cache()
+        cache.clear()
+
+        # Touch wsgi.py to trigger a reload when running under Gunicorn/uWSGI
+        wsgi_path = os.path.join(current_app.root_path, '..', 'wsgi.py')
+        wsgi_path = os.path.abspath(wsgi_path)
+        if os.path.exists(wsgi_path):
+            os.utime(wsgi_path, None)
+
+        log_action('restart_site', entity_type='system', details='Site restart triggered by super admin')
+        flash('Riavvio del sito eseguito con successo. Le cache sono state svuotate.', 'success')
+    except Exception as e:
+        current_app.logger.error(f'Error restarting site: {e}')
+        flash(f'Errore durante il riavvio del sito: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.dashboard'))
+

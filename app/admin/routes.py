@@ -4,6 +4,8 @@ Admin routes
 import csv
 import io
 import logging
+import os
+import signal
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +87,6 @@ from app.models import (
     LiveBanner,
 )
 from datetime import datetime, timedelta, timezone
-import os
 import json
 from app.utils import log_action
 
@@ -2759,5 +2760,46 @@ def live_banner_toggle(banner_id):
         flash(f'Errore durante la modifica dello stato: {str(e)}', 'danger')
     
     return redirect(url_for('admin.live_banners'))
+
+
+@bp.route('/refresh-cache', methods=['POST'])
+@login_required
+@admin_required
+def refresh_cache():
+    """Clear application cache and refresh."""
+    try:
+        cache = get_cache()
+        cache.clear()
+        log_action('cache_clear', details='Cache applicazione svuotata dal pannello admin')
+        flash('Cache svuotata con successo!', 'success')
+    except Exception as e:
+        current_app.logger.error(f'Error clearing cache: {e}')
+        flash(f'Errore durante lo svuotamento della cache: {str(e)}', 'danger')
+    return redirect(url_for('admin.dashboard'))
+
+
+@bp.route('/restart-site', methods=['POST'])
+@login_required
+@admin_required
+def restart_site():
+    """Gracefully restart the application server (Gunicorn)."""
+    try:
+        log_action('site_restart', details='Riavvio sito richiesto dal pannello admin')
+        master_pid = os.getppid()
+        # Safety check: only send SIGHUP if running under Gunicorn
+        try:
+            with open(f'/proc/{master_pid}/comm', 'r') as f:
+                proc_name = f.read().strip()
+            if 'gunicorn' not in proc_name:
+                flash('Il riavvio è disponibile solo quando il sito è in esecuzione con Gunicorn.', 'warning')
+                return redirect(url_for('admin.dashboard'))
+        except (FileNotFoundError, PermissionError):
+            pass  # /proc may not be available; proceed with signal
+        os.kill(master_pid, signal.SIGHUP)
+        flash('Riavvio del sito avviato con successo! La pagina si ricaricherà tra pochi secondi.', 'success')
+    except Exception as e:
+        current_app.logger.error(f'Error restarting site: {e}')
+        flash(f'Errore durante il riavvio del sito: {str(e)}', 'danger')
+    return redirect(url_for('admin.dashboard'))
 
 

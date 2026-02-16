@@ -436,7 +436,7 @@
                                  alt="Foto" class="img-fluid rounded" style="max-width:260px; max-height:260px; cursor:pointer;"
                                  onclick="window.open(this.src, '_blank')">
                             <div class="photo-expiry-notice mt-1">
-                                <small class="text-warning"><i class="bi bi-clock-history"></i> Scade il {{ msg.photo_expires_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                <small class="text-warning"><i class="bi bi-clock-history"></i> La foto scade il {{ msg.photo_expires_at.strftime('%d/%m/%Y %H:%M') }}</small>
                             </div>
                         </div>
                         {% else %}
@@ -569,6 +569,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 this.closest('form').submit();
+            }
+        });
+    }
+    
+    // Validate form: require at least text or photo
+    const chatForm = document.querySelector('.chat-input-form');
+    if (chatForm) {
+        chatForm.addEventListener('submit', function(e) {
+            const body = (document.getElementById('messageInput') || {}).value || '';
+            const photo = document.getElementById('photoInput');
+            if (!body.trim() && !(photo && photo.files && photo.files.length > 0)) {
+                e.preventDefault();
+                return false;
             }
         });
     }

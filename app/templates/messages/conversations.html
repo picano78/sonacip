@@ -532,6 +532,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Validate form: require at least text or photo
+    const chatForm = document.querySelector('.chat-input-form');
+    if (chatForm) {
+        chatForm.addEventListener('submit', function(e) {
+            const body = (document.getElementById('messageInput') || {}).value || '';
+            const photo = document.getElementById('photoInput');
+            if (!body.trim() && !(photo && photo.files && photo.files.length > 0)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+    
     // Emoji picker
     const emojiBtn = document.getElementById('emojiBtn');
     const emojiPicker = document.getElementById('emojiPicker');

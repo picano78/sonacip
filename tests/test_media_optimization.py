@@ -29,7 +29,8 @@ def app(tmp_path):
         upload_dir = str(tmp_path / 'uploads')
         os.makedirs(upload_dir, exist_ok=True)
         for sub in ('posts', 'avatars', 'covers', 'groups', 'group_avatars',
-                     'stories', 'marketplace', 'message_attachments', 'icons', 'invoice_logos'):
+                     'stories', 'marketplace', 'message_attachments',
+                     'message_photos', 'icons', 'invoice_logos'):
             os.makedirs(os.path.join(upload_dir, sub), exist_ok=True)
 
         ss = StorageSetting(

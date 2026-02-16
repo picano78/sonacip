@@ -303,6 +303,16 @@ def cleanup_expired_ads_task():
     return cleanup_expired_ads()
 
 
+@celery.task(name='app.tasks.cleanup_expired_message_photos')
+def cleanup_expired_message_photos():
+    """
+    Delete expired ephemeral message photos from disk and database.
+    Photos in messages expire after 7 days.
+    """
+    from app.messages.utils import cleanup_expired_photos
+    return cleanup_expired_photos()
+
+
 # Periodic tasks configuration
 @celery.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
@@ -329,4 +339,11 @@ def setup_periodic_tasks(sender, **kwargs):
         crontab(hour=4, minute=0),
         cleanup_expired_ads_task.s(),
         name='cleanup-expired-ads-daily'
+    )
+    
+    # Clean up expired message photos daily at 5 AM
+    sender.add_periodic_task(
+        crontab(hour=5, minute=0),
+        cleanup_expired_message_photos.s(),
+        name='cleanup-expired-message-photos-daily'
     )

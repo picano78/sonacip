@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni Società{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0"><i class="bi bi-gear"></i> Impostazioni Società</h1>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('social.society_dashboard') }}">
+      <i class="bi bi-arrow-left me-1"></i>Torna al cruscotto
+    </a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0"><i class="bi bi-people me-2"></i>Gestione Membri a Fine Anno</h5>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-3">
+        Scegli cosa succede ai membri associati alla società alla fine dell'anno sportivo.
+        Puoi decidere di mantenerli attivi oppure di rimuoverli automaticamente per ricominciare da capo.
+      </p>
+      <form method="post" action="{{ url_for('social.society_settings') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card h-100 border-2 {{ 'border-success' if society.members_year_end_policy == 'keep' else '' }}"
+                 style="cursor:pointer;" onclick="document.getElementById('policy_keep').checked=true; this.classList.add('border-success'); document.getElementById('card_remove').classList.remove('border-success');" id="card_keep">
+              <div class="card-body text-center py-4">
+                <i class="bi bi-shield-check text-success" style="font-size:2.5rem;"></i>
+                <h5 class="mt-3 fw-bold">Mantieni Membri</h5>
+                <p class="text-muted small mb-3">I membri restano attivi anche dopo la fine dell'anno. Nessuna azione automatica.</p>
+                <div class="form-check d-flex justify-content-center">
+                  <input class="form-check-input" type="radio" name="members_year_end_policy" id="policy_keep"
+                         value="keep" {{ 'checked' if society.members_year_end_policy == 'keep' else '' }}>
+                  <label class="form-check-label ms-2 fw-semibold" for="policy_keep">Mantieni</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="card h-100 border-2 {{ 'border-success' if society.members_year_end_policy == 'remove' else '' }}"
+                 style="cursor:pointer;" onclick="document.getElementById('policy_remove').checked=true; this.classList.add('border-success'); document.getElementById('card_keep').classList.remove('border-success');" id="card_remove">
+              <div class="card-body text-center py-4">
+                <i class="bi bi-arrow-repeat text-danger" style="font-size:2.5rem;"></i>
+                <h5 class="mt-3 fw-bold">Rimuovi Automaticamente</h5>
+                <p class="text-muted small mb-3">I membri vengono rimossi automaticamente a fine anno, per ricominciare da capo.</p>
+                <div class="form-check d-flex justify-content-center">
+                  <input class="form-check-input" type="radio" name="members_year_end_policy" id="policy_remove"
+                         value="remove" {{ 'checked' if society.members_year_end_policy == 'remove' else '' }}>
+                  <label class="form-check-label ms-2 fw-semibold" for="policy_remove">Rimuovi</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 text-end">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-check-lg me-1"></i>Salva Impostazioni
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

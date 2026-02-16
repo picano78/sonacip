@@ -215,3 +215,53 @@ def get_user_message_stats(user_id):
         'unread': unread,
         'total': total_sent + total_received
     }
+
+
+def cleanup_expired_photos():
+    """
+    Delete expired ephemeral message photos from disk and database.
+    Called by the Celery periodic task and can be invoked directly in tests.
+    """
+    import os
+    from app.models import MessageGroupMessage
+
+    now = datetime.now(timezone.utc)
+    deleted_dm = 0
+    deleted_group = 0
+
+    # Clean up direct message photo attachments
+    expired_attachments = MessageAttachment.query.filter(
+        MessageAttachment.expires_at.isnot(None),
+        MessageAttachment.expires_at <= now
+    ).all()
+
+    for att in expired_attachments:
+        try:
+            if att.file_path and os.path.exists(att.file_path):
+                os.remove(att.file_path)
+        except OSError:
+            pass
+        db.session.delete(att)
+        deleted_dm += 1
+
+    # Clean up group message photos
+    expired_group_msgs = MessageGroupMessage.query.filter(
+        MessageGroupMessage.photo_path.isnot(None),
+        MessageGroupMessage.photo_expires_at.isnot(None),
+        MessageGroupMessage.photo_expires_at <= now
+    ).all()
+
+    for msg in expired_group_msgs:
+        try:
+            from app.storage import _media_root
+            full_path = os.path.join(_media_root(), msg.photo_path)
+            if os.path.exists(full_path):
+                os.remove(full_path)
+        except (OSError, RuntimeError):
+            pass
+        msg.photo_path = None
+        msg.photo_expires_at = None
+        deleted_group += 1
+
+    db.session.commit()
+    return {'dm_photos_deleted': deleted_dm, 'group_photos_deleted': deleted_group}

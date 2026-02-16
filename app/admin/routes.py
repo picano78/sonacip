@@ -1519,6 +1519,8 @@ def ads_settings():
         settings.price_per_thousand_views = float(form.price_per_thousand_views.data)
         settings.default_duration_days = int(form.default_duration_days.data)
         settings.default_views = int(form.default_views.data)
+        settings.min_duration_days = int(form.min_duration_days.data)
+        settings.max_duration_days = int(form.max_duration_days.data)
         settings.updated_by = current_user.id
         settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()

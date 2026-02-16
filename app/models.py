@@ -1177,6 +1177,8 @@ class AdsSetting(db.Model):
     price_per_thousand_views = db.Column(db.Float, default=2.0)  # CPM
     default_duration_days = db.Column(db.Integer, default=7)
     default_views = db.Column(db.Integer, default=500)
+    min_duration_days = db.Column(db.Integer, default=1)   # minimum ad duration
+    max_duration_days = db.Column(db.Integer, default=90)  # maximum ad duration
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
 
@@ -1211,6 +1213,12 @@ class AdCampaign(db.Model):
     is_active = db.Column(db.Boolean, default=True, index=True)
     starts_at = db.Column(db.DateTime)
     ends_at = db.Column(db.DateTime)
+
+    # Audience targeting: all, societies, users, athletes, coaches
+    target_audience = db.Column(db.String(50), default='all')
+
+    # Payment status for self-serve: pending, completed, failed
+    payment_status = db.Column(db.String(20), default='completed')
 
     # Basic caps (autopilot safety)
     max_impressions = db.Column(db.Integer)

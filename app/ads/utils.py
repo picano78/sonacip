@@ -51,7 +51,7 @@ def _is_safe_redirect(url: str) -> bool:
         return False
 
 
-def _eligible_creatives(placement: str, society_id: int | None) -> list[AdCreative]:
+def _eligible_creatives(placement: str, society_id: int | None, user: object | None = None) -> list[AdCreative]:
     now = datetime.now(timezone.utc)
     q = (
         AdCreative.query.join(AdCampaign, AdCreative.campaign_id == AdCampaign.id)
@@ -71,6 +71,36 @@ def _eligible_creatives(placement: str, society_id: int | None) -> list[AdCreati
         # no scope -> global only
         q = q.filter(AdCampaign.society_id.is_(None))
 
+    # Audience targeting: filter based on the viewer's role
+    if user and hasattr(user, 'role'):
+        user_role = getattr(user, 'role', None) or ''
+        audience_filters = [AdCampaign.target_audience.is_(None), AdCampaign.target_audience == 'all']
+        if user_role in ('societa', 'society_admin'):
+            audience_filters.append(AdCampaign.target_audience == 'societies')
+        elif user_role == 'athlete':
+            audience_filters.append(AdCampaign.target_audience == 'athletes')
+        elif user_role == 'coach':
+            audience_filters.append(AdCampaign.target_audience == 'coaches')
+        else:
+            audience_filters.append(AdCampaign.target_audience == 'users')
+        q = q.filter(db.or_(*audience_filters))
+    else:
+        q = q.filter(
+            db.or_(
+                AdCampaign.target_audience.is_(None),
+                AdCampaign.target_audience == 'all',
+                AdCampaign.target_audience == 'users',
+            )
+        )
+
+    # Only show paid campaigns
+    q = q.filter(
+        db.or_(
+            AdCampaign.payment_status.is_(None),
+            AdCampaign.payment_status == 'completed',
+        )
+    )
+
     # caps
     q = q.filter((AdCampaign.max_impressions.is_(None)) | (AdCampaign.impressions_count < AdCampaign.max_impressions))
     q = q.filter((AdCampaign.max_clicks.is_(None)) | (AdCampaign.clicks_count < AdCampaign.max_clicks))
@@ -79,12 +109,12 @@ def _eligible_creatives(placement: str, society_id: int | None) -> list[AdCreati
     return q.order_by(AdCreative.id.asc()).limit(200).all()
 
 
-def choose_creative(placement: str, society_id: int | None, user_id: int | None) -> Optional[AdCreative]:
+def choose_creative(placement: str, society_id: int | None, user_id: int | None, user: object | None = None) -> Optional[AdCreative]:
     """
     Pick an ad creative automatically.
     Autopilot (per campaign): Thompson sampling on CTR; fallback to weights.
     """
-    creatives = _eligible_creatives(placement, society_id)
+    creatives = _eligible_creatives(placement, society_id, user=user)
     if not creatives:
         return None
 

@@ -78,6 +78,8 @@ class AdsSettingsForm(FlaskForm):
     price_per_thousand_views = StringField('Prezzo per 1000 visualizzazioni (€)', validators=[DataRequired()])
     default_duration_days = StringField('Durata predefinita (giorni)', validators=[DataRequired()])
     default_views = StringField('Impression predefinite', validators=[DataRequired()])
+    min_duration_days = StringField('Durata minima (giorni)', validators=[DataRequired()])
+    max_duration_days = StringField('Durata massima (giorni)', validators=[DataRequired()])
 
 
 class AdCampaignForm(FlaskForm):

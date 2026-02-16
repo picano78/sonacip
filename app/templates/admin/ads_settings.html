@@ -30,6 +30,18 @@
                                 {{ form.default_views(class="form-control", value=settings.default_views) }}
                             </div>
                         </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                {{ form.min_duration_days.label(class="form-label") }}
+                                {{ form.min_duration_days(class="form-control", value=settings.min_duration_days or 1) }}
+                                <small class="text-muted">Durata minima consentita per un annuncio.</small>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.max_duration_days.label(class="form-label") }}
+                                {{ form.max_duration_days(class="form-control", value=settings.max_duration_days or 90) }}
+                                <small class="text-muted">Durata massima consentita per un annuncio.</small>
+                            </div>
+                        </div>
                         <button type="submit" class="btn btn-primary">Salva</button>
                         <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Annulla</a>
                     </form>

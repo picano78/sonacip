@@ -652,7 +652,7 @@ def create_app(config_name: str | None = None) -> Flask:
         os.makedirs(uploads_dir, exist_ok=True)
         for _sub in ("avatars", "covers", "posts", "groups", "group_avatars",
                       "stories", "marketplace", "message_attachments",
-                      "icons", "invoice_logos"):
+                      "message_photos", "icons", "invoice_logos"):
             os.makedirs(os.path.join(uploads_dir, _sub), exist_ok=True)
 
         db_uri = (os.environ.get("DATABASE_URL") or "").strip()

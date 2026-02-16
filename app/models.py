@@ -1696,9 +1696,17 @@ class MessageAttachment(db.Model):
     mime_type = db.Column(db.String(100))
     
     uploaded_at = db.Column(db.DateTime, default=utc_now)
+    expires_at = db.Column(db.DateTime, nullable=True, index=True)  # Auto-delete date for ephemeral photos
     
     # Relationship
     message = db.relationship('Message', backref=db.backref('attachments', lazy='dynamic'))
+    
+    @property
+    def is_expired(self):
+        """Check if the attachment has expired"""
+        if self.expires_at is None:
+            return False
+        return datetime.now(timezone.utc) >= self.expires_at
     
     def __repr__(self):
         return f'<MessageAttachment {self.id}: {self.original_filename}>'
@@ -1836,6 +1844,10 @@ class MessageGroupMessage(db.Model):
     has_attachment = db.Column(db.Boolean, default=False)
     attachment_path = db.Column(db.String(500))
     
+    # Ephemeral photo support (auto-delete after 7 days)
+    photo_path = db.Column(db.String(500), nullable=True)
+    photo_expires_at = db.Column(db.DateTime, nullable=True, index=True)
+    
     # System messages (e.g., "User joined", "User left")
     is_system_message = db.Column(db.Boolean, default=False)
     
@@ -1846,6 +1858,13 @@ class MessageGroupMessage(db.Model):
     # Relationships
     group = db.relationship('MessageGroup', backref=db.backref('group_messages', lazy='dynamic'))
     sender = db.relationship('User', foreign_keys=[sender_id])
+    
+    @property
+    def is_photo_expired(self):
+        """Check if the photo has expired"""
+        if self.photo_expires_at is None:
+            return False
+        return datetime.now(timezone.utc) >= self.photo_expires_at
     
     def __repr__(self):
         return f'<MessageGroupMessage {self.id} group={self.group_id} sender={self.sender_id}>'

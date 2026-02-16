@@ -303,6 +303,58 @@ def cleanup_expired_ads_task():
     return cleanup_expired_ads()
 
 
+@celery.task(name='app.tasks.cleanup_expired_message_photos')
+def cleanup_expired_message_photos():
+    """
+    Delete expired ephemeral message photos from disk and database.
+    Photos in messages expire after 7 days.
+    """
+    from app.models import MessageAttachment, MessageGroupMessage
+    import os
+
+    now = datetime.now(timezone.utc)
+    deleted_dm = 0
+    deleted_group = 0
+
+    # Clean up direct message photo attachments
+    expired_attachments = MessageAttachment.query.filter(
+        MessageAttachment.expires_at.isnot(None),
+        MessageAttachment.expires_at <= now
+    ).all()
+
+    for att in expired_attachments:
+        try:
+            if att.file_path and os.path.exists(att.file_path):
+                os.remove(att.file_path)
+        except OSError:
+            pass
+        db.session.delete(att)
+        deleted_dm += 1
+
+    # Clean up group message photos
+    expired_group_msgs = MessageGroupMessage.query.filter(
+        MessageGroupMessage.photo_path.isnot(None),
+        MessageGroupMessage.photo_expires_at.isnot(None),
+        MessageGroupMessage.photo_expires_at <= now
+    ).all()
+
+    for msg in expired_group_msgs:
+        try:
+            # Try to resolve full path
+            from app.storage import _media_root
+            full_path = os.path.join(_media_root(), msg.photo_path)
+            if os.path.exists(full_path):
+                os.remove(full_path)
+        except (OSError, RuntimeError):
+            pass
+        msg.photo_path = None
+        msg.photo_expires_at = None
+        deleted_group += 1
+
+    db.session.commit()
+    return {'dm_photos_deleted': deleted_dm, 'group_photos_deleted': deleted_group}
+
+
 # Periodic tasks configuration
 @celery.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
@@ -329,4 +381,11 @@ def setup_periodic_tasks(sender, **kwargs):
         crontab(hour=4, minute=0),
         cleanup_expired_ads_task.s(),
         name='cleanup-expired-ads-daily'
+    )
+    
+    # Clean up expired message photos daily at 5 AM
+    sender.add_periodic_task(
+        crontab(hour=5, minute=0),
+        cleanup_expired_message_photos.s(),
+        name='cleanup-expired-message-photos-daily'
     )

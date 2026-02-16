@@ -1,17 +1,19 @@
 """Direct messages routes - Internal messaging system"""
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, abort
 from flask_login import login_required, current_user
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import or_, and_, func
 import os
 import secrets
 from werkzeug.utils import secure_filename
 from app import db
 from app.messages.forms import MessageForm, MessageGroupForm
-from app.models import Message, User, MessageGroup, MessageGroupMembership, MessageGroupMessage
+from app.models import Message, User, MessageGroup, MessageGroupMembership, MessageGroupMessage, MessageAttachment
 from app.notifications.utils import create_notification
 from app.utils import check_permission
 from app.storage import save_image_light
+
+PHOTO_EXPIRY_DAYS = 7
 
 bp = Blueprint('messages', __name__, url_prefix='/messages')
 
@@ -143,13 +145,18 @@ def chat(user_id):
 @bp.route('/chat/<int:user_id>/send', methods=['POST'])
 @login_required
 def send_message(user_id):
-    """Send message to user"""
+    """Send message to user, optionally with an ephemeral photo (7-day expiry)"""
     recipient = User.query.get_or_404(user_id)
     body = request.form.get('body', '').strip()
+    photo = request.files.get('photo')
     
-    if not body:
+    if not body and not photo:
         flash('Il messaggio non può essere vuoto.', 'warning')
         return redirect(url_for('messages.chat', user_id=user_id))
+    
+    # Default body for photo-only messages
+    if not body and photo:
+        body = '📷 Foto'
     
     msg = Message(
         sender_id=current_user.id,
@@ -157,6 +164,34 @@ def send_message(user_id):
         body=body
     )
     db.session.add(msg)
+    db.session.flush()  # Get msg.id for attachment
+    
+    # Handle photo upload with 7-day expiry
+    if photo and photo.filename:
+        try:
+            rel_path = save_image_light(photo, folder='message_photos', size=(1280, 1280))
+            optimized_filename = os.path.basename(rel_path)
+            upload_dir = os.path.join(current_app.root_path, 'uploads', 'message_photos')
+            file_path = os.path.join(upload_dir, optimized_filename)
+            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+            
+            expires_at = datetime.now(timezone.utc) + timedelta(days=PHOTO_EXPIRY_DAYS)
+            attachment = MessageAttachment(
+                message_id=msg.id,
+                filename=optimized_filename,
+                original_filename=secure_filename(photo.filename),
+                file_path=file_path,
+                file_size=file_size,
+                mime_type=photo.content_type,
+                expires_at=expires_at
+            )
+            db.session.add(attachment)
+            msg.has_attachment = True
+            msg.attachment_count = 1
+        except (ValueError, RuntimeError) as e:
+            current_app.logger.warning(f"Photo upload failed: {e}")
+            flash('Impossibile caricare la foto. Verifica il formato (jpg, png, gif, webp).', 'warning')
+    
     db.session.commit()
     
     create_notification(
@@ -382,6 +417,60 @@ def download_attachment(attachment_id):
     )
 
 
+@bp.route('/photo/<int:attachment_id>')
+@login_required
+def view_message_photo(attachment_id):
+    """Serve an ephemeral message photo (checks expiry)"""
+    from flask import send_file
+
+    attachment = MessageAttachment.query.get_or_404(attachment_id)
+    message = attachment.message
+
+    # Check permissions
+    if message.sender_id != current_user.id and message.recipient_id != current_user.id:
+        if not check_permission(current_user, 'admin', 'access'):
+            abort(403)
+
+    # Check if photo has expired
+    if attachment.is_expired:
+        abort(410)  # Gone
+
+    if not os.path.exists(attachment.file_path):
+        abort(404)
+
+    return send_file(attachment.file_path, mimetype=attachment.mime_type)
+
+
+@bp.route('/group-photo/<int:message_id>')
+@login_required
+def view_group_message_photo(message_id):
+    """Serve an ephemeral group message photo (checks expiry)"""
+    from flask import send_file
+
+    msg = MessageGroupMessage.query.get_or_404(message_id)
+
+    # Check membership
+    membership = MessageGroupMembership.query.filter_by(
+        group_id=msg.group_id,
+        user_id=current_user.id,
+        is_active=True
+    ).first()
+
+    if not membership:
+        abort(403)
+
+    # Check if photo has expired
+    if msg.is_photo_expired or not msg.photo_path:
+        abort(410)  # Gone
+
+    from app.storage import _media_root
+    full_path = os.path.join(_media_root(), msg.photo_path)
+    if not os.path.exists(full_path):
+        abort(404)
+
+    return send_file(full_path)
+
+
 @bp.route('/stats')
 @login_required
 def message_stats():
@@ -513,7 +602,7 @@ def group_chat(group_id):
 @bp.route('/groups/<int:group_id>/send', methods=['POST'])
 @login_required
 def send_group_message(group_id):
-    """Send a message to a group"""
+    """Send a message to a group, optionally with an ephemeral photo (7-day expiry)"""
     group = MessageGroup.query.get_or_404(group_id)
     
     # Check membership
@@ -533,15 +622,35 @@ def send_group_message(group_id):
         return redirect(url_for('messages.group_chat', group_id=group.id))
     
     body = request.form.get('body', '').strip()
-    if not body:
+    photo = request.files.get('photo')
+    
+    if not body and not photo:
         flash('Il messaggio non può essere vuoto.', 'warning')
         return redirect(url_for('messages.group_chat', group_id=group.id))
+    
+    # Default body for photo-only messages
+    if not body and photo:
+        body = '📷 Foto'
+    
+    # Handle photo upload
+    photo_path = None
+    photo_expires_at = None
+    if photo and photo.filename:
+        try:
+            rel_path = save_image_light(photo, folder='message_photos', size=(1280, 1280))
+            photo_path = rel_path
+            photo_expires_at = datetime.now(timezone.utc) + timedelta(days=PHOTO_EXPIRY_DAYS)
+        except (ValueError, RuntimeError) as e:
+            current_app.logger.warning(f"Group photo upload failed: {e}")
+            flash('Impossibile caricare la foto. Verifica il formato (jpg, png, gif, webp).', 'warning')
     
     # Create message
     msg = MessageGroupMessage(
         group_id=group.id,
         sender_id=current_user.id,
-        body=body
+        body=body,
+        photo_path=photo_path,
+        photo_expires_at=photo_expires_at
     )
     db.session.add(msg)
     

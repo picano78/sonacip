@@ -428,6 +428,26 @@
                     {% if msg.sender_id != current_user.id %}
                     <div class="message-sender">{{ msg.sender.get_full_name() }}</div>
                     {% endif %}
+                    {# Display ephemeral photo if present #}
+                    {% if msg.photo_path %}
+                        {% if not msg.is_photo_expired %}
+                        <div class="message-photo mb-1">
+                            <img src="{{ url_for('messages.view_group_message_photo', message_id=msg.id) }}" 
+                                 alt="Foto" class="img-fluid rounded" style="max-width:260px; max-height:260px; cursor:pointer;"
+                                 onclick="window.open(this.src, '_blank')">
+                            <div class="photo-expiry-notice mt-1">
+                                <small class="text-warning"><i class="bi bi-clock-history"></i> Scade il {{ msg.photo_expires_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="message-photo-expired mb-1">
+                            <div class="p-2 bg-light rounded text-center text-muted" style="min-width:160px;">
+                                <i class="bi bi-image" style="font-size:1.5rem;"></i>
+                                <div><small>Foto scaduta</small></div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
                     <div class="message-text">{{ msg.body }}</div>
                     <div class="message-time">{{ msg.created_at.strftime('%H:%M') }}</div>
                 </div>
@@ -441,9 +461,24 @@
             </div>
             
             <div class="chat-input-area">
-                <form action="{{ url_for('messages.send_group_message', group_id=group.id) }}" method="POST" class="chat-input-form">
+                <div class="photo-expiry-warning text-center mb-2" style="display:none;" id="photoExpiryWarning">
+                    <small class="text-warning"><i class="bi bi-exclamation-triangle"></i> La foto rimarrà disponibile solo per 7 giorni, poi verrà automaticamente cancellata dal server.</small>
+                </div>
+                <div id="photoPreviewContainer" style="display:none;" class="mb-2 text-center">
+                    <div class="position-relative d-inline-block">
+                        <img id="photoPreview" src="" alt="Anteprima" class="rounded" style="max-height:120px; max-width:200px;">
+                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" id="removePhotoBtn" style="border-radius:50%; width:24px; height:24px; padding:0; line-height:24px; font-size:0.7rem;">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+                <form action="{{ url_for('messages.send_group_message', group_id=group.id) }}" method="POST" class="chat-input-form" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <textarea name="body" class="form-control chat-input" id="messageInput" placeholder="Scrivi un messaggio..." rows="1" required></textarea>
+                    <input type="file" name="photo" id="photoInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+                    <button type="button" class="emoji-btn" id="photoBtn" title="Invia foto (scade dopo 7 giorni)">
+                        <i class="bi bi-camera"></i>
+                    </button>
+                    <textarea name="body" class="form-control chat-input" id="messageInput" placeholder="Scrivi un messaggio..." rows="1"></textarea>
                     <button type="submit" class="chat-send-btn">
                         <i class="bi bi-send-fill"></i>
                     </button>
@@ -536,6 +571,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.closest('form').submit();
             }
         });
+    }
+    
+    // Photo upload handling
+    const photoBtn = document.getElementById('photoBtn');
+    const photoInput = document.getElementById('photoInput');
+    const photoPreviewContainer = document.getElementById('photoPreviewContainer');
+    const photoPreview = document.getElementById('photoPreview');
+    const removePhotoBtn = document.getElementById('removePhotoBtn');
+    const photoExpiryWarning = document.getElementById('photoExpiryWarning');
+    
+    if (photoBtn && photoInput) {
+        photoBtn.addEventListener('click', function() {
+            photoInput.click();
+        });
+        
+        photoInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photoPreview.src = e.target.result;
+                    photoPreviewContainer.style.display = 'block';
+                    photoExpiryWarning.style.display = 'block';
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+        
+        if (removePhotoBtn) {
+            removePhotoBtn.addEventListener('click', function() {
+                photoInput.value = '';
+                photoPreviewContainer.style.display = 'none';
+                photoExpiryWarning.style.display = 'none';
+            });
+        }
     }
 });
 </script>

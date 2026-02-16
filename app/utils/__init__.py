@@ -146,6 +146,8 @@ def check_permission(user, resource, action, society_id=None):
                     ('events', 'manage'),
                     ('calendar', 'view'),
                     ('calendar', 'manage'),
+                    ('field_planner', 'view'),
+                    ('field_planner', 'manage'),
                     ('crm', 'access'),
                     ('crm', 'manage'),
                     ('tasks', 'manage'),
@@ -159,6 +161,7 @@ def check_permission(user, resource, action, society_id=None):
                     ('social', 'comment'),
                     ('events', 'view'),
                     ('calendar', 'view'),
+                    ('field_planner', 'view'),
                     ('tournaments', 'view'),
                 }:
                     return True

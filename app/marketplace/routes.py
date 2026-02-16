@@ -42,21 +42,11 @@ def _save_listing_image(file_storage):
         return None
     if not _allowed_image(file_storage.filename):
         return None
-    upload_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, '..', 'uploads')), 'marketplace')
-    os.makedirs(upload_dir, exist_ok=True)
-    ext = file_storage.filename.rsplit('.', 1)[1].lower()
-    unique_name = f"{uuid.uuid4().hex}.{ext}"
-    filepath = os.path.join(upload_dir, unique_name)
     try:
-        img = Image.open(file_storage)
-        if img.mode in ('RGBA', 'LA'):
-            img = img.convert('RGB')
-        img.thumbnail((600, 600))
-        img.save(filepath, quality=50, optimize=True)
-    except Exception:
-        file_storage.seek(0)
-        file_storage.save(filepath)
-    return f"marketplace/{unique_name}"
+        from app.storage import save_image_light
+        return save_image_light(file_storage, folder='marketplace', size=(600, 600))
+    except (ValueError, RuntimeError):
+        return None
 
 
 def _delete_listing_image(relative_path):

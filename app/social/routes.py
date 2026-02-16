@@ -9,7 +9,7 @@ from sqlalchemy import or_
 from app import db, limiter
 from app.social.forms import PostForm, CommentForm, ProfileEditForm, SearchForm, PromotePostForm
 from app.social.society_forms import SocietyInviteForm
-from app.social.utils import save_picture
+from app.social.utils import save_picture, save_video
 from app.social.feed_ranking import get_connection_ids, score_feed_posts
 from app.models import (
     User,
@@ -353,10 +353,13 @@ def create_post():
         
         if form.validate_on_submit():
             has_media_file = form.image.data and hasattr(form.image.data, 'filename') and form.image.data.filename
-            if has_media_file and settings:
+            is_video = False
+            is_photo = True
+            if has_media_file:
                 fname = (form.image.data.filename or '').lower()
                 is_video = fname.endswith(('.mp4', '.mov', '.avi', '.webm', '.mkv'))
                 is_photo = not is_video
+            if has_media_file and settings:
                 if is_photo and not getattr(settings, 'allow_photos', True):
                     flash('La pubblicazione di foto è stata disabilitata dall\'amministratore.', 'warning')
                     return redirect(url_for('social.feed'))
@@ -402,7 +405,10 @@ def create_post():
             
             if has_media_file:
                 try:
-                    image_file = save_picture(form.image.data, folder='posts', size=(800, 800))
+                    if is_video:
+                        image_file = save_video(form.image.data, folder='posts')
+                    else:
+                        image_file = save_picture(form.image.data, folder='posts', size=(800, 800))
                     post.image = image_file
                 except Exception:
                     try:

@@ -16,7 +16,7 @@ automation_builder = Blueprint('automation_builder', __name__, url_prefix='/auto
 @login_required
 def index():
     """Automation builder dashboard"""
-    if not check_permission(current_user, 'manage_automations'):
+    if not check_permission(current_user, 'admin', 'manage_automations'):
         flash('You do not have permission to manage automations.', 'danger')
         return redirect(url_for('main.index'))
     
@@ -31,7 +31,7 @@ def index():
 @login_required
 def create():
     """Visual automation rule builder"""
-    if not check_permission(current_user, 'manage_automations'):
+    if not check_permission(current_user, 'admin', 'manage_automations'):
         flash('You do not have permission to create automations.', 'danger')
         return redirect(url_for('main.index'))
     
@@ -44,7 +44,7 @@ def edit(rule_id):
     """Edit existing automation rule"""
     rule = AutomationRule.query.get_or_404(rule_id)
     
-    if not check_permission(current_user, 'manage_automations') and rule.created_by != current_user.id:
+    if not check_permission(current_user, 'admin', 'manage_automations') and rule.created_by != current_user.id:
         flash('You do not have permission to edit this automation.', 'danger')
         return redirect(url_for('automation_builder.index'))
     
@@ -169,7 +169,7 @@ def get_action_types():
 @login_required
 def save_rule():
     """Save automation rule"""
-    if not check_permission(current_user, 'manage_automations'):
+    if not check_permission(current_user, 'admin', 'manage_automations'):
         return jsonify({'error': 'Permission denied'}), 403
     
     data = request.get_json()
@@ -178,7 +178,7 @@ def save_rule():
         rule_id = data.get('id')
         if rule_id:
             rule = AutomationRule.query.get_or_404(rule_id)
-            if rule.created_by != current_user.id and not check_permission(current_user, 'admin'):
+            if rule.created_by != current_user.id and not check_permission(current_user, 'admin', 'access'):
                 return jsonify({'error': 'Permission denied'}), 403
         else:
             rule = AutomationRule()
@@ -217,7 +217,7 @@ def delete_rule(rule_id):
     """Delete automation rule"""
     rule = AutomationRule.query.get_or_404(rule_id)
     
-    if rule.created_by != current_user.id and not check_permission(current_user, 'admin'):
+    if rule.created_by != current_user.id and not check_permission(current_user, 'admin', 'access'):
         return jsonify({'error': 'Permission denied'}), 403
     
     try:
@@ -235,7 +235,7 @@ def toggle_rule(rule_id):
     """Toggle automation rule active status"""
     rule = AutomationRule.query.get_or_404(rule_id)
     
-    if rule.created_by != current_user.id and not check_permission(current_user, 'admin'):
+    if rule.created_by != current_user.id and not check_permission(current_user, 'admin', 'access'):
         return jsonify({'error': 'Permission denied'}), 403
     
     try:

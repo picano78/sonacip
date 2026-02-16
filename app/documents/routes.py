@@ -110,6 +110,10 @@ def _generate_pdf_export(data, filename='export.pdf', title='Data Export'):
     # Auto-detect columns
     columns = list(data[0].keys()) if data else []
     
+    if not columns:
+        flash('Nessun documento da esportare.', 'info')
+        return redirect(url_for('documents.index'))
+    
     # Create PDF in memory
     output = io.BytesIO()
     doc = SimpleDocTemplate(output, pagesize=A4)

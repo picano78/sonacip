@@ -636,6 +636,14 @@ def create_app(config_name: str | None = None) -> Flask:
     config_class = config[config_name]
     app.config.from_object(config_class)
 
+    # Re-read SUPERADMIN credentials from os.environ after dotenv loading.
+    # The Config class attributes are evaluated at import time (before dotenv),
+    # so we need to refresh them with values now available from .env.
+    for _key in ('SUPERADMIN_EMAIL', 'SUPERADMIN_PASSWORD'):
+        _val = os.environ.get(_key) or None
+        if _val is not None:
+            app.config[_key] = _val
+
     # Ensure DB URI is resolved *after* dotenv is loaded.
     # Use config default (SQLite) if DATABASE_URL not provided
     if not app.config.get("TESTING"):

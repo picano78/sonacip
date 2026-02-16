@@ -69,21 +69,24 @@ def test_production_mode_requires_credentials():
         # Remove credentials from environment
         os.environ.pop('SUPERADMIN_EMAIL', None)
         os.environ.pop('SUPERADMIN_PASSWORD', None)
-        
-        # Import should raise RuntimeError in production without credentials
+
         import importlib
         import sys
-        
+
         # Remove the module from cache to force reload
         if 'app.core.config' in sys.modules:
             del sys.modules['app.core.config']
-        
-        # Should raise RuntimeError with message about missing credentials
-        with pytest.raises(RuntimeError) as exc_info:
-            from app.core import config
-        
-        # Verify it's a configuration error (not just any RuntimeError)
-        assert exc_info.type is RuntimeError
+
+        from app.core import config as config_mod
+
+        # Credentials should be None when not set in environment
+        assert config_mod.Config.SUPERADMIN_EMAIL is None
+        assert config_mod.Config.SUPERADMIN_PASSWORD is None
+
+        # ProductionConfig.validate_config should raise RuntimeError
+        # (validation is deferred so that .env is loaded first)
+        with pytest.raises(RuntimeError):
+            config_mod.ProductionConfig.validate_config()
 
 
 def test_development_mode_allows_missing_credentials():

@@ -190,25 +190,8 @@ class Config:
     SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL') or None
     SUPERADMIN_PASSWORD = os.environ.get('SUPERADMIN_PASSWORD') or None
     
-    # Validate that credentials are set in production mode
-    if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('APP_ENV') == 'production':
-        if not SUPERADMIN_EMAIL or not SUPERADMIN_PASSWORD:
-            raise RuntimeError(
-                "\n" + "="*80 + "\n"
-                "⚠️  CRITICAL CONFIGURATION ERROR ⚠️\n"
-                "="*80 + "\n"
-                "SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be set in production!\n\n"
-                "REQUIRED ACTION:\n"
-                "1. Check your environment configuration:\n"
-                "   python3 check_env.py\n"
-                "2. Edit .env file and set secure credentials:\n"
-                "   SUPERADMIN_EMAIL='your-secure-email@domain.com'\n"
-                "   SUPERADMIN_PASSWORD='your-strong-password'\n"
-                "3. Start/restart the application\n"
-                "\n"
-                "See MIGRATION_GUIDE.md or README.md for more information.\n"
-                "="*80 + "\n"
-            )
+    # Note: SUPERADMIN validation is deferred to ProductionConfig.validate_config()
+    # so that .env files are loaded before the check runs.
 
     # Stripe (payments)
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
@@ -276,6 +259,26 @@ class ProductionConfig(Config):
             uri = uri.replace("postgres://", "postgresql://", 1)
         if not uri.startswith("postgresql://"):
             raise RuntimeError("DATABASE_URL must be PostgreSQL (postgresql://...)")
+        # Validate SUPERADMIN credentials (re-read from env after dotenv loading)
+        email = os.environ.get('SUPERADMIN_EMAIL') or None
+        password = os.environ.get('SUPERADMIN_PASSWORD') or None
+        if not email or not password:
+            raise RuntimeError(
+                "\n" + "="*80 + "\n"
+                "⚠️  CRITICAL CONFIGURATION ERROR ⚠️\n"
+                "="*80 + "\n"
+                "SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be set in production!\n\n"
+                "REQUIRED ACTION:\n"
+                "1. Check your environment configuration:\n"
+                "   python3 check_env.py\n"
+                "2. Edit .env file and set secure credentials:\n"
+                "   SUPERADMIN_EMAIL='your-secure-email@domain.com'\n"
+                "   SUPERADMIN_PASSWORD='your-strong-password'\n"
+                "3. Start/restart the application\n"
+                "\n"
+                "See MIGRATION_GUIDE.md or README.md for more information.\n"
+                "="*80 + "\n"
+            )
 
 
 class TestingConfig(Config):

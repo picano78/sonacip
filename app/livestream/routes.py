@@ -199,7 +199,11 @@ def watch(stream_id):
         
         db.session.commit()
     
-    return render_template('livestream/watch.html', stream=stream)
+    # Get active banners for display
+    from app.models import LiveBanner
+    active_banners = LiveBanner.query.filter_by(is_active=True).order_by(LiveBanner.display_order.asc()).all()
+    
+    return render_template('livestream/watch.html', stream=stream, banners=active_banners)
 
 
 @bp.route('/<int:stream_id>/leave', methods=['POST'])

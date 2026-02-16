@@ -1263,6 +1263,50 @@ def society_export_data():
     return resp
 
 
+@bp.route('/society/export/<string:data_type>')
+@login_required
+def society_export_specific(data_type):
+    """Export specific society data (athletes, events, tournaments, planner)"""
+    from app.utils.exports import DataExporter
+    
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Società non trovata.', 'warning')
+        return redirect(url_for('social.feed'))
+    
+    # Get format from query string (default: csv)
+    format = request.args.get('format', 'csv')
+    if format not in ['csv', 'excel', 'json', 'pdf']:
+        format = 'csv'
+    
+    try:
+        if data_type == 'athletes':
+            response = DataExporter.export_society_athletes(society, format=format)
+            log_action('society_export_athletes', 'Society', society.id, f'Exported athletes as {format}')
+        elif data_type == 'events':
+            response = DataExporter.export_society_events(society, format=format)
+            log_action('society_export_events', 'Society', society.id, f'Exported events as {format}')
+        elif data_type == 'tournaments':
+            response = DataExporter.export_society_tournaments(society, format=format)
+            log_action('society_export_tournaments', 'Society', society.id, f'Exported tournaments as {format}')
+        elif data_type == 'planner':
+            response = DataExporter.export_society_planner_events(society, format=format)
+            log_action('society_export_planner', 'Society', society.id, f'Exported planner events as {format}')
+        else:
+            flash('Tipo di dati non supportato.', 'danger')
+            return redirect(url_for('social.society_settings'))
+        
+        return response
+    except Exception as e:
+        current_app.logger.error(f"Export error for {data_type}: {e}")
+        flash(f'Errore durante l\'esportazione: {str(e)}', 'danger')
+        return redirect(url_for('social.society_settings'))
+
+
 @bp.route('/society/suggestions/<string:key>/dismiss', methods=['POST'])
 @login_required
 def society_dismiss_suggestion(key: str):
@@ -1442,9 +1486,15 @@ def society_settings():
         if policy not in ('keep', 'remove'):
             policy = 'keep'
         society.members_year_end_policy = policy
+        
+        # Handle planner notifications setting
+        planner_notifications = request.form.get('planner_notifications_enabled') == 'on'
+        society.planner_notifications_enabled = planner_notifications
+        
         db.session.commit()
         log_action('society_settings_update', 'Society', society.id,
-                   f'members_year_end_policy={policy}', society_id=society.id)
+                   f'members_year_end_policy={policy}, planner_notifications={planner_notifications}', 
+                   society_id=society.id)
         flash('Impostazioni salvate.', 'success')
         return redirect(url_for('social.society_settings'))
 

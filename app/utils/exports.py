@@ -4,9 +4,24 @@ Support for CSV, Excel, and PDF exports
 """
 import csv
 import io
+import re
 from datetime import datetime, timezone
 from flask import Response, make_response
 import json
+
+
+def sanitize_filename(filename):
+    """Sanitize filename to prevent path traversal and special characters"""
+    # Remove path separators and other dangerous characters
+    filename = re.sub(r'[^\w\s\-\.]', '', filename)
+    # Remove leading/trailing dots and spaces
+    filename = filename.strip('. ')
+    # Limit length
+    filename = filename[:100]
+    # Ensure not empty
+    if not filename:
+        filename = 'export'
+    return filename
 
 
 class DataExporter:
@@ -328,3 +343,159 @@ class DataExporter:
             return DataExporter.to_pdf(data, filename, 'Users Export', columns)
         else:
             raise ValueError(f"Unsupported format: {format}")
+
+    @staticmethod
+    def export_society_athletes(society, format='csv', filename=None):
+        """Export society athletes to file"""
+        from app.models import SocietyMembership, User
+        
+        if not filename:
+            safe_name = sanitize_filename(society.legal_name or 'society')
+            filename = f'athletes_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
+        
+        columns = ['id', 'username', 'email', 'first_name', 'last_name', 'phone', 'date_of_birth', 'role_name', 'joined_at']
+        
+        # Get all society members
+        memberships = SocietyMembership.query.filter_by(society_id=society.id).all()
+        
+        data = []
+        for membership in memberships:
+            user = membership.user
+            data.append({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name or '',
+                'last_name': user.last_name or '',
+                'phone': user.phone or '',
+                'date_of_birth': user.date_of_birth.isoformat() if hasattr(user, 'date_of_birth') and user.date_of_birth else '',
+                'role_name': membership.role_name or '',
+                'joined_at': membership.created_at.isoformat() if membership.created_at else ''
+            })
+        
+        if format == 'csv':
+            return DataExporter.to_csv(data, filename, columns)
+        elif format == 'excel':
+            return DataExporter.to_excel(data, filename, 'Athletes', columns)
+        elif format == 'json':
+            return DataExporter.to_json(data, filename)
+        elif format == 'pdf':
+            return DataExporter.to_pdf(data, filename, f'Athletes - {society.legal_name}', columns)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+    @staticmethod
+    def export_society_events(society, format='csv', filename=None):
+        """Export society events to file"""
+        from app.models import Event
+        
+        if not filename:
+            safe_name = sanitize_filename(society.legal_name or 'society')
+            filename = f'events_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
+        
+        columns = ['id', 'title', 'description', 'event_type', 'start_time', 'end_time', 'location', 'created_at']
+        
+        # Get all society events
+        events = Event.query.filter_by(society_id=society.id).order_by(Event.start_time.desc()).all()
+        
+        data = []
+        for event in events:
+            data.append({
+                'id': event.id,
+                'title': event.title or '',
+                'description': event.description or '',
+                'event_type': event.event_type or '',
+                'start_time': event.start_time.isoformat() if event.start_time else '',
+                'end_time': event.end_time.isoformat() if event.end_time else '',
+                'location': event.location or '',
+                'created_at': event.created_at.isoformat() if event.created_at else ''
+            })
+        
+        if format == 'csv':
+            return DataExporter.to_csv(data, filename, columns)
+        elif format == 'excel':
+            return DataExporter.to_excel(data, filename, 'Events', columns)
+        elif format == 'json':
+            return DataExporter.to_json(data, filename)
+        elif format == 'pdf':
+            return DataExporter.to_pdf(data, filename, f'Events - {society.legal_name}', columns)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+    @staticmethod
+    def export_society_tournaments(society, format='csv', filename=None):
+        """Export society tournaments to file"""
+        from app.models import Tournament
+        
+        if not filename:
+            safe_name = sanitize_filename(society.legal_name or 'society')
+            filename = f'tournaments_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
+        
+        columns = ['id', 'name', 'description', 'sport', 'tournament_type', 'start_date', 'end_date', 'status', 'created_at']
+        
+        # Get all society tournaments
+        tournaments = Tournament.query.filter_by(organizer_id=society.id).order_by(Tournament.start_date.desc()).all()
+        
+        data = []
+        for tournament in tournaments:
+            data.append({
+                'id': tournament.id,
+                'name': tournament.name or '',
+                'description': tournament.description or '',
+                'sport': tournament.sport or '',
+                'tournament_type': tournament.tournament_type or '',
+                'start_date': tournament.start_date.isoformat() if tournament.start_date else '',
+                'end_date': tournament.end_date.isoformat() if tournament.end_date else '',
+                'status': tournament.status or '',
+                'created_at': tournament.created_at.isoformat() if tournament.created_at else ''
+            })
+        
+        if format == 'csv':
+            return DataExporter.to_csv(data, filename, columns)
+        elif format == 'excel':
+            return DataExporter.to_excel(data, filename, 'Tournaments', columns)
+        elif format == 'json':
+            return DataExporter.to_json(data, filename)
+        elif format == 'pdf':
+            return DataExporter.to_pdf(data, filename, f'Tournaments - {society.legal_name}', columns)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+
+    @staticmethod
+    def export_society_planner_events(society, format='csv', filename=None):
+        """Export society field planner events to file"""
+        from app.models import FieldPlannerEvent
+        
+        if not filename:
+            safe_name = sanitize_filename(society.legal_name or 'society')
+            filename = f'planner_events_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
+        
+        columns = ['id', 'title', 'facility_name', 'event_type', 'start_time', 'end_time', 'notes', 'created_at']
+        
+        # Get all society planner events
+        planner_events = FieldPlannerEvent.query.filter_by(society_id=society.id).order_by(FieldPlannerEvent.start_time.desc()).all()
+        
+        data = []
+        for event in planner_events:
+            data.append({
+                'id': event.id,
+                'title': event.title or '',
+                'facility_name': event.facility.name if (event.facility and event.facility.name) else '',
+                'event_type': event.event_type or '',
+                'start_time': event.start_time.isoformat() if event.start_time else '',
+                'end_time': event.end_time.isoformat() if event.end_time else '',
+                'notes': event.notes or '',
+                'created_at': event.created_at.isoformat() if event.created_at else ''
+            })
+        
+        if format == 'csv':
+            return DataExporter.to_csv(data, filename, columns)
+        elif format == 'excel':
+            return DataExporter.to_excel(data, filename, 'Planner Events', columns)
+        elif format == 'json':
+            return DataExporter.to_json(data, filename)
+        elif format == 'pdf':
+            return DataExporter.to_pdf(data, filename, f'Planner Events - {society.legal_name}', columns)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+

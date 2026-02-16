@@ -454,8 +454,9 @@ def view_post(post_id):
     """View single post with comments"""
     post = Post.query.get_or_404(post_id)
     form = CommentForm()
+    comments = post.comments.order_by(Comment.created_at.desc()).all()
     
-    return render_template('social/view_post.html', post=post, form=form)
+    return render_template('social/view_post.html', post=post, form=form, comments=comments)
 
 
 @bp.route('/post/<int:post_id>/promote', methods=['GET', 'POST'])

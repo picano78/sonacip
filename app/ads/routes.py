@@ -1,7 +1,6 @@
 """Ads delivery and tracking routes."""
 from __future__ import annotations
 
-import os
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for

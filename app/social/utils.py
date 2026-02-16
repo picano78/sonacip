@@ -40,8 +40,9 @@ def cleanup_expired_post_photos():
             file_path = os.path.join(base_path, post.image)
             if os.path.isfile(file_path):
                 os.remove(file_path)
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Failed to delete expired post photo file: %s", e)
         post.image = None
         post.photo_expires_at = None
         deleted_count += 1

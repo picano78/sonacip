@@ -446,6 +446,10 @@ def create_post():
                     db.session.commit()
                 except Exception:
                     db.session.rollback()
+                    try:
+                        current_app.logger.exception("Failed to create photo expiry notification")
+                    except Exception:
+                        pass
 
             try:
                 log_action(

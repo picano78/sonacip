@@ -227,3 +227,22 @@ class ModuleUploadForm(FlaskForm):
     ])
 
 
+class LiveBannerForm(FlaskForm):
+    """Form for managing live stream banners"""
+    title = StringField('Titolo Banner', validators=[DataRequired(), Length(max=200)])
+    content = TextAreaField('Contenuto HTML/Testo', validators=[Optional(), Length(max=5000)])
+    image_url = StringField('URL Immagine', validators=[Optional(), URL(), Length(max=500)])
+    link_url = StringField('URL Link Click', validators=[Optional(), URL(), Length(max=500)])
+    position = SelectField('Posizione', choices=[
+        ('right', 'Destra'),
+        ('left', 'Sinistra'),
+        ('top', 'Sopra'),
+        ('bottom', 'Sotto')
+    ], validators=[DataRequired()])
+    width = IntegerField('Larghezza (px)', validators=[Optional()], default=300)
+    height = IntegerField('Altezza (px)', validators=[Optional()], default=250)
+    is_active = BooleanField('Banner Attivo')
+    display_order = IntegerField('Ordine Visualizzazione', validators=[Optional()], default=0)
+
+
+

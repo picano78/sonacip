@@ -2655,6 +2655,7 @@ class Society(db.Model):
     logo = db.Column(db.String(255))
     brand_color = db.Column(db.String(7))  # Hex color
     members_year_end_policy = db.Column(db.String(20), nullable=False, default='keep')  # 'keep' or 'remove'
+    planner_notifications_enabled = db.Column(db.Boolean, default=True)  # Send notifications on planner changes
     
     # Stats and metadata
     total_athletes = db.Column(db.Integer, default=0)
@@ -3970,6 +3971,33 @@ class LiveStreamViewer(db.Model):
 
     def __repr__(self):
         return f'<LiveStreamViewer stream={self.stream_id} viewer={self.viewer_id}>'
+
+
+class LiveBanner(db.Model):
+    """Advertising banners displayed during live streams"""
+    __tablename__ = 'live_banner'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text)  # HTML content or text
+    image_url = db.Column(db.String(500))  # Optional banner image
+    link_url = db.Column(db.String(500))  # Optional click-through URL
+    position = db.Column(db.String(20), default='right')  # left, right, top, bottom
+    width = db.Column(db.Integer, default=300)  # Width in pixels
+    height = db.Column(db.Integer, default=250)  # Height in pixels
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    display_order = db.Column(db.Integer, default=0)  # Order for rotation
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=utc_now, index=True)
+    updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Creator
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    creator = db.relationship('User', foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f'<LiveBanner {self.id} "{self.title}">'
 
 
 class Poll(db.Model):

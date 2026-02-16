@@ -33,6 +33,7 @@ from app.admin.forms import (
     AdCampaignForm,
     AdCreativeForm,
     ModuleUploadForm,
+    LiveBannerForm,
 )
 from app.models import (
     AdsSetting,
@@ -81,6 +82,7 @@ from app.models import (
     FeePayment,
     Invoice,
     SystemModule,
+    LiveBanner,
 )
 from datetime import datetime, timedelta, timezone
 import os
@@ -2623,4 +2625,139 @@ def module_download(module_id):
         current_app.logger.error(f'Error downloading module: {e}')
         flash(f'Errore durante il download del modulo: {str(e)}', 'danger')
         return redirect(url_for('admin.modules'))
+
+
+# ===== Live Banner Management Routes =====
+
+@bp.route('/live-banners')
+@login_required
+@admin_required
+def live_banners():
+    """List all live stream banners"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    banners = LiveBanner.query.order_by(LiveBanner.display_order.asc(), LiveBanner.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('admin/live_banners.html', banners=banners)
+
+
+@bp.route('/live-banners/new', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def live_banner_new():
+    """Create new live banner"""
+    form = LiveBannerForm()
+    
+    if form.validate_on_submit():
+        try:
+            banner = LiveBanner(
+                title=form.title.data,
+                content=form.content.data,
+                image_url=form.image_url.data,
+                link_url=form.link_url.data,
+                position=form.position.data,
+                width=form.width.data or 300,
+                height=form.height.data or 250,
+                is_active=form.is_active.data,
+                display_order=form.display_order.data or 0,
+                created_by=current_user.id
+            )
+            
+            db.session.add(banner)
+            db.session.commit()
+            
+            log_action('live_banner_create', 'LiveBanner', banner.id, f'Created banner: {banner.title}')
+            flash('Banner creato con successo!', 'success')
+            return redirect(url_for('admin.live_banners'))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Error creating live banner: {e}')
+            flash(f'Errore durante la creazione del banner: {str(e)}', 'danger')
+    
+    return render_template('admin/live_banner_form.html', form=form, banner=None)
+
+
+@bp.route('/live-banners/<int:banner_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def live_banner_edit(banner_id):
+    """Edit live banner"""
+    banner = LiveBanner.query.get_or_404(banner_id)
+    form = LiveBannerForm(obj=banner)
+    
+    if form.validate_on_submit():
+        try:
+            banner.title = form.title.data
+            banner.content = form.content.data
+            banner.image_url = form.image_url.data
+            banner.link_url = form.link_url.data
+            banner.position = form.position.data
+            banner.width = form.width.data or 300
+            banner.height = form.height.data or 250
+            banner.is_active = form.is_active.data
+            banner.display_order = form.display_order.data or 0
+            
+            db.session.commit()
+            
+            log_action('live_banner_update', 'LiveBanner', banner.id, f'Updated banner: {banner.title}')
+            flash('Banner aggiornato con successo!', 'success')
+            return redirect(url_for('admin.live_banners'))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Error updating live banner: {e}')
+            flash(f'Errore durante l\'aggiornamento del banner: {str(e)}', 'danger')
+    
+    return render_template('admin/live_banner_form.html', form=form, banner=banner)
+
+
+@bp.route('/live-banners/<int:banner_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def live_banner_delete(banner_id):
+    """Delete live banner"""
+    try:
+        banner = LiveBanner.query.get_or_404(banner_id)
+        title = banner.title
+        
+        db.session.delete(banner)
+        db.session.commit()
+        
+        log_action('live_banner_delete', 'LiveBanner', banner_id, f'Deleted banner: {title}')
+        flash('Banner eliminato con successo!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error deleting live banner: {e}')
+        flash(f'Errore durante l\'eliminazione del banner: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin.live_banners'))
+
+
+@bp.route('/live-banners/<int:banner_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def live_banner_toggle(banner_id):
+    """Toggle banner active status"""
+    try:
+        banner = LiveBanner.query.get_or_404(banner_id)
+        banner.is_active = not banner.is_active
+        
+        db.session.commit()
+        
+        status = 'attivato' if banner.is_active else 'disattivato'
+        log_action('live_banner_toggle', 'LiveBanner', banner.id, f'Banner {status}: {banner.title}')
+        flash(f'Banner {status} con successo!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error toggling live banner: {e}')
+        flash(f'Errore durante la modifica dello stato: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin.live_banners'))
+
 

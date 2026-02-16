@@ -160,9 +160,16 @@ def cleanup_old_notifications(days=90):
 def notify_planner_change(society_id, title, message, link=None):
     """
     Notify all society members who have enabled planner notifications
+    Only sends notifications if the society has planner_notifications_enabled set to True
     """
     try:
-        from app.models import SocietyMembership
+        from app.models import SocietyMembership, Society
+        
+        # Check if society has planner notifications enabled
+        society = db.session.get(Society, society_id)
+        if not society or not society.planner_notifications_enabled:
+            logger.debug(f"Planner notifications disabled for society {society_id}")
+            return []
         
         # Get all active members who want planner notifications
         memberships = (

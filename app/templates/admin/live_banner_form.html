@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifica Banner' if banner else 'Nuovo Banner' }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+          <i class="bi bi-badge-ad text-primary"></i>
+          {{ 'Modifica Banner Live' if banner else 'Nuovo Banner Live' }}
+        </h1>
+        <a href="{{ url_for('admin.live_banners') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Indietro
+        </a>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="mb-3">
+              <label for="title" class="form-label fw-bold">
+                <i class="bi bi-type text-primary"></i> Titolo Banner *
+              </label>
+              {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else "")) }}
+              {% if form.title.errors %}
+                <div class="invalid-feedback">
+                  {% for error in form.title.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+              <small class="form-text text-muted">Nome descrittivo del banner (uso interno)</small>
+            </div>
+
+            <div class="mb-3">
+              <label for="content" class="form-label fw-bold">
+                <i class="bi bi-file-text text-primary"></i> Contenuto HTML/Testo
+              </label>
+              {{ form.content(class="form-control", rows=5) }}
+              <small class="form-text text-muted">
+                Contenuto HTML o testo del banner. Può essere usato insieme all'immagine.
+              </small>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="image_url" class="form-label fw-bold">
+                  <i class="bi bi-image text-primary"></i> URL Immagine
+                </label>
+                {{ form.image_url(class="form-control" + (" is-invalid" if form.image_url.errors else "")) }}
+                {% if form.image_url.errors %}
+                  <div class="invalid-feedback">
+                    {% for error in form.image_url.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+                <small class="form-text text-muted">URL completo dell'immagine banner</small>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label for="link_url" class="form-label fw-bold">
+                  <i class="bi bi-link-45deg text-primary"></i> URL Link Click
+                </label>
+                {{ form.link_url(class="form-control" + (" is-invalid" if form.link_url.errors else "")) }}
+                {% if form.link_url.errors %}
+                  <div class="invalid-feedback">
+                    {% for error in form.link_url.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+                <small class="form-text text-muted">URL di destinazione al click sul banner</small>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="position" class="form-label fw-bold">
+                  <i class="bi bi-arrows-move text-primary"></i> Posizione *
+                </label>
+                {{ form.position(class="form-control" + (" is-invalid" if form.position.errors else "")) }}
+                {% if form.position.errors %}
+                  <div class="invalid-feedback">
+                    {% for error in form.position.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-4 mb-3">
+                <label for="width" class="form-label fw-bold">
+                  <i class="bi bi-arrows-angle-expand text-primary"></i> Larghezza (px)
+                </label>
+                {{ form.width(class="form-control") }}
+                <small class="form-text text-muted">Default: 300px</small>
+              </div>
+
+              <div class="col-md-4 mb-3">
+                <label for="height" class="form-label fw-bold">
+                  <i class="bi bi-arrows-angle-contract text-primary"></i> Altezza (px)
+                </label>
+                {{ form.height(class="form-control") }}
+                <small class="form-text text-muted">Default: 250px</small>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="display_order" class="form-label fw-bold">
+                  <i class="bi bi-sort-numeric-down text-primary"></i> Ordine Visualizzazione
+                </label>
+                {{ form.display_order(class="form-control") }}
+                <small class="form-text text-muted">
+                  Banner con ordine più basso vengono mostrati per primi (0 = priorità massima)
+                </small>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold d-block">
+                  <i class="bi bi-toggle-on text-primary"></i> Stato Banner
+                </label>
+                <div class="form-check form-switch mt-2">
+                  {{ form.is_active(class="form-check-input", role="switch") }}
+                  <label class="form-check-label" for="is_active">
+                    Banner attivo (visibile durante le live)
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              <strong>Nota:</strong> I banner attivi verranno visualizzati automaticamente durante 
+              le dirette live nella posizione specificata. L'ordine di visualizzazione determina 
+              quale banner viene mostrato quando ci sono più banner attivi.
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a href="{{ url_for('admin.live_banners') }}" class="btn btn-secondary">
+                <i class="bi bi-x-lg me-1"></i>Annulla
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>{{ 'Aggiorna Banner' if banner else 'Crea Banner' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Preview Section -->
+      {% if banner and banner.image_url %}
+      <div class="card shadow-sm mt-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0"><i class="bi bi-eye text-primary"></i> Anteprima Banner</h6>
+        </div>
+        <div class="card-body text-center">
+          <div style="max-width: {{ banner.width }}px; max-height: {{ banner.height }}px; margin: 0 auto;">
+            <img src="{{ banner.image_url }}" alt="{{ banner.title }}" class="img-fluid rounded">
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

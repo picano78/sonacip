@@ -199,6 +199,86 @@
   [data-theme="dark"] .progress-ring-inner {
     background: #242526;
   }
+  
+  /* Mobile Responsive Styles for Dashboard */
+  @media (max-width: 767px) {
+    .dash-gradient-header {
+      padding: 1.5rem 1rem 2rem;
+      margin-bottom: 20px;
+      border-radius: 12px;
+    }
+    
+    .greeting-text {
+      font-size: 1.4rem;
+    }
+    
+    .greeting-sub {
+      font-size: 0.875rem;
+    }
+    
+    .dash-card {
+      margin-bottom: 16px;
+    }
+    
+    .dash-stat-card {
+      padding: 1.25rem;
+      margin-bottom: 12px;
+    }
+    
+    .dash-stat-card .stat-icon {
+      width: 40px;
+      height: 40px;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .dash-stat-card .stat-value {
+      font-size: 1.5rem;
+    }
+    
+    .dash-stat-card .stat-label {
+      font-size: 0.75rem;
+    }
+    
+    .pill-link {
+      padding: 10px 16px;
+      font-size: 0.85rem;
+      margin: 4px;
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+    
+    .notif-item {
+      padding: 0.75rem;
+      font-size: 0.9rem;
+    }
+    
+    /* Stack dashboard widgets properly on mobile */
+    .row > [class*="col-"] {
+      margin-bottom: 12px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .dash-gradient-header {
+      padding: 1.25rem 0.875rem 1.5rem;
+    }
+    
+    .greeting-text {
+      font-size: 1.25rem;
+    }
+    
+    .dash-stat-card .stat-value {
+      font-size: 1.35rem;
+    }
+    
+    /* Ensure buttons wrap on very small screens */
+    .dash-gradient-header .d-flex {
+      flex-direction: column;
+      align-items: flex-start !important;
+    }
+  }
 </style>
 {% endblock %}
 

@@ -4,101 +4,189 @@
 <style>
     .widget-card {
         border: 2px solid #e9ecef;
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 8px;
-        cursor: grab;
-        transition: all 0.2s;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        transition: all 0.25s ease;
         background: #fff;
+        position: relative;
     }
-    .widget-card:hover { border-color: #1877f2; box-shadow: 0 2px 8px rgba(24,119,242,0.15); }
-    .widget-card.dragging { opacity: 0.5; transform: scale(0.95); }
-    .widget-card .widget-icon { font-size: 1.5rem; color: #1877f2; }
-    .drop-zone {
-        min-height: 200px;
-        border: 2px dashed #dee2e6;
-        border-radius: 8px;
-        padding: 12px;
-        transition: all 0.2s;
+    .widget-card:hover { 
+        border-color: #1877f2; 
+        box-shadow: 0 4px 12px rgba(24,119,242,0.15);
+        transform: translateY(-2px);
     }
-    .drop-zone.drag-over { border-color: #1877f2; background: rgba(24,119,242,0.05); }
-    .drop-zone-empty {
+    .widget-card.selected { 
+        border-color: #1877f2; 
+        background: rgba(24,119,242,0.05);
+    }
+    .widget-card .widget-icon { 
+        font-size: 1.75rem; 
+        color: #1877f2;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #adb5bd;
-        padding: 40px;
-        font-size: 0.9rem;
+        width: 48px;
+        height: 48px;
+        background: rgba(24,119,242,0.1);
+        border-radius: 10px;
     }
-    .size-btn { width: 28px; height: 28px; padding: 0; font-size: 0.7rem; }
-    .size-btn.active { background: #1877f2; color: #fff; border-color: #1877f2; }
+    .widget-checkbox {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        accent-color: #1877f2;
+    }
+    .size-btn { 
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    .size-btn.active { 
+        background: #1877f2;
+        color: #fff;
+        border-color: #1877f2;
+    }
+    .widget-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e9ecef;
+    }
+    .widget-order-controls {
+        display: flex;
+        gap: 4px;
+    }
+    .btn-order {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px;
+        font-size: 1rem;
+    }
+    @media (max-width: 768px) {
+        .widget-card {
+            padding: 14px;
+        }
+        .widget-card .widget-icon {
+            width: 44px;
+            height: 44px;
+            font-size: 1.5rem;
+        }
+        .size-btn {
+            min-width: 48px;
+            min-height: 48px;
+            font-size: 0.9rem;
+        }
+        .btn-order {
+            min-width: 48px;
+            min-height: 48px;
+        }
+        .widget-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .widget-controls .btn-group {
+            width: 100%;
+        }
+        .widget-controls .btn-group .size-btn {
+            flex: 1;
+        }
+    }
 </style>
 {% endblock %}
 {% block content %}
 <div class="container my-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
-            <h1 class="h4 mb-0"><i class="bi bi-grid-1x2 me-1" style="color:#1877f2"></i> Personalizza Cruscotto</h1>
-            <div class="text-muted small">Trascina i widget per personalizzare il tuo cruscotto</div>
+            <h1 class="h4 mb-1"><i class="bi bi-grid-1x2 me-2" style="color:#1877f2"></i> Personalizza Cruscotto</h1>
+            <div class="text-muted small">Seleziona i widget da visualizzare e personalizza il loro ordine e dimensione</div>
         </div>
-        <div class="d-flex gap-2">
-            <button id="btnSave" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i> Salva Layout</button>
+        <div class="d-flex gap-2 flex-wrap">
+            <button id="btnSave" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Salva Layout</button>
             <form method="post" action="{{ url_for('main.reset_dashboard_layout') }}" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Ripristinare il layout predefinito?')">
+                <button type="submit" class="btn btn-outline-secondary" onclick="return confirm('Ripristinare il layout predefinito?')">
                     <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                 </button>
             </form>
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-left me-1"></i> Torna</a>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary"><i class="bi bi-arrow-left me-1"></i> Torna</a>
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-12 col-lg-4">
-            <h6 class="text-muted mb-3"><i class="bi bi-collection me-1"></i> Widget Disponibili</h6>
-            <div id="availableWidgets" class="drop-zone">
-                {% for w in available_widgets %}
-                <div class="widget-card" draggable="true" data-key="{{ w.key }}" data-size="medium" data-visible="true">
-                    <div class="d-flex align-items-center">
-                        <span class="widget-icon me-2"><i class="bi {{ w.icon }}"></i></span>
-                        <div class="flex-grow-1">
-                            <div class="fw-semibold small">{{ w.name }}</div>
-                            <div class="text-muted" style="font-size:0.75rem;">{{ w.description }}</div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-                {% if not available_widgets %}
-                <div class="drop-zone-empty">Tutti i widget sono nel cruscotto</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="col-12 col-lg-8">
-            <h6 class="text-muted mb-3"><i class="bi bi-speedometer2 me-1"></i> Il Tuo Dashboard</h6>
-            <div id="activeWidgets" class="drop-zone">
-                {% for w in active_widgets %}
-                <div class="widget-card" draggable="true" data-key="{{ w.key }}" data-size="{{ w.size }}" data-visible="{{ 'true' if w.visible else 'false' }}">
-                    <div class="d-flex align-items-center">
-                        <span class="widget-icon me-2"><i class="bi {{ w.info.icon }}"></i></span>
-                        <div class="flex-grow-1">
-                            <div class="fw-semibold small">{{ w.info.name }}</div>
-                            <div class="text-muted" style="font-size:0.75rem;">{{ w.info.description }}</div>
-                        </div>
-                        <div class="d-flex align-items-center gap-1">
-                            <div class="btn-group btn-group-sm me-2">
-                                <button class="btn btn-outline-secondary size-btn {% if w.size == 'small' %}active{% endif %}" onclick="setSize(this,'small')" title="Piccolo">S</button>
-                                <button class="btn btn-outline-secondary size-btn {% if w.size == 'medium' %}active{% endif %}" onclick="setSize(this,'medium')" title="Medio">M</button>
-                                <button class="btn btn-outline-secondary size-btn {% if w.size == 'large' %}active{% endif %}" onclick="setSize(this,'large')" title="Grande">L</button>
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-3 p-md-4">
+                    <h6 class="text-muted mb-3">
+                        <i class="bi bi-collection me-2"></i> Widget Disponibili
+                        <span class="badge bg-primary ms-2" id="selectedCount">0 selezionati</span>
+                    </h6>
+                    
+                    <div id="widgetsList">
+                        {% set all_widget_keys = [] %}
+                        {% for w in active_widgets %}
+                            {% set _ = all_widget_keys.append(w.key) %}
+                        {% endfor %}
+                        
+                        {% for w in available_widgets %}
+                        <div class="widget-card" data-key="{{ w.key }}" data-position="{{ loop.index }}">
+                            <div class="d-flex align-items-start gap-3">
+                                <input type="checkbox" 
+                                       class="widget-checkbox form-check-input m-0" 
+                                       id="widget_{{ w.key }}"
+                                       {% if w.key in all_widget_keys %}checked{% endif %}
+                                       onchange="toggleWidget(this)">
+                                <label for="widget_{{ w.key }}" class="flex-grow-1 cursor-pointer" style="cursor: pointer;">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="widget-icon">
+                                            <i class="bi {{ w.icon }}"></i>
+                                        </span>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold mb-1">{{ w.name }}</div>
+                                            <div class="text-muted small">{{ w.description }}</div>
+                                        </div>
+                                    </div>
+                                </label>
                             </div>
-                            <button class="btn btn-sm btn-outline-danger" onclick="removeWidget(this)" title="Rimuovi"><i class="bi bi-x"></i></button>
+                            <div class="widget-controls" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
+                                    <div>
+                                        <label class="small text-muted me-2 mb-0">Dimensione:</label>
+                                        <div class="btn-group" role="group">
+                                            {% set default_size = (active_widgets|selectattr('key', 'equalto', w.key)|map(attribute='size')|first) or 'medium' %}
+                                            <button type="button" class="btn btn-outline-secondary size-btn {% if default_size == 'small' %}active{% endif %}" 
+                                                    onclick="setSize(this, 'small')" title="Piccolo">
+                                                <i class="bi bi-phone me-1"></i> S
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary size-btn {% if default_size == 'medium' %}active{% endif %}" 
+                                                    onclick="setSize(this, 'medium')" title="Medio">
+                                                <i class="bi bi-tablet me-1"></i> M
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary size-btn {% if default_size == 'large' %}active{% endif %}" 
+                                                    onclick="setSize(this, 'large')" title="Grande">
+                                                <i class="bi bi-laptop me-1"></i> L
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="widget-order-controls">
+                                        <button type="button" class="btn btn-outline-secondary btn-order" onclick="moveUp(this)" title="Sposta su">
+                                            <i class="bi bi-arrow-up"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-order" onclick="moveDown(this)" title="Sposta giù">
+                                            <i class="bi bi-arrow-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        {% endfor %}
                     </div>
                 </div>
-                {% endfor %}
-                {% if not active_widgets %}
-                <div class="drop-zone-empty" id="emptyMsg">Trascina i widget qui</div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -108,127 +196,180 @@
 
 <script>
 (function() {
-    let draggedEl = null;
-
-    document.querySelectorAll('.widget-card').forEach(card => {
-        card.addEventListener('dragstart', e => {
-            draggedEl = card;
-            card.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-        });
-        card.addEventListener('dragend', () => {
-            if (draggedEl) draggedEl.classList.remove('dragging');
-            draggedEl = null;
-            document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
-            updateEmptyMsg();
-        });
-    });
-
-    document.querySelectorAll('.drop-zone').forEach(zone => {
-        zone.addEventListener('dragover', e => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            zone.classList.add('drag-over');
-        });
-        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-        zone.addEventListener('drop', e => {
-            e.preventDefault();
-            zone.classList.remove('drag-over');
-            if (draggedEl) {
-                const emptyMsg = zone.querySelector('.drop-zone-empty');
-                if (emptyMsg) emptyMsg.remove();
-                zone.appendChild(draggedEl);
-                if (zone.id === 'activeWidgets' && !draggedEl.querySelector('.size-btn')) {
-                    addControls(draggedEl);
-                }
-                if (zone.id === 'availableWidgets') {
-                    const ctrls = draggedEl.querySelector('.d-flex.align-items-center.gap-1');
-                    if (ctrls) ctrls.remove();
-                }
-            }
-        });
-    });
-
-    function addControls(card) {
-        const existing = card.querySelector('.d-flex.align-items-center.gap-1');
-        if (existing) return;
-        const wrapper = card.querySelector('.d-flex.align-items-center');
-        const controls = document.createElement('div');
-        controls.className = 'd-flex align-items-center gap-1';
-        controls.innerHTML = `
-            <div class="btn-group btn-group-sm me-2">
-                <button class="btn btn-outline-secondary size-btn" onclick="setSize(this,'small')" title="Piccolo">S</button>
-                <button class="btn btn-outline-secondary size-btn active" onclick="setSize(this,'medium')" title="Medio">M</button>
-                <button class="btn btn-outline-secondary size-btn" onclick="setSize(this,'large')" title="Grande">L</button>
-            </div>
-            <button class="btn btn-sm btn-outline-danger" onclick="removeWidget(this)" title="Rimuovi"><i class="bi bi-x"></i></button>
-        `;
-        wrapper.appendChild(controls);
-    }
-
-    window.updateEmptyMsg = function() {
-        ['availableWidgets', 'activeWidgets'].forEach(id => {
-            const zone = document.getElementById(id);
-            const cards = zone.querySelectorAll('.widget-card');
-            const existing = zone.querySelector('.drop-zone-empty');
-            if (cards.length === 0 && !existing) {
-                const msg = document.createElement('div');
-                msg.className = 'drop-zone-empty';
-                msg.textContent = id === 'activeWidgets' ? 'Trascina i widget qui' : 'Tutti i widget sono nel cruscotto';
-                zone.appendChild(msg);
-            } else if (cards.length > 0 && existing) {
-                existing.remove();
-            }
-        });
+    // Initialize the interface
+    updateSelectedCount();
+    updateAllWidgetStates();
+    
+    // Toggle widget selection
+    window.toggleWidget = function(checkbox) {
+        const card = checkbox.closest('.widget-card');
+        const controls = card.querySelector('.widget-controls');
+        
+        if (checkbox.checked) {
+            card.classList.add('selected');
+            controls.style.display = 'block';
+        } else {
+            card.classList.remove('selected');
+            controls.style.display = 'none';
+        }
+        
+        updateSelectedCount();
+        updateOrderButtons();
     };
-
+    
+    // Set widget size
     window.setSize = function(btn, size) {
         const card = btn.closest('.widget-card');
         card.dataset.size = size;
+        
+        // Update active button
         card.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
     };
-
-    window.removeWidget = function(btn) {
+    
+    // Move widget up in order
+    window.moveUp = function(btn) {
         const card = btn.closest('.widget-card');
-        const ctrls = card.querySelector('.d-flex.align-items-center.gap-1');
-        if (ctrls) ctrls.remove();
-        document.getElementById('availableWidgets').appendChild(card);
-        updateEmptyMsg();
+        const prev = card.previousElementSibling;
+        
+        if (prev && prev.classList.contains('widget-card')) {
+            card.parentNode.insertBefore(card, prev);
+            updatePositions();
+            updateOrderButtons();
+        }
     };
-
-    document.getElementById('btnSave').addEventListener('click', () => {
-        const active = document.getElementById('activeWidgets');
-        const cards = active.querySelectorAll('.widget-card');
-        const widgets = [];
-        cards.forEach(card => {
-            widgets.push({
-                key: card.dataset.key,
-                size: card.dataset.size || 'medium',
-                visible: card.dataset.visible !== 'false',
-            });
+    
+    // Move widget down in order
+    window.moveDown = function(btn) {
+        const card = btn.closest('.widget-card');
+        const next = card.nextElementSibling;
+        
+        if (next && next.classList.contains('widget-card')) {
+            card.parentNode.insertBefore(next, card);
+            updatePositions();
+            updateOrderButtons();
+        }
+    };
+    
+    // Update position data attributes
+    function updatePositions() {
+        const cards = document.querySelectorAll('.widget-card');
+        cards.forEach((card, index) => {
+            card.dataset.position = index + 1;
         });
-
+    }
+    
+    // Update order buttons state (disable first up, last down)
+    function updateOrderButtons() {
+        const cards = document.querySelectorAll('.widget-card');
+        const selectedCards = Array.from(cards).filter(card => {
+            const checkbox = card.querySelector('.widget-checkbox');
+            return checkbox && checkbox.checked;
+        });
+        
+        selectedCards.forEach((card, index) => {
+            const upBtn = card.querySelector('.btn-order:first-child');
+            const downBtn = card.querySelector('.btn-order:last-child');
+            
+            if (upBtn && downBtn) {
+                // Disable up button for first selected card
+                const prevSibling = card.previousElementSibling;
+                upBtn.disabled = !prevSibling || !prevSibling.classList.contains('widget-card');
+                
+                // Disable down button for last selected card
+                const nextSibling = card.nextElementSibling;
+                downBtn.disabled = !nextSibling || !nextSibling.classList.contains('widget-card');
+            }
+        });
+    }
+    
+    // Update selected count badge
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.widget-checkbox');
+        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const badge = document.getElementById('selectedCount');
+        
+        if (badge) {
+            badge.textContent = selectedCount + ' selezionati';
+        }
+    }
+    
+    // Initialize all widget states on page load
+    function updateAllWidgetStates() {
+        const checkboxes = document.querySelectorAll('.widget-checkbox');
+        checkboxes.forEach(checkbox => {
+            const card = checkbox.closest('.widget-card');
+            const controls = card.querySelector('.widget-controls');
+            
+            if (checkbox.checked) {
+                card.classList.add('selected');
+                controls.style.display = 'block';
+            } else {
+                card.classList.remove('selected');
+                controls.style.display = 'none';
+            }
+        });
+        
+        updateOrderButtons();
+    }
+    
+    // Save layout
+    document.getElementById('btnSave').addEventListener('click', function() {
+        const cards = document.querySelectorAll('.widget-card');
+        const widgets = [];
+        
+        cards.forEach((card, index) => {
+            const checkbox = card.querySelector('.widget-checkbox');
+            if (checkbox && checkbox.checked) {
+                const activeSize = card.querySelector('.size-btn.active');
+                const size = activeSize ? activeSize.textContent.trim().toLowerCase().replace(/[^sml]/g, '') : 'medium';
+                let sizeValue = 'medium';
+                
+                if (size === 's') sizeValue = 'small';
+                else if (size === 'm') sizeValue = 'medium';
+                else if (size === 'l') sizeValue = 'large';
+                
+                widgets.push({
+                    key: card.dataset.key,
+                    size: sizeValue,
+                    visible: true,
+                    position: index
+                });
+            }
+        });
+        
         fetch('{{ url_for("main.save_dashboard_layout") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('input[name="csrf_token"]') ? document.querySelector('input[name="csrf_token"]').value : ''
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]') ? 
+                              document.querySelector('input[name="csrf_token"]').value : 
+                              document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({ widgets: widgets })
         })
         .then(r => r.json())
         .then(data => {
             const alert = document.getElementById('saveAlert');
-            alert.textContent = data.message || 'Salvato!';
-            alert.className = 'alert mt-3 ' + (data.status === 'ok' ? 'alert-success' : 'alert-danger');
-            setTimeout(() => alert.className += ' d-none', 3000);
+            alert.textContent = data.message || 'Layout salvato con successo!';
+            alert.classList.remove('d-none', 'alert-danger');
+            alert.classList.add('alert-success');
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                alert.classList.add('d-none');
+            }, 3000);
         })
-        .catch(() => {
+        .catch(err => {
+            console.error('Error saving layout:', err);
             const alert = document.getElementById('saveAlert');
-            alert.textContent = 'Errore di rete.';
-            alert.className = 'alert mt-3 alert-danger';
-            setTimeout(() => alert.className += ' d-none', 3000);
+            alert.textContent = 'Errore durante il salvataggio. Riprova.';
+            alert.classList.remove('d-none', 'alert-success');
+            alert.classList.add('alert-danger');
+            
+            setTimeout(() => {
+                alert.classList.add('d-none');
+            }, 3000);
         });
     });
 })();

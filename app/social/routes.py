@@ -1425,6 +1425,32 @@ def society_permissions():
     )
 
 
+@bp.route('/society/settings', methods=['GET', 'POST'])
+@login_required
+def society_settings():
+    """Society settings page – year-end member policy and future settings."""
+    if not check_permission(current_user, 'society', 'manage'):
+        flash('Accesso riservato alle società.', 'warning')
+        return redirect(url_for('social.feed'))
+    society = current_user.get_primary_society()
+    if not society:
+        flash('Profilo società non trovato.', 'warning')
+        return redirect(url_for('social.feed'))
+
+    if request.method == 'POST':
+        policy = request.form.get('members_year_end_policy', 'keep')
+        if policy not in ('keep', 'remove'):
+            policy = 'keep'
+        society.members_year_end_policy = policy
+        db.session.commit()
+        log_action('society_settings_update', 'Society', society.id,
+                   f'members_year_end_policy={policy}', society_id=society.id)
+        flash('Impostazioni salvate.', 'success')
+        return redirect(url_for('social.society_settings'))
+
+    return render_template('social/society_settings.html', society=society)
+
+
 @bp.route('/society/members/<int:user_id>/set-role', methods=['POST'])
 @login_required
 def society_set_member_role(user_id):

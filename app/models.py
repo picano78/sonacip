@@ -2654,6 +2654,7 @@ class Society(db.Model):
     # Settings
     logo = db.Column(db.String(255))
     brand_color = db.Column(db.String(7))  # Hex color
+    members_year_end_policy = db.Column(db.String(20), nullable=False, default='keep')  # 'keep' or 'remove'
     
     # Stats and metadata
     total_athletes = db.Column(db.Integer, default=0)

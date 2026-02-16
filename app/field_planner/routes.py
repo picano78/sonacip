@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone, date, time as dt_time
 from flask import render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from app import db
-from app.field_planner import bp, legacy_bp  # noqa: F401 – legacy_bp exported for blueprint registration
+from app.field_planner import bp, legacy_bp  # noqa: F401 -- legacy_bp exported for blueprint registration
 from app.field_planner.forms import FieldPlannerEventForm
 from app.models import FieldPlannerEvent, Facility, Notification
 from app.utils import permission_required, check_permission, get_active_society_id

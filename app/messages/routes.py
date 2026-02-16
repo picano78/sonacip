@@ -906,3 +906,63 @@ def group_video_call(group_id):
                          group=group,
                          members=member_users)
 
+
+# ==================== VOICE CALL ROUTES ====================
+
+
+@bp.route('/chat/<int:user_id>/voice-call')
+@login_required
+def voice_call(user_id):
+    """Start a voice call with another user in direct messaging"""
+    other_user = User.query.get_or_404(user_id)
+    
+    if other_user.id == current_user.id:
+        flash('Non puoi chiamare te stesso.', 'warning')
+        return redirect(url_for('messages.inbox'))
+    
+    # Generate a unique room ID for the call
+    room_id = secrets.token_urlsafe(16)
+    
+    return render_template('messages/voice_call.html',
+                         call_type='direct',
+                         other_user=other_user,
+                         room_id=room_id,
+                         group=None)
+
+
+@bp.route('/groups/<int:group_id>/voice-call')
+@login_required
+def group_voice_call(group_id):
+    """Start a voice call in a group chat"""
+    group = MessageGroup.query.get_or_404(group_id)
+    
+    # Check membership
+    membership = MessageGroupMembership.query.filter_by(
+        group_id=group.id,
+        user_id=current_user.id,
+        is_active=True
+    ).first()
+    
+    if not membership:
+        flash('Non sei membro di questo gruppo.', 'warning')
+        return redirect(url_for('messages.inbox'))
+    
+    # Generate a unique room ID for the group call
+    room_id = secrets.token_urlsafe(16)
+    
+    # Get active members for the call
+    from sqlalchemy.orm import joinedload
+    members = MessageGroupMembership.query.filter_by(
+        group_id=group.id,
+        is_active=True
+    ).options(joinedload(MessageGroupMembership.user)).all()
+    
+    member_users = [m.user for m in members if m.user]
+    
+    return render_template('messages/voice_call.html',
+                         call_type='group',
+                         other_user=None,
+                         room_id=room_id,
+                         group=group,
+                         members=member_users)
+

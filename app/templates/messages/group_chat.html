@@ -385,7 +385,10 @@
                     </div>
                 </div>
                 <div class="dropdown">
-                    <a href="{{ url_for('messages.group_video_call', group_id=group.id) }}" class="btn btn-outline-success btn-sm rounded-circle me-2" title="Videochiamata di gruppo" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+                    <a href="{{ url_for('messages.group_voice_call', group_id=group.id) }}" class="btn btn-outline-success btn-sm rounded-circle me-2" title="Chiamata vocale di gruppo" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-telephone-fill"></i>
+                    </a>
+                    <a href="{{ url_for('messages.group_video_call', group_id=group.id) }}" class="btn btn-outline-primary btn-sm rounded-circle me-2" title="Videochiamata di gruppo" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
                         <i class="bi bi-camera-video-fill"></i>
                     </a>
                     <button class="btn btn-link text-dark" type="button" data-bs-toggle="dropdown">

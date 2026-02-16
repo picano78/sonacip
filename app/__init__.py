@@ -887,11 +887,12 @@ def create_app(config_name: str | None = None) -> Flask:
     @app.errorhandler(RequestEntityTooLarge)
     def handle_file_too_large(err: RequestEntityTooLarge):
         max_size_mb = app.config.get('MAX_CONTENT_LENGTH', 16 * 1024 * 1024) / (1024 * 1024)
+        msg = f"File troppo grande. La dimensione massima consentita è {max_size_mb:.0f} MB."
         
         if _wants_json():
-            return {"error": "file_too_large", "max_size_mb": max_size_mb}, 413
+            return {"error": "file_too_large", "message": msg, "max_size_mb": max_size_mb}, 200
         
-        flash(f"Il file è troppo grande. La dimensione massima consentita è {max_size_mb:.0f} MB.", "danger")
+        flash(msg, "danger")
         
         # Try to redirect back to referrer
         ref = request.referrer
@@ -1201,7 +1202,7 @@ def create_app(config_name: str | None = None) -> Flask:
             resp.headers.setdefault("X-Content-Type-Options", "nosniff")
             resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
             resp.headers.setdefault("X-Frame-Options", "DENY")
-            resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+            resp.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(self), camera=(self)")
 
             # Add caching headers for static files to improve performance
             if request.path.startswith('/static/'):
@@ -1280,5 +1281,16 @@ def create_app(config_name: str | None = None) -> Flask:
     # Skip if SKIP_AUTO_SEED is set (used by init_db.py to avoid conflicts)
     if not app.config.get("TESTING") and not os.environ.get("SKIP_AUTO_SEED"):
         _auto_seed(app)
+
+    # Load MAX_CONTENT_LENGTH from admin StorageSetting if available
+    if not app.config.get("TESTING"):
+        try:
+            with app.app_context():
+                from app.models import StorageSetting as _SS
+                _ss = _SS.query.first()
+                if _ss and getattr(_ss, 'max_upload_mb', None):
+                    app.config['MAX_CONTENT_LENGTH'] = _ss.max_upload_mb * 1024 * 1024
+        except Exception:
+            pass  # DB not ready or column missing; keep default
 
     return app

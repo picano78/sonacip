@@ -62,7 +62,6 @@
           <table class="table table-sm align-middle">
             <thead>
               <tr>
-                <th>Slug</th>
                 <th>Nome</th>
                 <th>Prezzo</th>
                 <th>Stripe</th>
@@ -73,8 +72,7 @@
             <tbody>
               {% for p in packages %}
                 <tr>
-                  <td class="text-muted small">{{ p.slug }}</td>
-                  <td>{{ p.name }}</td>
+                  <td>{{ p.name }}<div class="text-muted small">{{ p.slug }}</div></td>
                   <td>€{{ "%.2f"|format(p.price_one_time or 0) }} {{ p.currency or 'EUR' }}</td>
                   <td class="text-muted small">{{ p.stripe_price_one_time_id or '-' }}</td>
                   <td>

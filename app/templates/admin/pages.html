@@ -21,8 +21,8 @@
             <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                href="{{ url_for('admin.edit_page', slug=p.slug) }}">
               <div>
-                <div class="fw-semibold">{{ p.slug }}</div>
-                <div class="small text-muted">{{ p.title or '' }}</div>
+                <div class="fw-semibold">{{ p.title or p.slug }}</div>
+                <div class="small text-muted">{{ p.slug }}</div>
               </div>
               <span class="badge bg-secondary">Modifica</span>
             </a>

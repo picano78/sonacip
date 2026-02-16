@@ -59,9 +59,7 @@
       <table class="table table-sm align-middle">
         <thead>
           <tr>
-            <th>Slug</th>
             <th>Nome</th>
-            <th>Feature</th>
             <th>Prezzo</th>
             <th>Stripe</th>
             <th>Attivo</th>
@@ -71,9 +69,7 @@
         <tbody>
           {% for a in addons %}
             <tr>
-              <td class="text-muted small">{{ a.slug }}</td>
-              <td>{{ a.name }}</td>
-              <td class="text-muted small">{{ a.feature_key }}</td>
+              <td>{{ a.name }}<div class="text-muted small">{{ a.slug }}</div></td>
               <td>€{{ "%.2f"|format(a.price_one_time or 0) }} {{ a.currency or 'EUR' }}</td>
               <td class="text-muted small">{{ a.stripe_price_one_time_id or '-' }}</td>
               <td>

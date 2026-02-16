@@ -115,7 +115,7 @@
         </div>
         <div class="tier-info">
             <strong>{{ tier.name }}</strong>
-            <div class="small text-muted">{{ tier.duration_days }} giorni &middot; €{{ "%.2f"|format(tier.price) }} &middot; {{ tier.slug }}</div>
+            <div class="small text-muted">{{ tier.duration_days }} giorni &middot; €{{ "%.2f"|format(tier.price) }}</div>
             {% if tier.stripe_price_id %}
             <span class="badge bg-info-subtle text-info small">Stripe: {{ tier.stripe_price_id[:20] }}...</span>
             {% endif %}

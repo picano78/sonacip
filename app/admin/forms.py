@@ -169,6 +169,7 @@ class StorageSettingsForm(FlaskForm):
     video_max_width = StringField('Larghezza max video (px)', validators=[Optional(), Length(max=5)])
     max_image_mb = StringField('Limite immagini (MB)', validators=[Optional(), Length(max=4)])
     max_video_mb = StringField('Limite video (MB)', validators=[Optional(), Length(max=4)])
+    max_upload_mb = StringField('Limite upload generale (MB)', validators=[Optional(), Length(max=4)])
 
 
 class SiteCustomizationForm(FlaskForm):

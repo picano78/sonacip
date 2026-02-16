@@ -271,6 +271,16 @@
                         {{ form.max_video_mb(class='form-control', style='width:80px') }}
                         <span>MB</span>
                     </div>
+                    
+                    <div class="limit-input">
+                        <i class="bi bi-upload"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Limite upload generale</div>
+                            <div class="small text-muted">Dimensione massima consentita per qualsiasi file caricato</div>
+                        </div>
+                        {{ form.max_upload_mb(class='form-control', style='width:80px') }}
+                        <span>MB</span>
+                    </div>
                 </div>
             </div>
         </div>

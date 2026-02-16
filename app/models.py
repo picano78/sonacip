@@ -1343,6 +1343,7 @@ class StorageSetting(db.Model):
     video_max_width = db.Column(db.Integer, default=1280)
     max_image_mb = db.Column(db.Integer, default=8)
     max_video_mb = db.Column(db.Integer, default=64)
+    max_upload_mb = db.Column(db.Integer, default=16)  # overall upload limit (MAX_CONTENT_LENGTH)
 
     updated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)

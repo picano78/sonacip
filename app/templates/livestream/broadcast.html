@@ -305,7 +305,40 @@ async function initMedia() {
         
     } catch (error) {
         console.error('Error accessing media devices:', error);
-        alert('Impossibile accedere alla fotocamera o al microfono. Verifica i permessi del browser.');
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            // Camera permission denied - guide user to enable it
+            const openSettings = confirm(
+                'Permesso fotocamera negato.\n\n' +
+                'Per avviare la diretta è necessario abilitare la fotocamera.\n' +
+                'Vuoi aprire le impostazioni del dispositivo per abilitarla?'
+            );
+            if (openSettings) {
+                // Try to open app settings on mobile devices
+                try {
+                    if (/android/i.test(navigator.userAgent)) {
+                        window.location.href = 'intent://settings#Intent;scheme=android.settings;end';
+                    } else if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                        window.location.href = 'app-settings:';
+                    } else {
+                        alert(
+                            'Apri le impostazioni del tuo dispositivo e abilita il permesso fotocamera per questo sito.\n\n' +
+                            'Su Chrome: Impostazioni > Privacy e sicurezza > Impostazioni sito > Fotocamera\n' +
+                            'Su Safari: Preferenze > Siti web > Fotocamera'
+                        );
+                    }
+                } catch (e) {
+                    alert(
+                        'Apri le impostazioni del tuo dispositivo e abilita il permesso fotocamera per questo sito.'
+                    );
+                }
+            }
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+            alert('Nessuna fotocamera trovata sul dispositivo. Collega una fotocamera e riprova.');
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+            alert('La fotocamera è già in uso da un\'altra applicazione. Chiudi le altre app e riprova.');
+        } else {
+            alert('Impossibile accedere alla fotocamera o al microfono. Verifica i permessi del browser.');
+        }
     }
 }
 

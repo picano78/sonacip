@@ -122,6 +122,24 @@
         cursor: pointer;
     }
     
+    .visibility-toggle {
+        position: absolute;
+        top: 70px;
+        right: 20px;
+        background: rgba(0,0,0,0.8);
+        padding: 10px 15px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .visibility-toggle label {
+        font-size: 13px;
+        cursor: pointer;
+        margin: 0;
+    }
+    
     .tips-notification {
         position: absolute;
         bottom: 120px;
@@ -199,6 +217,16 @@
                 <option value="medium">Media (480p)</option>
                 <option value="low">Bassa (360p)</option>
             </select>
+        </div>
+        
+        <div class="visibility-toggle">
+            <i class="bi {{ 'bi-globe' if stream.is_public else 'bi-lock-fill' }}" id="visibilityIcon"></i>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="visibilityToggle" {{ 'checked' if stream.is_public else '' }}>
+                <label class="form-check-label" for="visibilityToggle" id="visibilityLabel">
+                    {{ 'Pubblica' if stream.is_public else 'Privata' }}
+                </label>
+            </div>
         </div>
         
         <div class="tips-notification" id="tipsNotification">
@@ -382,6 +410,30 @@ document.getElementById('qualitySelect').addEventListener('change', async functi
         localStream.getTracks().forEach(track => track.stop());
     }
     await initMedia();
+});
+
+// Visibility toggle handler
+document.getElementById('visibilityToggle').addEventListener('change', async function() {
+    try {
+        const response = await fetch(`/livestream/${streamId}/toggle-visibility`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            const icon = document.getElementById('visibilityIcon');
+            const label = document.getElementById('visibilityLabel');
+            if (data.is_public) {
+                icon.className = 'bi bi-globe';
+                label.textContent = 'Pubblica';
+            } else {
+                icon.className = 'bi bi-lock-fill';
+                label.textContent = 'Privata';
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling visibility:', error);
+    }
 });
 
 // Toggle camera on/off

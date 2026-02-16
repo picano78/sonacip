@@ -1,14 +1,17 @@
 """Routes for Field Planner (field/facility occupancy only)"""
+import logging
 from datetime import datetime, timedelta, timezone, date, time as dt_time
 from flask import render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from app import db
-from app.field_planner import bp
+from app.field_planner import bp, legacy_bp  # noqa: F401 – legacy_bp exported for blueprint registration
 from app.field_planner.forms import FieldPlannerEventForm
 from app.models import FieldPlannerEvent, Facility, Notification
 from app.utils import permission_required, check_permission, get_active_society_id
 from app.utils.audit import log_planner_change
 from app.notifications.utils import notify_planner_change
+
+logger = logging.getLogger(__name__)
 
 
 def _scope_id():
@@ -18,8 +21,11 @@ def _scope_id():
 
 def _event_scope_id(event_id: int):
     """Get society ID for a specific event"""
-    ev = db.session.get(FieldPlannerEvent, event_id)
-    return ev.society_id if ev else None
+    try:
+        ev = db.session.get(FieldPlannerEvent, event_id)
+        return ev.society_id if ev else None
+    except Exception:
+        return None
 
 
 def _get_facilities_for_society(society_id):
@@ -218,140 +224,147 @@ def create():
             )
             return redirect(url_for('field_planner.create'))
 
-        # Handle recurring events for entire season (Aug 1 - Jul 31)
-        if form.is_recurring.data and form.recurrence_pattern.data == 'weekly':
-            # Create main event
-            event = FieldPlannerEvent(
-                society_id=society.id,
-                facility_id=form.facility_id.data,
-                created_by=current_user.id,
-                event_type=form.event_type.data,
-                title=form.title.data,
-                team=form.team.data,
-                category=form.category.data,
-                start_datetime=start_dt,
-                end_datetime=end_dt,
-                is_recurring=True,
-                recurrence_pattern='weekly',
-                notes=form.notes.data,
-                color=form.color.data or '#28a745'
-            )
-            
-            # Calculate season end: July 31 of next year if we're after August, otherwise this year
-            current_year = form.start_date.data.year
-            if form.start_date.data.month >= 8:
-                season_end = date(current_year + 1, 7, 31)
-            else:
-                season_end = date(current_year, 7, 31)
-            
-            event.recurrence_end_date = season_end
-            db.session.add(event)
-            db.session.flush()
-            
-            # Create recurring instances
-            current_dt = start_dt + timedelta(days=7)
-            end_season_dt = datetime.combine(season_end, start_dt.time())
-            created_count = 1
-            
-            while current_dt <= end_season_dt:
-                recurring_end_dt = current_dt + (end_dt - start_dt)
-                
-                # Check for conflict on each recurring date
-                conflict_check = (
-                    FieldPlannerEvent.query.filter(
-                        FieldPlannerEvent.society_id == society.id,
-                        FieldPlannerEvent.facility_id == form.facility_id.data,
-                        FieldPlannerEvent.start_datetime < recurring_end_dt,
-                        FieldPlannerEvent.end_datetime > current_dt,
-                    ).first()
+        try:
+            # Handle recurring events for entire season (Aug 1 - Jul 31)
+            if form.is_recurring.data and form.recurrence_pattern.data == 'weekly':
+                # Create main event
+                event = FieldPlannerEvent(
+                    society_id=society.id,
+                    facility_id=form.facility_id.data,
+                    created_by=current_user.id,
+                    event_type=form.event_type.data,
+                    title=form.title.data,
+                    team=form.team.data,
+                    category=form.category.data,
+                    start_datetime=start_dt,
+                    end_datetime=end_dt,
+                    is_recurring=True,
+                    recurrence_pattern='weekly',
+                    notes=form.notes.data,
+                    color=form.color.data or '#28a745'
                 )
                 
-                if not conflict_check:
-                    recurring_event = FieldPlannerEvent(
-                        society_id=society.id,
-                        facility_id=form.facility_id.data,
-                        created_by=current_user.id,
-                        event_type=form.event_type.data,
-                        title=form.title.data,
-                        team=form.team.data,
-                        category=form.category.data,
-                        start_datetime=current_dt,
-                        end_datetime=recurring_end_dt,
-                        is_recurring=False,
-                        parent_event_id=event.id,
-                        notes=form.notes.data,
-                        color=form.color.data or '#28a745'
-                    )
-                    db.session.add(recurring_event)
-                    created_count += 1
+                # Calculate season end: July 31 of next year if we're after August, otherwise this year
+                current_year = form.start_date.data.year
+                if form.start_date.data.month >= 8:
+                    season_end = date(current_year + 1, 7, 31)
+                else:
+                    season_end = date(current_year, 7, 31)
                 
-                current_dt += timedelta(days=7)
-            
-            db.session.commit()
-            
-            # Log the creation
-            log_planner_change(
-                user_id=current_user.id,
-                society_id=society.id,
-                action='field_planner_created_recurring',
-                entity_type='FieldPlannerEvent',
-                entity_id=event.id,
-                details={
-                    'title': event.title,
-                    'facility_id': event.facility_id,
-                    'event_type': event.event_type,
-                    'instances_created': created_count,
-                    'season_end': season_end.strftime('%Y-%m-%d')
-                }
-            )
-            
-            flash(f'Allenamento ricorrente creato: {created_count} sessioni programmate fino al {season_end.strftime("%d/%m/%Y")}.', 'success')
-            
-        else:
-            # Create single event
-            event = FieldPlannerEvent(
-                society_id=society.id,
-                facility_id=form.facility_id.data,
-                created_by=current_user.id,
-                event_type=form.event_type.data,
-                title=form.title.data,
-                team=form.team.data,
-                category=form.category.data,
-                start_datetime=start_dt,
-                end_datetime=end_dt,
-                notes=form.notes.data,
-                color=form.color.data or '#28a745'
-            )
-            db.session.add(event)
-            db.session.commit()
-            
-            # Log the creation
-            log_planner_change(
-                user_id=current_user.id,
-                society_id=society.id,
-                action='field_planner_created',
-                entity_type='FieldPlannerEvent',
-                entity_id=event.id,
-                details={
-                    'title': event.title,
-                    'facility_id': event.facility_id,
-                    'event_type': event.event_type,
-                    'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
-                    'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M')
-                }
-            )
-            
-            flash('Evento inserito nel Planner Campo.', 'success')
+                event.recurrence_end_date = season_end
+                db.session.add(event)
+                db.session.flush()
+                
+                # Create recurring instances
+                current_dt = start_dt + timedelta(days=7)
+                end_season_dt = datetime.combine(season_end, start_dt.time())
+                created_count = 1
+                
+                while current_dt <= end_season_dt:
+                    recurring_end_dt = current_dt + (end_dt - start_dt)
+                    
+                    # Check for conflict on each recurring date
+                    conflict_check = (
+                        FieldPlannerEvent.query.filter(
+                            FieldPlannerEvent.society_id == society.id,
+                            FieldPlannerEvent.facility_id == form.facility_id.data,
+                            FieldPlannerEvent.start_datetime < recurring_end_dt,
+                            FieldPlannerEvent.end_datetime > current_dt,
+                        ).first()
+                    )
+                    
+                    if not conflict_check:
+                        recurring_event = FieldPlannerEvent(
+                            society_id=society.id,
+                            facility_id=form.facility_id.data,
+                            created_by=current_user.id,
+                            event_type=form.event_type.data,
+                            title=form.title.data,
+                            team=form.team.data,
+                            category=form.category.data,
+                            start_datetime=current_dt,
+                            end_datetime=recurring_end_dt,
+                            is_recurring=False,
+                            parent_event_id=event.id,
+                            notes=form.notes.data,
+                            color=form.color.data or '#28a745'
+                        )
+                        db.session.add(recurring_event)
+                        created_count += 1
+                    
+                    current_dt += timedelta(days=7)
+                
+                db.session.commit()
+                
+                # Log the creation
+                log_planner_change(
+                    user_id=current_user.id,
+                    society_id=society.id,
+                    action='field_planner_created_recurring',
+                    entity_type='FieldPlannerEvent',
+                    entity_id=event.id,
+                    details={
+                        'title': event.title,
+                        'facility_id': event.facility_id,
+                        'event_type': event.event_type,
+                        'instances_created': created_count,
+                        'season_end': season_end.strftime('%Y-%m-%d')
+                    }
+                )
+                
+                flash(f'Allenamento ricorrente creato: {created_count} sessioni programmate fino al {season_end.strftime("%d/%m/%Y")}.', 'success')
+                
+            else:
+                # Create single event
+                event = FieldPlannerEvent(
+                    society_id=society.id,
+                    facility_id=form.facility_id.data,
+                    created_by=current_user.id,
+                    event_type=form.event_type.data,
+                    title=form.title.data,
+                    team=form.team.data,
+                    category=form.category.data,
+                    start_datetime=start_dt,
+                    end_datetime=end_dt,
+                    notes=form.notes.data,
+                    color=form.color.data or '#28a745'
+                )
+                db.session.add(event)
+                db.session.commit()
+                
+                # Log the creation
+                log_planner_change(
+                    user_id=current_user.id,
+                    society_id=society.id,
+                    action='field_planner_created',
+                    entity_type='FieldPlannerEvent',
+                    entity_id=event.id,
+                    details={
+                        'title': event.title,
+                        'facility_id': event.facility_id,
+                        'event_type': event.event_type,
+                        'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
+                        'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M')
+                    }
+                )
+                
+                flash('Evento inserito nel Planner Campo.', 'success')
 
-        # Notify society members
-        facility = db.session.get(Facility, form.facility_id.data)
-        if facility:
-            notify_planner_change(
-                society.id,
-                f"Nuovo impegno sul campo: {event.title}",
-                f"È stato creato un nuovo impegno '{event.title}' sul campo {facility.name} per il {event.start_datetime.strftime('%d/%m/%Y')} alle {event.start_datetime.strftime('%H:%M')}.",
-                link=url_for('field_planner.detail', event_id=event.id)
-            )
+            # Notify society members
+            facility = db.session.get(Facility, form.facility_id.data)
+            if facility:
+                notify_planner_change(
+                    society.id,
+                    f"Nuovo impegno sul campo: {event.title}",
+                    f"È stato creato un nuovo impegno '{event.title}' sul campo {facility.name} per il {event.start_datetime.strftime('%d/%m/%Y')} alle {event.start_datetime.strftime('%H:%M')}.",
+                    link=url_for('field_planner.detail', event_id=event.id)
+                )
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error saving field planner event: {e}", exc_info=True)
+            flash('Errore durante il salvataggio dell\'evento. Riprova.', 'danger')
+            return render_template('field_planner/create.html', form=form, facilities=facilities)
 
         return redirect(url_for('field_planner.index'))
 
@@ -414,49 +427,55 @@ def edit(event_id):
             )
             return render_template('field_planner/edit.html', form=form, event=event, facilities=facilities)
         
-        # Update event fields
-        event.facility_id = form.facility_id.data
-        event.event_type = form.event_type.data
-        event.title = form.title.data
-        event.team = form.team.data
-        event.category = form.category.data
-        event.start_datetime = start_dt
-        event.end_datetime = end_dt
-        event.notes = form.notes.data
-        event.color = form.color.data or '#28a745'
-        
-        db.session.commit()
-        
-        # Log the modification
-        log_planner_change(
-            user_id=current_user.id,
-            society_id=event.society_id,
-            action='field_planner_updated',
-            entity_type='FieldPlannerEvent',
-            entity_id=event.id,
-            details={
-                'old_values': old_values,
-                'new_values': {
-                    'title': event.title,
-                    'facility_id': event.facility_id,
-                    'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
-                    'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M')
+        try:
+            # Update event fields
+            event.facility_id = form.facility_id.data
+            event.event_type = form.event_type.data
+            event.title = form.title.data
+            event.team = form.team.data
+            event.category = form.category.data
+            event.start_datetime = start_dt
+            event.end_datetime = end_dt
+            event.notes = form.notes.data
+            event.color = form.color.data or '#28a745'
+            
+            db.session.commit()
+            
+            # Log the modification
+            log_planner_change(
+                user_id=current_user.id,
+                society_id=event.society_id,
+                action='field_planner_updated',
+                entity_type='FieldPlannerEvent',
+                entity_id=event.id,
+                details={
+                    'old_values': old_values,
+                    'new_values': {
+                        'title': event.title,
+                        'facility_id': event.facility_id,
+                        'start_datetime': event.start_datetime.strftime('%Y-%m-%d %H:%M'),
+                        'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M')
+                    }
                 }
-            }
-        )
-        
-        # Notify society members
-        facility = db.session.get(Facility, form.facility_id.data)
-        if facility:
-            notify_planner_change(
-                society.id,
-                f"Impegno modificato: {event.title}",
-                f"L'impegno '{event.title}' sul campo {facility.name} è stato modificato per il {event.start_datetime.strftime('%d/%m/%Y')} alle {event.start_datetime.strftime('%H:%M')}.",
-                link=url_for('field_planner.detail', event_id=event.id)
             )
-        
-        flash('Evento aggiornato nel Planner Campo.', 'success')
-        return redirect(url_for('field_planner.detail', event_id=event.id))
+            
+            # Notify society members
+            facility = db.session.get(Facility, form.facility_id.data)
+            if facility:
+                notify_planner_change(
+                    society.id,
+                    f"Impegno modificato: {event.title}",
+                    f"L'impegno '{event.title}' sul campo {facility.name} è stato modificato per il {event.start_datetime.strftime('%d/%m/%Y')} alle {event.start_datetime.strftime('%H:%M')}.",
+                    link=url_for('field_planner.detail', event_id=event.id)
+                )
+            
+            flash('Evento aggiornato nel Planner Campo.', 'success')
+            return redirect(url_for('field_planner.detail', event_id=event.id))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error updating field planner event {event_id}: {e}", exc_info=True)
+            flash('Errore durante il salvataggio delle modifiche. Riprova.', 'danger')
+            return render_template('field_planner/edit.html', form=form, event=event, facilities=facilities)
     
     # Pre-fill form with existing event data
     if request.method == 'GET':

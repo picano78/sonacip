@@ -354,6 +354,7 @@ def create_post():
         if form.validate_on_submit():
             has_media_file = form.image.data and hasattr(form.image.data, 'filename') and form.image.data.filename
             is_video = False
+            is_photo = True
             if has_media_file:
                 fname = (form.image.data.filename or '').lower()
                 is_video = fname.endswith(('.mp4', '.mov', '.avi', '.webm', '.mkv'))

@@ -50,6 +50,10 @@ uploads/*
 !uploads/.gitkeep
 !uploads/*/
 !uploads/*/.gitkeep
+app/uploads/*
+!app/uploads/.gitkeep
+!app/uploads/*/
+!app/uploads/*/.gitkeep
 backups/*
 !backups/.gitkeep
 

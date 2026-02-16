@@ -58,7 +58,10 @@ def save_attachment(file, message_id):
     unique_filename = f"{timestamp}_{filename}"
 
     # Create uploads directory if it doesn't exist
-    upload_dir = os.path.join(current_app.root_path, 'uploads', 'message_attachments')
+    upload_dir = os.path.join(
+        current_app.config.get('UPLOAD_FOLDER', os.path.join(current_app.root_path, 'uploads')),
+        'message_attachments'
+    )
     os.makedirs(upload_dir, exist_ok=True)
 
     file_path = os.path.join(upload_dir, unique_filename)

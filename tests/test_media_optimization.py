@@ -260,8 +260,8 @@ class TestMessageAttachmentOptimization:
             from app.messages.utils import save_attachment
             fake_pdf = io.BytesIO(b'%PDF-1.4 fake content')
             fs = _make_file_storage(fake_pdf, 'doc.pdf', 'application/pdf')
-            # Ensure upload dir exists
-            upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], '..', 'app', 'uploads', 'message_attachments')
+            # Ensure upload dir exists under configured UPLOAD_FOLDER
+            upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'message_attachments')
             os.makedirs(upload_dir, exist_ok=True)
             attachment = save_attachment(fs, message_id=1)
             assert attachment is not None

@@ -71,7 +71,7 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body data-theme="light" {% if current_user.is_authenticated %}class="has-sidebar" data-user-id="{{ current_user.id }}"{% endif %}>
+<body data-theme="light" hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}' {% if current_user.is_authenticated %}class="has-sidebar" data-user-id="{{ current_user.id }}"{% endif %}>
     
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}

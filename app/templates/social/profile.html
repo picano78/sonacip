@@ -609,6 +609,14 @@
                             <i class="bi bi-broadcast"></i> Inizia Diretta
                         </a>
                         {% endif %}
+                        {% if user.is_society() and feature_enabled('planner') %}
+                        <a href="{{ url_for('field_planner.index') }}" class="btn-prof-outline">
+                            <i class="bi bi-calendar2-check"></i> Planner Campo
+                        </a>
+                        <a href="{{ url_for('calendar.index') }}" class="btn-prof-outline">
+                            <i class="bi bi-calendar3-range"></i> Calendario
+                        </a>
+                        {% endif %}
                         {% else %}
                         {% if connection_status == 'blocked_by_other' %}
                         <span class="conn-status-badge pending"><i class="bi bi-shield-lock me-1"></i>Non disponibile</span>

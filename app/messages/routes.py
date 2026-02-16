@@ -1,5 +1,5 @@
 """Direct messages routes - Internal messaging system"""
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import datetime, timezone
 from sqlalchemy import or_, and_, func
@@ -11,6 +11,7 @@ from app.messages.forms import MessageForm, MessageGroupForm
 from app.models import Message, User, MessageGroup, MessageGroupMembership, MessageGroupMessage
 from app.notifications.utils import create_notification
 from app.utils import check_permission
+from app.storage import save_image_light
 
 bp = Blueprint('messages', __name__, url_prefix='/messages')
 
@@ -398,30 +399,15 @@ def message_stats():
 # ==================== GROUP CHAT ROUTES ====================
 
 def save_group_avatar(file):
-    """Save group avatar image"""
+    """Save group avatar image with optimization."""
     if not file or not file.filename:
         return None
-    
-    # Check file size (max 5MB)
-    file.seek(0, os.SEEK_END)
-    file_size = file.tell()
-    file.seek(0)
-    
-    if file_size > 5 * 1024 * 1024:
+
+    try:
+        return save_image_light(file, folder='group_avatars', size=(300, 300))
+    except (ValueError, RuntimeError) as e:
+        current_app.logger.warning(f"Group avatar save failed: {e}")
         return None
-    
-    # Generate secure filename
-    ext = os.path.splitext(secure_filename(file.filename))[1]
-    filename = f"{secrets.token_hex(16)}{ext}"
-    
-    # Save file
-    upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads', 'group_avatars')
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    filepath = os.path.join(upload_dir, filename)
-    file.save(filepath)
-    
-    return f"group_avatars/{filename}"
 
 
 @bp.route('/groups/create', methods=['GET', 'POST'])

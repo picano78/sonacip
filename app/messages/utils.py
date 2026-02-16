@@ -5,11 +5,13 @@ import os
 from werkzeug.utils import secure_filename
 from flask import current_app
 from app.models import Message, MessageThread, MessageAttachment
+from app.storage import save_image_light
 from app import db
 from datetime import datetime, timezone
 
 
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'zip', 'xlsx', 'xls'}
+IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 
@@ -20,26 +22,51 @@ def allowed_file(filename):
 
 def save_attachment(file, message_id):
     """
-    Save message attachment and create database record
+    Save message attachment and create database record.
+    Image attachments are automatically optimized.
     Returns MessageAttachment object or None if failed
     """
     if not file or not allowed_file(file.filename):
         return None
-    
+
     filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+    # Optimize image attachments through centralized storage
+    if ext in IMAGE_EXTENSIONS:
+        try:
+            rel_path = save_image_light(file, folder='message_attachments', size=(1280, 1280))
+            optimized_filename = os.path.basename(rel_path)
+            upload_dir = os.path.join(current_app.root_path, 'uploads', 'message_attachments')
+            file_path = os.path.join(upload_dir, optimized_filename)
+            file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+
+            attachment = MessageAttachment(
+                message_id=message_id,
+                filename=optimized_filename,
+                original_filename=filename,
+                file_path=file_path,
+                file_size=file_size,
+                mime_type=file.content_type
+            )
+            return attachment
+        except (ValueError, RuntimeError):
+            # Fall through to standard save if optimization fails
+            file.seek(0)
+
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
     unique_filename = f"{timestamp}_{filename}"
-    
+
     # Create uploads directory if it doesn't exist
     upload_dir = os.path.join(current_app.root_path, 'uploads', 'message_attachments')
     os.makedirs(upload_dir, exist_ok=True)
-    
+
     file_path = os.path.join(upload_dir, unique_filename)
     file.save(file_path)
-    
+
     # Get file size
     file_size = os.path.getsize(file_path)
-    
+
     # Create attachment record
     attachment = MessageAttachment(
         message_id=message_id,
@@ -49,7 +76,7 @@ def save_attachment(file, message_id):
         file_size=file_size,
         mime_type=file.content_type
     )
-    
+
     return attachment
 
 

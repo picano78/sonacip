@@ -650,6 +650,10 @@ def create_app(config_name: str | None = None) -> Flask:
         base_dir = app.config.get("BASE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
         uploads_dir = os.path.join(str(base_dir), "uploads")
         os.makedirs(uploads_dir, exist_ok=True)
+        for _sub in ("avatars", "covers", "posts", "groups", "group_avatars",
+                      "stories", "marketplace", "message_attachments",
+                      "icons", "invoice_logos"):
+            os.makedirs(os.path.join(uploads_dir, _sub), exist_ok=True)
 
         db_uri = (os.environ.get("DATABASE_URL") or "").strip()
         if db_uri.startswith("postgres://"):

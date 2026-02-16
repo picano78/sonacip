@@ -141,7 +141,7 @@
                                        id="widget_{{ w.key }}"
                                        {% if w.key in all_widget_keys %}checked{% endif %}
                                        onchange="toggleWidget(this)">
-                                <label for="widget_{{ w.key }}" class="flex-grow-1 cursor-pointer" style="cursor: pointer;">
+                                <label for="widget_{{ w.key }}" class="flex-grow-1 cursor-pointer">
                                     <div class="d-flex align-items-center gap-3">
                                         <span class="widget-icon">
                                             <i class="bi {{ w.icon }}"></i>
@@ -160,15 +160,15 @@
                                         <div class="btn-group" role="group">
                                             {% set default_size = (active_widgets|selectattr('key', 'equalto', w.key)|map(attribute='size')|first) or 'medium' %}
                                             <button type="button" class="btn btn-outline-secondary size-btn {% if default_size == 'small' %}active{% endif %}" 
-                                                    onclick="setSize(this, 'small')" title="Piccolo">
+                                                    data-size="small" onclick="setSize(this, 'small')" title="Piccolo">
                                                 <i class="bi bi-phone me-1"></i> S
                                             </button>
                                             <button type="button" class="btn btn-outline-secondary size-btn {% if default_size == 'medium' %}active{% endif %}" 
-                                                    onclick="setSize(this, 'medium')" title="Medio">
+                                                    data-size="medium" onclick="setSize(this, 'medium')" title="Medio">
                                                 <i class="bi bi-tablet me-1"></i> M
                                             </button>
                                             <button type="button" class="btn btn-outline-secondary size-btn {% if default_size == 'large' %}active{% endif %}" 
-                                                    onclick="setSize(this, 'large')" title="Grande">
+                                                    data-size="large" onclick="setSize(this, 'large')" title="Grande">
                                                 <i class="bi bi-laptop me-1"></i> L
                                             </button>
                                         </div>
@@ -322,12 +322,7 @@
             const checkbox = card.querySelector('.widget-checkbox');
             if (checkbox && checkbox.checked) {
                 const activeSize = card.querySelector('.size-btn.active');
-                const size = activeSize ? activeSize.textContent.trim().toLowerCase().replace(/[^sml]/g, '') : 'medium';
-                let sizeValue = 'medium';
-                
-                if (size === 's') sizeValue = 'small';
-                else if (size === 'm') sizeValue = 'medium';
-                else if (size === 'l') sizeValue = 'large';
+                const sizeValue = activeSize ? (activeSize.dataset.size || 'medium') : 'medium';
                 
                 widgets.push({
                     key: card.dataset.key,
@@ -342,9 +337,12 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('input[name="csrf_token"]') ? 
-                              document.querySelector('input[name="csrf_token"]').value : 
-                              document.querySelector('meta[name="csrf-token"]').content
+                'X-CSRFToken': (() => {
+                    const inputToken = document.querySelector('input[name="csrf_token"]');
+                    if (inputToken) return inputToken.value;
+                    const metaToken = document.querySelector('meta[name="csrf-token"]');
+                    return metaToken ? metaToken.content : '';
+                })()
             },
             body: JSON.stringify({ widgets: widgets })
         })

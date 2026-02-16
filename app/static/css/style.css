@@ -120,6 +120,12 @@ main {
     object-fit: cover;
 }
 
+/* Utility classes */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+
 .timeline-dot {
     width: 12px;
     height: 12px;
@@ -786,8 +792,8 @@ img, video {
         margin-bottom: 1rem;
     }
     
-    /* Touch-friendly interactive elements */
-    a, button, .btn, input[type="submit"], 
+    /* Touch-friendly interactive elements - selective application */
+    button, .btn, input[type="submit"], 
     input[type="button"], input[type="reset"],
     .clickable, [role="button"] {
         min-height: 48px;
@@ -795,6 +801,12 @@ img, video {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+    }
+    
+    /* Touch-friendly links in navigation and interactive contexts */
+    .nav-link, .dropdown-item, .list-group-item,
+    .page-link, .sidebar-link {
+        min-height: 48px;
     }
     
     /* Navigation and menus */

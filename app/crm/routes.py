@@ -385,7 +385,7 @@ def member_add():
         db.session.flush()
 
         # Auto-create rubrica contact for this member if not already present
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if user:
             existing_contact = Contact.query.filter_by(
                 society_id=scope_id, user_id=user_id
@@ -795,7 +795,7 @@ def rubrica_detail(contact_id):
             for ev in events:
                 convocations.append({'event': ev, 'status': status_map.get(ev.id, 'pending')})
     except Exception:
-        pass
+        current_app.logger.warning('Failed to load convocations for rubrica contact %s', contact_id, exc_info=True)
 
     return render_template(
         'crm/rubrica_detail.html',

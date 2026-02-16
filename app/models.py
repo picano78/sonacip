@@ -3929,6 +3929,9 @@ class LiveStream(db.Model):
     # WebRTC connection info (for signaling only)
     room_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
     
+    # Visibility: if True, stream is visible on user's profile page and social feed
+    is_public = db.Column(db.Boolean, default=False)
+    
     streamer = db.relationship('User', foreign_keys=[user_id], backref=db.backref('live_streams', lazy='dynamic'))
 
     @property

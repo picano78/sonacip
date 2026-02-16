@@ -50,8 +50,10 @@ def start_stream():
     if existing:
         return jsonify({'error': 'Hai già una diretta attiva'}), 400
     
-    title = request.json.get('title', '').strip()
-    description = request.json.get('description', '').strip()
+    data = request.json or {}
+    title = data.get('title', '').strip()
+    description = data.get('description', '').strip()
+    is_public = data.get('is_public', False)
     
     if not title:
         title = f"Diretta di {current_user.get_full_name()}"
@@ -64,7 +66,8 @@ def start_stream():
         title=title,
         description=description,
         room_id=room_id,
-        is_active=True
+        is_active=True,
+        is_public=bool(is_public)
     )
     
     db.session.add(stream)
@@ -78,6 +81,37 @@ def start_stream():
         'room_id': room_id,
         'stream_url': url_for('livestream.broadcast', stream_id=stream.id)
     })
+
+
+@bp.route('/quick-start', methods=['POST'])
+@login_required
+def quick_start():
+    """Immediately start a live stream with default settings.
+    
+    Skips the title/description modal - goes straight to broadcast.
+    Camera setup is handled on the broadcast page itself.
+    """
+    # If user already has an active stream, redirect to it
+    existing = LiveStream.query.filter_by(user_id=current_user.id, is_active=True).first()
+    if existing:
+        return redirect(url_for('livestream.broadcast', stream_id=existing.id))
+    
+    room_id = secrets.token_urlsafe(32)
+    
+    stream = LiveStream(
+        user_id=current_user.id,
+        title=f"Diretta di {current_user.get_full_name()}",
+        room_id=room_id,
+        is_active=True,
+        is_public=False
+    )
+    
+    db.session.add(stream)
+    db.session.commit()
+    
+    current_app.logger.info(f"Quick live stream started: user={current_user.id} stream={stream.id}")
+    
+    return redirect(url_for('livestream.broadcast', stream_id=stream.id))
 
 
 @bp.route('/<int:stream_id>/stop', methods=['POST'])
@@ -337,4 +371,31 @@ def stream_analytics(stream_id):
         'duration_seconds': stream.duration_seconds,
         'average_watch_time': round(avg_watch_time, 2),
         'is_active': stream.is_active
+    })
+
+
+@bp.route('/<int:stream_id>/toggle-visibility', methods=['POST'])
+@login_required
+def toggle_visibility(stream_id):
+    """Toggle stream between public and private.
+    
+    Public streams are visible on the user's profile page and social feed.
+    Private streams are only accessible via direct link.
+    """
+    stream = LiveStream.query.get_or_404(stream_id)
+    
+    if stream.user_id != current_user.id:
+        return jsonify({'error': 'Non autorizzato'}), 403
+    
+    if not stream.is_active:
+        return jsonify({'error': 'La diretta non è attiva'}), 400
+    
+    stream.is_public = not stream.is_public
+    db.session.commit()
+    
+    current_app.logger.info(f"Stream {stream_id} visibility toggled to {'public' if stream.is_public else 'private'}")
+    
+    return jsonify({
+        'success': True,
+        'is_public': stream.is_public
     })

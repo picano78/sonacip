@@ -286,3 +286,122 @@ if SOCKETIO_AVAILABLE and socketio:
         except Exception as e:
             logger.error(f"Error updating stream stats: {e}")
             return {'error': str(e)}
+
+    # ==================== VIDEO CALL SIGNALING ====================
+    
+    @socketio.on('join_call')
+    def handle_join_call(data):
+        """Join a video call room for WebRTC signaling"""
+        try:
+            room_id = data.get('room_id')
+            if not room_id:
+                return {'error': 'Room ID required'}
+            
+            if not current_user.is_authenticated:
+                return {'error': 'Authentication required'}
+            
+            room = f'call_{room_id}'
+            join_room(room)
+            
+            user_name = current_user.get_full_name()
+            emit('call_user_joined', {
+                'user_id': current_user.id,
+                'user_name': user_name,
+                'user_avatar': current_user.avatar
+            }, room=room, include_self=False)
+            
+            return {'success': True}
+            
+        except Exception as e:
+            logger.error(f"Error joining call: {e}")
+            return {'error': str(e)}
+
+    @socketio.on('leave_call')
+    def handle_leave_call(data):
+        """Leave a video call room"""
+        try:
+            room_id = data.get('room_id')
+            if not room_id:
+                return {'error': 'Room ID required'}
+            
+            room = f'call_{room_id}'
+            leave_room(room)
+            
+            if current_user.is_authenticated:
+                emit('call_user_left', {
+                    'user_id': current_user.id,
+                    'user_name': current_user.get_full_name()
+                }, room=room)
+            
+            return {'success': True}
+            
+        except Exception as e:
+            logger.error(f"Error leaving call: {e}")
+            return {'error': str(e)}
+
+    @socketio.on('call_offer')
+    def handle_call_offer(data):
+        """Relay WebRTC offer for video call"""
+        try:
+            room_id = data.get('room_id')
+            offer = data.get('offer')
+            
+            if not room_id or not offer:
+                return {'error': 'Invalid data'}
+            
+            room = f'call_{room_id}'
+            emit('call_offer', {
+                'offer': offer,
+                'from': current_user.id if current_user.is_authenticated else None,
+                'from_name': current_user.get_full_name() if current_user.is_authenticated else None
+            }, room=room, include_self=False)
+            
+            return {'success': True}
+            
+        except Exception as e:
+            logger.error(f"Error relaying call offer: {e}")
+            return {'error': str(e)}
+
+    @socketio.on('call_answer')
+    def handle_call_answer(data):
+        """Relay WebRTC answer for video call"""
+        try:
+            room_id = data.get('room_id')
+            answer = data.get('answer')
+            
+            if not room_id or not answer:
+                return {'error': 'Invalid data'}
+            
+            room = f'call_{room_id}'
+            emit('call_answer', {
+                'answer': answer,
+                'from': current_user.id if current_user.is_authenticated else None
+            }, room=room, include_self=False)
+            
+            return {'success': True}
+            
+        except Exception as e:
+            logger.error(f"Error relaying call answer: {e}")
+            return {'error': str(e)}
+
+    @socketio.on('call_ice_candidate')
+    def handle_call_ice_candidate(data):
+        """Relay ICE candidates for video call"""
+        try:
+            room_id = data.get('room_id')
+            candidate = data.get('candidate')
+            
+            if not room_id or not candidate:
+                return {'error': 'Invalid data'}
+            
+            room = f'call_{room_id}'
+            emit('call_ice_candidate', {
+                'candidate': candidate,
+                'from': current_user.id if current_user.is_authenticated else None
+            }, room=room, include_self=False)
+            
+            return {'success': True}
+            
+        except Exception as e:
+            logger.error(f"Error relaying call ICE candidate: {e}")
+            return {'error': str(e)}

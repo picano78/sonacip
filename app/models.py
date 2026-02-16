@@ -2039,6 +2039,9 @@ class Contact(db.Model):
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))  # Assigned sales rep
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
+    # Link to registered user (rubrica: when society links a member)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    
     # Timestamps
     created_at = db.Column(db.DateTime, default=utc_now, index=True)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
@@ -2048,6 +2051,7 @@ class Contact(db.Model):
     creator = db.relationship('User', foreign_keys=[created_by])
     assigned_user = db.relationship('User', foreign_keys=[assigned_to])
     last_contact_user = db.relationship('User', foreign_keys=[last_contacted_by])
+    linked_user = db.relationship('User', foreign_keys=[user_id], backref='rubrica_contacts')
     
     def get_full_name(self):
         return f'{self.first_name} {self.last_name}'

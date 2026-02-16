@@ -486,6 +486,9 @@ class Post(db.Model):
     link_image = db.Column(db.String(500))  # Preview image URL
     link_provider = db.Column(db.String(50))  # Provider name (youtube, instagram, tiktok, etc.)
     
+    # Photo auto-expiration (set by admin photo_retention_hours)
+    photo_expires_at = db.Column(db.DateTime, index=True)
+
     created_at = db.Column(db.DateTime, default=utc_now, index=True)
     updated_at = db.Column(db.DateTime, default=utc_now, onupdate=utc_now)
     
@@ -1316,6 +1319,9 @@ class SocialSetting(db.Model):
     max_posts_per_day = db.Column(db.Integer, default=20)
     boosted_types = db.Column(db.Text)
     muted_types = db.Column(db.Text)
+
+    # Photo retention: 0 = forever, 12/24/36/48 = hours before auto-delete
+    photo_retention_hours = db.Column(db.Integer, default=0)
 
     # Feed algorithm tuning (super admin)
     priority_followed = db.Column(db.Integer, default=0)

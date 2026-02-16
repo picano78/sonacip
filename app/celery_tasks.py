@@ -313,6 +313,16 @@ def cleanup_expired_message_photos():
     return cleanup_expired_photos()
 
 
+@celery.task(name='app.tasks.cleanup_expired_post_photos')
+def cleanup_expired_post_photos():
+    """
+    Delete expired post photos from disk and clear the image field.
+    Photos expire based on admin-configured photo_retention_hours in SocialSetting.
+    """
+    from app.social.utils import cleanup_expired_post_photos as _cleanup
+    return _cleanup()
+
+
 # Periodic tasks configuration
 @celery.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
@@ -346,4 +356,11 @@ def setup_periodic_tasks(sender, **kwargs):
         crontab(hour=5, minute=0),
         cleanup_expired_message_photos.s(),
         name='cleanup-expired-message-photos-daily'
+    )
+
+    # Clean up expired post photos every hour
+    sender.add_periodic_task(
+        crontab(minute=0),
+        cleanup_expired_post_photos.s(),
+        name='cleanup-expired-post-photos-hourly'
     )

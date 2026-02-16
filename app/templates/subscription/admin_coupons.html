@@ -85,7 +85,7 @@
               {% for c in coupons %}
                 <tr>
                   <td class="fw-semibold">{{ c.code }}</td>
-                  <td>{{ c.discount_type }}</td>
+                  <td>{{ 'Percentuale' if c.discount_type == 'percent' else ('Importo fisso' if c.discount_type == 'fixed' else c.discount_type) }}</td>
                   <td>{{ c.discount_value }}</td>
                   <td>{{ c.redeemed_count or 0 }}{% if c.max_redemptions %}/{{ c.max_redemptions }}{% endif %}</td>
                   <td>

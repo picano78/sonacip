@@ -81,7 +81,7 @@ def test_413_error_handler(client):
         follow_redirects=False
     )
     
-    # Should redirect or return 413
+    # Should redirect (302) for HTML or return 413 with friendly message for JSON
     # The error handler should have been called
     assert response.status_code in [302, 413]
 

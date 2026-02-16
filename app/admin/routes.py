@@ -470,10 +470,15 @@ def storage_settings():
         settings.video_max_width = _safe_int_conversion(form.video_max_width.data, settings.video_max_width)
         settings.max_image_mb = _safe_int_conversion(form.max_image_mb.data, settings.max_image_mb)
         settings.max_video_mb = _safe_int_conversion(form.max_video_mb.data, settings.max_video_mb)
+        settings.max_upload_mb = _safe_int_conversion(form.max_upload_mb.data, settings.max_upload_mb)
 
         settings.updated_by = current_user.id
         settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()
+
+        # Update MAX_CONTENT_LENGTH from admin setting
+        if settings.max_upload_mb:
+            current_app.config['MAX_CONTENT_LENGTH'] = settings.max_upload_mb * 1024 * 1024
 
         log_action('update_storage_settings', 'StorageSetting', settings.id, 'Updated storage settings')
         flash('Impostazioni storage aggiornate.', 'success')

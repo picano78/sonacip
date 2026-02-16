@@ -21,7 +21,6 @@
         <thead>
           <tr>
             <th>Nome</th>
-            <th>Slug</th>
             <th>Prezzo mese</th>
             <th>Prezzo anno</th>
             <th>Stripe price (mese)</th>
@@ -33,8 +32,7 @@
         <tbody>
           {% for p in plans %}
             <tr>
-              <td class="fw-semibold">{{ p.name }}</td>
-              <td class="text-muted">{{ p.slug }}</td>
+              <td class="fw-semibold">{{ p.name }}<div class="text-muted small">{{ p.slug }}</div></td>
               <td>€{{ "%.2f"|format(p.price_monthly or 0) }}</td>
               <td>€{{ "%.2f"|format(p.price_yearly or 0) }}</td>
               <td>

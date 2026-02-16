@@ -311,7 +311,7 @@
 </div>
 
 <!-- Hidden audio element for remote stream -->
-<audio id="remoteAudio" autoplay></audio>
+<audio id="remoteAudio" autoplay aria-label="Audio della chiamata remota"></audio>
 {% endblock %}
 
 {% block extra_js %}
@@ -333,12 +333,12 @@ try {
         transports: ['websocket', 'polling']
     });
 
-    socket.on('connect', function() {
+    socket.on('connect', () => {
         console.log('WebSocket connected for voice call');
         socket.emit('join_call', {room_id: roomId, call_type: 'voice'});
     });
 
-    socket.on('call_user_joined', function(data) {
+    socket.on('call_user_joined', (data) => {
         document.getElementById('waitingOverlay').style.display = 'none';
         if (!callStartTime) {
             callStartTime = new Date();
@@ -352,7 +352,7 @@ try {
         }
     });
 
-    socket.on('call_user_left', function(data) {
+    socket.on('call_user_left', (data) => {
         updateCallStatus('Chiamata terminata');
         
         // Remove participant from list for group calls
@@ -361,12 +361,12 @@ try {
         }
     });
 
-    socket.on('call_offer', function(data) {
+    socket.on('call_offer', (data) => {
         document.getElementById('waitingOverlay').style.display = 'none';
         updateCallStatus('Connesso');
     });
 
-    socket.on('call_answer', function(data) {
+    socket.on('call_answer', (data) => {
         document.getElementById('waitingOverlay').style.display = 'none';
         updateCallStatus('Connesso');
     });
@@ -388,6 +388,8 @@ async function initMedia() {
         });
 
         // Send offer after getting local stream
+        // Note: This uses a simplified signaling approach. For production,
+        // implement full WebRTC peer connection with proper SDP exchange
         if (socket) {
             socket.emit('call_offer', {
                 room_id: roomId,
@@ -412,7 +414,7 @@ function updateCallStatus(status) {
 }
 
 function startDurationTimer() {
-    durationInterval = setInterval(function() {
+    durationInterval = setInterval(() => {
         if (callStartTime) {
             const diff = Math.floor((new Date() - callStartTime) / 1000);
             const minutes = Math.floor(diff / 60);
@@ -453,7 +455,7 @@ function removeParticipant(userId) {
 document.getElementById('toggleMic').addEventListener('click', function() {
     if (localStream) {
         audioEnabled = !audioEnabled;
-        localStream.getAudioTracks().forEach(function(track) {
+        localStream.getAudioTracks().forEach((track) => {
             track.enabled = audioEnabled;
         });
         this.innerHTML = audioEnabled
@@ -486,7 +488,7 @@ document.getElementById('endCall').addEventListener('click', function() {
 
 function endCallAndReturn() {
     if (localStream) {
-        localStream.getTracks().forEach(function(track) { track.stop(); });
+        localStream.getTracks().forEach((track) => { track.stop(); });
     }
     if (socket) {
         socket.emit('leave_call', {room_id: roomId});
@@ -503,9 +505,9 @@ function endCallAndReturn() {
 }
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', function() {
+window.addEventListener('beforeunload', () => {
     if (localStream) {
-        localStream.getTracks().forEach(function(track) { track.stop(); });
+        localStream.getTracks().forEach((track) => { track.stop(); });
     }
     if (socket) {
         socket.emit('leave_call', {room_id: roomId});

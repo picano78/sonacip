@@ -382,6 +382,32 @@ def member_add():
             )
             db.session.add(membership)
 
+        db.session.flush()
+
+        # Auto-create rubrica contact for this member if not already present
+        user = User.query.get(user_id)
+        if user:
+            existing_contact = Contact.query.filter_by(
+                society_id=scope_id, user_id=user_id
+            ).first()
+            if not existing_contact:
+                contact = Contact(
+                    first_name=user.first_name or '',
+                    last_name=user.last_name or '',
+                    email=user.email or '',
+                    phone=user.phone or '',
+                    address=user.address or '',
+                    city=user.city or '',
+                    postal_code=user.postal_code or '',
+                    contact_type='athlete' if role_name == 'atleta' else 'other',
+                    status='converted',
+                    source='membership',
+                    society_id=scope_id,
+                    user_id=user_id,
+                    created_by=current_user.id,
+                )
+                db.session.add(contact)
+
         db.session.commit()
         flash('Membro aggiunto con successo!', 'success')
         return redirect(url_for('crm.members'))
@@ -442,6 +468,8 @@ def member_detail(membership_id):
     fee_form.user_id.choices = [(user.id, user.get_full_name())]
     fee_form.user_id.data = user.id
 
+    rubrica_contact = Contact.query.filter_by(society_id=scope_id, user_id=user.id).first()
+
     return render_template(
         'crm/member_detail.html',
         membership=membership,
@@ -451,6 +479,7 @@ def member_detail(membership_id):
         convocations=convocations,
         cert_form=cert_form,
         fee_form=fee_form,
+        rubrica_contact=rubrica_contact,
     )
 
 
@@ -668,6 +697,147 @@ def convocation_notify(event_id):
 
     flash(f'Notifica inviata a {count} atleti.', 'success')
     return redirect(url_for('crm.convocations'))
+
+
+# ---------------------------------------------------------------------------
+# Rubrica (Address Book) – society-scoped member contacts
+# ---------------------------------------------------------------------------
+@bp.route('/rubrica')
+@login_required
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
+def rubrica():
+    scope_id = _society_scope_id()
+    if not scope_id:
+        flash('Seleziona una società.', 'warning')
+        return redirect(url_for('crm.index'))
+
+    q_filter = request.args.get('q', '').strip()
+    role_filter = request.args.get('role', '').strip()
+
+    query = (
+        Contact.query
+        .filter(Contact.society_id == scope_id, Contact.user_id.isnot(None))
+        .order_by(Contact.last_name.asc(), Contact.first_name.asc())
+    )
+    if q_filter:
+        like = f'%{q_filter}%'
+        query = query.filter(
+            or_(Contact.first_name.ilike(like), Contact.last_name.ilike(like), Contact.email.ilike(like))
+        )
+
+    contacts = query.all()
+
+    # Build membership map for role badges & detail links
+    user_ids = [c.user_id for c in contacts if c.user_id]
+    memberships = {}
+    if user_ids:
+        ms = SocietyMembership.query.filter(
+            SocietyMembership.society_id == scope_id,
+            SocietyMembership.user_id.in_(user_ids),
+            SocietyMembership.status == 'active',
+        ).all()
+        memberships = {m.user_id: m for m in ms}
+
+    if role_filter:
+        contacts = [c for c in contacts if memberships.get(c.user_id) and memberships[c.user_id].role_name == role_filter]
+
+    return render_template(
+        'crm/rubrica.html',
+        contacts=contacts,
+        memberships=memberships,
+        q_filter=q_filter,
+        role_filter=role_filter,
+    )
+
+
+@bp.route('/rubrica/<int:contact_id>')
+@login_required
+@permission_required('crm', 'access', society_id_func=_society_scope_id)
+@feature_required('crm')
+def rubrica_detail(contact_id):
+    contact = Contact.query.get_or_404(contact_id)
+    scoped = _enforce_scope(contact.society_id, 'crm.rubrica')
+    if scoped:
+        return scoped
+    if not contact.user_id:
+        flash('Questo contatto non è collegato a un utente.', 'warning')
+        return redirect(url_for('crm.contacts'))
+
+    scope_id = contact.society_id
+    user = User.query.get(contact.user_id)
+    membership = SocietyMembership.query.filter_by(
+        society_id=scope_id, user_id=contact.user_id, status='active'
+    ).first()
+
+    certificates = (
+        MedicalCertificate.query
+        .filter_by(society_id=scope_id, user_id=contact.user_id)
+        .order_by(MedicalCertificate.expires_on.desc())
+        .all()
+    )
+    fees = (
+        SocietyFee.query
+        .filter_by(society_id=scope_id, user_id=contact.user_id)
+        .order_by(SocietyFee.due_on.desc())
+        .all()
+    )
+    convocations = []
+    try:
+        rows = db.session.execute(
+            db.select(event_athletes.c.event_id, event_athletes.c.status)
+            .where(event_athletes.c.user_id == contact.user_id)
+        ).fetchall()
+        event_ids = [r[0] for r in rows]
+        status_map = {r[0]: r[1] for r in rows}
+        if event_ids:
+            events = Event.query.filter(Event.id.in_(event_ids)).order_by(Event.start_date.desc()).limit(20).all()
+            for ev in events:
+                convocations.append({'event': ev, 'status': status_map.get(ev.id, 'pending')})
+    except Exception:
+        pass
+
+    return render_template(
+        'crm/rubrica_detail.html',
+        contact=contact,
+        user=user,
+        membership=membership,
+        certificates=certificates,
+        fees=fees,
+        convocations=convocations,
+    )
+
+
+@bp.route('/rubrica/<int:contact_id>/edit', methods=['GET', 'POST'])
+@login_required
+@permission_required('crm', 'manage', society_id_func=_society_scope_id)
+@feature_required('crm')
+def rubrica_edit(contact_id):
+    contact = Contact.query.get_or_404(contact_id)
+    scoped = _enforce_scope(contact.society_id, 'crm.rubrica')
+    if scoped:
+        return scoped
+    if not contact.user_id:
+        flash('Questo contatto non è collegato a un utente.', 'warning')
+        return redirect(url_for('crm.contacts'))
+
+    form = ContactForm(obj=contact)
+
+    if form.validate_on_submit():
+        contact.first_name = form.first_name.data
+        contact.last_name = form.last_name.data
+        contact.email = form.email.data
+        contact.phone = form.phone.data
+        contact.address = form.address.data
+        contact.city = form.city.data
+        contact.postal_code = form.postal_code.data
+        contact.notes = form.notes.data
+        contact.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        flash('Contatto rubrica aggiornato!', 'success')
+        return redirect(url_for('crm.rubrica_detail', contact_id=contact_id))
+
+    return render_template('crm/rubrica_edit.html', form=form, contact=contact)
 
 
 # ---------------------------------------------------------------------------

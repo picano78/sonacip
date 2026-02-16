@@ -37,6 +37,7 @@
           {% endif %}
           <h5 class="mb-1">{{ user.get_full_name() }}</h5>
           <p class="mb-1 opacity-75">{{ user.email }}</p>
+          {% if user.phone %}<p class="mb-1 opacity-75"><i class="bi bi-telephone me-1"></i>{{ user.phone }}</p>{% endif %}
           <span class="badge role-badge-{{ membership.role_name }} text-white fs-6">{{ membership.role_name }}</span>
         </div>
         <div class="card-body">
@@ -49,6 +50,17 @@
               <span class="text-muted">Iscritto dal</span>
               <span>{{ membership.created_at.strftime('%d/%m/%Y') if membership.created_at else 'N/D' }}</span>
             </li>
+            {% if user.address or user.city %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span class="text-muted"><i class="bi bi-geo-alt me-1"></i>Indirizzo</span>
+              <span>{{ user.address or '' }}{% if user.address and user.city %}, {% endif %}{{ user.city or '' }}</span>
+            </li>
+            {% endif %}
+            {% if rubrica_contact %}
+            <li class="list-group-item text-center">
+              <a href="{{ url_for('crm.rubrica_detail', contact_id=rubrica_contact.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-person-vcard me-1"></i> Apri in Rubrica</a>
+            </li>
+            {% endif %}
           </ul>
         </div>
         {% if can('crm','manage') %}

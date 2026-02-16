@@ -142,6 +142,16 @@
                                 {{ form.allow_videos(class='form-check-input') }}
                             </div>
                         </div>
+
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name"><i class="bi bi-clock-history me-2 text-warning"></i>Durata Foto</div>
+                                <div class="setting-desc">Quanto tempo le foto restano visibili nei post. Allo scadere vengono eliminate dal server.</div>
+                            </div>
+                            <div style="width: 160px;">
+                                {{ form.photo_retention_hours(class='form-select form-select-sm') }}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

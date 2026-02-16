@@ -250,6 +250,10 @@ def social_settings():
                 pass
         settings.boosted_types = form.boosted_types.data or None
         settings.muted_types = form.muted_types.data or None
+        try:
+            settings.photo_retention_hours = int(form.photo_retention_hours.data)
+        except (ValueError, TypeError):
+            settings.photo_retention_hours = 0
         settings.updated_by = current_user.id
         settings.updated_at = datetime.now(timezone.utc)
         db.session.commit()

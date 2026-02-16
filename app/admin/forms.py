@@ -124,6 +124,13 @@ class SocialSettingsAdminForm(FlaskForm):
     max_posts_per_day = StringField('Max post per giorno (per ruolo)', validators=[Optional()])
     boosted_types = TextAreaField('Tipi contenuto da potenziare (JSON array)', validators=[Optional()])
     muted_types = TextAreaField('Tipi contenuto da silenziare (JSON array)', validators=[Optional()])
+    photo_retention_hours = SelectField('Durata foto nei post', choices=[
+        ('0', 'Per sempre'),
+        ('12', '12 ore'),
+        ('24', '24 ore'),
+        ('36', '36 ore'),
+        ('48', '48 ore'),
+    ], default='0', validators=[Optional()])
 
 
 class AppearanceSettingsForm(FlaskForm):

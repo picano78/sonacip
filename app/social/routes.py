@@ -421,9 +421,31 @@ def create_post():
                         pass
                     # Continue: publish the text-only post.
                     post.image = None
-            
+
+            # Photo retention: set expiry and notify user
+            retention_hours = 0
+            if post.image and is_photo and settings:
+                retention_hours = getattr(settings, 'photo_retention_hours', 0) or 0
+                if retention_hours > 0:
+                    post.photo_expires_at = datetime.now(timezone.utc) + timedelta(hours=retention_hours)
+
             db.session.add(post)
             db.session.commit()
+
+            # Notify user about photo expiration after commit (need post.id)
+            if post.image and is_photo and retention_hours > 0:
+                try:
+                    notification = Notification(
+                        user_id=current_user.id,
+                        title='Foto a tempo',
+                        message=f'La foto del tuo post verrà cancellata automaticamente dopo {retention_hours} ore.',
+                        notification_type='social',
+                        link=url_for('social.view_post', post_id=post.id),
+                    )
+                    db.session.add(notification)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
 
             try:
                 log_action(

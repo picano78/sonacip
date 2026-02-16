@@ -36,6 +36,7 @@
                     
                     <div class="d-flex gap-3 mb-3">
                         <form method="POST" action="{{ url_for('social.like_post', post_id=post.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-heart{{ '-fill' if post.is_liked_by(current_user) else '' }}"></i>
                                 {{ post.likes_count }}
@@ -56,7 +57,7 @@
                     {% include 'components/comment_form.html' %}
                     
                     <div id="comments-list">
-                        {% for comment in post.comments.order_by(comment.created_at.desc()) %}
+                        {% for comment in comments %}
                             {% include 'components/comment_item.html' %}
                         {% else %}
                             <p class="text-muted">Nessun commento ancora. Sii il primo a commentare!</p>

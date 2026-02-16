@@ -192,6 +192,15 @@
                 <p class="action-desc">Gestisci allenamenti, partite e disponibilità campi</p>
             </a>
         </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('calendar.index') }}" class="action-card">
+                <div class="action-icon bg-purple-subtle" style="background-color: rgba(111, 66, 193, 0.1);">
+                    <i class="bi bi-calendar3-range text-purple" style="color: #6f42c1;"></i>
+                </div>
+                <div class="action-title">Calendario</div>
+                <p class="action-desc">Visualizza e gestisci il calendario eventi della società</p>
+            </a>
+        </div>
         {% endif %}
         
         {% if feature_enabled('crm') and can('crm', 'access') %}

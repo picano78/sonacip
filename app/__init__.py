@@ -890,7 +890,7 @@ def create_app(config_name: str | None = None) -> Flask:
         msg = f"File troppo grande. La dimensione massima consentita è {max_size_mb:.0f} MB."
         
         if _wants_json():
-            return {"error": "file_too_large", "message": msg, "max_size_mb": max_size_mb}, 200
+            return {"error": "file_too_large", "message": msg, "max_size_mb": max_size_mb}, 413
         
         flash(msg, "danger")
         

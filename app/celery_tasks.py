@@ -294,6 +294,15 @@ def export_data_async(user_id, export_type, format='csv', filters=None):
         raise
 
 
+@celery.task(name='app.tasks.cleanup_expired_ads')
+def cleanup_expired_ads_task():
+    """
+    Deactivate expired ad campaigns and delete their images from server.
+    """
+    from app.ads.automation import cleanup_expired_ads
+    return cleanup_expired_ads()
+
+
 # Periodic tasks configuration
 @celery.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
@@ -313,4 +322,11 @@ def setup_periodic_tasks(sender, **kwargs):
         crontab(hour=3, minute=0),
         cleanup_old_data.s(),
         name='cleanup-old-data-daily'
+    )
+    
+    # Clean up expired ad campaigns daily at 4 AM
+    sender.add_periodic_task(
+        crontab(hour=4, minute=0),
+        cleanup_expired_ads_task.s(),
+        name='cleanup-expired-ads-daily'
     )

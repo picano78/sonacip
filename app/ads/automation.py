@@ -361,3 +361,73 @@ def generate_ad_report(campaign_id, start_date=None, end_date=None):
     except Exception as e:
         logger.error(f"Error generating ad report: {e}")
         return None
+
+
+def cleanup_expired_ads():
+    """
+    Automated task to deactivate expired ad campaigns and delete their
+    images from the server.  Should be run daily via cron or celery beat.
+    """
+    import os
+    from flask import current_app
+    from app.models import AdEvent
+
+    try:
+        now = datetime.now(timezone.utc)
+
+        # Find expired campaigns (end date in the past)
+        expired = AdCampaign.query.filter(
+            AdCampaign.ends_at.isnot(None),
+            AdCampaign.ends_at < now,
+        ).all()
+
+        cleaned_count = 0
+        for campaign in expired:
+            # Deactivate the campaign
+            campaign.is_active = False
+
+            # Delete associated creative images from disk
+            for creative in campaign.creatives.all():
+                if creative.image_url:
+                    _delete_ad_image(creative.image_url, current_app)
+                    creative.image_url = None
+                creative.is_active = False
+                db.session.add(creative)
+
+            db.session.add(campaign)
+            cleaned_count += 1
+
+        if cleaned_count > 0:
+            db.session.commit()
+            logger.info(f"Cleaned up {cleaned_count} expired ad campaigns")
+
+        return cleaned_count
+
+    except Exception as e:
+        logger.error(f"Error cleaning up expired ads: {e}")
+        db.session.rollback()
+        return 0
+
+
+def _delete_ad_image(image_path: str, app) -> None:
+    """Safely delete an ad image file from the storage root."""
+    import os
+
+    try:
+        storage_root = (
+            app.config.get('STORAGE_LOCAL_PATH')
+            or app.config.get('UPLOAD_FOLDER')
+        )
+        if not storage_root or not image_path:
+            return
+        full_path = os.path.join(storage_root, image_path)
+        full_path = os.path.realpath(full_path)
+        # Ensure path is inside storage root (path traversal protection)
+        if not full_path.startswith(os.path.realpath(storage_root)):
+            logger.warning(f"Path traversal blocked: {image_path}")
+            return
+        if os.path.isfile(full_path):
+            os.remove(full_path)
+            logger.info(f"Deleted expired ad image: {full_path}")
+    except Exception as e:
+        logger.warning(f"Could not delete ad image {image_path}: {e}")

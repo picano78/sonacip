@@ -10,39 +10,66 @@
   </div>
 
   <div class="card mb-4">
-    <div class="card-header"><strong>Crea campagna</strong></div>
+    <div class="card-header"><strong>Crea annuncio</strong></div>
     <div class="card-body">
-      <form method="post" action="{{ url_for('ads.selfserve_new') }}" class="row g-2">
+      <form method="post" action="{{ url_for('ads.selfserve_new') }}" enctype="multipart/form-data" class="row g-2">
         {{ csrf_token() }}
         <div class="col-md-4">
           <label class="form-label">Nome</label>
           <input class="form-control" name="name" placeholder="Sponsor XYZ" required>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label class="form-label">Placement</label>
           <select class="form-select" name="placement">
             <option value="feed_inline">Feed (inline)</option>
             <option value="sidebar_card">Sidebar (card)</option>
           </select>
         </div>
-        <div class="col-md-3">
-          <label class="form-label">Budget (€)</label>
-          <input class="form-control" name="budget_eur" value="50">
+        <div class="col-md-4">
+          <label class="form-label">Pubblico</label>
+          <select class="form-select" name="target_audience">
+            <option value="all">Tutti</option>
+            <option value="societies">Solo Società</option>
+            <option value="users">Solo Utenti</option>
+            <option value="athletes">Solo Atleti</option>
+            <option value="coaches">Solo Allenatori</option>
+          </select>
         </div>
-        <div class="col-md-2">
-          <label class="form-label">Link</label>
-          <input class="form-control" name="link_url" value="/subscription/plans">
+        <div class="col-md-4">
+          <label class="form-label">Durata (giorni)</label>
+          <input class="form-control" name="duration_days" id="durationDays" type="number"
+                 min="{{ settings.min_duration_days or 1 }}"
+                 max="{{ settings.max_duration_days or 90 }}"
+                 value="{{ settings.default_duration_days or 7 }}">
+          <small class="text-muted">Min {{ settings.min_duration_days or 1 }} – Max {{ settings.max_duration_days or 90 }} giorni</small>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Prezzo stimato (€)</label>
+          <input class="form-control" id="estimatedPrice" type="text" readonly
+                 value="{{ '%.2f'|format((settings.price_per_day or 5.0) * (settings.default_duration_days or 7)) }}">
+          <small class="text-muted">€{{ '%.2f'|format(settings.price_per_day or 5.0) }} / giorno</small>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Link destinazione</label>
+          <input class="form-control" name="link_url" value="/">
         </div>
         <div class="col-md-6">
-          <label class="form-label">Headline</label>
-          <input class="form-control" name="headline" placeholder="Titolo">
+          <label class="form-label">Titolo</label>
+          <input class="form-control" name="headline" placeholder="Titolo dell'annuncio">
         </div>
         <div class="col-md-6">
-          <label class="form-label">Body</label>
-          <input class="form-control" name="body" placeholder="Testo breve">
+          <label class="form-label">Testo</label>
+          <input class="form-control" name="body" placeholder="Descrizione breve">
         </div>
-        <div class="col-12">
-          <button class="btn btn-primary" type="submit">Crea</button>
+        <div class="col-md-6">
+          <label class="form-label">Immagine annuncio</label>
+          <input class="form-control" name="image" type="file" accept="image/*">
+          <small class="text-muted">JPG, PNG, WebP – max 8 MB</small>
+        </div>
+        <div class="col-12 mt-2">
+          <button class="btn btn-primary" type="submit">
+            <i class="bi bi-credit-card"></i> Crea e paga
+          </button>
         </div>
       </form>
     </div>
@@ -55,8 +82,11 @@
         <thead>
           <tr>
             <th>Nome</th>
+            <th>Pubblico</th>
+            <th>Periodo</th>
             <th>Budget</th>
             <th>Speso</th>
+            <th>Stato</th>
             <th>Impression</th>
             <th>Click</th>
             <th class="text-end">Ricarica</th>
@@ -69,8 +99,22 @@
                 <strong>{{ c.name }}</strong>
                 <div class="text-muted small">#{{ c.id }}</div>
               </td>
+              <td><span class="badge bg-info">{{ c.target_audience or 'all' }}</span></td>
+              <td class="small">
+                {{ c.starts_at.strftime('%d/%m/%Y') if c.starts_at else '–' }}
+                → {{ c.ends_at.strftime('%d/%m/%Y') if c.ends_at else '–' }}
+              </td>
               <td>€{{ "%.2f"|format((c.budget_cents or 0) / 100.0) }}</td>
               <td>€{{ "%.2f"|format((c.spend_cents or 0) / 100.0) }}</td>
+              <td>
+                {% if c.payment_status == 'pending' %}
+                  <span class="badge bg-warning">In attesa pagamento</span>
+                {% elif c.is_active %}
+                  <span class="badge bg-success">Attiva</span>
+                {% else %}
+                  <span class="badge bg-secondary">Inattiva</span>
+                {% endif %}
+              </td>
               <td class="text-muted small">{{ c.impressions_count or 0 }}</td>
               <td class="text-muted small">{{ c.clicks_count or 0 }}</td>
               <td class="text-end">
@@ -82,12 +126,26 @@
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="6" class="text-muted">Nessuna campagna.</td></tr>
+            <tr><td colspan="9" class="text-muted">Nessuna campagna.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var durationInput = document.getElementById('durationDays');
+    var priceField = document.getElementById('estimatedPrice');
+    var pricePerDay = {{ settings.price_per_day or 5.0 }};
+    if (durationInput && priceField) {
+        durationInput.addEventListener('input', function() {
+            var days = parseInt(this.value) || 0;
+            priceField.value = (pricePerDay * days).toFixed(2);
+        });
+    }
+});
+</script>
 {% endblock %}
 

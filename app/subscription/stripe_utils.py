@@ -448,6 +448,10 @@ def handle_stripe_event(event: Any) -> None:
             # Increase budget by amount_total
             amount_total = session_obj.get("amount_total") or 0
             camp.budget_cents = int(camp.budget_cents or 0) + int(amount_total)
+            # Activate campaign on successful payment
+            if camp.payment_status == "pending":
+                camp.is_active = True
+                camp.payment_status = "completed"
             db.session.add(camp)
             db.session.commit()
             return

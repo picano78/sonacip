@@ -2,6 +2,7 @@
 Application Configuration
 Environment-based configuration for development and production
 """
+import logging
 import os
 import secrets
 from datetime import timedelta
@@ -260,22 +261,22 @@ class ProductionConfig(Config):
             uri = uri.replace("postgres://", "postgresql://", 1)
         if not uri.startswith("postgresql://"):
             raise RuntimeError("DATABASE_URL must be PostgreSQL (postgresql://...)")
-        # Validate SUPERADMIN credentials (re-read from env after dotenv loading)
+        # Warn about missing SUPERADMIN credentials (seed.py will generate defaults)
         email = os.environ.get('SUPERADMIN_EMAIL') or None
         password = os.environ.get('SUPERADMIN_PASSWORD') or None
         if not email or not password:
-            raise RuntimeError(
+            logger = logging.getLogger(__name__)
+            logger.warning(
                 "\n" + "="*80 + "\n"
-                "⚠️  CRITICAL CONFIGURATION ERROR ⚠️\n"
+                "⚠️  SUPERADMIN CREDENTIALS NOT SET ⚠️\n"
                 "="*80 + "\n"
-                "SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD must be set in production!\n\n"
-                "REQUIRED ACTION:\n"
-                "1. Check your environment configuration:\n"
-                "   python3 check_env.py\n"
-                "2. Edit .env file and set secure credentials:\n"
+                "SUPERADMIN_EMAIL and/or SUPERADMIN_PASSWORD not set in production.\n"
+                "Default credentials will be generated automatically at startup.\n\n"
+                "RECOMMENDED ACTION:\n"
+                "1. Edit .env file and set secure credentials:\n"
                 "   SUPERADMIN_EMAIL='your-secure-email@domain.com'\n"
                 "   SUPERADMIN_PASSWORD='your-strong-password'\n"
-                "3. Start/restart the application\n"
+                "2. Restart the application\n"
                 "\n"
                 "See MIGRATION_GUIDE.md or README.md for more information.\n"
                 "="*80 + "\n"

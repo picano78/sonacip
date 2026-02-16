@@ -65,6 +65,7 @@ def test_production_mode_requires_credentials():
     with mock.patch.dict(os.environ, {
         'APP_ENV': 'production',
         'SECRET_KEY': 'test-secret-key-for-production',
+        'DATABASE_URL': 'postgresql://user:pass@localhost:5432/sonacip_test',
     }, clear=True):
         # Remove credentials from environment
         os.environ.pop('SUPERADMIN_EMAIL', None)
@@ -83,10 +84,9 @@ def test_production_mode_requires_credentials():
         assert config_mod.Config.SUPERADMIN_EMAIL is None
         assert config_mod.Config.SUPERADMIN_PASSWORD is None
 
-        # ProductionConfig.validate_config should raise RuntimeError
-        # (validation is deferred so that .env is loaded first)
-        with pytest.raises(RuntimeError):
-            config_mod.ProductionConfig.validate_config()
+        # ProductionConfig.validate_config should log a warning (not raise)
+        # because seed.py handles generating default credentials
+        config_mod.ProductionConfig.validate_config()
 
 
 def test_development_mode_allows_missing_credentials():

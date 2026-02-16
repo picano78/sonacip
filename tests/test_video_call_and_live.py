@@ -3,7 +3,6 @@ Tests for video call in messaging and enhanced livestream features.
 Tests the is_public field, quick_start, toggle_visibility, and video call routes.
 """
 import pytest
-from datetime import datetime, timezone
 from app import create_app, db
 from app.models import (
     User, LiveStream, LiveStreamViewer, Role,

@@ -295,18 +295,26 @@
             <!-- Live Banners -->
             {% if banners %}
                 {% for banner in banners %}
+                {% if banner.link_url and (banner.link_url.startswith('http://') or banner.link_url.startswith('https://')) %}
+                <a href="{{ banner.link_url }}" target="_blank" rel="noopener noreferrer" class="live-banner position-{{ banner.position }}" 
+                   style="width: {{ banner.width }}px; height: {{ banner.height }}px; text-decoration: none;">
+                {% else %}
                 <div class="live-banner position-{{ banner.position }}" 
-                     style="width: {{ banner.width }}px; height: {{ banner.height }}px;"
-                     {% if banner.link_url %}onclick="window.open('{{ banner.link_url }}', '_blank')" style="cursor: pointer;"{% endif %}>
-                    {% if banner.image_url %}
+                     style="width: {{ banner.width }}px; height: {{ banner.height }}px;">
+                {% endif %}
+                    {% if banner.image_url and (banner.image_url.startswith('http://') or banner.image_url.startswith('https://')) %}
                         <img src="{{ banner.image_url }}" alt="{{ banner.title }}">
                     {% endif %}
                     {% if banner.content %}
                         <div class="banner-content">
-                            {{ banner.content|safe }}
+                            {{ banner.content|striptags }}
                         </div>
                     {% endif %}
+                {% if banner.link_url and (banner.link_url.startswith('http://') or banner.link_url.startswith('https://')) %}
+                </a>
+                {% else %}
                 </div>
+                {% endif %}
                 {% endfor %}
             {% endif %}
             

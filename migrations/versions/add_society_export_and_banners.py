@@ -1,7 +1,7 @@
 """Add society planner notifications and live banners
 
 Revision ID: add_society_export_banners
-Revises: 
+Revises: d2f4a6c8e0b1
 Create Date: 2026-02-16 09:21:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_society_export_banners'
-down_revision = None  # Will be set by Alembic based on current head
+down_revision = 'd2f4a6c8e0b1'
 
 def upgrade():
     # Add planner_notifications_enabled to society table

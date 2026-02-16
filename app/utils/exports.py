@@ -4,9 +4,24 @@ Support for CSV, Excel, and PDF exports
 """
 import csv
 import io
+import re
 from datetime import datetime, timezone
 from flask import Response, make_response
 import json
+
+
+def sanitize_filename(filename):
+    """Sanitize filename to prevent path traversal and special characters"""
+    # Remove path separators and other dangerous characters
+    filename = re.sub(r'[^\w\s\-\.]', '', filename)
+    # Remove leading/trailing dots and spaces
+    filename = filename.strip('. ')
+    # Limit length
+    filename = filename[:100]
+    # Ensure not empty
+    if not filename:
+        filename = 'export'
+    return filename
 
 
 class DataExporter:
@@ -335,7 +350,8 @@ class DataExporter:
         from app.models import SocietyMembership, User
         
         if not filename:
-            filename = f'athletes_{society.legal_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
+            safe_name = sanitize_filename(society.legal_name or 'society')
+            filename = f'athletes_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
         
         columns = ['id', 'username', 'email', 'first_name', 'last_name', 'phone', 'date_of_birth', 'role_name', 'joined_at']
         
@@ -374,7 +390,8 @@ class DataExporter:
         from app.models import Event
         
         if not filename:
-            filename = f'events_{society.legal_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
+            safe_name = sanitize_filename(society.legal_name or 'society')
+            filename = f'events_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
         
         columns = ['id', 'title', 'description', 'event_type', 'start_time', 'end_time', 'location', 'created_at']
         
@@ -411,7 +428,8 @@ class DataExporter:
         from app.models import Tournament
         
         if not filename:
-            filename = f'tournaments_{society.legal_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
+            safe_name = sanitize_filename(society.legal_name or 'society')
+            filename = f'tournaments_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
         
         columns = ['id', 'name', 'description', 'sport', 'tournament_type', 'start_date', 'end_date', 'status', 'created_at']
         
@@ -449,7 +467,8 @@ class DataExporter:
         from app.models import FieldPlannerEvent
         
         if not filename:
-            filename = f'planner_events_{society.legal_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
+            safe_name = sanitize_filename(society.legal_name or 'society')
+            filename = f'planner_events_{safe_name}_{datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")}.{format}'
         
         columns = ['id', 'title', 'facility_name', 'event_type', 'start_time', 'end_time', 'notes', 'created_at']
         
@@ -461,7 +480,7 @@ class DataExporter:
             data.append({
                 'id': event.id,
                 'title': event.title or '',
-                'facility_name': event.facility.name if event.facility else '',
+                'facility_name': event.facility.name if (event.facility and event.facility.name) else '',
                 'event_type': event.event_type or '',
                 'start_time': event.start_time.isoformat() if event.start_time else '',
                 'end_time': event.end_time.isoformat() if event.end_time else '',

@@ -31,8 +31,8 @@ EnvironmentFile=/opt/sonacip/.env
 Environment=PYTHONUNBUFFERED=1
 Environment=RUN_MAIN=true
 ExecStart=/opt/sonacip/venv/bin/gunicorn \\
-    --workers 2 \\
-    --threads 2 \\
+    --workers 1 \\
+    --threads 1 \\
     --worker-class gthread \\
     --timeout 120 \\
     --bind 127.0.0.1:8000 \\

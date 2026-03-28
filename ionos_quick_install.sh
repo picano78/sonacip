@@ -716,14 +716,22 @@ print_success "🚀 SONACIP is production-ready with original code!"
 echo ""
 print_status "Installation log available at: $LOG_FILE"
 
-# Cleanup phase
-echo "Pulizia finale..."
-mkdir -p backup_installers
-mv ionos_quick_install.sh backup_installers/ 2>/dev/null
-mv ionos_complete_installer.sh backup_installers/ 2>/dev/null
-mv install_sonacip*.sh backup_installers/ 2>/dev/null
-mv installer.sh backup_installers/ 2>/dev/null
-mv test_*.sh backup_installers/ 2>/dev/null
-mv check_system.sh backup_installers/ 2>/dev/null
+# Cleanup phase - ONLY if installation successful
+print_status "Performing final cleanup..."
 
-echo "Installazione completata e pulizia eseguita!"
+# Verify everything is working before cleanup
+if systemctl is-active --quiet sonacip && systemctl is-active --quiet nginx; then
+    print_success "All services running correctly, proceeding with cleanup"
+    
+    # Remove installer script only
+    rm -f ionos_quick_install.sh 2>/dev/null || true
+    
+    # Remove temporary files
+    rm -rf /tmp/sonacip_install 2>/dev/null || true
+    
+    print_success "Installer cleanup completed"
+    echo "INSTALLAZIONE COMPLETATA E PULITA"
+else
+    print_warning "Services not running properly, skipping cleanup"
+    print_status "Installer script preserved for debugging"
+fi

@@ -8,6 +8,7 @@ from app import db
 from app.utils import check_permission
 from app.main.forms import DashboardEditForm, ContactAdminForm
 from types import SimpleNamespace
+from datetime import datetime
 
 bp = Blueprint('main', __name__, url_prefix='')
 
@@ -144,6 +145,31 @@ def about():
     """About page"""
     sections = _page_sections('main.about')
     return render_template('main/about.html', pb_sections=sections)
+
+
+@bp.route('/health')
+def health():
+    """Health check endpoint for monitoring"""
+    try:
+        # Test database connection
+        from app.models import User
+        db.session.execute('SELECT 1').fetchone()
+        
+        return jsonify({
+            'status': 'healthy',
+            'app': 'SONACIP',
+            'version': '1.0.0',
+            'server': 'Ubuntu 24.04',
+            'database': 'connected',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'app': 'SONACIP',
+            'error': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
 
 
 @bp.route('/contact', methods=['GET', 'POST'])

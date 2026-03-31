@@ -626,6 +626,7 @@ def register():
 
 
 @bp.route('/register/society', methods=['GET', 'POST'])
+@bp.route('/register-society', methods=['GET', 'POST'])
 @limiter.limit("2 per hour", methods=["POST"])
 def register_society():
     """Registration page for societies (CRM-style)."""

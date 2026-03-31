@@ -164,10 +164,17 @@ def load_external_plugins(app) -> list[PluginMeta]:
     loaded: list[PluginMeta] = []
     for entry in sorted(os.listdir(plugins_dir)):
         plugin_id = entry.strip()
+        # PRODUCTION FIX: Skip hidden files, README, and other non-plugin files
         if not plugin_id or plugin_id.startswith("."):
             continue
+        # Skip common non-plugin files
+        if plugin_id.lower() in ('readme.md', 'readme.txt', 'readme', 
+                                  'license', 'license.md', 'license.txt',
+                                  'dockerfile', 'docker-compose.yml', 
+                                  '.gitignore', '.git', '__pycache__'):
+            continue
         if not _ID_RE.match(plugin_id):
-            app.logger.warning("Skipping invalid plugin id folder: %s", plugin_id)
+            app.logger.debug("Skipping invalid plugin folder: %s", plugin_id)
             continue
 
         plugin_path = os.path.join(plugins_dir, plugin_id)

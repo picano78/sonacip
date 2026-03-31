@@ -1,0 +1,28 @@
+[Unit]
+Description=SONACIP Flask Application
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/sonacip
+Environment=PATH=/opt/sonacip/venv/bin
+Environment=PYTHONPATH=/opt/sonacip
+# Load environment from .env file
+EnvironmentFile=-/opt/sonacip/.env
+
+# Gunicorn with proper logging
+ExecStart=/opt/sonacip/venv/bin/gunicorn     -c gunicorn.conf.py     --access-logfile /var/log/sonacip/access.log     --error-logfile /var/log/sonacip/error.log     wsgi:app
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+# Restart policy
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

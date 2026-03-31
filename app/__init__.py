@@ -146,12 +146,7 @@ def _load_dotenv_if_present() -> None:
     """
     Load `.env` from repo root if present.
 
-    We deliberately keep this dependency-free at runtime (python-dotenv is already
-    in requirements.txt) and do not require systemd EnvironmentFile tweaks.
-    
-    Loads .env files in this order (later values do not override earlier ones):
-    1. Environment variables already set
-    2. .env in repo root
+    # PRODUCTION FIX: Enhanced error handling and logging
     """
     try:
         from dotenv import load_dotenv
@@ -159,10 +154,21 @@ def _load_dotenv_if_present() -> None:
         # Load from repo root (preferred location for production .env file)
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
         env_path = os.path.join(repo_root, ".env")
-        # Do not override already-exported environment variables
-        load_dotenv(env_path, override=False)
-    except Exception:
-        return
+        
+        # Check if .env exists before loading
+        if os.path.exists(env_path):
+            # PRODUCTION: Use override=True to ensure .env takes precedence
+            load_dotenv(env_path, override=True)
+            import logging
+            logging.getLogger(__name__).info(f"[OK] Loaded .env from {env_path}")
+        else:
+            import logging
+            logging.getLogger(__name__).warning(f"[WARNING] .env not found at {env_path}")
+            logging.getLogger(__name__).warning("[WARNING] Using environment variables only")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"[ERROR] Failed to load .env: {e}")
+        # Don't crash - continue with environment variables
 
 
 def _ensure_secret_key(app: Flask) -> None:
@@ -1048,11 +1054,14 @@ def create_app(config_name: str | None = None) -> Flask:
         app.logger.debug("Automation builder blueprint not loaded (non-fatal)")
 
     # External drop-in plugins (filesystem-based)
+    # PRODUCTION FIX: Ignore invalid files like README.md
     try:
         from app.core.plugins import load_external_plugins
-        load_external_plugins(app)
-    except Exception:
-        app.logger.exception("External plugins load failed (non-fatal)")
+        loaded_plugins = load_external_plugins(app)
+        if loaded_plugins:
+            app.logger.info(f"[OK] Loaded {len(loaded_plugins)} external plugins")
+    except Exception as e:
+        app.logger.error(f"[WARNING] External plugins load failed (non-fatal): {e}")
 
     @app.context_processor
     def inject_platform_context():
@@ -1284,7 +1293,11 @@ def create_app(config_name: str | None = None) -> Flask:
     # This is idempotent and safe to run on every startup
     # Skip if SKIP_AUTO_SEED is set (used by init_db.py to avoid conflicts)
     if not app.config.get("TESTING") and not os.environ.get("SKIP_AUTO_SEED"):
-        _auto_seed(app)
+        try:
+            _auto_seed(app)
+        except Exception as e:
+            app.logger.error(f"[ERROR] Auto-seed failed: {e}")
+            # Don't crash on seed failure - log and continue
 
     # Load MAX_CONTENT_LENGTH from admin StorageSetting if available
     if not app.config.get("TESTING"):

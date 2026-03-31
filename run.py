@@ -1,17 +1,16 @@
-
+#!/usr/bin/env python
 """
 Production entrypoint for SONACIP.
 
 GUARANTEED to load .env BEFORE any config is evaluated.
+Usage: python run.py
 """
 import os
 import sys
 
 # CRITICAL: Load .env BEFORE importing app/config modules
-# This ensures all environment variables are available during config import
 from dotenv import load_dotenv
 
-# Get the directory containing this file
 basedir = os.path.abspath(os.path.dirname(__file__))
 env_path = os.path.join(basedir, '.env')
 
@@ -20,41 +19,23 @@ if os.path.exists(env_path):
     load_dotenv(env_path, override=True)
     print(f"[OK] Loaded .env from {env_path}", file=sys.stderr)
 else:
-    print(f"[WARNING] .env file not found at {env_path}", file=sys.stderr)
-    print("[WARNING] Using environment variables only", file=sys.stderr)
+    # Create .env with fixed values if missing
+    print(f"[WARNING] .env not found, creating with default values", file=sys.stderr)
+    with open(env_path, 'w') as f:
+        f.write("SUPERADMIN_EMAIL=picano78@gmail.com\n")
+        f.write("SUPERADMIN_PASSWORD=Picano78\n")
+        f.write("SECRET_KEY=4f8a2b9c1d3e5f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\n")
+        f.write("SQLALCHEMY_DATABASE_URI=sqlite:///uploads/sonacip.db\n")
+        f.write("FLASK_ENV=production\n")
+        f.write("FLASK_DEBUG=False\n")
+        f.write("PORT=8000\n")
+    load_dotenv(env_path, override=True)
 
-# Now import and create app
+# Now safe to import and create app
 from app import create_app
 
 app = create_app()
 
 if __name__ == "__main__":
-    # Development server
     port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
-"""
-
-Legacy entrypoint kept for compatibility.
-
-Production entrypoint MUST be `wsgi:app`.
-This module intentionally remains runnable by Gunicorn as `run:app` if needed.
-"""
-
-# CRITICAL: Load .env BEFORE importing app/config modules
-from dotenv import load_dotenv
-import os
-import sys
-
-basedir = os.path.abspath(os.path.dirname(__file__))
-env_path = os.path.join(basedir, '.env')
-
-if os.path.exists(env_path):
-    load_dotenv(env_path, override=True)
-    print(f"[OK] Loaded .env from {env_path}", file=sys.stderr)
-else:
-    print(f"[WARNING] .env file not found at {env_path}", file=sys.stderr)
-
-# Now safe to import app
-from app import create_app
-
-app = create_app()

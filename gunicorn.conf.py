@@ -20,11 +20,14 @@ worker_connections = 1000
 # Timeout settings
 timeout = 120
 keepalive = 5
+graceful_timeout = 30
 
 # Logging
 accesslog = '-'
 errorlog = '-'
 loglevel = os.environ.get('LOG_LEVEL', 'info')
+capture_output = True
+enable_stdio_inheritance = True
 
 # Process naming
 proc_name = 'sonacip'
@@ -50,7 +53,7 @@ def on_reload(server):
 
 def when_ready(server):
     """Called just after the server is started."""
-    print(f"[OK] Gunicorn ready with {server.num_workers} workers")
+    print(f"[OK] Gunicorn ready with {server.num_workers} workers on {bind}")
 
 def worker_int(worker):
     """Called when a worker receives SIGINT or SIGQUIT."""

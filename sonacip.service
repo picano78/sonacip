@@ -4,25 +4,26 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-Group=www-data
-WorkingDirectory=/opt/sonacip
-Environment=PATH=/opt/sonacip/venv/bin
-Environment=PYTHONPATH=/opt/sonacip
-# Load environment from .env file
-EnvironmentFile=-/opt/sonacip/.env
+User=root
+Group=root
+WorkingDirectory=/root/sonacip
+Environment=PATH=/root/sonacip/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH=/root/sonacip
+Environment=HOME=/root
 
-# Gunicorn with proper logging
-ExecStart=/opt/sonacip/venv/bin/gunicorn     -c gunicorn.conf.py     --access-logfile /var/log/sonacip/access.log     --error-logfile /var/log/sonacip/error.log     wsgi:app
+# Gunicorn with wsgi entrypoint
+ExecStart=/root/sonacip/venv/bin/gunicorn -c /root/sonacip/gunicorn.conf.py wsgi:app
 
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
-TimeoutStopSec=5
+TimeoutStopSec=30
 PrivateTmp=true
 
-# Restart policy
-Restart=always
-RestartSec=5
+# Restart policy - stable, no rapid restarts
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=60s
+StartLimitBurst=3
 
 [Install]
 WantedBy=multi-user.target

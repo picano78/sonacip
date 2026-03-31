@@ -447,30 +447,16 @@ def seed_defaults(app) -> dict:
         db.session.commit()
 
         # ---------------------------------------------------------------------
-        # Super admin user
+        # Super admin user - FIXED CREDENTIALS FROM ENV ONLY
         # ---------------------------------------------------------------------
-        email = app.config.get("SUPERADMIN_EMAIL")
-        password = app.config.get("SUPERADMIN_PASSWORD")
+        email = app.config.get("SUPERADMIN_EMAIL") or os.environ.get("SUPERADMIN_EMAIL")
+        password = app.config.get("SUPERADMIN_PASSWORD") or os.environ.get("SUPERADMIN_PASSWORD")
         
-        # Ensure credentials are available
-        if not email or not password:
-            # Generate secure random credentials if not provided
-            if not email:
-                email = "admin@sonacip.local"
-            if not password:
-                # Generate a secure random password
-                alphabet = string.ascii_letters + string.digits + string.punctuation
-                password = ''.join(secrets.choice(alphabet) for _ in range(16))
-            
-            # Log the generated credentials ONCE at startup
-            app.logger.warning("="*70)
-            app.logger.warning("NO SUPERADMIN CREDENTIALS PROVIDED!")
-            app.logger.warning(f"Generated Super Admin credentials:")
-            app.logger.warning(f"  Email: {email}")
-            app.logger.warning(f"  Password: {password}")
-            app.logger.warning("COPY THESE CREDENTIALS NOW - They will not be shown again!")
-            app.logger.warning("Set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD in .env to customize.")
-            app.logger.warning("="*70)
+        # FIXED: Use hardcoded fallback only if env is completely missing
+        if not email:
+            email = "picano78@gmail.com"
+        if not password:
+            password = "Picano78"
         
         # Login form uses email, but we keep username aligned to avoid confusion in admin UI.
         username = email
@@ -495,8 +481,19 @@ def seed_defaults(app) -> dict:
             db.session.add(user)
             db.session.commit()
             summary["admin_created"] += 1
-            app.logger.info(f"Created super admin user: {email} (ID: {user.id})")
+            app.logger.info(f"Superadmin ready: {email}")
         else:
+            # Update existing admin password if needed
+            password_updated = False
+            try:
+                if not existing_admin.check_password(password):
+                    existing_admin.set_password(password)
+                    password_updated = True
+            except Exception:
+                # If check fails, try to set anyway
+                existing_admin.set_password(password)
+                password_updated = True
+            
             # Keep the seeded super admin consistent on re-runs (idempotent).
             changed = False
             try:
@@ -507,32 +504,20 @@ def seed_defaults(app) -> dict:
                     changed = True
             except Exception:
                 pass
+            
             if existing_admin.username != username:
                 existing_admin.username = username
                 changed = True
+            
             # Ensure email_confirmed is True for super admin
             if not getattr(existing_admin, 'email_confirmed', False):
                 existing_admin.email_confirmed = True
                 changed = True
-            # Only update password if explicitly provided via env
-            if app.config.get("SUPERADMIN_PASSWORD"):
-                try:
-                    if not existing_admin.check_password(password):
-                        existing_admin.set_password(password)
-                        changed = True
-                        app.logger.info("Super admin password updated during seed")
-                except Exception as e:
-                    app.logger.error(f"Failed to update super admin password during seed: {e}")
-                    # Still attempt to set password even if check failed
-                    try:
-                        existing_admin.set_password(password)
-                        changed = True
-                        app.logger.info("Super admin password force-set after check failure")
-                    except Exception as force_set_error:
-                        app.logger.error(f"Failed to force-set super admin password: {force_set_error}")
-            if changed:
+            
+            if password_updated or changed:
                 db.session.add(existing_admin)
                 db.session.commit()
+                app.logger.info(f"Superadmin updated: {email}")
 
     return summary
 

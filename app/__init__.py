@@ -145,8 +145,7 @@ def _register_blueprints(app: Flask, modules: list[str] | None = None) -> None:
 def _load_dotenv_if_present() -> None:
     """
     Load `.env` from repo root if present.
-
-    # PRODUCTION FIX: Enhanced error handling and logging
+    If not present, create with fixed credentials.
     """
     try:
         from dotenv import load_dotenv
@@ -155,19 +154,26 @@ def _load_dotenv_if_present() -> None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
         env_path = os.path.join(repo_root, ".env")
         
-        # Check if .env exists before loading
-        if os.path.exists(env_path):
-            # PRODUCTION: Use override=True to ensure .env takes precedence
-            load_dotenv(env_path, override=True)
+        # If .env doesn't exist, create it with fixed credentials
+        if not os.path.exists(env_path):
+            with open(env_path, 'w') as f:
+                f.write("SUPERADMIN_EMAIL=picano78@gmail.com\n")
+                f.write("SUPERADMIN_PASSWORD=Picano78\n")
+                f.write("SECRET_KEY=4f8a2b9c1d3e5f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\n")
+                f.write("SQLALCHEMY_DATABASE_URI=sqlite:///uploads/sonacip.db\n")
+                f.write("FLASK_ENV=production\n")
+                f.write("FLASK_DEBUG=False\n")
+                f.write("PORT=8000\n")
             import logging
-            logging.getLogger(__name__).info(f"[OK] Loaded .env from {env_path}")
-        else:
-            import logging
-            logging.getLogger(__name__).warning(f"[WARNING] .env not found at {env_path}")
-            logging.getLogger(__name__).warning("[WARNING] Using environment variables only")
+            logging.getLogger(__name__).info(f"[OK] Created .env at {env_path}")
+        
+        # Load .env with override=True to ensure it takes precedence
+        load_dotenv(env_path, override=True)
+        import logging
+        logging.getLogger(__name__).info(f"[OK] Loaded .env from {env_path}")
     except Exception as e:
         import logging
-        logging.getLogger(__name__).error(f"[ERROR] Failed to load .env: {e}")
+        logging.getLogger(__name__).error(f"[ERROR] Failed to load/create .env: {e}")
         # Don't crash - continue with environment variables
 
 

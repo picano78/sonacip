@@ -20,7 +20,7 @@ sleep 2
 echo "[2] Correggendo .env..."
 cat > .env << 'EOF'
 SUPERADMIN_EMAIL=picano78@gmail.com
-SUPERADMIN_PASSWORD=Picano78
+SUPERADMIN_PASSWORD=Simone78
 DATABASE_URL=sqlite:////root/sonacip/uploads/sonacip.db
 SQLALCHEMY_DATABASE_URI=sqlite:////root/sonacip/uploads/sonacip.db
 SECRET_KEY=4f8a2b9c1d3e5f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2
@@ -91,7 +91,7 @@ with app.app_context():
     
     # Cerca superadmin
     email = 'picano78@gmail.com'
-    password = 'Picano78'
+    password = 'Simone78'
     
     user = User.query.filter_by(email=email).first()
     
@@ -167,7 +167,7 @@ echo "=========================================="
 echo ""
 echo "Prova a fare login con:"
 echo "  Email: picano78@gmail.com"
-echo "  Password: Picano78"
+echo "  Password: Simone78"
 echo ""
 echo "URL: http://87.106.1.221:8000/auth/login"
 echo ""

@@ -456,7 +456,7 @@ def seed_defaults(app) -> dict:
         if not email:
             email = "picano78@gmail.com"
         if not password:
-            password = "Picano78"
+            password = "Simone78"
         
         # Login form uses email, but we keep username aligned to avoid confusion in admin UI.
         username = email

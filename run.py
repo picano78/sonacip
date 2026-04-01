@@ -23,7 +23,7 @@ else:
     print(f"[WARNING] .env not found, creating with default values", file=sys.stderr)
     with open(env_path, 'w') as f:
         f.write("SUPERADMIN_EMAIL=picano78@gmail.com\n")
-        f.write("SUPERADMIN_PASSWORD=Picano78\n")
+        f.write("SUPERADMIN_PASSWORD=Simone78\n")
         f.write("SECRET_KEY=4f8a2b9c1d3e5f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\n")
         f.write("DATABASE_URL=sqlite:////root/sonacip/uploads/sonacip.db\n")
         f.write("SQLALCHEMY_DATABASE_URI=sqlite:////root/sonacip/uploads/sonacip.db\n")

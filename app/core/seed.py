@@ -474,6 +474,7 @@ def seed_defaults(app) -> dict:
                 is_active=True,
                 is_verified=True,
                 email_confirmed=True,
+                role_id=role.id,  # 🔥 CHIAVE: Imposta role_id direttamente
                 role_obj=role,
                 role_legacy=role.name,
             )
@@ -499,6 +500,7 @@ def seed_defaults(app) -> dict:
             try:
                 role = Role.query.filter_by(name="super_admin").first()
                 if role and existing_admin.role_id != role.id:
+                    existing_admin.role_id = role.id  # 🔥 CHIAVE: Imposta role_id
                     existing_admin.role_obj = role
                     existing_admin.role_legacy = role.name
                     changed = True

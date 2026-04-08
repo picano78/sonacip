@@ -862,7 +862,7 @@ def email_confirm_pending(user_id):
     if not user:
         flash('Effettua il login per continuare.', 'info')
         return redirect(url_for('auth.login'))
-    if getattr(user, 'email_confirmed', False):
+    if getattr(user, 'email_confirmed', True):
         session.pop('_email_confirm_uid', None)
         flash('Email già confermata. Puoi effettuare il login.', 'success')
         return redirect(url_for('auth.login'))

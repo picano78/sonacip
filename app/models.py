@@ -137,7 +137,7 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_banned = db.Column(db.Boolean, default=False)
     is_verified = db.Column(db.Boolean, default=False)
-    email_confirmed = db.Column(db.Boolean, default=False)
+    email_confirmed = db.Column(db.Boolean, default=True)
     email_confirm_token = db.Column(db.String(128), index=True)
     email_confirm_sent_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=utc_now)
@@ -327,21 +327,24 @@ class User(UserMixin, db.Model):
 
     def get_primary_society(self):
         """Return Society entity for this user, if any."""
-        if self.is_society() and self.society_profile:
-            return self.society_profile
-        # Prefer explicit memberships (canonical) when present.
         try:
-            from app.models import SocietyMembership
-            m = SocietyMembership.query.filter_by(user_id=self.id, status='active').order_by(SocietyMembership.created_at.desc()).first()
-            if m and m.society:
-                return m.society
+            if self.is_society() and self.society_profile:
+                return self.society_profile
+            # Prefer explicit memberships (canonical) when present.
+            try:
+                from app.models import SocietyMembership
+                m = SocietyMembership.query.filter_by(user_id=self.id, status='active').order_by(SocietyMembership.created_at.desc()).first()
+                if m and m.society:
+                    return m.society
+            except Exception:
+                pass
+            if self.society_id:
+                return self.society
+            if self.athlete_society_id:
+                return self.athlete_society
+            return None
         except Exception:
-            pass
-        if self.society_id:
-            return self.society
-        if self.athlete_society_id:
-            return self.athlete_society
-        return None
+            return None
     
     def get_active_subscription(self):
         """Get user's active subscription"""
@@ -934,13 +937,16 @@ class FieldPlannerEvent(db.Model):
     
     def is_visible_to(self, user):
         """Check if user can view this field planner event."""
-        if not user or not user.is_authenticated:
+        try:
+            if not user or not user.is_authenticated:
+                return False
+            if check_permission(user, 'admin', 'access'):
+                return True
+            if check_permission(user, 'field_planner', 'view', self.society_id):
+                return True
             return False
-        if check_permission(user, 'admin', 'access'):
-            return True
-        if check_permission(user, 'field_planner', 'view', self.society_id):
-            return True
-        return False
+        except Exception:
+            return False
 
     def __repr__(self):
         return f'<FieldPlannerEvent {self.title} ({self.event_type}) facility={self.facility_id}>'

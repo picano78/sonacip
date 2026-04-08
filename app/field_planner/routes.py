@@ -172,7 +172,7 @@ def create():
     society = current_user.get_primary_society()
     if not society:
         flash('Profilo società non trovato.', 'warning')
-        return redirect(url_for('field_planner.index'))
+        return redirect(url_for('main.dashboard'))
     
     # Populate facility choices
     facilities = _get_facilities_for_society(society.id)
@@ -381,7 +381,7 @@ def edit(event_id):
     society = current_user.get_primary_society()
     if not society:
         flash('Profilo società non trovato.', 'warning')
-        return redirect(url_for('field_planner.index'))
+        return redirect(url_for('main.dashboard'))
     
     # Check permissions
     if not check_permission(current_user, 'admin', 'access'):

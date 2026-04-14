@@ -1,10 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-Production entrypoint for SONACIP.
-
-GUARANTEED to load .env BEFORE any config is evaluated.
+Development entrypoint for SONACIP Flask application.
 Usage: python run.py
 """
+
 import os
 import sys
 
@@ -19,8 +18,8 @@ if os.path.exists(env_path):
     load_dotenv(env_path, override=True)
     print(f"[OK] Loaded .env from {env_path}", file=sys.stderr)
 else:
-    # Create .env with fixed values if missing
-    print(f"[WARNING] .env not found, creating with default values", file=sys.stderr)
+    # Create .env with production values if missing
+    print(f"[WARNING] .env not found, creating with production values", file=sys.stderr)
     with open(env_path, 'w') as f:
         f.write("SUPERADMIN_EMAIL=picano78@gmail.com\n")
         f.write("SUPERADMIN_PASSWORD=Simone78\n")
@@ -30,6 +29,8 @@ else:
         f.write("FLASK_ENV=production\n")
         f.write("FLASK_DEBUG=False\n")
         f.write("PORT=8000\n")
+        f.write("WTF_CSRF_ENABLED=True\n")
+        f.write("WTF_CSRF_TIME_LIMIT=None\n")
     load_dotenv(env_path, override=True)
 
 # Now safe to import and create app
@@ -39,4 +40,5 @@ app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

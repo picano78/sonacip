@@ -258,8 +258,9 @@ class ProductionConfig(Config):
             raise RuntimeError("DATABASE_URL must be set in production")
         if uri.startswith("postgres://"):
             uri = uri.replace("postgres://", "postgresql://", 1)
-        if not uri.startswith("postgresql://"):
-            raise RuntimeError("DATABASE_URL must be PostgreSQL (postgresql://...)")
+        # Allow both PostgreSQL and SQLite for production stability
+        if not uri.startswith("postgresql://") and not uri.startswith("sqlite"):
+            raise RuntimeError("DATABASE_URL must be PostgreSQL or SQLite")
         # Validate SUPERADMIN credentials (re-read from env after dotenv loading)
         email = os.environ.get('SUPERADMIN_EMAIL') or None
         password = os.environ.get('SUPERADMIN_PASSWORD') or None

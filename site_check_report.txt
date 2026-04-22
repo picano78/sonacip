@@ -1,6 +1,0 @@
-SONACIP Site Check Report
-============================================================
-
-[INFO] Inizio verifica completa SONACIP...
-[INFO] 
-[SECTION] 1. VERIFICA FILE ESSENZIALI

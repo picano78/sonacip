@@ -1,7 +1,0 @@
-{
-  "name": "Hello World Plugin",
-  "version": "1.0.0",
-  "description": "Esempio plugin SONACIP (route + template + static).",
-  "url_prefix": "/plugins/hello_world",
-  "enabled_by_default": true
-}

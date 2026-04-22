@@ -180,7 +180,18 @@ def create():
     
     if not facilities:
         flash('Devi creare almeno un campo prima di aggiungere eventi al planner.', 'warning')
-        return redirect(url_for('calendar.facilities'))
+        # Auto-create default facilities if none exist
+        default_facilities = [
+            ('Campo 1', '#28a745'),
+            ('Campo 2', '#0d6efd'),
+            ('Palestra', '#6f42c1'),
+        ]
+        for name, color in default_facilities:
+            f = Facility(society_id=society.id, name=name, color=color, capacity=20)
+            db.session.add(f)
+        db.session.commit()
+        flash('Campi creati automaticamente. Ora puoi aggiungere eventi.', 'success')
+        return redirect(url_for('field_planner.create'))
 
     # Pre-fill date/time from URL params
     if request.method == 'GET':

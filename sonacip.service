@@ -1,0 +1,27 @@
+[Unit]
+Description=SONACIP Flask Application
+After=network.target
+
+[Service]
+Type=notify
+User=root
+Group=root
+WorkingDirectory=/root/sonacip
+Environment=PATH=/root/sonacip/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH=/root/sonacip
+Environment=FLASK_ENV=production
+Environment=FLASK_DEBUG=False
+
+ExecStart=/root/sonacip/venv/bin/gunicorn -w 3 -b 0.0.0.0:8000 run:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=30
+
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

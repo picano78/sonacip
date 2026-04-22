@@ -1,6 +1,6 @@
 [Unit]
 Description=SONACIP Flask Application
-After=network.target postgresql.service
+After=network.target
 
 [Service]
 Type=notify
@@ -9,24 +9,17 @@ Group=root
 WorkingDirectory=/root/sonacip
 Environment=PATH=/root/sonacip/venv/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONPATH=/root/sonacip
-Environment=HOME=/root
 Environment=FLASK_ENV=production
 Environment=FLASK_DEBUG=False
 
-# Gunicorn with wsgi entrypoint
-ExecStart=/root/sonacip/venv/bin/gunicorn -c /root/sonacip/gunicorn.conf.py wsgi:app
+ExecStart=/root/sonacip/venv/bin/gunicorn -w 3 -b 0.0.0.0:8000 run:app
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
 TimeoutStopSec=30
-PrivateTmp=true
 
-# Restart policy - production stable
 Restart=on-failure
 RestartSec=5s
-StartLimitInterval=2min
-StartLimitBurst=5
 
-# Logging
 StandardOutput=journal
 StandardError=journal
 

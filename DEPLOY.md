@@ -1,160 +1,82 @@
 # SONACIP - Deployment Guide for IONOS VPS
 
-## Quick Start Commands
+## Quick Start Commands (Copy-Paste)
 
 ```bash
 # 1. Login to VPS
 ssh root@YOUR_VPS_IP
 
-# 2. Install prerequisites
-apt update && apt upgrade -y
-apt install -y python3 python3-pip python3-venv postgresql nginx certbot python3-certbot-nginx git
-
-# 3. Create project directory
+# 2. Create directory and upload files
 mkdir -p /root/sonacip
+# Upload from your computer: scp -r ./sonacip/* root@YOUR_VPS_IP:/root/sonacip/
+
+# 3. Install dependencies
 cd /root/sonacip
-
-# 4. Upload project files (from your computer)
-# scp -r ./sonacip/* root@YOUR_VPS_IP:/root/sonacip/
-
-# 5. Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
-
-# 6. Install dependencies
 pip install -r requirements.txt
 
-# 7. Configure environment
+# 4. Configure environment
 cp .env.example .env
-nano .env  # Edit with your settings
+nano .env  # Edit SECRET_KEY, DATABASE_URL
 
-# 8. Initialize database
-python init_db.py
-
-# 9. Install systemd service
+# 5. Install systemd service
 cp sonacip.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable sonacip
 
-# 10. Configure Nginx
-cp deploy/sonacip.nginx.conf /etc/nginx/sites-available/sonacip
-ln -s /etc/nginx/sites-available/sonacip /etc/nginx/sites-enabled/
-rm /etc/nginx/sites-enabled/default  # Remove default site
-nginx -t
+# 6. Configure Nginx
+cp nginx.conf /etc/nginx/sites-available/sonacip
+ln -sf /etc/nginx/sites-available/sonacip /etc/nginx/sites-enabled/
+rm /etc/nginx/sites-enabled/default 2>/dev/null
+nginx -t && systemctl restart nginx
 
-# 11. Start services
+# 7. Start
 systemctl start sonacip
-systemctl restart nginx
 
-# 12. Configure firewall
-ufw allow 22/tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw enable
-
-# 13. SSL Certificate (optional but recommended)
-certbot --nginx -d yourdomain.com
-
-# 14. Verify installation
+# 8. Check
 systemctl status sonacip
 curl http://localhost:8000
 ```
 
-## Service Management
+## Service Commands
 
 ```bash
-# Start
-systemctl start sonacip
-
-# Stop
-systemctl stop sonacip
-
-# Restart
-systemctl restart sonacip
-
-# Status
-systemctl status sonacip
-
-# Logs
-journalctl -u sonacip -f
+systemctl start sonacip    # Start
+systemctl stop sonacip     # Stop
+systemctl restart sonacip   # Restart
+systemctl status sonacip    # Status
+journalctl -u sonacip -f  # Logs
 ```
 
 ## Backup & Restore
 
 ```bash
-# Create backup
-./backup.sh
-
-# Restore backup
-./restore.sh /root/sonacip/backups/sonacip_backup_YYYYMMDD_HHMMSS.tar.gz
-```
-
-## Troubleshooting
-
-### Service won't start
-```bash
-# Check logs
-journalctl -u sonacip -n 50
-
-# Test manually
-source venv/bin/activate
-cd /root/sonacip
-python run.py
-```
-
-### Database connection error
-```bash
-# Check database exists
-ls -la /root/sonacip/uploads/sonacip.db
-
-# Recreate if needed
-python init_db.py
-```
-
-### Nginx 502 Bad Gateway
-```bash
-# Check gunicorn is running
-ps aux | grep gunicorn
-
-# Restart both
-systemctl restart sonacip
-systemctl restart nginx
+./backup.sh                           # Create backup
+./restore.sh backups/sonacip_backup_*.tar.gz  # Restore
 ```
 
 ## File Structure
 
 ```
 /root/sonacip/
-├── app/              # Application code
-├── uploads/          # User uploads & database
-├── backups/          # Backup archives
-├── logs/             # Application logs
-├── migrations/       # Database migrations
-├── run.py            # Development entrypoint
-├── wsgi.py           # Production entrypoint
-├── gunicorn.conf.py  # Gunicorn configuration
-├── requirements.txt  # Python dependencies
-├── .env              # Environment variables
-└── sonacip.service   # Systemd service file
+├── run.py              # Development: python run.py
+├── wsgi.py            # Production: gunicorn run:app
+├── app/               # Application code
+├── uploads/           # Database + uploads
+├── requirements.txt   # Dependencies
+├── sonacip.service   # Systemd service
+└── nginx.conf        # Nginx config
 ```
-
-## Security Checklist
-
-- [ ] Change default passwords in .env
-- [ ] Enable HTTPS with Let's Encrypt
-- [ ] Configure firewall (ufw)
-- [ ] Set proper file permissions
-- [ ] Disable DEBUG mode
-- [ ] Configure SESSION_COOKIE_SECURE=True
-- [ ] Regular backups
 
 ## Default Credentials
 
-**Admin Panel:**
-- Email: picano78@gmail.com
-- Password: Simone78
+- **Admin**: picano78@gmail.com / Simone78
+- **Database**: SQLite at /root/sonacip/uploads/sonacip.db
 
-**Database:**
-- SQLite: /root/sonacip/uploads/sonacip.db
+## IMPORTANT
 
-**IMPORTANT:** Change these credentials for production!
+1. Change `SECRET_KEY` in `.env`
+2. Set `FLASK_ENV=production`
+3. Set `FLASK_DEBUG=False`
+4. Configure firewall: `ufw allow 80/tcp 443/tcp`

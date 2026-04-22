@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Pagina Non Trovata - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .error-page {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .error-card {
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+  }
+  .error-illustration {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 2rem;
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 20px 60px rgba(24,119,242,0.25);
+    animation: float 3s ease-in-out infinite;
+  }
+  .error-code {
+    font-size: 5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #1877f2, #42a5f5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .error-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+  }
+  .error-message {
+    color: #64748b;
+    font-size: 1.05rem;
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+  .error-actions .btn {
+    border-radius: 10px;
+    padding: 0.6rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+  .btn-error-primary {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: #fff;
+    border: none;
+  }
+  .btn-error-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(24,119,242,0.3);
+    color: #fff;
+  }
+  .btn-error-outline {
+    border: 2px solid #e2e8f0;
+    color: #475569;
+    background: transparent;
+  }
+  .btn-error-outline:hover {
+    border-color: #1877f2;
+    color: #1877f2;
+    background: rgba(24,119,242,0.04);
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+  <div class="error-card">
+    <div class="error-illustration">
+      <i class="bi bi-search" style="font-size: 4rem; color: rgba(255,255,255,0.9);"></i>
+    </div>
+    <div class="error-code">404</div>
+    <h1 class="error-title">Pagina Non Trovata</h1>
+    <p class="error-message">
+      La pagina che stai cercando potrebbe essere stata spostata, eliminata o non è mai esistita.
+    </p>
+    <div class="error-actions d-flex justify-content-center gap-3">
+      <a href="javascript:history.back()" class="btn btn-error-outline">
+        <i class="bi bi-arrow-left me-1"></i> Torna Indietro
+      </a>
+      <a href="{{ url_for('main.index') }}" class="btn btn-error-primary">
+        <i class="bi bi-house me-1"></i> Homepage
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

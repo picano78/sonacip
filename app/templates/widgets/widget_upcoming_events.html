@@ -1,0 +1,30 @@
+<div class="card shadow-sm border-0 h-100">
+    <div class="card-header bg-white border-bottom" style="border-color: #1877f2 !important;">
+        <h6 class="mb-0"><i class="bi bi-calendar-event-fill text-primary"></i> Prossimi Eventi</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            {% if events %}
+                {% for event in events %}
+                <div class="list-group-item py-2 px-3">
+                    <div class="d-flex align-items-center">
+                        <div class="text-center me-3" style="min-width: 45px;">
+                            <div class="fw-bold text-primary" style="font-size: 1.2rem; line-height: 1;">{{ event.day }}</div>
+                            <small class="text-muted">{{ event.month }}</small>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold small">{{ event.title }}</div>
+                            <small class="text-muted"><i class="bi bi-clock"></i> {{ event.time }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-calendar-x fs-3"></i>
+                    <p class="small mb-0 mt-1">Nessun evento in programma</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

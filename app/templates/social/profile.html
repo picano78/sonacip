@@ -1,0 +1,992 @@
+{% extends "base.html" %}
+{% block title %}{{ user.get_full_name() }} - Profilo{% endblock %}
+{% block extra_css %}
+<style>
+.prof-cover {
+    width: 100%;
+    height: 220px;
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    border-radius: 14px 14px 0 0;
+    position: relative;
+    overflow: hidden;
+}
+.prof-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.prof-cover-edit {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.prof-cover-edit:hover {
+    background: rgba(0,0,0,0.7);
+}
+.prof-avatar-wrap {
+    position: absolute;
+    bottom: -60px;
+    left: 32px;
+    z-index: 2;
+}
+.prof-avatar {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: 5px solid #fff;
+    object-fit: cover;
+    background: #e9ecef;
+}
+.prof-avatar-cam {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    width: 34px;
+    height: 34px;
+    background: #1877f2;
+    color: #fff;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+.prof-avatar-cam:hover {
+    background: #1565c0;
+}
+.prof-header-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+    overflow: visible;
+}
+.prof-info {
+    padding: 70px 28px 24px;
+}
+.prof-name {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+}
+.prof-username {
+    font-size: 0.9rem;
+    color: #65676b;
+    margin-bottom: 6px;
+}
+.prof-bio {
+    font-size: 0.95rem;
+    color: #333;
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+.prof-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #e7f0ff;
+    color: #1877f2;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+.prof-society {
+    font-size: 0.85rem;
+    color: #65676b;
+    margin-bottom: 12px;
+}
+.prof-stats-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 12px 0;
+    border-top: 1px solid #e4e6eb;
+    border-bottom: 1px solid #e4e6eb;
+}
+.prof-stat {
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.2s;
+}
+.prof-stat:hover {
+    color: #1877f2;
+}
+.prof-stat-num {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1877f2;
+    display: block;
+}
+.prof-stat-label {
+    font-size: 0.78rem;
+    color: #65676b;
+}
+.prof-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+.btn-prof-primary {
+    background: #1877f2;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+    text-decoration: none;
+}
+.btn-prof-primary:hover {
+    background: #1565c0;
+    color: #fff;
+}
+.btn-prof-outline {
+    background: transparent;
+    color: #1877f2;
+    border: 2px solid #1877f2;
+    padding: 6px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.btn-prof-outline:hover {
+    background: rgba(24,119,242,0.08);
+    color: #1877f2;
+}
+.btn-prof-outline-danger {
+    background: transparent;
+    color: #dc3545;
+    border: 2px solid #dc3545;
+    padding: 6px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.btn-prof-outline-danger:hover {
+    background: rgba(220,53,69,0.08);
+    color: #dc3545;
+}
+.btn-prof-secondary {
+    background: #e4e6eb;
+    color: #333;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+    text-decoration: none;
+}
+.btn-prof-secondary:hover {
+    background: #d0d2d6;
+    color: #333;
+}
+.prof-tabs {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+.prof-tabs .nav-tabs {
+    border-bottom: 2px solid #e4e6eb;
+    padding: 0 16px;
+}
+.prof-tabs .nav-tabs .nav-link {
+    border: none;
+    color: #65676b;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 14px 18px;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    border-radius: 0;
+}
+.prof-tabs .nav-tabs .nav-link:hover {
+    color: #1877f2;
+    background: rgba(24,119,242,0.04);
+}
+.prof-tabs .nav-tabs .nav-link.active {
+    color: #1877f2;
+    border-bottom-color: #1877f2;
+    background: transparent;
+}
+.prof-tab-body {
+    padding: 20px;
+}
+.prof-post-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    padding: 16px;
+    margin-bottom: 14px;
+    transition: box-shadow 0.2s, transform 0.15s;
+}
+.prof-post-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+.prof-post-img {
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 10px;
+    max-height: 400px;
+    object-fit: cover;
+}
+.timeline-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    border-left: 3px solid #1877f2;
+    margin-left: 12px;
+    padding-left: 20px;
+    position: relative;
+}
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 22px;
+    width: 13px;
+    height: 13px;
+    background: #1877f2;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #1877f2;
+}
+.timeline-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: #f0f2f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.3rem;
+    color: #65676b;
+}
+.timeline-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+}
+.timeline-sub {
+    font-size: 0.85rem;
+    color: #333;
+}
+.timeline-meta {
+    font-size: 0.8rem;
+    color: #65676b;
+    margin-top: 2px;
+}
+.timeline-desc {
+    font-size: 0.85rem;
+    color: #444;
+    margin-top: 6px;
+    line-height: 1.5;
+}
+.skill-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    transition: background 0.2s, box-shadow 0.2s;
+    margin-bottom: 10px;
+}
+.skill-card:hover {
+    background: #e7f0ff;
+    box-shadow: 0 2px 8px rgba(24,119,242,0.1);
+}
+.skill-card-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+.skill-card-count {
+    font-size: 0.8rem;
+    color: #65676b;
+    margin-right: 8px;
+}
+.skill-endorse-btn {
+    background: transparent;
+    border: 1.5px solid #1877f2;
+    color: #1877f2;
+    padding: 4px 14px;
+    border-radius: 16px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.skill-endorse-btn:hover {
+    background: #1877f2;
+    color: #fff;
+}
+.pending-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.pending-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f2f5;
+}
+.pending-item:last-child {
+    border-bottom: none;
+}
+.pending-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #e9ecef;
+}
+.conn-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.conn-status-badge.connected {
+    background: #d4edda;
+    color: #155724;
+}
+.conn-status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+.prof-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: #65676b;
+}
+.prof-empty i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    display: block;
+    color: #b0b3b8;
+}
+[data-theme="dark"] .prof-header-card,
+[data-theme="dark"] .prof-tabs,
+[data-theme="dark"] .prof-post-card,
+[data-theme="dark"] .pending-card {
+    background: #242526;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .prof-info {
+    border-color: #3a3b3c;
+}
+[data-theme="dark"] .prof-name,
+[data-theme="dark"] .timeline-title,
+[data-theme="dark"] .skill-card-name {
+    color: #e4e6eb;
+}
+[data-theme="dark"] .prof-username,
+[data-theme="dark"] .prof-society,
+[data-theme="dark"] .prof-stat-label,
+[data-theme="dark"] .timeline-meta,
+[data-theme="dark"] .skill-card-count {
+    color: #b0b3b8;
+}
+[data-theme="dark"] .prof-bio,
+[data-theme="dark"] .timeline-sub,
+[data-theme="dark"] .timeline-desc {
+    color: #d0d2d6;
+}
+[data-theme="dark"] .prof-stats-row {
+    border-color: #3a3b3c;
+}
+[data-theme="dark"] .prof-tabs .nav-tabs {
+    border-color: #3a3b3c;
+}
+[data-theme="dark"] .prof-tabs .nav-tabs .nav-link {
+    color: #b0b3b8;
+}
+[data-theme="dark"] .prof-tabs .nav-tabs .nav-link.active {
+    color: #1877f2;
+}
+[data-theme="dark"] .prof-badge {
+    background: rgba(24,119,242,0.2);
+    color: #42a5f5;
+}
+[data-theme="dark"] .skill-card {
+    background: #3a3b3c;
+}
+[data-theme="dark"] .skill-card:hover {
+    background: rgba(24,119,242,0.15);
+}
+[data-theme="dark"] .timeline-icon {
+    background: #3a3b3c;
+    color: #b0b3b8;
+}
+[data-theme="dark"] .timeline-item {
+    border-left-color: #1877f2;
+}
+[data-theme="dark"] .timeline-item::before {
+    border-color: #242526;
+}
+[data-theme="dark"] .btn-prof-secondary {
+    background: #3a3b3c;
+    color: #e4e6eb;
+}
+[data-theme="dark"] .btn-prof-secondary:hover {
+    background: #4a4b4d;
+}
+[data-theme="dark"] .pending-item {
+    border-color: #3a3b3c;
+}
+[data-theme="dark"] .prof-avatar {
+    border-color: #242526;
+}
+[data-theme="dark"] .prof-cover-edit {
+    background: rgba(255,255,255,0.2);
+}
+[data-theme="dark"] .prof-empty {
+    color: #b0b3b8;
+}
+@media (max-width: 768px) {
+    .prof-cover {
+        height: 160px;
+        border-radius: 0;
+    }
+    .prof-header-card {
+        border-radius: 0 0 14px 14px;
+    }
+    .prof-avatar-wrap {
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: -50px;
+    }
+    .prof-avatar {
+        width: 110px;
+        height: 110px;
+    }
+    .prof-info {
+        padding-top: 60px;
+        text-align: center;
+    }
+    .prof-stats-row {
+        justify-content: center;
+    }
+    .prof-actions {
+        justify-content: center;
+    }
+    .prof-tabs .nav-tabs .nav-link {
+        padding: 10px 12px;
+        font-size: 0.82rem;
+    }
+    .timeline-item {
+        margin-left: 6px;
+        padding-left: 14px;
+    }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9 col-xl-8">
+
+            <div class="prof-header-card">
+                <div class="prof-cover">
+                    {% if user.cover_photo_url %}
+                    <img src="{{ user.cover_photo_url }}" alt="Cover">
+                    {% endif %}
+                    {% if current_user.id == user.id %}
+                    <a href="{{ url_for('social.edit_profile') }}" class="prof-cover-edit" title="Modifica copertina">
+                        <i class="bi bi-pencil-fill"></i>
+                    </a>
+                    {% endif %}
+                    <div class="prof-avatar-wrap">
+                        {% if current_user.id == user.id %}
+                        <form id="avatarUploadForm" action="{{ url_for('social.upload_avatar') }}" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="file" id="avatarInput" name="avatar" accept="image/*" style="display:none;">
+                            <img src="{{ user.avatar_url or url_for('static', filename='img/default-avatar.png') }}" class="prof-avatar" alt="{{ user.get_full_name() }}">
+                            <div class="prof-avatar-cam" onclick="document.getElementById('avatarInput').click();">
+                                <i class="bi bi-camera-fill"></i>
+                            </div>
+                        </form>
+                        <script>
+                            document.getElementById('avatarInput').addEventListener('change', function() {
+                                if (this.files && this.files[0]) {
+                                    document.getElementById('avatarUploadForm').submit();
+                                }
+                            });
+                        </script>
+                        {% else %}
+                        <img src="{{ user.avatar_url or url_for('static', filename='img/default-avatar.png') }}" class="prof-avatar" alt="{{ user.get_full_name() }}">
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="prof-info">
+                    <h1 class="prof-name">{{ user.get_full_name() }}</h1>
+                    <div class="prof-username">@{{ user.username }}</div>
+                    {% if user.bio %}
+                    <p class="prof-bio">{{ user.bio }}</p>
+                    {% endif %}
+                    <div class="mb-2">
+                        {% if user.role %}
+                        <span class="prof-badge"><i class="bi bi-person-badge me-1"></i>{{ user.role_display_name or user.role }}</span>
+                        {% endif %}
+                        {% if user.society_name %}
+                        <span class="prof-badge"><i class="bi bi-building me-1"></i>{{ user.society_name }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="prof-stats-row">
+                        <div class="prof-stat">
+                            <span class="prof-stat-num">{{ stats.posts_count }}</span>
+                            <span class="prof-stat-label">Post</span>
+                        </div>
+                        <a href="{{ url_for('social.followers', user_id=user.id) }}" class="prof-stat">
+                            <span class="prof-stat-num">{{ stats.followers_count }}</span>
+                            <span class="prof-stat-label">Follower</span>
+                        </a>
+                        <a href="{{ url_for('social.following', user_id=user.id) }}" class="prof-stat">
+                            <span class="prof-stat-num">{{ stats.following_count }}</span>
+                            <span class="prof-stat-label">Seguiti</span>
+                        </a>
+                        <a href="{{ url_for('social.connections_list', user_id=user.id) }}" class="prof-stat">
+                            <span class="prof-stat-num">{{ connections_count|default(0) }}</span>
+                            <span class="prof-stat-label">Connessioni</span>
+                        </a>
+                    </div>
+
+                    <div class="prof-actions">
+                        {% if current_user.id == user.id %}
+                        <a href="{{ url_for('social.edit_profile') }}" class="btn-prof-primary">
+                            <i class="bi bi-pencil"></i> Modifica Profilo
+                        </a>
+                        {% if feature_enabled('livestream') %}
+                        <a href="{{ url_for('livestream.index') }}" class="btn-prof-outline-danger">
+                            <i class="bi bi-broadcast"></i> Inizia Diretta
+                        </a>
+                        {% endif %}
+                        {% if user.is_society() and feature_enabled('planner') %}
+                        <a href="{{ url_for('field_planner.index') }}" class="btn-prof-outline">
+                            <i class="bi bi-calendar2-check"></i> Planner Campo
+                        </a>
+                        <a href="{{ url_for('field_planner.index') }}" class="btn-prof-outline">
+                            <i class="bi bi-calendar3-range"></i> Calendario
+                        </a>
+                        {% endif %}
+                        {% else %}
+                        {% if connection_status == 'blocked_by_other' %}
+                        <span class="conn-status-badge pending"><i class="bi bi-shield-lock me-1"></i>Non disponibile</span>
+                        {% else %}
+                        {% if connection_status != 'blocked' %}
+                        <button class="btn-prof-primary"
+                                hx-post="{{ url_for('social.unfollow' if is_following else 'social.follow', user_id=user.id) }}"
+                                hx-swap="outerHTML"
+                                hx-target="this">
+                            {% if is_following %}<i class="bi bi-check-lg"></i> Seguendo{% else %}<i class="bi bi-plus-lg"></i> Segui{% endif %}
+                        </button>
+                        {% endif %}
+
+                        {% if is_member_of_society %}
+                        <form method="POST" action="{{ url_for('social.society_leave', society_id=user.id) }}" class="d-inline" onsubmit="return confirm('Vuoi abbandonare questa società?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-outline">
+                                <i class="bi bi-door-open"></i> Abbandona
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if connection_status == 'connected' %}
+                        <span class="conn-status-badge connected"><i class="bi bi-check-circle me-1"></i>Connesso</span>
+                        <form method="POST" action="{{ url_for('social.remove_connection', user_id=user.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-outline"><i class="bi bi-person-x"></i> Rimuovi</button>
+                        </form>
+                        {% elif connection_status == 'pending_sent' %}
+                        <span class="conn-status-badge pending"><i class="bi bi-clock me-1"></i>Invito inviato</span>
+                        <form method="POST" action="{{ url_for('social.cancel_connection', user_id=user.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-outline"><i class="bi bi-x-lg"></i> Annulla</button>
+                        </form>
+                        {% elif connection_status == 'pending_received' %}
+                        <form method="POST" action="{{ url_for('social.accept_connection', user_id=user.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-primary"><i class="bi bi-check-lg"></i> Accetta</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('social.reject_connection', user_id=user.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-outline">Ignora</button>
+                        </form>
+                        {% elif connection_status == 'blocked' %}
+                        <span class="conn-status-badge pending"><i class="bi bi-shield-lock me-1"></i>Hai bloccato</span>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('social.send_connection', user_id=user.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-outline"><i class="bi bi-person-plus"></i> Collegati</button>
+                        </form>
+                        {% endif %}
+
+                        {% if connection_status != 'blocked' %}
+                        <a href="{{ url_for('messages.compose') }}?to={{ user.id }}" class="btn-prof-secondary">
+                            <i class="bi bi-chat-dots"></i> Messaggio
+                        </a>
+                        {% endif %}
+
+                        <div class="dropdown d-inline">
+                            <button class="btn-prof-outline dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                Altro
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                {% if connection_status == 'blocked' %}
+                                <li>
+                                    <form method="POST" action="{{ url_for('social.unblock_connection', user_id=user.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="dropdown-item">Sblocca</button>
+                                    </form>
+                                </li>
+                                {% else %}
+                                <li>
+                                    <form method="POST" action="{{ url_for('social.block_connection', user_id=user.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="dropdown-item text-danger">Blocca</button>
+                                    </form>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="prof-tabs">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-posts" type="button" role="tab">
+                            <i class="bi bi-grid-3x3-gap me-1"></i> Post
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-career" type="button" role="tab">
+                            <i class="bi bi-briefcase me-1"></i> Esperienza
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-education" type="button" role="tab">
+                            <i class="bi bi-mortarboard me-1"></i> Formazione
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-skills" type="button" role="tab">
+                            <i class="bi bi-stars me-1"></i> Competenze
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active prof-tab-body" id="tab-posts" role="tabpanel">
+                        {% if posts %}
+                        {% for post in posts %}
+                        <div class="prof-post-card">
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <a href="{{ url_for('social.profile', user_id=post.author.id) }}">
+                                    {% if post.author.avatar_url %}
+                                    <img src="{{ post.author.avatar_url }}" class="rounded-circle" width="44" height="44" alt="" style="object-fit:cover;" loading="lazy">
+                                    {% else %}
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:44px;height:44px;background:#e4e6eb;">
+                                        <i class="bi bi-person-fill text-muted"></i>
+                                    </div>
+                                    {% endif %}
+                                </a>
+                                <div class="flex-grow-1">
+                                    <a href="{{ url_for('social.profile', user_id=post.author.id) }}" class="text-decoration-none fw-semibold" style="color:inherit;">{{ post.author.get_full_name() }}</a>
+                                    <div class="text-muted" style="font-size:0.78rem;">{{ post.created_at|timeago }}</div>
+                                </div>
+                            </div>
+                            <p class="mb-2" style="font-size:0.92rem;line-height:1.55;">{{ post.content }}</p>
+                            {% if post.image %}
+                            <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="prof-post-img" alt="" loading="lazy">
+                            {% endif %}
+                            <div class="d-flex gap-3 mt-3 pt-2" style="border-top:1px solid #e4e6eb;">
+                                <button class="btn btn-sm {{ 'btn-primary' if post.is_liked_by(current_user) else 'btn-outline-secondary' }}"
+                                        hx-post="{{ url_for('social.like_post', post_id=post.id) }}"
+                                        hx-swap="outerHTML"
+                                        hx-target="this"
+                                        style="border-radius:8px;">
+                                    <i class="bi bi-heart{{ '-fill' if post.is_liked_by(current_user) else '' }}"></i> {{ post.likes_count }}
+                                </button>
+                                <a href="{{ url_for('social.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+                                    <i class="bi bi-chat"></i> {{ post.comments_count }}
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        {% if pagination.pages > 1 %}
+                        <nav class="mt-3">
+                            <ul class="pagination justify-content-center">
+                                {% if pagination.has_prev %}
+                                <li class="page-item"><a class="page-link" href="{{ url_for('social.profile', user_id=user.id, page=pagination.prev_num) }}">Precedente</a></li>
+                                {% endif %}
+                                {% for page_num in pagination.iter_pages() %}
+                                {% if page_num %}
+                                <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                    <a class="page-link" href="{{ url_for('social.profile', user_id=user.id, page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                                {% endif %}
+                                {% endfor %}
+                                {% if pagination.has_next %}
+                                <li class="page-item"><a class="page-link" href="{{ url_for('social.profile', user_id=user.id, page=pagination.next_num) }}">Successivo</a></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+
+                        {% else %}
+                        <div class="prof-empty">
+                            <i class="bi bi-chat-square-text"></i>
+                            <p>Nessun post pubblicato</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade prof-tab-body" id="tab-career" role="tabpanel">
+                        {% if current_user.id == user.id %}
+                        <div class="text-end mb-3">
+                            <a href="{{ url_for('social.add_career') }}" class="btn-prof-outline btn-sm"><i class="bi bi-plus-lg"></i> Aggiungi</a>
+                        </div>
+                        {% endif %}
+                        {% if careers and careers|list|length > 0 %}
+                        {% for career in careers %}
+                        <div class="timeline-item">
+                            <div class="timeline-icon">
+                                {% if career.company_logo %}
+                                <img src="{{ url_for('static', filename='uploads/' + career.company_logo) }}" width="48" height="48" style="border-radius:10px;object-fit:cover;">
+                                {% else %}
+                                <i class="bi bi-building"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="timeline-title">{{ career.title }}</div>
+                                        <div class="timeline-sub">{{ career.company }}</div>
+                                        <div class="timeline-meta">
+                                            {{ career.start_date.strftime('%b %Y') }} -
+                                            {% if career.is_current %}Presente{% elif career.end_date %}{{ career.end_date.strftime('%b %Y') }}{% endif %}
+                                            {% if career.location %} · {{ career.location }}{% endif %}
+                                        </div>
+                                    </div>
+                                    {% if current_user.id == user.id %}
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="{{ url_for('social.edit_career', career_id=career.id) }}"><i class="bi bi-pencil me-2"></i>Modifica</a></li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('social.delete_career', career_id=career.id) }}" onsubmit="return confirm('Eliminare?');">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Elimina</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if career.description %}
+                                <div class="timeline-desc">{{ career.description }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="prof-empty">
+                            <i class="bi bi-briefcase"></i>
+                            <p>Nessuna esperienza aggiunta</p>
+                            {% if current_user.id == user.id %}
+                            <a href="{{ url_for('social.add_career') }}" class="btn-prof-outline btn-sm">Aggiungi esperienza</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade prof-tab-body" id="tab-education" role="tabpanel">
+                        {% if current_user.id == user.id %}
+                        <div class="text-end mb-3">
+                            <a href="{{ url_for('social.add_education') }}" class="btn-prof-outline btn-sm"><i class="bi bi-plus-lg"></i> Aggiungi</a>
+                        </div>
+                        {% endif %}
+                        {% if educations and educations|list|length > 0 %}
+                        {% for edu in educations %}
+                        <div class="timeline-item">
+                            <div class="timeline-icon">
+                                {% if edu.school_logo %}
+                                <img src="{{ url_for('static', filename='uploads/' + edu.school_logo) }}" width="48" height="48" style="border-radius:10px;object-fit:cover;">
+                                {% else %}
+                                <i class="bi bi-mortarboard"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="timeline-title">{{ edu.school }}</div>
+                                        <div class="timeline-sub">{{ edu.degree }}{% if edu.field_of_study %}, {{ edu.field_of_study }}{% endif %}</div>
+                                        <div class="timeline-meta">
+                                            {% if edu.start_year %}{{ edu.start_year }}{% endif %}
+                                            {% if edu.end_year %} - {{ edu.end_year }}{% endif %}
+                                        </div>
+                                    </div>
+                                    {% if current_user.id == user.id %}
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="{{ url_for('social.edit_education', education_id=edu.id) }}"><i class="bi bi-pencil me-2"></i>Modifica</a></li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('social.delete_education', education_id=edu.id) }}" onsubmit="return confirm('Eliminare?');">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Elimina</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if edu.description %}
+                                <div class="timeline-desc">{{ edu.description }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="prof-empty">
+                            <i class="bi bi-mortarboard"></i>
+                            <p>Nessuna formazione aggiunta</p>
+                            {% if current_user.id == user.id %}
+                            <a href="{{ url_for('social.add_education') }}" class="btn-prof-outline btn-sm">Aggiungi formazione</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="tab-pane fade prof-tab-body" id="tab-skills" role="tabpanel">
+                        {% if current_user.id == user.id %}
+                        <div class="text-end mb-3">
+                            <a href="{{ url_for('social.add_skill') }}" class="btn-prof-outline btn-sm"><i class="bi bi-plus-lg"></i> Aggiungi</a>
+                        </div>
+                        {% endif %}
+                        {% if user_skills and user_skills|list|length > 0 %}
+                        <div class="row">
+                            {% for skill in user_skills %}
+                            <div class="col-md-6">
+                                <div class="skill-card">
+                                    <div>
+                                        <div class="skill-card-name">{{ skill.name }}</div>
+                                        <span class="skill-card-count"><i class="bi bi-hand-thumbs-up me-1"></i>{{ skill.endorsement_count }} conferme</span>
+                                    </div>
+                                    {% if current_user.id != user.id %}
+                                    <form method="POST" action="{{ url_for('social.endorse_skill', skill_id=skill.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="skill-endorse-btn"><i class="bi bi-plus-lg"></i> Conferma</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="prof-empty">
+                            <i class="bi bi-stars"></i>
+                            <p>Nessuna competenza aggiunta</p>
+                            {% if current_user.id == user.id %}
+                            <a href="{{ url_for('social.add_skill') }}" class="btn-prof-outline btn-sm">Aggiungi competenza</a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if current_user.id == user.id and pending_connections and pending_connections|list|length > 0 %}
+            <div class="pending-card">
+                <h5 class="fw-bold mb-3"><i class="bi bi-person-plus me-2" style="color:#1877f2;"></i>Richieste di connessione</h5>
+                {% for conn in pending_connections %}
+                <div class="pending-item">
+                    <a href="{{ url_for('social.profile', user_id=conn.requester.id) }}">
+                        {% if conn.requester.avatar_url %}
+                        <img src="{{ conn.requester.avatar_url }}" class="pending-avatar" alt="">
+                        {% else %}
+                        <div class="pending-avatar d-flex align-items-center justify-content-center" style="background:#e4e6eb;">
+                            <i class="bi bi-person-fill text-muted"></i>
+                        </div>
+                        {% endif %}
+                    </a>
+                    <div class="flex-grow-1">
+                        <a href="{{ url_for('social.profile', user_id=conn.requester.id) }}" class="fw-semibold text-decoration-none" style="color:inherit;">{{ conn.requester.get_full_name() }}</a>
+                        {% if conn.requester.bio %}
+                        <div class="text-muted" style="font-size:0.8rem;">{{ conn.requester.bio[:60] }}{% if conn.requester.bio|length > 60 %}...{% endif %}</div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <form method="POST" action="{{ url_for('social.accept_connection', user_id=conn.requester_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-primary" style="padding:6px 14px;font-size:0.82rem;"><i class="bi bi-check-lg"></i> Accetta</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('social.reject_connection', user_id=conn.requester_id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-prof-secondary" style="padding:6px 14px;font-size:0.82rem;">Ignora</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

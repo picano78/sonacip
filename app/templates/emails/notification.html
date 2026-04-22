@@ -1,0 +1,27 @@
+{% extends "emails/base_email.html" %}
+{% block subject %}{{ notification_title|default('Nuova notifica') }} - SONACIP{% endblock %}
+{% block content %}
+<h2 style="color: #1c1e21; margin-top: 0; font-size: 22px;">{{ notification_title|default('Hai una nuova notifica') }} 🔔</h2>
+<p style="color: #606770; font-size: 16px; line-height: 1.6;">
+    Ciao {{ user.first_name or user.username }},
+</p>
+<p style="color: #606770; font-size: 16px; line-height: 1.6;">
+    {{ notification_message|default('Hai ricevuto una nuova notifica sulla piattaforma SONACIP.') }}
+</p>
+{% if notification_detail %}
+<div style="background: #f0f2f5; border-left: 4px solid #1877f2; padding: 16px; border-radius: 0 8px 8px 0; margin: 20px 0;">
+    <p style="color: #444; font-size: 14px; margin: 0;">{{ notification_detail }}</p>
+</div>
+{% endif %}
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ notification_url|default('#') }}"
+       style="display: inline-block; background: #1877f2; color: #ffffff; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; box-shadow: 0 2px 8px rgba(24,119,242,0.3);">
+        👁️ Visualizza Notifica
+    </a>
+</div>
+<hr style="border: none; border-top: 1px solid #e4e6eb; margin: 24px 0;">
+<p style="color: #8a8d91; font-size: 12px; text-align: center;">
+    Non vuoi più ricevere queste notifiche via email?
+    Puoi modificare le tue preferenze di notifica nelle <a href="{{ settings_url|default('#') }}" style="color: #1877f2; text-decoration: none;">impostazioni del tuo account</a>.
+</p>
+{% endblock %}

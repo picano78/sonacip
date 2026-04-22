@@ -1,0 +1,561 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+.analytics-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 28px 32px;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(24, 119, 242, 0.3);
+}
+.analytics-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+.analytics-header p {
+    opacity: 0.85;
+    margin-bottom: 0;
+}
+.metric-card {
+    background: white;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+    position: relative;
+}
+.metric-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+.metric-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 4px 0 0 4px;
+}
+.metric-card.border-blue::before { background: linear-gradient(180deg, #1877f2, #42a5f5); }
+.metric-card.border-green::before { background: linear-gradient(180deg, #198754, #20c997); }
+.metric-card.border-orange::before { background: linear-gradient(180deg, #fd7e14, #ffc107); }
+.metric-card.border-purple::before { background: linear-gradient(180deg, #6f42c1, #a855f7); }
+.metric-card .metric-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+.metric-card .metric-value {
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #1c1e21;
+}
+.metric-card .metric-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #65676b;
+    font-weight: 600;
+}
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e4e6eb;
+}
+.section-header .section-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: white;
+}
+.section-header h5 {
+    font-weight: 700;
+    margin-bottom: 0;
+    color: #1c1e21;
+}
+.chart-card {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: none;
+    overflow: hidden;
+}
+.chart-card .card-header {
+    background: transparent;
+    border-bottom: 1px solid #f0f2f5;
+    padding: 16px 20px;
+    font-weight: 600;
+}
+.chart-card .card-body {
+    padding: 20px;
+}
+.ranking-card {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: none;
+    overflow: hidden;
+}
+.ranking-card .card-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    border: none;
+    padding: 14px 20px;
+}
+.ranking-card .card-header h5 {
+    color: white;
+    font-weight: 600;
+}
+.ranking-card .table {
+    margin-bottom: 0;
+}
+.ranking-card .table thead th {
+    border-top: none;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #65676b;
+    font-weight: 600;
+    padding: 12px 16px;
+}
+.ranking-card .table tbody tr {
+    transition: background 0.2s;
+}
+.ranking-card .table tbody tr:hover {
+    background: #f8f9ff;
+}
+.ranking-card .table td {
+    padding: 12px 16px;
+    vertical-align: middle;
+}
+[data-theme="dark"] .metric-card,
+[data-theme="dark"] .chart-card,
+[data-theme="dark"] .filter-bar {
+    background: #242526;
+    border-color: #3a3b3c;
+    color: #e4e6eb;
+}
+[data-theme="dark"] .metric-card:hover,
+[data-theme="dark"] .chart-card:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .metric-label,
+[data-theme="dark"] .chart-title-text { color: #b0b3b8; }
+[data-theme="dark"] .metric-icon { opacity: 0.9; }
+[data-theme="dark"] .form-select {
+    background-color: #3a3b3c;
+    border-color: #4a4b4c;
+    color: #e4e6eb;
+}
+[data-theme="dark"] canvas { filter: brightness(0.9); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="analytics-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-1"><i class="bi bi-graph-up-arrow me-2"></i>Analytics</h1>
+                <p>Statistiche e metriche della piattaforma</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light btn-sm px-3">
+                <i class="bi bi-arrow-left me-1"></i> Torna alla dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        {% set border_colors = ['border-blue', 'border-green', 'border-orange', 'border-purple', 'border-blue', 'border-green'] %}
+        {% set icon_bgs = ['bg-primary-subtle text-primary', 'bg-success-subtle text-success', 'bg-warning-subtle text-warning', 'bg-info-subtle text-info', 'bg-primary-subtle text-primary', 'bg-success-subtle text-success'] %}
+        {% for entity, stats in growth_stats.items() %}
+        <div class="col-md-4">
+            <div class="metric-card {{ border_colors[loop.index0 % 6] }} h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="metric-icon {{ icon_bgs[loop.index0 % 6] }}">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <span class="badge {{ 'bg-success-subtle text-success' if stats.trend == 'up' else 'bg-danger-subtle text-danger' }} rounded-pill px-3 py-2">
+                        <i class="bi {{ 'bi-arrow-up' if stats.trend == 'up' else 'bi-arrow-down' }}"></i> {{ stats.percent }}%
+                    </span>
+                </div>
+                <div class="metric-label mb-1">{{ entity }}</div>
+                <div class="metric-value">{{ stats.value }}</div>
+                <div class="small text-muted mt-2">vs {{ stats.prev }} prev {{ days }}d</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if business %}
+    <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, #1877f2, #42a5f5);">
+            <i class="bi bi-briefcase-fill"></i>
+        </div>
+        <h5>Metriche Business</h5>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="metric-card border-green h-100">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="metric-icon bg-success-subtle text-success me-2">
+                        <i class="bi bi-currency-euro"></i>
+                    </div>
+                </div>
+                <div class="metric-label mb-1">Revenue (30d)</div>
+                <div class="metric-value" style="color: #198754;">€{{ "%.2f"|format(business.revenue_30d or 0) }}</div>
+                <div class="small text-muted mt-2">Pagamenti completati</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card border-blue h-100">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="metric-icon bg-primary-subtle text-primary me-2">
+                        <i class="bi bi-percent"></i>
+                    </div>
+                </div>
+                <div class="metric-label mb-1">Take-rate (30d)</div>
+                <div class="metric-value" style="color: #1877f2;">€{{ "%.2f"|format(business.take_rate_30d or 0) }}</div>
+                <div class="small text-muted mt-2">Fee piattaforma</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card border-orange h-100">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="metric-icon bg-warning-subtle text-warning me-2">
+                        <i class="bi bi-credit-card-2-front"></i>
+                    </div>
+                </div>
+                <div class="metric-label mb-1">Abbonamenti</div>
+                <div class="metric-value" style="color: #fd7e14;">{{ business.subs_active or 0 }}</div>
+                <div class="small text-muted mt-2">past_due: {{ business.subs_past_due or 0 }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card border-purple h-100">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="metric-icon bg-info-subtle text-info me-2">
+                        <i class="bi bi-speedometer"></i>
+                    </div>
+                </div>
+                <div class="metric-label mb-1">Retention score</div>
+                <div class="metric-value" style="color: #6f42c1;">{{ business.retention_avg_score if business.retention_avg_score is not none else 'n/d' }}</div>
+                <div class="small text-muted mt-2">media 30 giorni</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="metric-card border-blue h-100">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="metric-icon bg-primary-subtle text-primary me-2">
+                        <i class="bi bi-puzzle"></i>
+                    </div>
+                </div>
+                <div class="metric-label mb-1">Add-on attivati (30d)</div>
+                <div class="metric-value">{{ business.addons_30d or 0 }}</div>
+                <div class="small text-muted mt-2">Entitlement attivi</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card border-green h-100">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="metric-icon bg-success-subtle text-success me-2">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                </div>
+                <div class="metric-label mb-1">Marketplace sales (30d)</div>
+                <div class="metric-value">{{ business.marketplace_sales_30d or 0 }}</div>
+                <div class="small text-muted mt-2">Acquisti completati</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card border-orange h-100">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="metric-icon bg-warning-subtle text-warning me-2">
+                        <i class="bi bi-megaphone"></i>
+                    </div>
+                </div>
+                <div class="metric-label mb-1">Ads self‑serve</div>
+                <div class="d-flex justify-content-between mt-2">
+                    <div>
+                        <div class="text-muted small">Budget</div>
+                        <div class="fw-bold fs-5">€{{ "%.2f"|format(business.ads_selfserve_budget_eur or 0) }}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-muted small">Speso</div>
+                        <div class="fw-bold fs-5">€{{ "%.2f"|format(business.ads_selfserve_spend_eur or 0) }}</div>
+                    </div>
+                </div>
+                <div class="small text-muted mt-2">CPM su impression</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, #1877f2, #42a5f5);">
+            <i class="bi bi-bar-chart-line-fill"></i>
+        </div>
+        <h5>Grafici e Trend</h5>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="chart-card">
+                <div class="card-header">
+                    <i class="bi bi-activity me-2 text-primary"></i>Trend Attività Giornaliera
+                </div>
+                <div class="card-body">
+                    <canvas id="activityChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="chart-card h-100">
+                <div class="card-header">
+                    <i class="bi bi-pie-chart me-2 text-primary"></i>Distribuzione Ruoli
+                </div>
+                <div class="card-body">
+                    <canvas id="roleChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-4 mb-4">
+        <div class="col-md-12">
+            <div class="chart-card">
+                <div class="card-header">
+                    <i class="bi bi-person-plus me-2 text-success"></i>Nuovi Iscritti
+                </div>
+                <div class="card-body">
+                    <canvas id="signupChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-icon" style="background: linear-gradient(135deg, #1877f2, #42a5f5);">
+            <i class="bi bi-trophy-fill"></i>
+        </div>
+        <h5>Classifiche</h5>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-md-6">
+            <div class="ranking-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-people me-2"></i>Top Utenti (Post)</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Utente</th>
+                                <th class="text-end">Post</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user, count in top_posters %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if user.avatar %}
+                                        <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}" class="rounded-circle me-2" width="32" height="32" alt="{{ user.username }}">
+                                        {% else %}
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; background: linear-gradient(135deg, #1877f2, #42a5f5); color: white; font-weight: 600; font-size: 0.75rem;">
+                                            {{ user.username[:2].upper() }}
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ user.username }}</div>
+                                            <div class="small text-muted">{{ user.role }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-bold">{{ count }}</span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center text-muted py-4">Nessun dato</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="ranking-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-building me-2"></i>Top Società (Follower)</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Società</th>
+                                <th class="text-end">Follower</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for society in top_societies %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">{{ society.legal_name }}</div>
+                                    <div class="small text-muted">{{ society.city }}</div>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 fw-bold">
+                                        {{ society.user.followers.count() if society.user else 0 }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="text-center text-muted py-4">Nessun dato</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<script id="analytics-data" type="application/json">
+{{ {
+    'signup_labels': signup_data | map(attribute='date') | list,
+    'signup_values': signup_data | map(attribute='count') | list,
+    'role_labels': role_data | map(attribute='role') | list,
+    'role_values': role_data | map(attribute='count') | list,
+    'dates': activity_trend | map(attribute='date') | list,
+    'posts': activity_trend | map(attribute='posts') | list,
+    'events': activity_trend | map(attribute='events') | list
+} | tojson }}
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const dataEl = document.getElementById('analytics-data');
+        let data = {};
+        if (dataEl && dataEl.textContent) {
+            try {
+                data = JSON.parse(dataEl.textContent);
+            } catch (err) {
+                console.error('Analytics data parse error', err);
+            }
+        }
+
+        const commonOptions = {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: { boxWidth: 10, usePointStyle: true }
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            }
+        };
+
+        new Chart(document.getElementById('activityChart'), {
+            type: 'bar',
+            data: {
+                labels: data.dates || [],
+                datasets: [
+                    {
+                        label: 'Post',
+                        data: data.posts || [],
+                        backgroundColor: '#1877f2',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Eventi',
+                        data: data.events || [],
+                        backgroundColor: '#42a5f5',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                ...commonOptions,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, border: { display: false } }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('signupChart'), {
+            type: 'line',
+            data: {
+                labels: data.signup_labels || [],
+                datasets: [{
+                    label: 'Nuovi Iscritti',
+                    data: data.signup_values || [],
+                    borderColor: '#1877f2',
+                    backgroundColor: 'rgba(24, 119, 242, 0.08)',
+                    tension: 0.3,
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }]
+            },
+            options: {
+                ...commonOptions,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('roleChart'), {
+            type: 'doughnut',
+            data: {
+                labels: data.role_labels || [],
+                datasets: [{
+                    data: data.role_values || [],
+                    backgroundColor: ['#1877f2', '#20c997', '#ffc107', '#fd7e14', '#6f42c1', '#adb5bd'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '70%',
+                plugins: { 
+                    legend: { position: 'bottom', labels: { boxWidth: 12 } } 
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

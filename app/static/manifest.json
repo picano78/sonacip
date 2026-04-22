@@ -1,0 +1,85 @@
+{
+  "name": "SONACIP - Piattaforma Sport Dilettantistico",
+  "short_name": "SONACIP",
+  "description": "La piattaforma #1 per la gestione dello sport dilettantistico italiano. Società, atleti, eventi e tornei.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1877f2",
+  "orientation": "any",
+  "id": "/",
+  "lang": "it",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/static/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "short_name": "Feed",
+      "description": "Vedi il feed social",
+      "url": "/social/feed",
+      "icons": [{"src": "/static/icons/icon-192x192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Messaggi",
+      "short_name": "Messaggi",
+      "description": "Apri i messaggi",
+      "url": "/messages/",
+      "icons": [{"src": "/static/icons/icon-192x192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Calendario",
+      "short_name": "Calendario",
+      "description": "Vedi il planner eventi",
+      "url": "/scheduler/",
+      "icons": [{"src": "/static/icons/icon-192x192.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Profilo",
+      "short_name": "Profilo",
+      "description": "Vai al tuo profilo",
+      "url": "/social/profile",
+      "icons": [{"src": "/static/icons/icon-192x192.png", "sizes": "192x192"}]
+    }
+  ],
+  "categories": ["sports", "social", "lifestyle"],
+  "share_target": {
+    "action": "/social/create_post",
+    "method": "GET",
+    "params": {
+      "text": "content"
+    }
+  }
+}

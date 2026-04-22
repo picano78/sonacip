@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Calendario Società | SONACIP{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="section-hero mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <div class="pill mb-2"><i class="bi bi-calendar3"></i> Calendario strategico</div>
+                <h1 class="h3 mb-1">Calendario Società</h1>
+                <p class="text-muted mb-0">Vista compatta e grafica degli impegni chiave, distinta dal planner campi.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="stat-tile text-center">
+                    <div class="small text-muted">Filtro attivo</div>
+                    <div class="fw-bold">{{ view|capitalize }}</div>
+                </div>
+                <a href="{{ url_for('calendar.modifications') }}" class="btn btn-outline-info" title="Registro modifiche">
+                    <i class="bi bi-clock-history"></i> Modifiche
+                </a>
+                <a href="{{ url_for('calendar.grid') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-grid-3x3-gap"></i> Griglia
+                </a>
+                {% if can('calendar', 'manage') %}
+                    <a href="{{ url_for('calendar.create') }}" class="btn btn-dark">
+                        <i class="bi bi-plus-lg"></i> Nuovo evento
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <form class="row g-2 align-items-end mb-4" method="get">
+        <div class="col-md-2">
+            <label class="form-label">Data inizio</label>
+            <input type="date" class="form-control" name="start" value="{{ start_date.strftime('%Y-%m-%d') }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Vista</label>
+            <select class="form-select" name="view" onchange="this.form.submit()">
+                <option value="day" {% if view=='day' %}selected{% endif %}>Giorno</option>
+                <option value="week" {% if view=='week' %}selected{% endif %}>Settimana</option>
+                <option value="month" {% if view=='month' %}selected{% endif %}>Mese</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Squadra</label>
+            <input type="text" class="form-control" name="team" value="{{ filters.team }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Categoria</label>
+            <input type="text" class="form-control" name="category" value="{{ filters.category }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Competizione</label>
+            <input type="text" class="form-control" name="competition" value="{{ filters.competition }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-funnel"></i> Filtra
+            </button>
+        </div>
+    </form>
+
+    {% if events_by_date %}
+        <div class="row g-3">
+            {% for day, events in events_by_date.items()|sort %}
+                <div class="col-lg-6">
+                    <div class="glass-card p-3 card-hover h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="fw-semibold"><i class="bi bi-sun"></i> {{ day.strftime('%A %d %B %Y') }}</div>
+                            <span class="chip">{{ events|length }} eventi</span>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <div class="timeline-line rounded"></div>
+                            <div class="flex-grow-1 d-flex flex-column gap-3">
+                                {% for event in events %}
+                                    {% if event.__class__.__name__ == 'FieldPlannerEvent' %}
+                                        <a href="{{ url_for('field_planner.detail', event_id=event.id) }}" class="text-decoration-none text-dark">
+                                            <div class="d-flex gap-3 align-items-start card-hover p-3 border rounded" style="border-left: 3px solid {{ event.color or '#28a745' }} !important;">
+                                                <div class="timeline-dot mt-1" style="background-color: {{ event.color or '#28a745' }};"></div>
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="fw-semibold">
+                                                            <i class="bi bi-calendar-event text-success"></i> {{ event.title }}
+                                                        </div>
+                                                        <span class="badge text-uppercase" style="background-color: {{ event.color or '#28a745' }}; color: #fff;">
+                                                            {{ event.event_type }} (Planner)
+                                                        </span>
+                                                    </div>
+                                                    <div class="small text-muted mb-2">
+                                                        <i class="bi bi-clock"></i> {{ event.start_datetime.strftime('%H:%M') }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%H:%M') }}{% endif %}
+                                                        &middot; <i class="bi bi-geo-alt"></i>
+                                                        {% if event.facility %}{{ event.facility.name }}{% else %}Struttura non specificata{% endif %}
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1 small">
+                                                        {% if event.team %}<span class="badge bg-success-subtle text-success">{{ event.team }}</span>{% endif %}
+                                                        {% if event.category %}<span class="badge bg-secondary">{{ event.category }}</span>{% endif %}
+                                                        <span class="badge bg-info"><i class="bi bi-diagram-3"></i> Campo</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    {% else %}
+                                        <div class="d-flex gap-3 align-items-start card-hover p-3 border rounded">
+                                            <div class="timeline-dot mt-1"></div>
+                                            <a href="{{ url_for('calendar.detail', event_id=event.id) }}" class="text-decoration-none text-dark flex-grow-1">
+                                                <div>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="fw-semibold">{{ event.title }}</div>
+                                                        <span class="badge text-uppercase" style="background-color: {{ event.color or '#212529' }}; color: #fff;">
+                                                            {{ event.event_type }}
+                                                        </span>
+                                                    </div>
+                                                    <div class="small text-muted mb-2">
+                                                        <i class="bi bi-clock"></i> {{ event.start_datetime.strftime('%H:%M') }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%H:%M') }}{% endif %}
+                                                        &middot; <i class="bi bi-geo-alt"></i>
+                                                        {% if event.facility %}{{ event.facility.name }}{% else %}{{ event.location_text or 'Luogo da definire' }}{% endif %}
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1 small">
+                                                        {% if event.team %}<span class="badge bg-primary-subtle text-primary">{{ event.team }}</span>{% endif %}
+                                                        {% if event.category %}<span class="badge bg-secondary">{{ event.category }}</span>{% endif %}
+                                                        {% if event.competition_name %}<span class="badge bg-warning text-dark">{{ event.competition_name }}</span>{% endif %}
+                                                        {% if event.share_to_social %}<span class="badge bg-success"><i class="bi bi-megaphone"></i> Social</span>{% endif %}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            {% if can('calendar', 'manage') %}
+                                            <a href="{{ url_for('calendar.edit', event_id=event.id) }}" 
+                                               class="btn btn-sm btn-link text-primary p-0" 
+                                               title="Modifica evento">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">Nessun evento trovato per l'intervallo selezionato.</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="{{ current_language|default('it') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ (site.navbar_brand_text if site and site.navbar_brand_text else 'SONACIP') }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- Performance: Preconnect to external domains -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <title>
+      {% if page and page.title %}
+        {{ page.title }}
+      {% else %}
+        {% block title %}SONACIP{% endblock %}
+      {% endif %}
+    </title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Custom CSS with cache busting -->
+    <link rel="stylesheet" href="{{ static_versioned('css/style.css') }}">
+    {% set app_icon = (appearance.app_icon_url if appearance and appearance.app_icon_url else None) %}
+    {% if appearance and appearance.favicon_url %}
+      <link rel="icon" href="{{ appearance.favicon_url }}">
+    {% else %}
+      <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
+      <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+      <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
+    {% endif %}
+    <link rel="apple-touch-icon" href="{{ app_icon or url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('main.manifest') }}">
+    <meta name="theme-color" content="{{ (appearance.primary_color if appearance else '') or '#1877f2' }}" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    
+    <!-- CSRF token for AJAX requests -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <!-- HTMX - load early without defer since HTMX attributes need processing on page load -->
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            --primary-color: {{ (appearance.primary_color if appearance else '') or '#1877f2' }};
+            --secondary-color: {{ (appearance.secondary_color if appearance else '') or '#6c757d' }};
+            --accent-color: {{ (appearance.accent_color if appearance else '') or '#20c997' }};
+            --app-font: {{ (appearance.font_family if appearance else '') or 'Inter, system-ui, -apple-system, sans-serif' }};
+        }
+        body { font-family: var(--app-font); }
+        .navbar, .btn-primary { background-color: var(--primary-color) !important; border-color: var(--primary-color) !important; }
+        .btn-secondary { background-color: var(--secondary-color) !important; border-color: var(--secondary-color) !important; }
+        a { color: var(--primary-color); }
+    </style>
+    {% if site and site.custom_css %}
+    <style>
+{{ site.custom_css }}
+    </style>
+    {% endif %}
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-theme="light" hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}' {% if current_user.is_authenticated %}class="has-sidebar" data-user-id="{{ current_user.id }}"{% endif %}>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Sidebar Navigation -->
+    {% include 'components/sidebar.html' %}
+    
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <div id="pwaInstallBanner" class="pwa-install-banner" style="display:none;">
+        <div class="pwa-install-card">
+            <div class="pwa-install-text">
+                <div class="pwa-install-title">Installa SONACIP sul telefono</div>
+                <div class="pwa-install-desc" id="pwaInstallDesc">Aggiungi SONACIP alla schermata home per un accesso rapido.</div>
+                <div class="pwa-install-ios d-none" id="pwaInstallIosHint">Su iPhone: apri Condividi e scegli Aggiungi a Home.</div>
+            </div>
+            <div class="pwa-install-actions">
+                <button id="pwaInstallAction" class="btn btn-primary btn-sm">Installa</button>
+                <button id="pwaInstallClose" class="btn btn-outline-light btn-sm">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+    {% if current_user.is_authenticated %}
+    <script src="{{ url_for('static', filename='js/push.js') }}"></script>
+    {% endif %}
+    
+    <footer class="mt-5" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: #e0e0e0;">
+        {% if site and site.footer_html %}
+        <div class="container py-4 text-center">
+            {{ site.footer_html|safe }}
+        </div>
+        {% else %}
+        <div class="container py-5">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="fw-bold text-white mb-3"><i class="bi bi-trophy-fill me-2" style="color: #1877f2;"></i>SONACIP</h5>
+                    <p class="small" style="color: #b0b0b0;">La piattaforma completa per la gestione delle società sportive, atleti e appassionati in Italia.</p>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold text-white mb-3">Piattaforma</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="{{ url_for('main.about') }}" class="text-decoration-none" style="color: #b0b0b0;">Chi Siamo</a></li>
+                        <li class="mb-2"><a href="{{ url_for('main.contact') }}" class="text-decoration-none" style="color: #b0b0b0;">Contatti</a></li>
+                        {% if current_user.is_authenticated %}
+                        <li class="mb-2"><a href="{{ url_for('main.contact_admin') }}" class="text-decoration-none" style="color: #b0b0b0;">Assistenza</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold text-white mb-3">Guide</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="{{ url_for('main.guide_user') }}" class="text-decoration-none" style="color: #b0b0b0;">Guida Utente</a></li>
+                        <li class="mb-2"><a href="{{ url_for('main.guide_society') }}" class="text-decoration-none" style="color: #b0b0b0;">Guida Società</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <h6 class="fw-bold text-white mb-3">Legale</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="{{ url_for('main.privacy_policy') }}" class="text-decoration-none" style="color: #b0b0b0;"><i class="bi bi-shield-lock me-1"></i>Privacy Policy</a></li>
+                        <li class="mb-2"><a href="{{ url_for('main.terms') }}" class="text-decoration-none" style="color: #b0b0b0;"><i class="bi bi-file-text me-1"></i>Termini di Servizio</a></li>
+                        <li class="mb-2"><a href="{{ url_for('main.cookie_policy') }}" class="text-decoration-none" style="color: #b0b0b0;"><i class="bi bi-cookie me-1"></i>Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.1);">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <p class="small mb-0" style="color: #888;">&copy; 2026 SONACIP - Tutti i diritti riservati</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="d-flex justify-content-center gap-1 flex-wrap">
+                        {% for code in supported_languages|default(['it','en','es','fr','de']) %}
+                        <form method="post" action="{{ url_for('main.set_language') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="language" value="{{ code }}">
+                            <button type="submit" class="btn btn-sm px-2 py-0 {{ 'btn-light' if current_language|default('it') == code else '' }}" style="font-size: 0.75rem; color: {{ '#fff' if current_language|default('it') != code else '#333' }}; opacity: {{ '1' if current_language|default('it') == code else '0.7' }};">
+                                {{ (language_flags|default({}))[code]|default('') }} {{ code|upper }}
+                            </button>
+                        </form>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <p class="small mb-0" style="color: #888;">Conforme al GDPR (Reg. UE 2016/679)</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </footer>
+
+    {% if privacy and privacy.banner_enabled %}
+    <div id="privacyCookieBar" data-privacy-version="{{ privacy.updated_at.timestamp() if (privacy and privacy.updated_at) else 'v1' }}" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:9999; background:rgba(30,58,95,0.97); backdrop-filter:blur(12px); color:#fff; box-shadow:0 -4px 24px rgba(0,0,0,0.18); border-top:1px solid rgba(255,255,255,0.08); padding-bottom:env(safe-area-inset-bottom, 0);">
+        <div class="container py-3">
+            <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
+                <div class="d-flex align-items-start gap-3 flex-grow-1">
+                    <div style="min-width:40px; height:40px; background:rgba(24,119,242,0.2); border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-shield-lock-fill" style="font-size:1.2rem; color:#42a5f5;"></i>
+                    </div>
+                    <div>
+                        <p class="mb-1" style="font-size:0.92rem; line-height:1.5;">
+                            {{ privacy.consent_message if privacy else 'Utilizziamo cookie tecnici per garantire il corretto funzionamento del sito. Leggi la nostra informativa per i dettagli.' }}
+                        </p>
+                        <div class="d-flex gap-3" style="font-size:0.8rem;">
+                            {% if privacy and privacy.privacy_url %}
+                                <a href="{{ privacy.privacy_url }}" target="_blank" rel="noopener" style="color:#90caf9; text-decoration:none;"><i class="bi bi-file-text me-1"></i>Privacy Policy</a>
+                            {% endif %}
+                            {% if privacy and privacy.cookie_url %}
+                                <a href="{{ privacy.cookie_url }}" target="_blank" rel="noopener" style="color:#90caf9; text-decoration:none;"><i class="bi bi-cookie me-1"></i>Cookie Policy</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-shrink-0">
+                    <button type="button" id="rejectPrivacyBtn" style="background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:8px 20px; font-weight:600; font-size:0.875rem; cursor:pointer; transition:all 0.2s;">Rifiuta</button>
+                    <button type="button" id="acceptPrivacyBtn" style="background:linear-gradient(135deg,#1877f2,#42a5f5); color:#fff; border:none; border-radius:8px; padding:8px 24px; font-weight:600; font-size:0.875rem; cursor:pointer; transition:all 0.2s; box-shadow:0 2px 8px rgba(24,119,242,0.3);">Accetta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="pageLoader" style="display:none; position:fixed; top:0; left:0; right:0; height:3px; z-index:99999;">
+        <div style="height:100%; width:30%; background:linear-gradient(90deg,#1877f2,#42a5f5,#1877f2); background-size:200% 100%; border-radius:0 2px 2px 0; animation:loaderSlide 1.2s ease-in-out infinite;"></div>
+    </div>
+    <style>
+        @keyframes loaderSlide {
+            0% { width:0; margin-left:0; background-position:0 0; }
+            50% { width:60%; margin-left:20%; background-position:100% 0; }
+            100% { width:0; margin-left:100%; background-position:0 0; }
+        }
+        @keyframes slideUpBar {
+            from { transform:translateY(100%); opacity:0; }
+            to { transform:translateY(0); opacity:1; }
+        }
+        @keyframes slideDownBar {
+            from { transform:translateY(0); opacity:1; }
+            to { transform:translateY(100%); opacity:0; }
+        }
+        .pwa-install-banner {
+            position: fixed;
+            bottom: 24px;
+            left: 16px;
+            right: 16px;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .pwa-install-card {
+            width: min(920px, 100%);
+            background: linear-gradient(135deg, rgba(24,119,242,0.98), rgba(13,91,189,0.98));
+            color: #fff;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+            pointer-events: auto;
+        }
+        .pwa-install-title { font-weight: 700; }
+        .pwa-install-desc, .pwa-install-ios { font-size: 0.9rem; opacity: 0.9; }
+        .pwa-install-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        @media (max-width: 768px) {
+            .pwa-install-card { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+    
+    <!-- Bootstrap JS with defer for better performance -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+    <!-- Custom JS with defer and cache busting -->
+    <script src="{{ static_versioned('js/main.js') }}" defer></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

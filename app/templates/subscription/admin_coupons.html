@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Coupon - Admin{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="section-hero mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <div class="pill mb-2"><i class="bi bi-ticket-perforated"></i> Admin</div>
+      <h1 class="h4 mb-0">Coupon</h1>
+      <p class="text-muted mb-0">Genera codici per sbloccare funzionalità o applicare sconti ai piani.</p>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">Nuovo coupon</div>
+        <div class="card-body">
+          <form method="post">
+            {{ csrf_token() }}
+            <div class="mb-2">
+              <label class="form-label">Codice</label>
+              <input class="form-control" name="code" placeholder="SONACIP2026">
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Descrizione</label>
+              <input class="form-control" name="description" placeholder="Sconto lancio">
+            </div>
+            <div class="row g-2">
+              <div class="col-md-6">
+                <label class="form-label">Tipo</label>
+                <select class="form-select" name="discount_type">
+                  <option value="percent">Percentuale</option>
+                  <option value="fixed">Importo fisso (cent)</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Valore</label>
+                <input class="form-control" name="discount_value" placeholder="10 (percent) oppure 500 (cent)">
+              </div>
+            </div>
+            <div class="row g-2 mt-1">
+              <div class="col-md-6">
+                <label class="form-label">Max riscatti</label>
+                <input class="form-control" name="max_redemptions" placeholder="vuoto = illimitato">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Scadenza</label>
+                <input class="form-control" type="date" name="valid_until">
+              </div>
+            </div>
+            <div class="mt-2">
+              <label class="form-label">Piano (opzionale)</label>
+              <select class="form-select" name="plan_id">
+                <option value="">Tutti i piani</option>
+                {% for p in plans %}
+                  <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <button class="btn btn-primary mt-3" type="submit">Crea</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Coupon</span>
+          <span class="badge bg-secondary">{{ coupons|length }}</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Codice</th>
+                <th>Tipo</th>
+                <th>Valore</th>
+                <th>Riscatti</th>
+                <th>Stato</th>
+                <th class="text-end">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in coupons %}
+                <tr>
+                  <td class="fw-semibold">{{ c.code }}</td>
+                  <td>{{ 'Percentuale' if c.discount_type == 'percent' else ('Importo fisso' if c.discount_type == 'fixed' else c.discount_type) }}</td>
+                  <td>{{ c.discount_value }}</td>
+                  <td>{{ c.redeemed_count or 0 }}{% if c.max_redemptions %}/{{ c.max_redemptions }}{% endif %}</td>
+                  <td>
+                    <span class="badge bg-{{ 'success' if c.is_active else 'secondary' }}">{{ 'attivo' if c.is_active else 'off' }}</span>
+                  </td>
+                  <td class="text-end">
+                    <form method="post" action="{{ url_for('subscription.admin_coupon_toggle', coupon_id=c.id) }}">
+                      {{ csrf_token() }}
+                      <button class="btn btn-sm btn-outline-primary" type="submit">
+                        {{ 'Disattiva' if c.is_active else 'Attiva' }}
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="text-muted">Nessun coupon.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block title %}
+{% if call_type == 'direct' %}Videochiamata con {{ other_user.get_full_name() }}{% else %}Videochiamata - {{ group.name }}{% endif %} - SONACIP
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #1a1a2e;
+        color: #fff;
+    }
+
+    .call-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .videos-grid {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .video-wrapper {
+        position: relative;
+        background: #16213e;
+        border-radius: 12px;
+        overflow: hidden;
+        flex: 1;
+        min-width: 300px;
+        max-width: 100%;
+        aspect-ratio: 16/9;
+    }
+
+    .video-wrapper video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 12px;
+    }
+
+    .video-label {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.7);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+    }
+
+    .local-video-pip {
+        position: absolute;
+        bottom: 100px;
+        right: 20px;
+        width: 200px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        z-index: 10;
+    }
+
+    .local-video-pip video {
+        width: 100%;
+        border-radius: 12px;
+    }
+
+    .call-info {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        z-index: 10;
+    }
+
+    .call-info h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .call-info .call-duration {
+        font-size: 14px;
+        color: rgba(255,255,255,0.7);
+    }
+
+    .call-controls {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 15px;
+        background: rgba(0,0,0,0.8);
+        padding: 15px 25px;
+        border-radius: 50px;
+        z-index: 10;
+    }
+
+    .call-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: none;
+        color: #fff;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: rgba(255,255,255,0.2);
+    }
+
+    .call-btn:hover {
+        background: rgba(255,255,255,0.3);
+        transform: scale(1.1);
+    }
+
+    .call-btn.end-call {
+        background: #dc3545;
+    }
+
+    .call-btn.end-call:hover {
+        background: #c82333;
+    }
+
+    .call-btn.off {
+        background: #dc3545;
+    }
+
+    .waiting-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(26,26,46,0.95);
+        z-index: 5;
+    }
+
+    .waiting-overlay .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        margin-bottom: 15px;
+    }
+
+    @media (max-width: 768px) {
+        .call-controls {
+            bottom: 15px;
+            padding: 10px 15px;
+            gap: 10px;
+        }
+
+        .call-btn {
+            width: 45px;
+            height: 45px;
+            font-size: 18px;
+        }
+
+        .local-video-pip {
+            width: 140px;
+            bottom: 80px;
+            right: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="call-container">
+    <div class="call-info">
+        <h5>
+            {% if call_type == 'direct' %}
+                <i class="bi bi-camera-video-fill me-2"></i>{{ other_user.get_full_name() }}
+            {% else %}
+                <i class="bi bi-people-fill me-2"></i>{{ group.name }}
+            {% endif %}
+        </h5>
+        <div class="call-duration" id="callDuration">Connessione in corso...</div>
+    </div>
+
+    <div class="videos-grid">
+        <div class="video-wrapper" id="remoteVideoWrapper">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <div class="video-label" id="remoteLabel">
+                {% if call_type == 'direct' %}
+                    {{ other_user.get_full_name() }}
+                {% else %}
+                    In attesa...
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="local-video-pip">
+        <video id="localVideo" autoplay muted playsinline></video>
+    </div>
+
+    <div class="waiting-overlay" id="waitingOverlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5>
+            {% if call_type == 'direct' %}
+                Chiamata a {{ other_user.get_full_name() }}...
+            {% else %}
+                Connessione alla chiamata di gruppo...
+            {% endif %}
+        </h5>
+        <p class="text-muted">In attesa di risposta</p>
+    </div>
+
+    <div class="call-controls">
+        <button class="call-btn" id="toggleCamera" title="Camera">
+            <i class="bi bi-camera-video-fill"></i>
+        </button>
+        <button class="call-btn" id="toggleMic" title="Microfono">
+            <i class="bi bi-mic-fill"></i>
+        </button>
+        <button class="call-btn" id="switchCamera" title="Cambia camera">
+            <i class="bi bi-arrow-repeat"></i>
+        </button>
+        <button class="call-btn end-call" id="endCall" title="Termina chiamata">
+            <i class="bi bi-telephone-x-fill"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+const roomId = '{{ room_id }}';
+const callType = '{{ call_type }}';
+
+let localStream = null;
+let videoEnabled = true;
+let audioEnabled = true;
+let facingMode = 'user';
+let callStartTime = null;
+let socket = null;
+let durationInterval = null;
+
+// Initialize Socket.IO for call signaling
+try {
+    socket = io({
+        transports: ['websocket', 'polling']
+    });
+
+    socket.on('connect', function() {
+        console.log('WebSocket connected for call');
+        socket.emit('join_call', {room_id: roomId});
+    });
+
+    socket.on('call_user_joined', function(data) {
+        document.getElementById('waitingOverlay').style.display = 'none';
+        if (!callStartTime) {
+            callStartTime = new Date();
+            startDurationTimer();
+        }
+    });
+
+    socket.on('call_user_left', function(data) {
+        document.getElementById('callDuration').textContent = 'Chiamata terminata';
+    });
+
+    socket.on('call_offer', function(data) {
+        document.getElementById('waitingOverlay').style.display = 'none';
+    });
+
+    socket.on('call_answer', function(data) {
+        document.getElementById('waitingOverlay').style.display = 'none';
+    });
+
+} catch (e) {
+    console.error('WebSocket not available:', e);
+}
+
+async function initMedia() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+            video: {facingMode: facingMode, width: {ideal: 1280}, height: {ideal: 720}},
+            audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true}
+        });
+        document.getElementById('localVideo').srcObject = localStream;
+
+        // Send offer after getting local stream
+        if (socket) {
+            socket.emit('call_offer', {
+                room_id: roomId,
+                offer: {type: 'init', sdp: 'init'}
+            });
+        }
+    } catch (error) {
+        console.error('Error accessing media devices:', error);
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            alert('Permesso fotocamera/microfono negato. Abilita i permessi nelle impostazioni del browser.');
+        } else if (error.name === 'NotFoundError') {
+            alert('Nessuna fotocamera o microfono trovato. Collega un dispositivo e riprova.');
+        } else {
+            alert('Impossibile accedere alla fotocamera o al microfono.');
+        }
+    }
+}
+
+function startDurationTimer() {
+    durationInterval = setInterval(function() {
+        if (callStartTime) {
+            const diff = Math.floor((new Date() - callStartTime) / 1000);
+            const minutes = Math.floor(diff / 60);
+            const seconds = diff % 60;
+            document.getElementById('callDuration').textContent =
+                String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        }
+    }, 1000);
+}
+
+// Toggle camera
+document.getElementById('toggleCamera').addEventListener('click', function() {
+    if (localStream) {
+        videoEnabled = !videoEnabled;
+        localStream.getVideoTracks().forEach(function(track) {
+            track.enabled = videoEnabled;
+        });
+        this.innerHTML = videoEnabled
+            ? '<i class="bi bi-camera-video-fill"></i>'
+            : '<i class="bi bi-camera-video-off-fill"></i>';
+        this.classList.toggle('off', !videoEnabled);
+    }
+});
+
+// Toggle microphone
+document.getElementById('toggleMic').addEventListener('click', function() {
+    if (localStream) {
+        audioEnabled = !audioEnabled;
+        localStream.getAudioTracks().forEach(function(track) {
+            track.enabled = audioEnabled;
+        });
+        this.innerHTML = audioEnabled
+            ? '<i class="bi bi-mic-fill"></i>'
+            : '<i class="bi bi-mic-mute-fill"></i>';
+        this.classList.toggle('off', !audioEnabled);
+    }
+});
+
+// Switch camera
+document.getElementById('switchCamera').addEventListener('click', async function() {
+    facingMode = facingMode === 'user' ? 'environment' : 'user';
+    if (localStream) {
+        localStream.getTracks().forEach(function(track) { track.stop(); });
+    }
+    await initMedia();
+});
+
+// End call
+document.getElementById('endCall').addEventListener('click', function() {
+    if (localStream) {
+        localStream.getTracks().forEach(function(track) { track.stop(); });
+    }
+    if (socket) {
+        socket.emit('leave_call', {room_id: roomId});
+        socket.disconnect();
+    }
+    if (durationInterval) {
+        clearInterval(durationInterval);
+    }
+    {% if call_type == 'direct' %}
+    window.location.href = '{{ url_for("messages.chat", user_id=other_user.id) }}';
+    {% else %}
+    window.location.href = '{{ url_for("messages.group_chat", group_id=group.id) }}';
+    {% endif %}
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (localStream) {
+        localStream.getTracks().forEach(function(track) { track.stop(); });
+    }
+    if (socket) {
+        socket.emit('leave_call', {room_id: roomId});
+        socket.disconnect();
+    }
+});
+
+// Initialize
+initMedia();
+</script>
+{% endblock %}

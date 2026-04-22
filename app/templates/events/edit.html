@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Modifica Evento{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="mb-4">Modifica Evento</h2>
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.event_type.label(class="form-label") }}
+                            {{ form.event_type(class="form-select", id="event_type") }}
+                        </div>
+                        <div class="card mb-3" id="event-detail-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Dettagli Partita/Torneo (opzionale)</h5>
+                                <div class="row" data-event-types="torneo">
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.tournament_name.label(class="form-label") }}
+                                        {{ form.tournament_name(class="form-control") }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.tournament_phase.label(class="form-label") }}
+                                        {{ form.tournament_phase(class="form-control") }}
+                                    </div>
+                                </div>
+                                <div class="row" data-event-types="partita">
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.opponent_name.label(class="form-label") }}
+                                        {{ form.opponent_name(class="form-control") }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.home_away.label(class="form-label") }}
+                                        {{ form.home_away(class="form-select") }}
+                                    </div>
+                                </div>
+                                <div class="row" data-event-types="partita">
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.score_for.label(class="form-label") }}
+                                        {{ form.score_for(class="form-control") }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.score_against.label(class="form-label") }}
+                                        {{ form.score_against(class="form-control") }}
+                                    </div>
+                                </div>
+                                <div class="mb-3" data-event-types="torneo">
+                                    {{ form.bracket_url.label(class="form-label") }}
+                                    {{ form.bracket_url(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="3") }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.start_date.label(class="form-label") }}
+                                {{ form.start_date(class="form-control") }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.end_date.label(class="form-label") }}
+                                {{ form.end_date(class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.location.label(class="form-label") }}
+                            {{ form.location(class="form-control") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.address.label(class="form-label") }}
+                            {{ form.address(class="form-control") }}
+                        </div>
+                        <div class="card mb-3" id="field-planner-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Planner Campo (per allenamenti e partite)</h5>
+                                <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        {{ form.facility_id.label(class="form-label") }}
+                                        {{ form.facility_id(class="form-select", id="facility_id") }}
+                                        <small class="form-text text-muted">Seleziona un campo per integrare l'evento nel planner campo e verificare la disponibilità</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ form.color.label(class="form-label") }}
+                                        {{ form.color(class="form-control", type="color", id="color_picker") }}
+                                        <small class="form-text text-muted">Colore nel calendario</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Salva</button>
+                        <a href="{{ url_for('events.detail', event_id=event.id) }}" class="btn btn-secondary">Annulla</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        const eventTypeSelect = document.getElementById("event_type");
+        const detailCard = document.getElementById("event-detail-card");
+        const fieldPlannerCard = document.getElementById("field-planner-card");
+        const detailBlocks = document.querySelectorAll("[data-event-types]");
+        if (!eventTypeSelect || !detailCard || detailBlocks.length === 0) {
+            return;
+        }
+
+        const updateDetailVisibility = () => {
+            const selectedType = eventTypeSelect.value;
+            let anyVisible = false;
+            detailBlocks.forEach((block) => {
+                const types = (block.dataset.eventTypes || "").split(",").map((t) => t.trim());
+                const shouldShow = types.includes(selectedType);
+                block.style.display = shouldShow ? "" : "none";
+                if (shouldShow) {
+                    anyVisible = true;
+                }
+            });
+            detailCard.style.display = anyVisible ? "" : "none";
+            
+            // Show field planner card for training and match events
+            const showFieldPlanner = selectedType === "allenamento" || selectedType === "partita";
+            if (fieldPlannerCard) {
+                fieldPlannerCard.style.display = showFieldPlanner ? "" : "none";
+            }
+        };
+
+        eventTypeSelect.addEventListener("change", updateDetailVisibility);
+        updateDetailVisibility();
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+{% block title %}Tema Piattaforma{% endblock %}
+
+{% block extra_css %}
+<style>
+.theme-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.color-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+}
+.color-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+.color-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+}
+.color-info {
+    flex: 1;
+}
+.color-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.color-desc {
+    font-size: 0.85rem;
+    color: #65676b;
+}
+.color-input {
+    width: 120px;
+    font-family: monospace;
+}
+.font-option {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.font-option:hover {
+    border-color: #1877f2;
+}
+.font-option.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.font-option input {
+    margin-right: 12px;
+}
+.font-sample {
+    flex: 1;
+    font-size: 1.1rem;
+}
+.preview-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 20px;
+    position: sticky;
+    top: 20px;
+}
+.preview-header {
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e4e6eb;
+}
+.preview-box {
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+}
+.upload-zone {
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.upload-zone:hover {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.upload-zone i {
+    font-size: 2.5rem;
+    color: #1877f2;
+    margin-bottom: 12px;
+}
+.current-logo {
+    max-height: 60px;
+    margin-bottom: 12px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="theme-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-palette2"></i> Tema e Colori</h1>
+                <p class="mb-0 opacity-75">Personalizza l'aspetto della piattaforma con un click</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Torna
+            </a>
+        </div>
+    </div>
+
+    <form method="post" id="themeForm" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="color-card">
+                    <h5 class="mb-4"><i class="bi bi-droplet-fill text-primary"></i> Palette Colori</h5>
+                    
+                    <div class="color-picker-wrapper">
+                        <input type="color" class="color-preview" id="primaryColorPicker" 
+                               value="{{ form.primary_color.data or '#1877f2' }}"
+                               onchange="updateColor('primary_color', this.value)">
+                        <div class="color-info">
+                            <div class="color-label">Colore Primario</div>
+                            <div class="color-desc">Usato per pulsanti, link e elementi principali</div>
+                        </div>
+                        {{ form.primary_color(class='form-control color-input', id='primary_color') }}
+                    </div>
+                    
+                    <div class="color-picker-wrapper">
+                        <input type="color" class="color-preview" id="secondaryColorPicker"
+                               value="{{ form.secondary_color.data or '#6c757d' }}"
+                               onchange="updateColor('secondary_color', this.value)">
+                        <div class="color-info">
+                            <div class="color-label">Colore Secondario</div>
+                            <div class="color-desc">Usato per testi secondari e bordi</div>
+                        </div>
+                        {{ form.secondary_color(class='form-control color-input', id='secondary_color') }}
+                    </div>
+                    
+                    <div class="color-picker-wrapper">
+                        <input type="color" class="color-preview" id="accentColorPicker"
+                               value="{{ form.accent_color.data or '#20c997' }}"
+                               onchange="updateColor('accent_color', this.value)">
+                        <div class="color-info">
+                            <div class="color-label">Colore Accento</div>
+                            <div class="color-desc">Per evidenziare notifiche e badge</div>
+                        </div>
+                        {{ form.accent_color(class='form-control color-input', id='accent_color') }}
+                    </div>
+                </div>
+
+                <div class="color-card">
+                    <h5 class="mb-4"><i class="bi bi-fonts text-primary"></i> Tipografia</h5>
+                    
+                    <label class="font-option" onclick="selectFont(this, 'Inter, sans-serif')">
+                        <input type="radio" name="font_choice" value="Inter, sans-serif" 
+                               {{ 'checked' if not form.font_family.data or 'Inter' in (form.font_family.data or '') }}>
+                        <span class="font-sample" style="font-family: 'Inter', sans-serif;">Inter - Moderno e leggibile</span>
+                    </label>
+                    
+                    <label class="font-option" onclick="selectFont(this, 'Roboto, sans-serif')">
+                        <input type="radio" name="font_choice" value="Roboto, sans-serif"
+                               {{ 'checked' if 'Roboto' in (form.font_family.data or '') }}>
+                        <span class="font-sample" style="font-family: 'Roboto', sans-serif;">Roboto - Stile Google</span>
+                    </label>
+                    
+                    <label class="font-option" onclick="selectFont(this, 'Poppins, sans-serif')">
+                        <input type="radio" name="font_choice" value="Poppins, sans-serif"
+                               {{ 'checked' if 'Poppins' in (form.font_family.data or '') }}>
+                        <span class="font-sample" style="font-family: 'Poppins', sans-serif;">Poppins - Elegante</span>
+                    </label>
+                    
+                    <label class="font-option" onclick="selectFont(this, 'Open Sans, sans-serif')">
+                        <input type="radio" name="font_choice" value="Open Sans, sans-serif"
+                               {{ 'checked' if 'Open Sans' in (form.font_family.data or '') }}>
+                        <span class="font-sample" style="font-family: 'Open Sans', sans-serif;">Open Sans - Classico</span>
+                    </label>
+                    
+                    {{ form.font_family(type='hidden', id='font_family') }}
+                </div>
+
+                <div class="color-card">
+                    <h5 class="mb-4"><i class="bi bi-layout-split text-primary"></i> Layout</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="form-check p-3 border rounded-3 h-100" style="cursor:pointer;" onclick="selectLayout('standard')">
+                                <input class="form-check-input" type="radio" name="layout_choice" id="layoutStandard" value="standard"
+                                       {{ 'checked' if not form.layout_style.data or form.layout_style.data == 'standard' }}>
+                                <label class="form-check-label d-block" for="layoutStandard">
+                                    <i class="bi bi-grid-3x3 fs-3 d-block mb-2 text-primary"></i>
+                                    <strong>Standard</strong>
+                                    <small class="d-block text-muted">Layout classico</small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check p-3 border rounded-3 h-100" style="cursor:pointer;" onclick="selectLayout('compact')">
+                                <input class="form-check-input" type="radio" name="layout_choice" id="layoutCompact" value="compact"
+                                       {{ 'checked' if form.layout_style.data == 'compact' }}>
+                                <label class="form-check-label d-block" for="layoutCompact">
+                                    <i class="bi bi-grid fs-3 d-block mb-2 text-primary"></i>
+                                    <strong>Compatto</strong>
+                                    <small class="d-block text-muted">Più contenuto visibile</small>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check p-3 border rounded-3 h-100" style="cursor:pointer;" onclick="selectLayout('wide')">
+                                <input class="form-check-input" type="radio" name="layout_choice" id="layoutWide" value="wide"
+                                       {{ 'checked' if form.layout_style.data == 'wide' }}>
+                                <label class="form-check-label d-block" for="layoutWide">
+                                    <i class="bi bi-aspect-ratio fs-3 d-block mb-2 text-primary"></i>
+                                    <strong>Largo</strong>
+                                    <small class="d-block text-muted">Massima larghezza</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {{ form.layout_style(type='hidden', id='layout_style') }}
+                </div>
+
+                <div class="color-card">
+                    <h5 class="mb-4"><i class="bi bi-image text-primary"></i> Logo, Favicon e Icona App</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Logo (caricamento)</label>
+                            <div class="upload-zone mb-2" onclick="document.getElementById('logo_upload').click()">
+                                <i class="bi bi-cloud-arrow-up"></i>
+                                <div class="fw-semibold">Carica un logo</div>
+                                <div class="text-muted" style="font-size:0.85rem;">PNG/JPG/WEBP - consigliato 512x512</div>
+                            </div>
+                            {{ form.logo_upload(class='form-control d-none', id='logo_upload') }}
+                            {% if settings and settings.logo_url %}
+                                <img src="{{ settings.logo_url }}" alt="Logo attuale" class="current-logo" style="max-width: 180px; height:auto;">
+                            {% endif %}
+                            <small class="text-muted d-block">Puoi anche inserire un URL qui sotto.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">URL Logo</label>
+                            {{ form.logo_url(class='form-control', placeholder='https://esempio.com/logo.png') }}
+                            <small class="text-muted">Inserisci l'URL del logo aziendale</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">URL Favicon</label>
+                            {{ form.favicon_url(class='form-control', placeholder='https://esempio.com/favicon.ico') }}
+                            <small class="text-muted">Icona che appare nella tab del browser</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Icona App (PWA) (caricamento)</label>
+                            <div class="upload-zone mb-2" onclick="document.getElementById('app_icon_upload').click()">
+                                <i class="bi bi-phone"></i>
+                                <div class="fw-semibold">Carica icona app</div>
+                                <div class="text-muted" style="font-size:0.85rem;">PNG/JPG/WEBP - consigliato 512x512</div>
+                            </div>
+                            {{ form.app_icon_upload(class='form-control d-none', id='app_icon_upload') }}
+                            {% if settings and settings.app_icon_url %}
+                                <img src="{{ settings.app_icon_url }}" alt="Icona app attuale" class="current-logo" style="max-width: 120px; height:auto; border-radius:16px;">
+                            {% endif %}
+                            <small class="text-muted d-block">Se impostata, verrà usata per l’icona dell’app installabile (Android/iPhone).</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">URL Icona App (PWA)</label>
+                            {{ form.app_icon_url(class='form-control', placeholder='https://esempio.com/app-icon-512.png') }}
+                            <small class="text-muted">URL dell’icona usata nel manifest (consigliato PNG 512x512)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="preview-card">
+                    <div class="preview-header"><i class="bi bi-eye"></i> Anteprima</div>
+                    
+                    <div class="preview-box mb-3" id="previewBox" style="background: #1877f2;">
+                        <div class="text-white">
+                            <i class="bi bi-trophy-fill fs-1"></i>
+                            <h5 class="mt-2 mb-1">SONACIP</h5>
+                            <small>La tua piattaforma sportiva</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="button" class="btn" id="previewPrimaryBtn" style="background: #1877f2; color: white;">
+                            Pulsante Primario
+                        </button>
+                        <button type="button" class="btn" id="previewSecondaryBtn" style="background: #6c757d; color: white;">
+                            Pulsante Secondario
+                        </button>
+                        <span class="badge" id="previewAccentBadge" style="background: #20c997; padding: 10px;">
+                            Badge Accento
+                        </span>
+                    </div>
+                    
+                    <p id="previewFont" style="font-family: Inter, sans-serif;">
+                        Questo testo mostra il font selezionato per la piattaforma.
+                    </p>
+                </div>
+                
+                <div class="d-grid gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-lg"></i> Salva Tema
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateColor(inputId, value) {
+    document.getElementById(inputId).value = value;
+    updatePreview();
+}
+
+function selectFont(element, fontFamily) {
+    document.querySelectorAll('.font-option').forEach(opt => opt.classList.remove('selected'));
+    element.classList.add('selected');
+    document.getElementById('font_family').value = fontFamily;
+    updatePreview();
+}
+
+function selectLayout(layout) {
+    document.getElementById('layout_style').value = layout;
+}
+
+function updatePreview() {
+    const primary = document.getElementById('primary_color').value || '#1877f2';
+    const secondary = document.getElementById('secondary_color').value || '#6c757d';
+    const accent = document.getElementById('accent_color').value || '#20c997';
+    const font = document.getElementById('font_family').value || 'Inter, sans-serif';
+    
+    document.getElementById('previewBox').style.background = primary;
+    document.getElementById('previewPrimaryBtn').style.background = primary;
+    document.getElementById('previewSecondaryBtn').style.background = secondary;
+    document.getElementById('previewAccentBadge').style.background = accent;
+    document.getElementById('previewFont').style.fontFamily = font;
+    
+    document.getElementById('primaryColorPicker').value = primary;
+    document.getElementById('secondaryColorPicker').value = secondary;
+    document.getElementById('accentColorPicker').value = accent;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.color-input').forEach(input => {
+        input.addEventListener('input', updatePreview);
+    });
+    
+    const selectedFont = document.querySelector('input[name="font_choice"]:checked');
+    if (selectedFont) {
+        selectedFont.closest('.font-option').classList.add('selected');
+    }
+    
+    updatePreview();
+});
+</script>
+{% endblock %}

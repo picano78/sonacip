@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Gestione Pagamenti - Admin{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="section-hero mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="pill mb-2"><i class="bi bi-credit-card"></i> Admin</div>
+            <h1 class="h4 mb-0">Gestione Pagamenti</h1>
+            <p class="text-muted mb-0">Visualizza e gestisci tutti i pagamenti della piattaforma.</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Utente</th>
+                            <th>Società</th>
+                            <th>Importo</th>
+                            <th>Stato</th>
+                            <th>Data</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.id }}</td>
+                            <td>
+                                {% if payment.user %}
+                                    {{ payment.user.get_full_name() }} ({{ payment.user.username }})
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if payment.society %}
+                                    {{ payment.society.legal_name }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>€{{ "%.2f"|format(payment.amount) }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if payment.status == 'completed' %}bg-success
+                                    {% elif payment.status == 'pending' %}bg-warning
+                                    {% elif payment.status == 'failed' %}bg-danger
+                                    {% elif payment.status == 'refunded' %}bg-secondary
+                                    {% else %}bg-light{% endif %}">
+                                    {{ payment.status }}
+                                </span>
+                            </td>
+                            <td>{{ payment.created_at|strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                {% if payment.status == 'completed' %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="refundPayment({{ payment.id }})">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Rimborso
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if pagination.pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('subscription.admin_payments', page=pagination.prev_num) }}">Precedente</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                            <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                <a class="page-link" href="{{ url_for('subscription.admin_payments', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('subscription.admin_payments', page=pagination.next_num) }}">Successivo</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Refund Modal -->
+<div class="modal fade" id="refundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Conferma Rimborso</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="refundForm" method="post">
+                <div class="modal-body">
+                    <p>Sei sicuro di voler rimborsare questo pagamento?</p>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Motivo del rimborso</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Inserisci il motivo del rimborso..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-danger">Conferma Rimborso</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function refundPayment(paymentId) {
+    document.getElementById('refundForm').action = '{{ url_for("subscription.refund_payment", payment_id=0) }}'.replace('0', paymentId);
+    new bootstrap.Modal(document.getElementById('refundModal')).show();
+}
+</script>
+{% endblock %}

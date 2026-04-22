@@ -1,0 +1,634 @@
+{% extends "base.html" %}
+
+{% block title %}Guida Società - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+  --green-primary: #28a745;
+  --green-dark: #1e7e34;
+  --green-light: #e8f5e9;
+  --fb-blue: #1877f2;
+}
+
+.guide-hero {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  color: white;
+  padding: 4rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.guide-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(30,126,52,0.2) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.guide-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  position: relative;
+  z-index: 2;
+}
+
+.guide-hero p {
+  font-size: 1.15rem;
+  opacity: 0.95;
+  position: relative;
+  z-index: 2;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: var(--green-light);
+  color: var(--green-primary);
+  font-weight: 600;
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(40,167,69,0.25);
+}
+
+.section-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--green-light);
+  color: var(--green-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-right: 0.75rem;
+}
+
+.guide-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.guide-card:hover {
+  border-color: var(--green-primary);
+  box-shadow: 0 8px 20px rgba(40,167,69,0.12);
+  transform: translateY(-4px);
+}
+
+.guide-card .card-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: var(--green-light);
+  color: var(--green-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.guide-card h6 {
+  font-weight: 600;
+  color: #050505;
+  margin-bottom: 0.5rem;
+}
+
+.guide-card p {
+  color: #65676b;
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+.step-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: all 0.3s ease;
+}
+
+.step-card:hover {
+  border-color: var(--green-primary);
+  box-shadow: 0 4px 12px rgba(40,167,69,0.1);
+}
+
+.step-number {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  background: var(--green-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.step-content h6 {
+  font-weight: 600;
+  color: #050505;
+  margin-bottom: 0.25rem;
+}
+
+.step-content p {
+  color: #65676b;
+  margin-bottom: 0;
+  font-size: 0.95rem;
+}
+
+.faq-section {
+  background: #f0f2f5;
+  border-radius: 16px;
+  padding: 2.5rem;
+}
+
+.cta-box {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  color: white;
+  text-align: center;
+}
+
+.cta-box h3 {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.btn-cta {
+  background: white;
+  color: var(--green-primary);
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-cta:hover {
+  background: var(--green-light);
+  color: var(--green-dark);
+  transform: translateY(-2px);
+}
+
+.btn-contact {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+  padding: 0.65rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-contact:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.premium-badge {
+  background: linear-gradient(135deg, #ffc107, #ff9800);
+  color: #333;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  display: inline-block;
+  margin-left: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="guide-hero">
+  <div class="container text-center">
+    <h1><i class="bi bi-building me-2"></i>Guida per Società Sportive</h1>
+    <p class="mt-3 mx-auto" style="max-width: 650px;">Scopri come gestire al meglio la tua società sportiva su SONACIP. Strumenti professionali per amministratori e dirigenti.</p>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="accordion" id="societyGuideAccordion">
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegistraSocieta">
+                <span class="section-icon"><i class="bi bi-building-add"></i></span>
+                Come Registrare la Società
+              </button>
+            </h2>
+            <div id="collapseRegistraSocieta" class="accordion-collapse collapse show" data-bs-parent="#societyGuideAccordion">
+              <div class="accordion-body">
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <div class="guide-card">
+                      <div class="card-icon"><i class="bi bi-clipboard-check"></i></div>
+                      <h6>Requisiti</h6>
+                      <p>Per registrare una società servono: nome ufficiale, codice fiscale/partita IVA, indirizzo sede legale e contatti del responsabile.</p>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="guide-card">
+                      <div class="card-icon"><i class="bi bi-shield-check"></i></div>
+                      <h6>Verifica</h6>
+                      <p>Dopo la registrazione, il team SONACIP verificherà i dati della società per garantire autenticità e sicurezza.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Accedi alla pagina di registrazione società</h6>
+                    <p>Clicca su "Registra la Tua Società" dalla homepage o dalla pagina di registrazione.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Compila i dati della società</h6>
+                    <p>Inserisci tutte le informazioni richieste: denominazione, sport praticati, sede e contatti.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Attendi la verifica</h6>
+                    <p>Il team controllerà i dati inseriti. Riceverai una notifica quando la società sarà approvata.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMembri">
+                <span class="section-icon"><i class="bi bi-people"></i></span>
+                Come Gestire i Membri
+              </button>
+            </h2>
+            <div id="collapseMembri" class="accordion-collapse collapse" data-bs-parent="#societyGuideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Accedi alla dashboard della società</h6>
+                    <p>Dalla sidebar, seleziona la tua società per accedere al pannello di gestione.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Invita nuovi membri</h6>
+                    <p>Usa la funzione "Invita Membro" per inviare inviti via email o link diretto agli atleti.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Assegna ruoli e permessi</h6>
+                    <p>Configura i ruoli (admin, allenatore, atleta, staff) e i relativi permessi per ogni membro.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Monitora l'attività</h6>
+                    <p>Visualizza le statistiche di partecipazione, presenze e attività di ciascun membro.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEventi">
+                <span class="section-icon"><i class="bi bi-calendar-event"></i></span>
+                Come Creare Eventi
+              </button>
+            </h2>
+            <div id="collapseEventi" class="accordion-collapse collapse" data-bs-parent="#societyGuideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Vai alla sezione Eventi</h6>
+                    <p>Dal pannello della società, seleziona "Eventi" per visualizzare e creare nuovi eventi.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Crea un nuovo evento</h6>
+                    <p>Compila titolo, descrizione, data, ora, luogo e tipologia (allenamento, gara, riunione).</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Invita i partecipanti</h6>
+                    <p>Seleziona i membri da convocare e invia le notifiche automatiche di invito.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Monitora le adesioni</h6>
+                    <p>Controlla le risposte RSVP e gestisci le presenze in tempo reale.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCalendarioSocieta">
+                <span class="section-icon"><i class="bi bi-calendar3"></i></span>
+                Come Usare il Calendario Società
+              </button>
+            </h2>
+            <div id="collapseCalendarioSocieta" class="accordion-collapse collapse" data-bs-parent="#societyGuideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Apri il Calendario</h6>
+                    <p>Accedi al calendario della società per una vista completa di tutti gli impegni e le prenotazioni.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Gestisci le strutture</h6>
+                    <p>Prenota campi, palestre e strutture sportive direttamente dal calendario integrato.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Visualizza l'occupancy</h6>
+                    <p>Monitora l'utilizzo delle strutture con report di occupazione e disponibilità in tempo reale.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseComunicazioni">
+                <span class="section-icon"><i class="bi bi-megaphone"></i></span>
+                Come Gestire le Comunicazioni
+              </button>
+            </h2>
+            <div id="collapseComunicazioni" class="accordion-collapse collapse" data-bs-parent="#societyGuideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Accedi ai Broadcast</h6>
+                    <p>Dalla dashboard società, vai su "Comunicazioni" per inviare messaggi a tutti i membri.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Crea un comunicato</h6>
+                    <p>Componi il messaggio, seleziona i destinatari (tutti, per ruolo, per gruppo) e invia.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Monitora le letture</h6>
+                    <p>Visualizza le statistiche di apertura e lettura per ogni comunicazione inviata.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCRM">
+                <span class="section-icon"><i class="bi bi-diagram-3"></i></span>
+                Come Gestire il CRM
+              </button>
+            </h2>
+            <div id="collapseCRM" class="accordion-collapse collapse" data-bs-parent="#societyGuideAccordion">
+              <div class="accordion-body">
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <div class="guide-card">
+                      <div class="card-icon"><i class="bi bi-person-lines-fill"></i></div>
+                      <h6>Contatti</h6>
+                      <p>Gestisci l'anagrafica completa dei contatti della società.</p>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="guide-card">
+                      <div class="card-icon"><i class="bi bi-funnel"></i></div>
+                      <h6>Pipeline</h6>
+                      <p>Crea pipeline personalizzate per gestire opportunità e trattative.</p>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="guide-card">
+                      <div class="card-icon"><i class="bi bi-journal-text"></i></div>
+                      <h6>Attività</h6>
+                      <p>Registra chiamate, riunioni e note per ogni contatto.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAnalytics">
+                <span class="section-icon"><i class="bi bi-graph-up-arrow"></i></span>
+                Come Usare l'Analytics
+              </button>
+            </h2>
+            <div id="collapseAnalytics" class="accordion-collapse collapse" data-bs-parent="#societyGuideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Accedi alla Dashboard Analytics</h6>
+                    <p>Vai su "Analytics" per una panoramica completa delle metriche della tua società.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Analizza i dati</h6>
+                    <p>Consulta grafici e report su membri attivi, partecipazione eventi, engagement e crescita.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Esporta i report</h6>
+                    <p>Scarica i report in formato CSV o PDF per analisi offline e presentazioni.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePremium">
+                <span class="section-icon"><i class="bi bi-star"></i></span>
+                Funzionalità Premium <span class="premium-badge">PRO</span>
+              </button>
+            </h2>
+            <div id="collapsePremium" class="accordion-collapse collapse" data-bs-parent="#societyGuideAccordion">
+              <div class="accordion-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="guide-card">
+                      <div class="card-icon"><i class="bi bi-bar-chart-line"></i></div>
+                      <h6>Analytics Avanzate</h6>
+                      <p>Report dettagliati, confronti temporali e previsioni basate su intelligenza artificiale.</p>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="guide-card">
+                      <div class="card-icon"><i class="bi bi-robot"></i></div>
+                      <h6>Automazioni</h6>
+                      <p>Crea regole automatiche per invii, notifiche, assegnazioni e workflow personalizzati.</p>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="guide-card">
+                      <div class="card-icon"><i class="bi bi-cloud-download"></i></div>
+                      <h6>Backup Automatici</h6>
+                      <p>Backup giornalieri automatici di tutti i dati della società con ripristino immediato.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="faq-section">
+          <h2 class="text-center mb-4" style="font-weight: 700; color: #050505;">
+            <i class="bi bi-question-circle me-2" style="color: #28a745;"></i>Domande Frequenti per Società
+          </h2>
+          <div class="accordion" id="faqSocietyAccordion">
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sfaq1">
+                  Quanto costa registrare una società?
+                </button>
+              </h2>
+              <div id="sfaq1" class="accordion-collapse collapse" data-bs-parent="#faqSocietyAccordion">
+                <div class="accordion-body">
+                  La registrazione base della società è gratuita. Sono disponibili piani premium con funzionalità avanzate per le esigenze di società più strutturate.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sfaq2">
+                  Quanti membri posso avere nella mia società?
+                </button>
+              </h2>
+              <div id="sfaq2" class="accordion-collapse collapse" data-bs-parent="#faqSocietyAccordion">
+                <div class="accordion-body">
+                  Il piano base permette fino a 50 membri. I piani premium offrono membri illimitati e funzionalità avanzate di gestione.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sfaq3">
+                  Posso gestire più sedi?
+                </button>
+              </h2>
+              <div id="sfaq3" class="accordion-collapse collapse" data-bs-parent="#faqSocietyAccordion">
+                <div class="accordion-body">
+                  Sì, puoi registrare più sedi e strutture sportive. Ogni sede può avere il proprio calendario e le proprie risorse gestibili in modo indipendente.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sfaq4">
+                  Come posso ottenere supporto dedicato?
+                </button>
+              </h2>
+              <div id="sfaq4" class="accordion-collapse collapse" data-bs-parent="#faqSocietyAccordion">
+                <div class="accordion-body">
+                  Puoi contattare il nostro team tramite la pagina <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a>. I clienti premium hanno accesso al supporto prioritario con tempi di risposta garantiti.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="cta-box">
+          <i class="bi bi-building" style="font-size: 3rem; margin-bottom: 1rem; display: block; opacity: 0.9;"></i>
+          <h3>Registra la Tua Società Sportiva</h3>
+          <p class="mb-4" style="opacity: 0.95;">Unisciti alle società sportive che già utilizzano SONACIP per gestire i loro atleti, eventi e comunicazioni.</p>
+          <div class="d-flex flex-wrap gap-3 justify-content-center">
+            <a href="{{ url_for('auth.register_society') }}" class="btn-cta">
+              <i class="bi bi-building-add"></i> Registra la Società
+            </a>
+            <a href="{{ url_for('main.contact_admin') }}" class="btn-contact">
+              <i class="bi bi-envelope"></i> Contatta l'Amministratore
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% block title %}Impostazioni Email{% endblock %}
+
+{% block extra_css %}
+<style>
+.smtp-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.setting-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+}
+.provider-option {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+}
+.provider-option:hover {
+    border-color: #1877f2;
+}
+.provider-option.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.provider-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-right: 16px;
+}
+.provider-info {
+    flex: 1;
+}
+.provider-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.provider-desc {
+    font-size: 0.85rem;
+    color: #65676b;
+}
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+.status-badge.enabled {
+    background: #d4edda;
+    color: #155724;
+}
+.status-badge.disabled {
+    background: #f8d7da;
+    color: #721c24;
+}
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+.toggle-label {
+    font-weight: 600;
+}
+.toggle-desc {
+    font-size: 0.85rem;
+    color: #65676b;
+}
+.form-switch .form-check-input {
+    width: 48px;
+    height: 24px;
+}
+.test-section {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 12px;
+    padding: 20px;
+}
+.test-section h6 {
+    color: #856404;
+}
+.input-group-text {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="smtp-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-envelope"></i> Impostazioni Email (SMTP)</h1>
+                <p class="mb-0 opacity-75">Configura l'invio email dalla piattaforma</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Torna
+            </a>
+        </div>
+    </div>
+
+    <form method="post" id="smtpForm">
+        {{ form.hidden_tag() }}
+        
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="setting-card">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="mb-0"><i class="bi bi-power text-primary"></i> Stato Servizio</h5>
+                        <span class="status-badge {{ 'enabled' if form.enabled.data else 'disabled' }}" id="statusBadge">
+                            <i class="bi {{ 'bi-check-circle' if form.enabled.data else 'bi-x-circle' }}"></i>
+                            <span id="statusText">{{ 'Attivo' if form.enabled.data else 'Disattivo' }}</span>
+                        </span>
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <div>
+                            <div class="toggle-label">Abilita invio email</div>
+                            <div class="toggle-desc">Attiva per inviare email dalla piattaforma</div>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.enabled(class='form-check-input', onchange='updateStatus()') }}
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <div>
+                            <div class="toggle-label">Usa TLS</div>
+                            <div class="toggle-desc">Crittografia per connessioni sicure</div>
+                        </div>
+                        <div class="form-check form-switch">
+                            {{ form.use_tls(class='form-check-input') }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-gear text-primary"></i> Provider Rapido</h5>
+                    
+                    <div class="provider-option" onclick="setProvider('gmail')">
+                        <div class="provider-icon bg-danger-subtle text-danger">
+                            <i class="bi bi-google"></i>
+                        </div>
+                        <div class="provider-info">
+                            <div class="provider-name">Gmail / Google</div>
+                            <div class="provider-desc">smtp.gmail.com:587</div>
+                        </div>
+                    </div>
+                    
+                    <div class="provider-option" onclick="setProvider('outlook')">
+                        <div class="provider-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-microsoft"></i>
+                        </div>
+                        <div class="provider-info">
+                            <div class="provider-name">Outlook / Microsoft</div>
+                            <div class="provider-desc">smtp.office365.com:587</div>
+                        </div>
+                    </div>
+                    
+                    <div class="provider-option" onclick="setProvider('custom')">
+                        <div class="provider-icon bg-secondary-subtle text-secondary">
+                            <i class="bi bi-server"></i>
+                        </div>
+                        <div class="provider-info">
+                            <div class="provider-name">Server Personalizzato</div>
+                            <div class="provider-desc">Configura manualmente</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="setting-card">
+                    <h5 class="mb-4"><i class="bi bi-sliders text-primary"></i> Configurazione Server</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-8">
+                            <label class="form-label fw-semibold">Server SMTP</label>
+                            {{ form.host(class='form-control', placeholder='smtp.gmail.com', id='smtpHost') }}
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">Porta</label>
+                            {{ form.port(class='form-control', placeholder='587', id='smtpPort') }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                {{ form.username(class='form-control', placeholder='email@esempio.com') }}
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-key"></i></span>
+                                {{ form.password(class='form-control', type='password', placeholder='Lascia vuoto per non modificare') }}
+                            </div>
+                            <small class="text-muted">Per Gmail usa una "App Password"</small>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Mittente Default</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                {{ form.default_sender(class='form-control', placeholder='noreply@sonacip.it') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="test-section">
+                    <h6><i class="bi bi-send me-2"></i>Invia Email di Test</h6>
+                    <p class="text-muted small mb-3">Verifica che le impostazioni funzionino correttamente</p>
+                    <div class="input-group">
+                        {{ form.test_recipient(class='form-control', placeholder='test@esempio.com') }}
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-send-fill"></i> Invia Test
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-check-lg"></i> Salva Impostazioni
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function setProvider(provider) {
+    const configs = {
+        gmail: { host: 'smtp.gmail.com', port: '587' },
+        outlook: { host: 'smtp.office365.com', port: '587' },
+        custom: { host: '', port: '' }
+    };
+    
+    document.getElementById('smtpHost').value = configs[provider].host;
+    document.getElementById('smtpPort').value = configs[provider].port;
+    
+    document.querySelectorAll('.provider-option').forEach(opt => opt.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+}
+
+function updateStatus() {
+    const enabled = document.getElementById('enabled').checked;
+    const badge = document.getElementById('statusBadge');
+    const text = document.getElementById('statusText');
+    const icon = badge.querySelector('i');
+    
+    if (enabled) {
+        badge.className = 'status-badge enabled';
+        icon.className = 'bi bi-check-circle';
+        text.textContent = 'Attivo';
+    } else {
+        badge.className = 'status-badge disabled';
+        icon.className = 'bi bi-x-circle';
+        text.textContent = 'Disattivo';
+    }
+}
+</script>
+{% endblock %}

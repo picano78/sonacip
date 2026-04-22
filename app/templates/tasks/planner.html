@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Planner{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-calendar-check"></i> Planner</h2>
+        <div>
+            <a href="{{ url_for('tasks.calendar') }}" class="btn btn-outline-secondary btn-sm">Calendario</a>
+            <a href="{{ url_for('events.index') }}" class="btn btn-outline-secondary btn-sm">Eventi</a>
+        </div>
+    </div>
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Attività assegnate</h5>
+                    <a href="{{ url_for('tasks.index') }}" class="small">Vai a Task</a>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for t in tasks %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ t.title }}</h6>
+                                <small class="text-muted">Scadenza: {{ t.due_date|datetime_format if t.due_date else 'N/D' }}</small>
+                            </div>
+                            <span class="badge bg-{{ 'success' if t.status == 'done' else 'primary' if t.status == 'in_progress' else 'warning' if t.status == 'review' else 'secondary' }}">{{ t.status|replace('_',' ')|title }}</span>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-muted">Nessun task assegnato.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Eventi</h5>
+                    <a href="{{ url_for('events.index') }}" class="small">Vai a Eventi</a>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for e in events %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">{{ e.title }}</h6>
+                                    <small class="text-muted">{{ e.start_date|datetime_format }}</small>
+                                </div>
+                                <span class="badge bg-{{ 'primary' if e.event_type == 'allenamento' else 'success' if e.event_type == 'partita' else 'warning' }}">{{ e.event_type|title }}</span>
+                            </div>
+                            {% if e.tournament_name or e.opponent_name %}
+                                <small class="text-muted"><i class="bi bi-trophy"></i> {{ e.tournament_name }} {% if e.opponent_name %}· vs {{ e.opponent_name }}{% endif %}</small>
+                            {% endif %}
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-muted">Nessun evento imminente.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

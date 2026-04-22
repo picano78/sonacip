@@ -1,0 +1,20 @@
+{% set c = sec.content or {} %}
+<section class="section-padding section-animate">
+  <div class="container">
+    {% if c.get('title') %}<h2 class="section-title">{{ c.get('title') }}</h2>{% endif %}
+    <div class="accordion" id="faq-{{ sec.id }}">
+      {% for item in c.get('items', []) %}
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button{% if not loop.first %} collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#faq-{{ sec.id }}-{{ loop.index }}">
+            {{ item.get('title', item.get('question', '')) }}
+          </button>
+        </h3>
+        <div id="faq-{{ sec.id }}-{{ loop.index }}" class="accordion-collapse collapse{% if loop.first %} show{% endif %}" data-bs-parent="#faq-{{ sec.id }}">
+          <div class="accordion-body">{{ item.get('text', item.get('answer', '')) }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

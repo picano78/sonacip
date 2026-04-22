@@ -1,0 +1,13 @@
+{% set c = sec.content or {} %}
+<section class="section-padding section-animate" style="background: var(--surface-light, #f0f2f5);">
+  <div class="container">
+    <div class="row g-4 text-center">
+      {% for item in c.get('items', []) %}
+      <div class="col-6 col-md-3">
+        <div style="font-size: 2.5rem; font-weight: 800; color: #1877f2;">{{ item.get('value', '') }}</div>
+        <div style="color: #65676b; font-weight: 500;">{{ item.get('label', '') }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

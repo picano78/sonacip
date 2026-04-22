@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}{{ t('profile_connections') }} - {{ user.get_full_name() }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+.connections-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+}
+.connections-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+}
+.connection-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    transition: background 0.2s;
+}
+.connection-item:hover {
+    background: #f0f7ff;
+}
+.connection-item:last-child {
+    border-bottom: none;
+}
+.connection-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 1rem;
+}
+.connection-avatar-placeholder {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 2rem;
+    color: white;
+}
+.connection-info {
+    flex: 1;
+}
+.connection-name {
+    font-weight: 600;
+    color: rgba(0,0,0,0.9);
+    text-decoration: none;
+    font-size: 1rem;
+}
+.connection-name:hover {
+    text-decoration: underline;
+    color: #1877f2;
+}
+.connection-headline {
+    color: rgba(0,0,0,0.6);
+    font-size: 0.875rem;
+    margin-top: 4px;
+}
+.btn-message {
+    background: transparent;
+    color: #1877f2;
+    border: 1px solid #1877f2;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.btn-remove {
+    background: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.btn-remove:hover {
+    background: rgba(108,117,125,0.1);
+    color: #6c757d;
+}
+.btn-message:hover {
+    background: rgba(24,119,242,0.1);
+    color: #1877f2;
+}
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: rgba(0,0,0,0.6);
+}
+.empty-state i {
+    font-size: 4rem;
+    color: #1877f2;
+    opacity: .3;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="gradient-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="mb-1"><i class="bi bi-people-fill me-2"></i>{{ connections|length }} {{ t('profile_connections') }}</h1>
+                <p class="mb-0 opacity-75">{{ user.get_full_name() }}</p>
+            </div>
+            <a href="{{ url_for('social.profile', user_id=user.id) }}" class="btn btn-outline-light">
+                <i class="bi bi-arrow-left me-1"></i>Profilo
+            </a>
+        </div>
+    </div>
+
+    <div class="connections-card">
+        {% if connections %}
+        {% for conn in connections %}
+        <div class="connection-item">
+            {% if conn.avatar %}
+            <img src="{{ url_for('static', filename='uploads/' + conn.avatar) }}" class="connection-avatar" alt="">
+            {% else %}
+            <div class="connection-avatar-placeholder"><i class="bi bi-person-fill"></i></div>
+            {% endif %}
+            <div class="connection-info">
+                <a href="{{ url_for('social.profile', user_id=conn.id) }}" class="connection-name">{{ conn.get_full_name() }}</a>
+                {% if conn.bio %}
+                <div class="connection-headline">{{ conn.bio[:100] }}{% if conn.bio|length > 100 %}...{% endif %}</div>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('messages.conversations') }}?to={{ conn.id }}" class="btn-message">
+                    <i class="bi bi-chat-dots me-1"></i>{{ t('messages_new') }}
+                </a>
+                {% if current_user.id == user.id %}
+                <form method="POST" action="{{ url_for('social.remove_connection', user_id=conn.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-remove"><i class="bi bi-person-x me-1"></i>Rimuovi</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people d-block"></i>
+            <h5>{{ t('profile_no_connections') }}</h5>
+            <p>{{ t('profile_no_connections_desc') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Invoices - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1><i class="fas fa-file-invoice"></i> Invoices</h1>
+    
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('accounting.invoices', status='all') }}" class="btn btn-{% if status == 'all' %}primary{% else %}outline-primary{% endif %}">All</a>
+                <a href="{{ url_for('accounting.invoices', status='draft') }}" class="btn btn-{% if status == 'draft' %}primary{% else %}outline-primary{% endif %}">Draft</a>
+                <a href="{{ url_for('accounting.invoices', status='sent') }}" class="btn btn-{% if status == 'sent' %}primary{% else %}outline-primary{% endif %}">Sent</a>
+                <a href="{{ url_for('accounting.invoices', status='paid') }}" class="btn btn-{% if status == 'paid' %}primary{% else %}outline-primary{% endif %}">Paid</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in pagination.items %}
+                        <tr>
+                            <td>{{ invoice.invoice_number }}</td>
+                            <td>{{ invoice.invoice_date.strftime('%Y-%m-%d') }}</td>
+                            <td>€{{ "%.2f"|format(invoice.total_amount) }}</td>
+                            <td><span class="badge badge-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'sent' %}warning{% else %}secondary{% endif %}">{{ invoice.status }}</span></td>
+                            <td>
+                                <a href="{{ url_for('accounting.view_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-info">View</a>
+                                <a href="{{ url_for('accounting.download_invoice_pdf', invoice_id=invoice.id) }}" class="btn btn-sm btn-secondary">PDF</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">No invoices found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if pagination.pages > 1 %}
+            <nav>
+                <ul class="pagination">
+                    {% if pagination.has_prev %}
+                    <li class="page-item"><a class="page-link" href="{{ url_for('accounting.invoices', page=pagination.prev_num, status=status) }}">Previous</a></li>
+                    {% endif %}
+                    {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                        <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('accounting.invoices', page=page_num, status=status) }}">{{ page_num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if pagination.has_next %}
+                    <li class="page-item"><a class="page-link" href="{{ url_for('accounting.invoices', page=pagination.next_num, status=status) }}">Next</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

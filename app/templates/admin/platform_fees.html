@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% block title %}Commissioni Piattaforma{% endblock %}
+
+{% block extra_css %}
+<style>
+.fees-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.fee-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    transition: transform 0.2s;
+}
+.fee-card:hover {
+    transform: translateY(-4px);
+}
+.fee-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 16px;
+}
+.fee-value {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+.fee-label {
+    color: #65676b;
+    margin-bottom: 20px;
+}
+.fee-input-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.fee-input {
+    width: 100px;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    border: 2px solid #e4e6eb;
+    border-radius: 10px;
+    padding: 12px;
+}
+.fee-input:focus {
+    border-color: #1877f2;
+    outline: none;
+}
+.fee-suffix {
+    font-size: 1.2rem;
+    color: #65676b;
+}
+.currency-option {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 8px;
+}
+.currency-option:hover {
+    border-color: #1877f2;
+}
+.currency-option.selected {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+.currency-option input {
+    margin-right: 12px;
+}
+.currency-flag {
+    font-size: 1.5rem;
+    margin-right: 12px;
+}
+.info-card {
+    background: #f0f8ff;
+    border-radius: 12px;
+    padding: 20px;
+    border-left: 4px solid #1877f2;
+}
+.example-calc {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 16px;
+}
+.calc-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px dashed #dee2e6;
+}
+.calc-row:last-child {
+    border-bottom: none;
+    font-weight: 600;
+    color: #1877f2;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="fees-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-cash-coin"></i> Commissioni Piattaforma</h1>
+                <p class="mb-0 opacity-75">Configura le commissioni (take-rate) sulle transazioni</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin.platform_transactions') }}" class="btn btn-light btn-sm me-2">
+                    <i class="bi bi-receipt"></i> Vedi Transazioni
+                </a>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> Torna
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="feesForm">
+        {{ csrf_token() }}
+        
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="fee-card">
+                    <div class="fee-icon bg-primary-subtle text-primary">
+                        <i class="bi bi-percent"></i>
+                    </div>
+                    <div class="fee-label">Percentuale Commissione</div>
+                    <div class="fee-input-group">
+                        <input type="number" class="fee-input" name="take_rate_percent" id="takeRatePercent"
+                               value="{{ settings.take_rate_percent or 0 }}" min="0" max="100" step="0.1"
+                               oninput="updateExample()">
+                        <span class="fee-suffix">%</span>
+                    </div>
+                    <small class="text-muted d-block mt-2">Su ogni transazione</small>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="fee-card">
+                    <div class="fee-icon bg-success-subtle text-success">
+                        <i class="bi bi-coin"></i>
+                    </div>
+                    <div class="fee-label">Commissione Minima</div>
+                    <div class="fee-input-group">
+                        <input type="number" class="fee-input" name="min_fee_cents" id="minFeeCents"
+                               value="{{ settings.min_fee_cents or 0 }}" min="0" step="1"
+                               oninput="updateExample()">
+                        <span class="fee-suffix">cent</span>
+                    </div>
+                    <small class="text-muted d-block mt-2">Minimo applicato</small>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="fee-card">
+                    <div class="fee-icon bg-warning-subtle text-warning">
+                        <i class="bi bi-currency-exchange"></i>
+                    </div>
+                    <div class="fee-label">Valuta</div>
+                    
+                    <label class="currency-option {{ 'selected' if not settings.currency or settings.currency == 'EUR' }}" onclick="selectCurrency('EUR')">
+                        <input type="radio" name="currency" value="EUR" {{ 'checked' if not settings.currency or settings.currency == 'EUR' }}>
+                        <span class="currency-flag">🇪🇺</span>
+                        <span>Euro (EUR)</span>
+                    </label>
+                    
+                    <label class="currency-option {{ 'selected' if settings.currency == 'USD' }}" onclick="selectCurrency('USD')">
+                        <input type="radio" name="currency" value="USD" {{ 'checked' if settings.currency == 'USD' }}>
+                        <span class="currency-flag">🇺🇸</span>
+                        <span>Dollaro (USD)</span>
+                    </label>
+                    
+                    <label class="currency-option {{ 'selected' if settings.currency == 'GBP' }}" onclick="selectCurrency('GBP')">
+                        <input type="radio" name="currency" value="GBP" {{ 'checked' if settings.currency == 'GBP' }}>
+                        <span class="currency-flag">🇬🇧</span>
+                        <span>Sterlina (GBP)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="info-card">
+                    <h6><i class="bi bi-info-circle me-2"></i>Come funziona</h6>
+                    <p class="mb-0 text-muted">
+                        La commissione viene calcolata su ogni pagamento processato attraverso la piattaforma. 
+                        Se la percentuale calcolata è inferiore al minimo, viene applicato il minimo.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="info-card">
+                    <h6><i class="bi bi-calculator me-2"></i>Esempio di Calcolo</h6>
+                    <div class="example-calc" id="exampleCalc">
+                        <div class="calc-row">
+                            <span>Pagamento ricevuto</span>
+                            <span id="exampleAmount">€100,00</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Commissione (<span id="examplePercent">0</span>%)</span>
+                            <span id="exampleFee">€0,00</span>
+                        </div>
+                        <div class="calc-row">
+                            <span>Netto alla società</span>
+                            <span id="exampleNet">€100,00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-check-lg"></i> Salva Commissioni
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function selectCurrency(currency) {
+    document.querySelectorAll('.currency-option').forEach(opt => {
+        opt.classList.toggle('selected', opt.querySelector('input').value === currency);
+    });
+    updateExample();
+}
+
+function updateExample() {
+    const percent = parseFloat(document.getElementById('takeRatePercent').value) || 0;
+    const minCents = parseFloat(document.getElementById('minFeeCents').value) || 0;
+    const amount = 100;
+    
+    let fee = (amount * percent / 100);
+    const minFee = minCents / 100;
+    if (fee < minFee) fee = minFee;
+    
+    const net = amount - fee;
+    
+    document.getElementById('examplePercent').textContent = percent;
+    document.getElementById('exampleFee').textContent = '€' + fee.toFixed(2).replace('.', ',');
+    document.getElementById('exampleNet').textContent = '€' + net.toFixed(2).replace('.', ',');
+}
+
+document.addEventListener('DOMContentLoaded', updateExample);
+</script>
+{% endblock %}

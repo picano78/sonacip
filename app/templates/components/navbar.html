@@ -1,0 +1,319 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('main.index') }}">
+            {% if appearance and appearance.logo_url %}
+                <img src="{{ appearance.logo_url }}" alt="Logo" style="height:28px; width:auto;" loading="lazy" decoding="async">
+            {% else %}
+                <i class="bi {{ (site.navbar_brand_icon if site and site.navbar_brand_icon else 'bi-trophy-fill') }}"></i>
+            {% endif %}
+            <span>{{ (site.navbar_brand_text if site and site.navbar_brand_text else 'SONACIP') }}</span>
+        </a>
+        
+        <button class="btn btn-light btn-sm ms-auto me-2 d-none" id="installAppBtnTop" type="button">
+            <i class="bi bi-phone"></i> Scarica app
+        </button>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            {% if current_user.is_authenticated %}
+                <!-- Authenticated Navigation -->
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Cruscotto
+                        </a>
+                    </li>
+                    {% if feature_enabled('planner') %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('field_planner.index') }}">
+                            <i class="bi bi-calendar-check"></i> Planner Campo
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('calendar.index') }}">
+                            <i class="bi bi-calendar3-range"></i> Calendario Società
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if nav_links %}
+                        {% for l in nav_links %}
+                            {% set endpoint = l.endpoint if l.endpoint is defined else l.get('endpoint') %}
+                            {% set label = l.label if l.label is defined else l.get('label') %}
+                            {% if endpoint and label and endpoint not in ['calendar.grid', 'calendar.index'] %}
+                                {% set icon = l.icon if l.icon is defined else l.get('icon') %}
+                                {% set res = l.resource if l.resource is defined else l.get('resource') %}
+                                {% set act = l.action if l.action is defined else l.get('action') %}
+                                {% if res and act and not can(res, act) %}
+                                    {# skip #}
+                                {% else %}
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{{ url_for(endpoint) }}">
+                                            {% if icon %}<i class="bi {{ icon }}"></i>{% endif %} {{ label }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% if feature_enabled('social_feed') and can('social', 'comment') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('social.feed') }}">
+                                    <i class="bi bi-house-fill"></i> Home
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if feature_enabled('social_feed') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('social.explore') }}">
+                                <i class="bi bi-compass"></i> Esplora
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if feature_enabled('events') and can('events', 'view') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('events.index') }}">
+                                    <i class="bi bi-calendar-event"></i> Eventi
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if feature_enabled('stories') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('stories.feed') }}">
+                                <i class="bi bi-circle-fill"></i> Storie
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if feature_enabled('livestream') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('livestream.index') }}">
+                                <i class="bi bi-broadcast text-danger"></i> Live
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if feature_enabled('tournaments') and can('tournaments', 'view') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('tournaments.list_tournaments') }}">
+                                    <i class="bi bi-trophy"></i> Tornei
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if feature_enabled('marketplace') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('marketplace.index') }}">
+                                <i class="bi bi-shop"></i> Marketplace
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if current_user.has_feature('ads_selfserve') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('ads.selfserve') }}">
+                                    <i class="bi bi-bullseye"></i> Ads
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% if feature_enabled('planner') %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('field_planner.index') }}">
+                                <i class="bi bi-calendar-check"></i> Planner Campo
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('calendar.index') }}">
+                                <i class="bi bi-calendar3-range"></i> Calendario Società
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% if feature_enabled('crm') and can('crm', 'access') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('crm.index') }}">
+                                    <i class="bi bi-briefcase"></i> CRM
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if feature_enabled('advanced_stats') and can('analytics', 'access') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">
+                                    <i class="bi bi-graph-up"></i> Analytics
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if can('admin', 'access') %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+                                    <i class="bi bi-gear-fill"></i> Admin
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if society_scopes and society_scopes|length > 1 %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="societyScopeDropdown"
+                               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-building"></i>
+                                {{ active_society.legal_name if active_society and active_society.legal_name else 'Contesto società' }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Seleziona società</h6></li>
+                                {% for s in society_scopes %}
+                                    <li>
+                                        <form method="post" action="{{ url_for('main.set_society_scope') }}" class="px-3 py-1">
+                                            {{ csrf_token() }}
+                                            <input type="hidden" name="society_id" value="{{ s.id }}">
+                                            <button class="btn btn-sm w-100 text-start {{ 'btn-primary' if active_society_id == s.id else 'btn-outline-secondary' }}"
+                                                    type="submit">
+                                                {{ s.legal_name or ('Società #' ~ s.id) }}
+                                            </button>
+                                        </form>
+                                    </li>
+                                {% endfor %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="{{ url_for('main.set_society_scope') }}" class="px-3 py-1">
+                                        {{ csrf_token() }}
+                                        <button class="btn btn-sm w-100 text-start btn-outline-dark" type="submit">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Ripristina automatico
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    {% endif %}
+
+                    <!-- Search -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('social.search') }}">
+                            <i class="bi bi-search"></i>
+                        </a>
+                    </li>
+                    <!-- Theme toggle -->
+                    <li class="nav-item">
+                        <button class="nav-link btn btn-link p-0" type="button" data-theme-toggle aria-label="Tema">
+                            <i class="bi bi-moon"></i>
+                        </button>
+                    </li>
+                    
+                    <!-- Notifications -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link position-relative" href="#" id="notificationsDropdown" 
+                           role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell-fill"></i>
+                            {% set unread_count = get_unread_notifications_count() %}
+                            {% if unread_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ unread_count }}
+                                </span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">Notifiche</h6></li>
+                            <li><a class="dropdown-item" href="{{ url_for('notifications.index') }}">
+                                Vedi tutte
+                            </a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Messages -->
+                    <li class="nav-item">
+                        <a class="nav-link position-relative" href="{{ url_for('messages.inbox') }}">
+                            <i class="bi bi-envelope"></i>
+                            {% set unread_msgs = get_unread_messages_count() %}
+                            {% if unread_msgs > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ unread_msgs }}
+                                </span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    
+                    <!-- User Menu -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" 
+                           role="button" data-bs-toggle="dropdown">
+                            {% if current_user.avatar %}
+                                <img src="{{ url_for('static', filename='uploads/' + current_user.avatar) }}" 
+                                     alt="Avatar" class="rounded-circle" width="30" height="30" loading="lazy" decoding="async">
+                            {% else %}
+                                <i class="bi bi-person-circle"></i>
+                            {% endif %}
+                            {{ current_user.get_full_name() }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('social.profile', user_id=current_user.id) }}">
+                                    <i class="bi bi-person"></i> Il Mio Profilo
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('social.edit_profile') }}">
+                                    <i class="bi bi-pencil"></i> Modifica Profilo
+                                </a>
+                            </li>
+                            {% if can('admin', 'access') %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.storage_settings') }}">
+                                        <i class="bi bi-hdd"></i> Storage media
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.appearance_settings') }}">
+                                        <i class="bi bi-palette"></i> Tema piattaforma
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.site_customization') }}">
+                                        <i class="bi bi-brush"></i> Personalizzazione sito
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.pages') }}">
+                                        <i class="bi bi-file-earmark-text"></i> Pagine
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.dashboard_templates') }}">
+                                        <i class="bi bi-grid-1x2"></i> Template cruscotti
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('admin.smtp_settings') }}">
+                                        <i class="bi bi-envelope"></i> SMTP
+                                    </a>
+                                </li>
+                            {% endif %}
+                            {% if can('society', 'manage') %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('social.society_dashboard') }}">
+                                        <i class="bi bi-speedometer2"></i> Dashboard Società
+                                    </a>
+                                </li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            {% else %}
+                <!-- Guest Navigation -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.register') }}">Registrati</a>
+                    </li>
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>

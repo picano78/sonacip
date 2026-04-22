@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Registrazione Società - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .society-wrapper {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+  }
+  .society-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(24,119,242,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    max-width: 720px;
+    width: 100%;
+  }
+  .society-brand {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    padding: 2rem;
+    text-align: center;
+    color: #fff;
+  }
+  .society-brand .brand-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+  .society-card .form-control,
+  .society-card .form-select {
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+  }
+  .society-card .form-control:focus,
+  .society-card .form-select:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 0.2rem rgba(24,119,242,0.18);
+  }
+  .btn-society {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+  .btn-society:hover {
+    background: linear-gradient(135deg, #146c43 0%, #198754 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(25,135,84,0.3);
+  }
+  .society-links {
+    background: #f8f9fa;
+    border-top: 1px solid #e5e7eb;
+    padding: 1.25rem 2rem;
+    text-align: center;
+  }
+  .society-links a {
+    color: #1877f2;
+    font-weight: 500;
+  }
+  .society-links a:hover {
+    color: #155fc7;
+    text-decoration: underline;
+  }
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0 1rem;
+    color: #495057;
+    font-weight: 600;
+  }
+  .section-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+  }
+  .section-divider i {
+    color: #1877f2;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="society-wrapper">
+  <div class="society-card">
+    <div class="society-brand">
+      <div class="brand-icon">
+        <i class="bi bi-building-fill fs-3"></i>
+      </div>
+      <h2 class="h4 mb-1">Registra la tua Società</h2>
+      <p class="mb-0" style="opacity:0.85;">Unisci la tua organizzazione sportiva a SONACIP</p>
+    </div>
+    <div class="p-4">
+      <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <div class="section-divider">
+          <i class="bi bi-person-badge"></i> Dati Account
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), autocomplete="email") }}
+            {% if form.email.errors %}
+              <div class="invalid-feedback">{{ form.email.errors[0] }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), autocomplete="username") }}
+            {% if form.username.errors %}
+              <div class="invalid-feedback">{{ form.username.errors[0] }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), autocomplete="new-password") }}
+            {% if form.password.errors %}
+              <div class="invalid-feedback">{{ form.password.errors[0] }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.password2.label(class="form-label") }}
+            {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else ""), autocomplete="new-password") }}
+            {% if form.password2.errors %}
+              <div class="invalid-feedback">{{ form.password2.errors[0] }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="section-divider">
+          <i class="bi bi-building"></i> Dati Società
+        </div>
+
+        <div class="row">
+          <div class="col-md-8 mb-3">
+            {{ form.company_name.label(class="form-label") }}
+            {{ form.company_name(class="form-control" + (" is-invalid" if form.company_name.errors else ""), autocomplete="organization") }}
+            {% if form.company_name.errors %}
+              <div class="invalid-feedback">{{ form.company_name.errors[0] }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4 mb-3">
+            {{ form.company_type.label(class="form-label") }}
+            {{ form.company_type(class="form-select") }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.fiscal_code.label(class="form-label") }}
+            {{ form.fiscal_code(class="form-control" + (" is-invalid" if form.fiscal_code.errors else "")) }}
+            {% if form.fiscal_code.errors %}
+              <div class="invalid-feedback">{{ form.fiscal_code.errors[0] }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.vat_number.label(class="form-label") }}
+            {{ form.vat_number(class="form-control") }}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          {{ form.phone.label(class="form-label") }}
+          {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""), autocomplete="tel") }}
+          {% if form.phone.errors %}
+            <div class="invalid-feedback">{{ form.phone.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          {{ form.address.label(class="form-label") }}
+          {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else ""), autocomplete="street-address") }}
+          {% if form.address.errors %}
+            <div class="invalid-feedback">{{ form.address.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.city.label(class="form-label") }}
+            {{ form.city(class="form-control" + (" is-invalid" if form.city.errors else ""), autocomplete="address-level2") }}
+            {% if form.city.errors %}
+              <div class="invalid-feedback">{{ form.city.errors[0] }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-3 mb-3">
+            {{ form.province.label(class="form-label") }}
+            {{ form.province(class="form-control" + (" is-invalid" if form.province.errors else ""), maxlength="2", autocomplete="address-level1") }}
+            {% if form.province.errors %}
+              <div class="invalid-feedback">{{ form.province.errors[0] }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-3 mb-3">
+            {{ form.postal_code.label(class="form-label") }}
+            {{ form.postal_code(class="form-control" + (" is-invalid" if form.postal_code.errors else ""), autocomplete="postal-code") }}
+            {% if form.postal_code.errors %}
+              <div class="invalid-feedback">{{ form.postal_code.errors[0] }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.website.label(class="form-label") }}
+            {{ form.website(class="form-control", autocomplete="url") }}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.language.label(class="form-label") }}
+            <div class="d-flex gap-3 mt-2">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="language" id="lang_it" value="it" checked>
+                <label class="form-check-label" for="lang_it">
+                  🇮🇹 Italiano
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="language" id="lang_en" value="en">
+                <label class="form-check-label" for="lang_en">
+                  🇬🇧 English
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-society w-100">
+          <i class="bi bi-building me-1"></i> Registra Società
+        </button>
+      </form>
+    </div>
+    <div class="society-links">
+      Hai già un account? <a href="{{ url_for('auth.login') }}">Login</a><br>
+      Sei un individuo? <a href="{{ url_for('auth.register') }}">Registrati qui</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

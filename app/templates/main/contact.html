@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title if page and page.title else 'Contatti - SONACIP' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --fb-blue: #1877f2;
+    --fb-blue-dark: #155fc7;
+    --fb-blue-light: #e7f3ff;
+    --text-dark: #050505;
+    --text-light: #65676b;
+    --surface-light: #f0f2f5;
+    --accent-gradient: linear-gradient(135deg, #1877f2 0%, #155fc7 100%);
+  }
+  .hero-section {
+    position: relative;
+    min-height: 350px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: var(--accent-gradient);
+  }
+  .hero-section::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+    pointer-events: none; z-index: 1;
+  }
+  .hero-content { position: relative; z-index: 2; color: white; text-align: center; padding: 2rem; max-width: 800px; animation: fadeInUp 0.8s ease-out; }
+  .hero-content h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; margin-bottom: 1rem; }
+  .hero-content p { font-size: clamp(1rem, 2vw, 1.2rem); opacity: 0.95; }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .section-animate { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+  .section-animate.in-view { opacity: 1; transform: translateY(0); }
+  .contact-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    border: 1px solid #e5e7eb;
+    text-align: center;
+    height: 100%;
+    transition: all 0.3s ease;
+  }
+  .contact-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--fb-blue);
+    box-shadow: 0 12px 24px rgba(24,119,242,0.12);
+  }
+  .contact-card-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: var(--fb-blue-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+    color: var(--fb-blue);
+    transition: all 0.3s ease;
+  }
+  .contact-card:hover .contact-card-icon {
+    background: var(--fb-blue);
+    color: white;
+    transform: scale(1.1);
+  }
+  .contact-card h4 { font-weight: 600; font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text-dark); }
+  .contact-card p { color: var(--text-light); font-size: 0.9rem; line-height: 1.5; margin: 0; }
+  .contact-card a { color: var(--fb-blue); text-decoration: none; font-weight: 500; }
+  .contact-card a:hover { text-decoration: underline; }
+  .contact-form-wrapper {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
+  .contact-form-wrapper h3 { font-weight: 700; margin-bottom: 0.5rem; color: var(--text-dark); }
+  .contact-form-wrapper .subtitle { color: var(--text-light); margin-bottom: 1.5rem; }
+  .form-control:focus { border-color: var(--fb-blue); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
+  .btn-facebook { background: var(--fb-blue); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s; width: 100%; justify-content: center; font-size: 1rem; }
+  .btn-facebook:hover { background: var(--fb-blue-dark); color: white; transform: translateY(-2px); box-shadow: 0 8px 16px rgba(24,119,242,0.3); }
+  .faq-section { background: var(--surface-light); padding: 4rem 0; }
+  .faq-item {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .faq-item:hover { border-color: var(--fb-blue); }
+  .faq-question {
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-dark);
+    user-select: none;
+  }
+  .faq-question i { color: var(--fb-blue); transition: transform 0.3s; }
+  .faq-answer { padding: 0 1.5rem 1.25rem; color: var(--text-light); line-height: 1.7; display: none; }
+  .faq-item.open .faq-answer { display: block; }
+  .faq-item.open .faq-question i { transform: rotate(180deg); }
+  .section-title { color: var(--text-dark); font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 700; margin-bottom: 1rem; text-align: center; }
+  .section-subtitle { color: var(--text-light); font-size: 1.1rem; text-align: center; margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+  body[data-theme="dark"] .contact-card { background: #1a1a1a; border-color: #333; }
+  body[data-theme="dark"] .contact-card h4 { color: white; }
+  body[data-theme="dark"] .contact-form-wrapper { background: #1a1a1a; border-color: #333; }
+  body[data-theme="dark"] .contact-form-wrapper h3 { color: white; }
+  body[data-theme="dark"] .faq-section { background: #111; }
+  body[data-theme="dark"] .faq-item { background: #1a1a1a; border-color: #333; }
+  body[data-theme="dark"] .faq-question { color: white; }
+  body[data-theme="dark"] .section-title { color: white; }
+  body[data-theme="dark"] .contact-card-icon { background: rgba(24,119,242,0.2); }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if pb_sections %}
+  {% for sec in pb_sections %}
+    {% if sec.visible %}
+      {% include 'sections/' ~ sec.type ~ '.html' ignore missing %}
+    {% endif %}
+  {% endfor %}
+{% else %}
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1>Contatti</h1>
+      <p>Siamo qui per aiutarti. Hai domande, suggerimenti o bisogno di assistenza? Scrivici!</p>
+    </div>
+  </div>
+
+  <section style="padding: 4rem 2rem;">
+    <div class="container">
+      <div class="row g-4 section-animate">
+        <div class="col-md-4">
+          <div class="contact-card">
+            <div class="contact-card-icon"><i class="bi bi-envelope"></i></div>
+            <h4>Email</h4>
+            <p><a href="mailto:info@sonacip.it">info@sonacip.it</a></p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="contact-card">
+            <div class="contact-card-icon"><i class="bi bi-clock"></i></div>
+            <h4>Orari Supporto</h4>
+            <p>Lun - Ven: 9:00 - 18:00<br>Risposta entro 24 ore</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="contact-card">
+            <div class="contact-card-icon"><i class="bi bi-geo-alt"></i></div>
+            <h4>Sede</h4>
+            <p>Italia<br>Piattaforma 100% Made in Italy</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding: 0 2rem 4rem;">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-7 section-animate">
+          <div class="contact-form-wrapper">
+            <h3><i class="bi bi-chat-dots me-2" style="color: var(--fb-blue);"></i>Inviaci un messaggio</h3>
+            <p class="subtitle">Compila il modulo e ti risponderemo il prima possibile.</p>
+            <form id="contactForm" action="{{ url_for('main.contact') }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">Nome *</label>
+                  <input type="text" name="name" class="form-control" placeholder="Il tuo nome" required autocomplete="given-name">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">Email *</label>
+                  <input type="email" name="email" class="form-control" placeholder="La tua email" required autocomplete="email">
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small">Oggetto *</label>
+                  <select name="subject" class="form-select" required>
+                    <option value="">Seleziona un argomento</option>
+                    <option value="info">Informazioni generali</option>
+                    <option value="support">Assistenza tecnica</option>
+                    <option value="society">Registrazione societ&agrave;</option>
+                    <option value="partnership">Collaborazioni</option>
+                    <option value="other">Altro</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small">Messaggio *</label>
+                  <textarea name="message" class="form-control" rows="5" placeholder="Scrivi il tuo messaggio..." required></textarea>
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn-facebook"><i class="bi bi-send"></i> Invia messaggio</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="col-lg-5 section-animate">
+          <div class="contact-form-wrapper h-100 d-flex flex-column justify-content-center" style="background: var(--surface-light);">
+            <h3><i class="bi bi-info-circle me-2" style="color: var(--fb-blue);"></i>Informazioni utili</h3>
+            <ul class="list-unstyled mt-3 mb-0" style="color: var(--text-light); line-height: 2.2;">
+              <li><i class="bi bi-check-circle-fill me-2" style="color: var(--fb-blue);"></i>Registrazione gratuita per appassionati</li>
+              <li><i class="bi bi-check-circle-fill me-2" style="color: var(--fb-blue);"></i>Piano completo per societ&agrave; sportive</li>
+              <li><i class="bi bi-check-circle-fill me-2" style="color: var(--fb-blue);"></i>Installabile sul tuo server (VPS)</li>
+              <li><i class="bi bi-check-circle-fill me-2" style="color: var(--fb-blue);"></i>Supporto PostgreSQL e SQLite</li>
+              <li><i class="bi bi-check-circle-fill me-2" style="color: var(--fb-blue);"></i>Conforme al GDPR</li>
+              <li><i class="bi bi-check-circle-fill me-2" style="color: var(--fb-blue);"></i>Multilingua (5 lingue supportate)</li>
+            </ul>
+            {% if current_user.is_authenticated %}
+            <div class="mt-3 pt-3" style="border-top: 1px solid #ddd;">
+              <a href="{{ url_for('main.contact_admin') }}" class="btn-facebook" style="width: auto; display: inline-flex;">
+                <i class="bi bi-headset"></i> Assistenza diretta
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq-section">
+    <div class="container">
+      <div class="section-animate">
+        <h2 class="section-title">Domande Frequenti</h2>
+        <p class="section-subtitle">Risposte rapide alle domande pi&ugrave; comuni</p>
+      </div>
+      <div class="section-animate" style="max-width: 800px; margin: 0 auto;">
+        <div class="faq-item">
+          <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            <span>SONACIP &egrave; gratuito?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="faq-answer">La registrazione come appassionato &egrave; gratuita. Le societ&agrave; sportive possono iniziare con il piano base gratuito e sbloccare funzionalit&agrave; premium secondo le proprie esigenze. La piattaforma pu&ograve; essere installata gratuitamente sul proprio server.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            <span>Posso installare SONACIP sul mio server?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="faq-answer">S&igrave;! SONACIP &egrave; progettato per essere completamente trasferibile. Supporta sia PostgreSQL che SQLite, e include una guida dettagliata per l'installazione su VPS con systemd e Nginx.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            <span>Quali sport sono supportati?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="faq-answer">SONACIP &egrave; progettato per ogni tipo di societ&agrave; sportiva: calcio, basket, pallavolo, nuoto, atletica, tennis e qualsiasi altra disciplina. Il sistema di statistiche e tornei &egrave; completamente personalizzabile.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            <span>I dati dei miei membri sono al sicuro?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="faq-answer">Assolutamente s&igrave;. SONACIP utilizza crittografia bcrypt per le password, supporta HTTPS, &egrave; conforme al GDPR e permette il backup completo dei dati. Installando la piattaforma sul tuo server, hai il pieno controllo dei dati.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+            <span>Come funzionano i pagamenti online?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="faq-answer">I pagamenti sono gestiti tramite Stripe, il sistema pi&ugrave; sicuro e affidabile al mondo. Le societ&agrave; possono raccogliere quote associative, pagamenti per eventi e vendere nel marketplace integrato. Tutte le transazioni generano ricevute automatiche.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endif %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('in-view'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.section-animate').forEach(s => observer.observe(s));
+  });
+</script>
+{% endblock %}

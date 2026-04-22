@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Add-on{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="mb-0">Add-on</h1>
+    <a class="btn btn-outline-secondary" href="{{ url_for('subscription.my_subscription') }}">Torna alla sottoscrizione</a>
+  </div>
+
+  {% if entitlements and entitlements|length %}
+    <div class="card mb-4">
+      <div class="card-header"><strong>Attivi</strong></div>
+      <div class="card-body">
+        <ul class="mb-0">
+          {% for e in entitlements %}
+            <li>
+              <strong>{{ e.addon.name if e.addon else e.feature_key }}</strong>
+              <span class="text-muted small">({{ e.feature_key }})</span>
+              {% if e.end_date %}
+                <span class="text-muted small">fino al {{ e.end_date.strftime('%d/%m/%Y') }}</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    {% for a in addons %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title mb-1">{{ a.name }}</h5>
+            <div class="text-muted small mb-2">{{ a.feature_key }}</div>
+            {% if a.description %}
+              <p class="card-text">{{ a.description }}</p>
+            {% endif %}
+            <div class="mb-3">
+              <span class="badge bg-light text-dark">€{{ "%.2f"|format(a.price_one_time or 0) }} {{ a.currency or 'EUR' }}</span>
+              {% if ent_by_feature.get(a.feature_key) %}
+                <span class="badge bg-success">Attivo</span>
+              {% endif %}
+            </div>
+            <form method="post" action="{{ url_for('subscription.buy_addon', addon_id=a.id) }}">
+              {{ csrf_token() }}
+              <button class="btn btn-primary" type="submit" {% if ent_by_feature.get(a.feature_key) %}disabled{% endif %}>
+                {% if ent_by_feature.get(a.feature_key) %}Già attivo{% else %}Acquista{% endif %}
+              </button>
+              {% if a.stripe_price_one_time_id %}
+                <span class="text-muted small ms-2">Stripe</span>
+              {% endif %}
+            </form>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-info mb-0">Nessun add-on disponibile.</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+

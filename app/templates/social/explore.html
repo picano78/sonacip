@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Esplora - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+.gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+.society-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+}
+.society-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(24,119,242,0.15);
+}
+.society-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+.society-avatar-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.post-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+}
+.post-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+}
+.sidebar-title {
+    font-weight: 700;
+    color: #1877f2;
+    border-bottom: 2px solid #1877f2;
+    padding-bottom: .5rem;
+    margin-bottom: 1rem;
+}
+.btn-follow {
+    background: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: .85rem;
+    transition: all .2s;
+}
+.btn-follow:hover {
+    background: #155fc7;
+    color: white;
+}
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: rgba(0,0,0,0.5);
+}
+.empty-state i {
+    font-size: 4rem;
+    color: #1877f2;
+    opacity: .3;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="gradient-header">
+        <h1 class="mb-1"><i class="bi bi-compass me-2"></i>Esplora</h1>
+        <p class="mb-0 opacity-75">Scopri società sportive e contenuti</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <h4 class="sidebar-title">Società Sportive Popolari</h4>
+            <div class="row">
+                {% for society in societies %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card society-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    {% if society.avatar %}
+                                        <img src="{{ url_for('static', filename='uploads/' + society.avatar) }}"
+                                             class="society-avatar me-3">
+                                    {% else %}
+                                        <div class="society-avatar-placeholder me-3">
+                                            <i class="bi bi-building" style="font-size: 1.5rem;"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">
+                                            <a href="{{ url_for('social.profile', user_id=society.id) }}" class="text-decoration-none text-dark">
+                                                {{ society.company_name }}
+                                            </a>
+                                        </h6>
+                                        <small class="text-muted"><i class="bi bi-people me-1"></i>{{ society.followers.count() }} follower</small>
+                                    </div>
+                                    {% if current_user.id != society.id %}
+                                        <button class="btn btn-sm btn-follow"
+                                                hx-post="{{ url_for('social.unfollow' if current_user.is_following(society) else 'social.follow', user_id=society.id) }}"
+                                                hx-swap="outerHTML"
+                                                hx-target="this">
+                                            {{ 'Seguendo' if current_user.is_following(society) else 'Segui' }}
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="col-12">
+                        <div class="empty-state">
+                            <i class="bi bi-building d-block mb-2"></i>
+                            <h5>Nessuna società trovata</h5>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <h4 class="sidebar-title">Post Recenti</h4>
+            {% for post in recent_posts %}
+                <div class="card post-card mb-3">
+                    <div class="card-body py-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;">
+                                <i class="bi bi-person-fill text-primary" style="font-size:.85rem;"></i>
+                            </div>
+                            <strong class="small">{{ post.author.get_full_name() }}</strong>
+                        </div>
+                        <p class="small text-muted mb-2">{{ post.content[:100] }}{{ '...' if post.content|length > 100 }}</p>
+                        <a href="{{ url_for('social.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary" style="border-radius:8px;">Vedi</a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-file-text d-block mb-2"></i>
+                    <p class="small">Nessun post recente</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

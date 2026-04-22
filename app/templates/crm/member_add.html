@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Aggiungi Membro{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3"><i class="bi bi-person-plus me-2"></i>Aggiungi Membro</h1>
+    <a href="{{ url_for('crm.members') }}" class="btn btn-outline-secondary">Indietro</a>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-header"><h6 class="mb-0">Cerca Utente</h6></div>
+        <div class="card-body">
+          <input type="text" id="member-search-input" class="form-control" placeholder="Cerca per nome, cognome o email..." autocomplete="off">
+          <div id="search-results" class="list-group mt-2" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="card" id="add-form-card" style="display:none;">
+        <div class="card-header"><h6 class="mb-0">Conferma Aggiunta</h6></div>
+        <div class="card-body">
+          <div id="selected-user-info" class="d-flex align-items-center mb-3 p-2 border rounded">
+            <div id="selected-avatar" class="me-3">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10" style="width:48px;height:48px;">
+                <i class="bi bi-person-fill fs-4 text-primary"></i>
+              </div>
+            </div>
+            <div>
+              <strong id="selected-name"></strong><br>
+              <small class="text-muted" id="selected-email"></small>
+            </div>
+          </div>
+
+          <form method="post" action="{{ url_for('crm.member_add') }}">
+            {{ form.hidden_tag() }}
+            {{ form.user_id(id="selected-user-id") }}
+            <div class="mb-3">
+              {{ form.role_name.label(class="form-label") }}
+              {{ form.role_name(class="form-select") }}
+            </div>
+            <button type="submit" class="btn btn-success w-100"><i class="bi bi-person-plus me-1"></i> Aggiungi alla Società</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const input = document.getElementById('member-search-input');
+  const resultsDiv = document.getElementById('search-results');
+  const formCard = document.getElementById('add-form-card');
+  let timeout = null;
+
+  input.addEventListener('input', function(){
+    clearTimeout(timeout);
+    const q = this.value.trim();
+    if(q.length < 2){ resultsDiv.style.display='none'; resultsDiv.innerHTML=''; return; }
+    timeout = setTimeout(function(){
+      fetch('{{ url_for("crm.member_search") }}?q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => {
+          resultsDiv.innerHTML = '';
+          if(!data.length){
+            resultsDiv.innerHTML = '<div class="list-group-item text-muted">Nessun utente trovato</div>';
+            resultsDiv.style.display = 'block';
+            return;
+          }
+          data.forEach(function(u){
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action d-flex align-items-center';
+            if(u.already_member){
+              item.className += ' disabled';
+              item.style.opacity = '0.5';
+            }
+            let avatarHtml = '';
+            if(u.avatar_url){
+              avatarHtml = '<img src="'+u.avatar_url+'" class="rounded-circle me-3" width="40" height="40" style="object-fit:cover;">';
+            } else {
+              avatarHtml = '<div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 me-3" style="width:40px;height:40px;"><i class="bi bi-person-fill text-primary"></i></div>';
+            }
+            item.innerHTML = avatarHtml +
+              '<div><strong>' + (u.first_name + ' ' + u.last_name).trim() + '</strong>' +
+              (u.already_member ? ' <span class="badge bg-secondary ms-1">Già membro</span>' : '') +
+              '<br><small class="text-muted">' + u.email + '</small></div>';
+            if(!u.already_member){
+              item.addEventListener('click', function(e){
+                e.preventDefault();
+                selectUser(u);
+              });
+            }
+            resultsDiv.appendChild(item);
+          });
+          resultsDiv.style.display = 'block';
+        });
+    }, 300);
+  });
+
+  function selectUser(u){
+    document.getElementById('selected-user-id').value = u.id;
+    document.getElementById('selected-name').textContent = (u.first_name + ' ' + u.last_name).trim();
+    document.getElementById('selected-email').textContent = u.email;
+    if(u.avatar_url){
+      document.getElementById('selected-avatar').innerHTML = '<img src="'+u.avatar_url+'" class="rounded-circle" width="48" height="48" style="object-fit:cover;">';
+    }
+    formCard.style.display = 'block';
+    resultsDiv.style.display = 'none';
+    input.value = (u.first_name + ' ' + u.last_name).trim();
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Cerca{% endblock %}
+
+{% block extra_css %}
+<style>
+.gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+.search-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+}
+.search-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(24,119,242,0.15);
+}
+.search-input-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.search-input-card .form-control {
+    border-radius: 12px 0 0 12px;
+    border: 1px solid #e0e0e0;
+}
+.search-input-card .form-control:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 .2rem rgba(24,119,242,.15);
+}
+.search-input-card .btn-primary {
+    background: #1877f2;
+    border-color: #1877f2;
+    border-radius: 0 12px 12px 0;
+}
+.search-input-card .btn-primary:hover {
+    background: #155fc7;
+}
+.user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.user-avatar-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-follow-search {
+    background: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: .85rem;
+}
+.btn-follow-search:hover {
+    background: #155fc7;
+    color: white;
+}
+.btn-follow-search.following {
+    background: transparent;
+    color: #1877f2;
+    border: 1px solid #1877f2;
+}
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: rgba(0,0,0,0.5);
+}
+.empty-state i {
+    font-size: 4rem;
+    color: #1877f2;
+    opacity: .3;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="gradient-header">
+        <h1 class="mb-1"><i class="bi bi-search me-2"></i>Cerca Utenti e Società</h1>
+        <p class="mb-0 opacity-75">Trova persone e organizzazioni sportive</p>
+    </div>
+
+    <div class="card search-input-card mb-4">
+        <div class="card-body">
+            <form method="GET">
+                <div class="input-group">
+                    {{ form.query(class="form-control form-control-lg", placeholder="Cerca per nome, username, società...", **{"data-autocomplete": "true", "data-autocomplete-scope": "users"}) }}
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-search"></i> Cerca
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if query %}
+        <h5 class="mb-3">Risultati per "{{ query }}"</h5>
+    {% endif %}
+
+    <div class="row">
+        {% for user in users %}
+            <div class="col-md-6 mb-3">
+                <div class="card search-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            {% if user.avatar %}
+                                <img src="{{ url_for('static', filename='uploads/' + user.avatar) }}"
+                                     class="user-avatar me-3">
+                            {% else %}
+                                <div class="user-avatar-placeholder me-3">
+                                    <i class="bi bi-person-fill" style="font-size: 1.5rem;"></i>
+                                </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h5 class="mb-0">
+                                    <a href="{{ url_for('social.profile', user_id=user.id) }}" class="text-decoration-none text-dark">
+                                        {{ user.get_full_name() }}
+                                    </a>
+                                </h5>
+                                <p class="text-muted small mb-1">@{{ user.username }}</p>
+                                <span class="badge" style="background:#1877f2;">{{ user.role }}</span>
+                            </div>
+                            {% if current_user.id != user.id %}
+                                <button class="btn btn-sm btn-follow-search {{ 'following' if current_user.is_following(user) }}"
+                                        hx-post="{{ url_for('social.unfollow' if current_user.is_following(user) else 'social.follow', user_id=user.id) }}"
+                                        hx-swap="outerHTML"
+                                        hx-target="this">
+                                    {{ 'Smetti di seguire' if current_user.is_following(user) else 'Segui' }}
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="bi bi-search d-block mb-2"></i>
+                    <h5>Nessun utente trovato</h5>
+                    <p class="text-muted">Prova con una ricerca diversa</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>Invoice {{ invoice.invoice_number }}</h1>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{{ url_for('accounting.download_invoice_pdf', invoice_id=invoice.id) }}" class="btn btn-primary">
+                <i class="fas fa-download"></i> Download PDF
+            </a>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Invoice Details</h5>
+                    <p><strong>Invoice Date:</strong> {{ invoice.invoice_date.strftime('%Y-%m-%d') }}</p>
+                    {% if invoice.due_date %}
+                    <p><strong>Due Date:</strong> {{ invoice.due_date.strftime('%Y-%m-%d') }}</p>
+                    {% endif %}
+                    <p><strong>Status:</strong> <span class="badge badge-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'sent' %}warning{% else %}secondary{% endif %}">{{ invoice.status }}</span></p>
+                </div>
+                <div class="col-md-6">
+                    {% if invoice.billing_name %}
+                    <h5>Billing Information</h5>
+                    <p><strong>Name:</strong> {{ invoice.billing_name }}</p>
+                    {% if invoice.billing_address %}
+                    <p><strong>Address:</strong><br>{{ invoice.billing_address|safe }}</p>
+                    {% endif %}
+                    {% if invoice.tax_id %}
+                    <p><strong>Tax ID:</strong> {{ invoice.tax_id }}</p>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if invoice.description %}
+            <div class="mt-3">
+                <h5>Description</h5>
+                <p>{{ invoice.description }}</p>
+            </div>
+            {% endif %}
+            
+            {% if invoice.line_items.count() > 0 %}
+            <div class="mt-4">
+                <h5>Line Items</h5>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in invoice.line_items %}
+                        <tr>
+                            <td>{{ item.description }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>€{{ "%.2f"|format(item.unit_price) }}</td>
+                            <td>€{{ "%.2f"|format(item.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            
+            <div class="mt-4">
+                <div class="row">
+                    <div class="col-md-6 offset-md-6">
+                        <table class="table">
+                            <tr>
+                                <td><strong>Subtotal:</strong></td>
+                                <td class="text-right">€{{ "%.2f"|format(invoice.amount) }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tax:</strong></td>
+                                <td class="text-right">€{{ "%.2f"|format(invoice.tax_amount) }}</td>
+                            </tr>
+                            <tr class="table-primary">
+                                <td><strong>Total:</strong></td>
+                                <td class="text-right"><strong>€{{ "%.2f"|format(invoice.total_amount) }}</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            {% if invoice.notes %}
+            <div class="mt-3">
+                <h5>Notes</h5>
+                <p>{{ invoice.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{{ url_for('accounting.invoices') }}" class="btn btn-secondary">Back to Invoices</a>
+    </div>
+</div>
+{% endblock %}

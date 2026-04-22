@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Permessi Società{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0"><i class="bi bi-shield-lock"></i> Permessi Società</h1>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('social.society_dashboard') }}">Torna al cruscotto</a>
+  </div>
+
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Qui puoi decidere cosa può fare ogni ruolo (view/edit) nel cruscotto della tua società e quali funzionalità appaiono nelle loro dashboard.
+    Le impostazioni sono per-società e vengono applicate quando una sezione richiede permessi con scope società.
+  </div>
+
+  <!-- Dashboard Features Control -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Visibilità Dashboard per Ruolo</h5>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-3">
+        Quando promuovi un utente a coach, dirigente, atleta o staff, le loro dashboard mostreranno diverse funzionalità in base ai permessi che imposti qui sotto nella tabella dettagliata.
+        Questa tabella mostra quali funzionalità sono tipicamente disponibili per ogni ruolo.
+      </p>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered align-middle">
+          <thead>
+            <tr>
+              <th style="min-width: 200px;">Funzionalità</th>
+              <th class="text-center">Coach</th>
+              <th class="text-center">Dirigente</th>
+              <th class="text-center">Atleta</th>
+              <th class="text-center">Staff</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="fw-semibold"><i class="bi bi-calendar-check text-primary me-2"></i>Planner Campo</div>
+                <div class="text-muted small">Gestione allenamenti e disponibilità campi</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-secondary"><i class="bi bi-dash"></i> Limitato</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="fw-semibold"><i class="bi bi-briefcase text-success me-2"></i>CRM Mini</div>
+                <div class="text-muted small">Gestione contatti e membri</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-secondary"><i class="bi bi-dash"></i> Limitato</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-warning"><i class="bi bi-eye"></i> Solo Vista</span>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <div class="fw-semibold"><i class="bi bi-calendar-event text-info me-2"></i>Eventi</div>
+                <div class="text-muted small">Gestione eventi e tornei</div>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-warning"><i class="bi bi-eye"></i> Solo Vista</span>
+              </td>
+              <td class="text-center">
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Disponibile</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="alert alert-info mt-3 mb-0">
+        <i class="bi bi-info-circle me-2"></i>
+        <strong>Come personalizzare:</strong> Usa la tabella dei permessi dettagliati qui sotto per controllare esattamente cosa ogni ruolo può fare.
+        Imposta "Consenti" (allow) per dare accesso completo, "Nega" (deny) per rimuovere l'accesso.
+        Per dare solo visualizzazione senza modifica, consenti il permesso "view" ma nega "edit" o "manage".
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Permissions -->
+  <div class="card">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Permessi Dettagliati per Ruolo</h5>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {{ csrf_token() }}
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle">
+            <thead>
+              <tr>
+                <th style="min-width: 220px;">Permesso</th>
+                {% for r in roles %}
+                  <th class="text-center" style="min-width: 160px;">{{ r }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in permissions %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ p.resource }}:{{ p.action }}</div>
+                    <div class="text-muted small">{{ p.description or '' }}</div>
+                  </td>
+                  {% for r in roles %}
+                    {% set current = override_map.get((r, p.id), 'inherit') %}
+                    <td class="text-center">
+                      <select class="form-select form-select-sm" name="p__{{ r }}__{{ p.id }}">
+                        <option value="inherit" {{ 'selected' if current == 'inherit' else '' }}>Eredita</option>
+                        <option value="allow" {{ 'selected' if current == 'allow' else '' }}>Consenti</option>
+                        <option value="deny" {{ 'selected' if current == 'deny' else '' }}>Nega</option>
+                      </select>
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Salva permessi</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

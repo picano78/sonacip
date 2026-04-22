@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Ricevuta #{{ payment.id }} - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        .receipt-container { box-shadow: none !important; border: 1px solid #ddd !important; }
+        body { background: white !important; }
+        .has-sidebar main { margin-left: 0 !important; }
+        footer { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="no-print mb-3 d-flex gap-2">
+                <a href="{{ url_for('payments.index') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Torna ai pagamenti
+                </a>
+                <button onclick="window.print()" class="btn btn-sm text-white" style="background-color: #1877f2;">
+                    <i class="bi bi-printer"></i> Stampa Ricevuta
+                </button>
+            </div>
+
+            <div class="card shadow-sm receipt-container">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold" style="color: #1877f2;">
+                            <i class="bi bi-trophy-fill"></i> SONACIP
+                        </h3>
+                        <p class="text-muted small mb-0">Piattaforma Gestione Società Sportive</p>
+                    </div>
+
+                    <hr>
+
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold">RICEVUTA DI PAGAMENTO</h4>
+                        <p class="text-muted mb-0">N. {{ '%06d'|format(payment.id) }}</p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <h6 class="fw-bold text-muted">PAGANTE</h6>
+                            <p class="mb-0">{{ payment.user.get_full_name() }}</p>
+                            <p class="text-muted small mb-0">{{ payment.user.email }}</p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <h6 class="fw-bold text-muted">DATA</h6>
+                            <p class="mb-0">{{ payment.paid_at.strftime('%d/%m/%Y') if payment.paid_at else payment.created_at.strftime('%d/%m/%Y') }}</p>
+                            <p class="text-muted small mb-0">{{ payment.paid_at.strftime('%H:%M') if payment.paid_at else '' }}</p>
+                        </div>
+                    </div>
+
+                    {% if fee and fee.society %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-muted">SOCIETÀ</h6>
+                        <p class="mb-0">{{ fee.society.legal_name or fee.society.name }}</p>
+                    </div>
+                    {% endif %}
+
+                    <table class="table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Descrizione</th>
+                                <th class="text-end">Importo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{ fee.description if fee else ('Pagamento #' ~ payment.id) }}</td>
+                                <td class="text-end fw-bold">&euro; {{ '%.2f'|format(amount_eur) }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <th>TOTALE</th>
+                                <th class="text-end" style="color: #1877f2;">&euro; {{ '%.2f'|format(amount_eur) }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <small class="text-muted">Metodo di Pagamento</small>
+                            <p class="fw-bold mb-0">
+                                {% if payment.payment_method == 'stripe' %}
+                                    <i class="bi bi-credit-card"></i> Carta (Stripe)
+                                {% elif payment.payment_method == 'contanti' %}
+                                    <i class="bi bi-cash-stack"></i> Contanti
+                                {% elif payment.payment_method == 'bonifico' %}
+                                    <i class="bi bi-bank"></i> Bonifico Bancario
+                                {% else %}
+                                    {{ payment.payment_method or 'N/D' }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">ID Transazione</small>
+                            <p class="fw-bold mb-0 text-break" style="font-size: 0.85rem;">{{ payment.stripe_payment_id or '-' }}</p>
+                        </div>
+                    </div>
+
+                    <hr class="mt-4">
+
+                    <div class="text-center">
+                        <p class="text-muted small mb-0">
+                            Documento generato automaticamente da SONACIP<br>
+                            {{ payment.paid_at.strftime('%d/%m/%Y %H:%M') if payment.paid_at else payment.created_at.strftime('%d/%m/%Y %H:%M') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

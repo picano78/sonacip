@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Piani - Admin{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="section-hero mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div>
+      <div class="pill mb-2"><i class="bi bi-box-seam"></i> Admin</div>
+      <h1 class="h4 mb-0">Piani</h1>
+      <p class="text-muted mb-0">Elenco piani attivi/inattivi (gestione avanzata in roadmap).</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('subscription.admin_subscriptions') }}">Sottoscrizioni</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('subscription.admin_payments') }}">Pagamenti</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('subscription.admin_coupons') }}">Coupon</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Prezzo mese</th>
+            <th>Prezzo anno</th>
+            <th>Stripe price (mese)</th>
+            <th>Stripe price (anno)</th>
+            <th>CRM</th>
+            <th>Attivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in plans %}
+            <tr>
+              <td class="fw-semibold">{{ p.name }}<div class="text-muted small">{{ p.slug }}</div></td>
+              <td>€{{ "%.2f"|format(p.price_monthly or 0) }}</td>
+              <td>€{{ "%.2f"|format(p.price_yearly or 0) }}</td>
+              <td>
+                <form method="post" action="{{ url_for('subscription.admin_plan_stripe', plan_id=p.id) }}" class="d-flex gap-2">
+                  {{ csrf_token() }}
+                  <input class="form-control form-control-sm" name="stripe_price_monthly_id" value="{{ p.stripe_price_monthly_id or '' }}" placeholder="price_...">
+                  <button class="btn btn-sm btn-outline-primary" type="submit">Salva</button>
+                </form>
+              </td>
+              <td>
+                <form method="post" action="{{ url_for('subscription.admin_plan_stripe', plan_id=p.id) }}" class="d-flex gap-2">
+                  {{ csrf_token() }}
+                  <input class="form-control form-control-sm" name="stripe_price_yearly_id" value="{{ p.stripe_price_yearly_id or '' }}" placeholder="price_...">
+                  <button class="btn btn-sm btn-outline-primary" type="submit">Salva</button>
+                </form>
+              </td>
+              <td><span class="badge bg-{{ 'success' if p.has_crm else 'secondary' }}">{{ 'on' if p.has_crm else 'off' }}</span></td>
+              <td><span class="badge bg-{{ 'success' if p.is_active else 'secondary' }}">{{ 'on' if p.is_active else 'off' }}</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="8" class="text-muted">Nessun piano.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

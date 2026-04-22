@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ athlete.first_name or '' }} {{ athlete.last_name or athlete.username }} - Statistiche{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card { transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-2px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-4 rounded-3 text-white" style="background: linear-gradient(135deg, #1877f2 0%, #0d5bbd 100%);">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        {% if athlete.avatar %}
+                        <img src="{{ athlete.avatar }}" class="rounded-circle" width="80" height="80" alt="Avatar" style="object-fit:cover; border: 3px solid rgba(255,255,255,0.3);">
+                        {% else %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:80px;height:80px;background:rgba(255,255,255,0.2);font-size:2rem;">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2 class="fw-bold mb-1">{{ athlete.first_name or '' }} {{ athlete.last_name or athlete.username }}</h2>
+                        <p class="mb-0 opacity-75">
+                            {% if athlete.sport %}<i class="bi bi-trophy me-1"></i>{{ athlete.sport }}{% endif %}
+                            {% if athlete.staff_role %}<span class="ms-2"><i class="bi bi-person-badge me-1"></i>{{ athlete.staff_role }}</span>{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if summary %}
+    <div class="row g-3 mb-4">
+        {% for key, val in summary.items() %}
+        <div class="col-6 col-md-3 col-lg-2">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body text-center py-3">
+                    <div class="h3 fw-bold mb-1" style="color: #1877f2;">{{ val }}</div>
+                    <small class="text-muted text-capitalize">{{ key }}</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-graph-up me-1" style="color: #1877f2;"></i>Andamento Prestazioni</h5>
+                        <div class="d-flex gap-2">
+                            <select id="chartMetric" class="form-select form-select-sm" style="width: auto;">
+                                <option value="gol">Gol</option>
+                                <option value="assist">Assist</option>
+                                <option value="minuti">Minuti</option>
+                                <option value="voto">Voto</option>
+                                <option value="presenze">Presenze</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="performanceChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-12">
+            <form method="get" class="d-flex gap-2 flex-wrap align-items-end">
+                <div>
+                    <label class="form-label small text-muted mb-1">Stagione</label>
+                    <select name="season" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Tutte</option>
+                        {% for s in seasons %}
+                        <option value="{{ s }}" {% if current_season == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label small text-muted mb-1">Tipo Stat</label>
+                    <select name="stat_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Tutti</option>
+                        {% for st in stat_types %}
+                        <option value="{{ st }}" {% if current_type == st %}selected{% endif %}>{{ st }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 fw-bold">
+                    <i class="bi bi-table me-1" style="color: #1877f2;"></i>Tutte le Registrazioni
+                </div>
+                <div class="card-body p-0">
+                    {% if stats %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Sport</th>
+                                    <th>Tipo</th>
+                                    <th>Stagione</th>
+                                    <th>Metriche</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in stats %}
+                                <tr>
+                                    <td>{{ stat.stat_date.strftime('%d/%m/%Y') if stat.stat_date else '-' }}</td>
+                                    <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ stat.sport_type or '-' }}</span></td>
+                                    <td>{{ stat.stat_type or '-' }}</td>
+                                    <td>{{ stat.season or '-' }}</td>
+                                    <td>
+                                        {% for k, v in stat._parsed_metrics.items() %}
+                                        {% if loop.index <= 4 %}
+                                        <span class="badge bg-light text-dark me-1">{{ k }}: {{ v }}</span>
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% if stat._parsed_metrics|length > 4 %}
+                                        <span class="text-muted small">+{{ stat._parsed_metrics|length - 4 }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><a href="{{ url_for('stats.entry', stat_id=stat.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox display-4"></i>
+                        <p class="mt-2">Nessuna registrazione trovata per i filtri selezionati.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const userId = {{ athlete.id }};
+    const chartApiUrl = "{{ url_for('stats.chart_data', user_id=athlete.id) }}";
+    let chart = null;
+
+    function loadChart(metric) {
+        const params = new URLSearchParams({metric: metric});
+        const season = new URLSearchParams(window.location.search).get('season');
+        const statType = new URLSearchParams(window.location.search).get('stat_type');
+        if (season) params.set('season', season);
+        if (statType) params.set('stat_type', statType);
+
+        fetch(chartApiUrl + '?' + params.toString())
+            .then(r => r.json())
+            .then(data => {
+                const ctx = document.getElementById('performanceChart').getContext('2d');
+                if (chart) chart.destroy();
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: data.metric.charAt(0).toUpperCase() + data.metric.slice(1),
+                            data: data.values,
+                            borderColor: '#1877f2',
+                            backgroundColor: 'rgba(24, 119, 242, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#1877f2',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: true, position: 'top' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            });
+    }
+
+    document.getElementById('chartMetric').addEventListener('change', function() {
+        loadChart(this.value);
+    });
+
+    loadChart('gol');
+})();
+</script>
+{% endblock %}

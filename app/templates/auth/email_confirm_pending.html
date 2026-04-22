@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Conferma Email - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+.confirm-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.confirm-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    max-width: 520px;
+    width: 100%;
+    overflow: hidden;
+}
+.confirm-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 40px 30px;
+    text-align: center;
+}
+.confirm-header .icon-circle {
+    width: 80px;
+    height: 80px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 2.5rem;
+}
+.confirm-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.confirm-header p {
+    margin: 8px 0 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+.confirm-body {
+    padding: 30px;
+}
+.email-display {
+    background: #f0f2f5;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    margin-bottom: 24px;
+}
+.email-display .label {
+    font-size: 0.85rem;
+    color: #65676b;
+    margin-bottom: 4px;
+}
+.email-display .email {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1c1e21;
+    word-break: break-all;
+}
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+}
+.info-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    color: #606770;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+.info-list li i {
+    color: #1877f2;
+    font-size: 1.1rem;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+.resend-section {
+    background: #f0f2f5;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+}
+.resend-section p {
+    color: #65676b;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+.btn-resend {
+    background: #1877f2;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-resend:hover {
+    background: #1565c0;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(24,119,242,0.3);
+}
+.btn-resend:disabled {
+    background: #bcc0c4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+.login-link {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e4e6eb;
+}
+.login-link a {
+    color: #1877f2;
+    text-decoration: none;
+    font-weight: 600;
+}
+.login-link a:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="confirm-container">
+    <div class="confirm-card">
+        <div class="confirm-header">
+            <div class="icon-circle">
+                <i class="bi bi-envelope-check"></i>
+            </div>
+            <h2>Conferma il tuo indirizzo email</h2>
+            <p>Un ultimo passo per completare la registrazione</p>
+        </div>
+        <div class="confirm-body">
+            <div class="email-display">
+                <div class="label">Email inviata a</div>
+                <div class="email">{{ masked_email }}</div>
+            </div>
+
+            <ul class="info-list">
+                <li>
+                    <i class="bi bi-1-circle-fill"></i>
+                    <span>Controlla la tua casella di posta (anche nello spam)</span>
+                </li>
+                <li>
+                    <i class="bi bi-2-circle-fill"></i>
+                    <span>Clicca sul link di conferma nell'email</span>
+                </li>
+                <li>
+                    <i class="bi bi-3-circle-fill"></i>
+                    <span>Torna qui ed effettua il login</span>
+                </li>
+            </ul>
+
+            <div class="resend-section">
+                <p>Non hai ricevuto l'email?</p>
+                <form method="POST" action="{{ url_for('auth.resend_confirmation', user_id=user.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-resend" id="resendBtn">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Rinvia email di conferma
+                    </button>
+                </form>
+            </div>
+
+            <div class="login-link">
+                <a href="{{ url_for('auth.login') }}"><i class="bi bi-arrow-left me-1"></i> Torna al Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('resendBtn').addEventListener('click', function() {
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Invio in corso...';
+    btn.closest('form').submit();
+});
+</script>
+{% endblock %}

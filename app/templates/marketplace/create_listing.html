@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Pubblica Annuncio - Marketplace{% endblock %}
+{% block content %}
+<style>
+.create-hero {
+    background: linear-gradient(135deg, #1877f2, #0a4da3);
+    color: #fff;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+.create-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.create-card h5 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #1c1e21;
+}
+.img-upload-area {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+.img-upload-slot {
+    aspect-ratio: 1;
+    border: 2px dashed #dadde1;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+    background: #f7f8fa;
+}
+.img-upload-slot:hover { border-color: #1877f2; background: #e7f3ff; }
+.img-upload-slot i { font-size: 1.75rem; color: #1877f2; margin-bottom: 0.25rem; }
+.img-upload-slot span { font-size: 0.75rem; color: #65676b; }
+.img-upload-slot input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+.img-upload-slot .preview-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+.img-upload-slot.has-image .preview-img { display: block; }
+.img-upload-slot.has-image i,
+.img-upload-slot.has-image span { display: none; }
+.price-input-group .input-group-text {
+    background: #f7f8fa;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+@media (max-width: 576px) {
+    .img-upload-area { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+
+<div class="container py-3" style="max-width: 700px;">
+    <div class="create-hero">
+        <h1 class="h4 mb-1"><i class="bi bi-plus-circle me-2"></i>Pubblica un annuncio</h1>
+        <p class="mb-0 small opacity-75">Vendi i tuoi articoli alla community sportiva</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="create-card">
+            <h5><i class="bi bi-camera me-2"></i>Foto <span class="text-muted fw-normal" style="font-size:0.8rem;">(salvate in bassa risoluzione)</span></h5>
+            <div class="img-upload-area">
+                {% for i in range(1, 5) %}
+                <label class="img-upload-slot" id="slot_{{ i }}">
+                    <i class="bi bi-camera-fill"></i>
+                    <span>{% if i == 1 %}Copertina{% else %}Foto {{ i }}{% endif %}</span>
+                    <input type="file" name="image_{{ i }}" accept="image/*"
+                           onchange="previewImage(this, 'slot_{{ i }}')">
+                    <img class="preview-img" alt="preview">
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="create-card">
+            <h5><i class="bi bi-tag me-2"></i>Dettagli</h5>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Titolo <span class="text-danger">*</span></label>
+                <input type="text" name="title" class="form-control form-control-lg" 
+                       placeholder="Es: Scarpe da calcio Nike taglia 42" required minlength="3" maxlength="200">
+            </div>
+
+            <div class="mb-3 price-input-group">
+                <label class="form-label fw-semibold">Prezzo <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text">&euro;</span>
+                    <input type="number" name="price" class="form-control form-control-lg" 
+                           placeholder="0.00" step="0.01" min="0" required>
+                </div>
+                <div class="form-text">Inserisci 0 per indicare che l'articolo è gratuito</div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Categoria</label>
+                    <select name="category" class="form-select">
+                        {% for key, label in categories %}
+                            <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Condizione</label>
+                    <select name="condition" class="form-select">
+                        {% for key, label in conditions %}
+                            <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Luogo</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                    <input type="text" name="location" class="form-control" 
+                           placeholder="Es: Roma, Milano, Napoli...">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Descrizione</label>
+                <textarea name="description" class="form-control" rows="5" 
+                          placeholder="Descrivi l'articolo: condizioni, dimensioni, motivo della vendita..."></textarea>
+            </div>
+        </div>
+
+        <div class="alert alert-info d-flex align-items-start gap-2 mb-3" role="alert">
+            <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+            <div>
+                <strong>Informazione importante:</strong> Gli annunci rimangono visibili per <strong>30 giorni</strong> dalla pubblicazione, dopodiché vengono cancellati automaticamente insieme alle foto. Le immagini vengono salvate in bassa risoluzione.
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-between">
+            <a href="{{ url_for('marketplace.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Annulla
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg px-4">
+                <i class="bi bi-megaphone me-1"></i> Pubblica Annuncio
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function previewImage(input, slotId) {
+    const slot = document.getElementById(slotId);
+    const preview = slot.querySelector('.preview-img');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            slot.classList.add('has-image');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

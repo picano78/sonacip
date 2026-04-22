@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Community - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --fb-blue: #1877f2;
+    --fb-blue-dark: #155fc7;
+    --fb-blue-light: #e7f3ff;
+  }
+  .groups-header {
+    background: linear-gradient(135deg, #1877f2 0%, #155fc7 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 0 0 16px 16px;
+  }
+  .group-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    height: 100%;
+  }
+  .group-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(24,119,242,0.15);
+    border-color: var(--fb-blue);
+  }
+  .group-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .group-avatar-placeholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: var(--fb-blue);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .btn-facebook {
+    background: var(--fb-blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+  .btn-facebook:hover {
+    background: var(--fb-blue-dark);
+    color: white;
+    transform: translateY(-1px);
+  }
+  .search-box {
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    padding: 0.5rem 1rem;
+  }
+  .search-box:focus {
+    border-color: var(--fb-blue);
+    box-shadow: 0 0 0 0.2rem rgba(24,119,242,0.25);
+  }
+  .badge-private {
+    background: #e4e6eb;
+    color: #65676b;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="groups-header">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1 class="mb-1"><i class="bi bi-people-fill me-2"></i>Community</h1>
+        <p class="mb-0 opacity-75">Scopri e unisciti ai gruppi della community</p>
+      </div>
+      <div class="d-flex gap-2">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('groups.my_groups') }}" class="btn btn-outline-light">
+          <i class="bi bi-collection me-1"></i>I Miei Gruppi
+        </a>
+        <a href="{{ url_for('groups.create') }}" class="btn btn-light text-primary fw-bold">
+          <i class="bi bi-plus-circle me-1"></i>Crea Gruppo
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container mb-5">
+  <form method="GET" action="{{ url_for('groups.index') }}" class="mb-4">
+    <div class="input-group">
+      <span class="input-group-text bg-white border-end-0" style="border-radius: 20px 0 0 20px;">
+        <i class="bi bi-search text-muted"></i>
+      </span>
+      <input type="text" name="q" class="form-control search-box border-start-0" 
+             placeholder="Cerca gruppi..." value="{{ search }}"
+             style="border-radius: 0 20px 20px 0;">
+    </div>
+  </form>
+
+  {% if groups %}
+  <div class="row g-3">
+    {% for group in groups %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card group-card">
+        <div class="card-body">
+          <div class="d-flex align-items-start gap-3 mb-3">
+            {% if group.avatar %}
+            <img src="/{{ group.avatar }}" alt="{{ group.name }}" class="group-avatar">
+            {% else %}
+            <div class="group-avatar-placeholder">
+              {{ group.name[0]|upper }}
+            </div>
+            {% endif %}
+            <div class="flex-grow-1 min-w-0">
+              <h5 class="card-title mb-1 text-truncate">{{ group.name }}</h5>
+              <div class="d-flex align-items-center gap-2 text-muted small">
+                <span><i class="bi bi-people me-1"></i>{{ group.members.count() }} membri</span>
+                {% if group.is_private %}
+                <span class="badge-private"><i class="bi bi-lock-fill me-1"></i>Privato</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% if group.description %}
+          <p class="card-text text-muted small mb-3">{{ group.description[:120] }}{% if group.description|length > 120 %}...{% endif %}</p>
+          {% endif %}
+          <div class="d-grid">
+            {% if current_user.is_authenticated and group.id in user_memberships %}
+            <a href="{{ url_for('groups.detail', group_id=group.id) }}" class="btn btn-facebook btn-sm">
+              <i class="bi bi-arrow-right-circle me-1"></i>Vai
+            </a>
+            {% elif current_user.is_authenticated %}
+            <form method="POST" action="{{ url_for('groups.join', group_id=group.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-facebook btn-sm w-100">
+                <i class="bi bi-person-plus me-1"></i>Entra
+              </button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-box-arrow-in-right me-1"></i>Accedi per entrare
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-people display-1 text-muted"></i>
+    <h4 class="mt-3 text-muted">Nessun gruppo trovato</h4>
+    <p class="text-muted">{% if search %}Prova con un'altra ricerca.{% else %}Sii il primo a creare un gruppo!{% endif %}</p>
+    {% if current_user.is_authenticated %}
+    <a href="{{ url_for('groups.create') }}" class="btn btn-facebook mt-2">
+      <i class="bi bi-plus-circle me-1"></i>Crea Gruppo
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

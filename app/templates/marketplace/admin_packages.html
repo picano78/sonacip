@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Marketplace{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Marketplace (Admin)</h1>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Admin</a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><strong>Crea pacchetto</strong></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('marketplace.admin_packages') }}" class="row g-2">
+        {{ csrf_token() }}
+        <div class="col-md-3">
+          <label class="form-label">Slug</label>
+          <input class="form-control" name="slug" placeholder="starter-crm" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Nome</label>
+          <input class="form-control" name="name" placeholder="Starter CRM" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Prezzo</label>
+          <input class="form-control" name="price_one_time" value="0">
+        </div>
+        <div class="col-md-1">
+          <label class="form-label">Valuta</label>
+          <input class="form-control" name="currency" value="EUR">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Ordine</label>
+          <input class="form-control" name="display_order" value="0">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Stripe price (one-time)</label>
+          <input class="form-control" name="stripe_price_one_time_id" placeholder="price_...">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Descrizione</label>
+          <input class="form-control" name="description" placeholder="...">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Template IDs (separati da virgola o newline)</label>
+          <textarea class="form-control" name="template_ids" rows="2" placeholder="1,2,3"></textarea>
+          <div class="text-muted small mt-1">Sotto trovi gli ultimi template disponibili per copiare gli ID.</div>
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary" type="submit">Crea</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header"><strong>Pacchetti</strong></div>
+        <div class="card-body table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Prezzo</th>
+                <th>Stripe</th>
+                <th>Attivo</th>
+                <th class="text-end">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in packages %}
+                <tr>
+                  <td>{{ p.name }}<div class="text-muted small">{{ p.slug }}</div></td>
+                  <td>€{{ "%.2f"|format(p.price_one_time or 0) }} {{ p.currency or 'EUR' }}</td>
+                  <td class="text-muted small">{{ p.stripe_price_one_time_id or '-' }}</td>
+                  <td>
+                    {% if p.is_active %}<span class="badge bg-success">ON</span>{% else %}<span class="badge bg-secondary">OFF</span>{% endif %}
+                  </td>
+                  <td class="text-end">
+                    <form method="post" action="{{ url_for('marketplace.admin_toggle', package_id=p.id) }}" class="d-inline">
+                      {{ csrf_token() }}
+                      <button class="btn btn-sm btn-outline-primary" type="submit">Toggle</button>
+                    </form>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('marketplace.detail', slug=p.slug) }}">Vedi</a>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="text-muted">Nessun pacchetto.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header"><strong>Ultimi Template</strong></div>
+        <div class="card-body">
+          <div class="list-group list-group-flush">
+            {% for t in templates %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between">
+                  <strong>#{{ t.id }} {{ t.name }}</strong>
+                  <span class="text-muted small">{{ t.template_type }}</span>
+                </div>
+                <div class="text-muted small">{{ t.description or '' }}</div>
+              </div>
+            {% else %}
+              <div class="list-group-item text-muted">Nessun template.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block title %}{{ event.title }} | Calendario Società{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="h3 mb-1">{{ event.title }}</h1>
+            <p class="text-muted mb-0">Calendario Società &middot; Evento strategico (non pianificazione campi)</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-primary text-uppercase">{{ event.event_type }}</span>
+            {% if can('calendar', 'manage') %}
+            <a href="{{ url_for('calendar.edit', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square"></i> Modifica
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="fw-semibold">Data e orario</div>
+                    <div>{{ event.start_datetime.strftime('%d/%m/%Y %H:%M') }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%d/%m/%Y %H:%M') }}{% endif %}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="fw-semibold">Palestra / Luogo</div>
+                    <div>
+                        {% if event.facility %}
+                            {{ event.facility.name }}
+                            {% if event.facility.address %}<div class="text-muted small">{{ event.facility.address }}</div>{% endif %}
+                        {% else %}
+                            {{ event.location_text or 'Da definire' }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold">Squadra / Categoria</div>
+                    <div>{{ event.team or '-' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold">Categoria</div>
+                    <div>{{ event.category or '-' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fw-semibold">Competizione</div>
+                    <div>{{ event.competition_name or '-' }}</div>
+                </div>
+                <div class="col-12">
+                    <div class="fw-semibold">Note</div>
+                    <div class="text-prewrap">{{ event.notes or 'Nessuna nota' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">Staff coinvolto</div>
+                <ul class="list-group list-group-flush">
+                    {% for member in event.staff_members %}
+                        <li class="list-group-item">{{ member.get_full_name() }}</li>
+                    {% else %}
+                        <li class="list-group-item text-muted">Nessuno staff assegnato</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Atleti convocati</span>
+                    {% if my_status %}
+                        <span class="badge bg-secondary">La tua risposta: {{ my_status }}</span>
+                    {% endif %}
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for athlete in event.athletes %}
+                        {% set st = attendance_map.get(athlete.id, 'pending') %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ athlete.get_full_name() }}</span>
+                            <span class="badge bg-{{ 'success' if st == 'accepted' else ('danger' if st == 'declined' else 'secondary') }}">
+                                {{ st }}
+                            </span>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-muted">Nessun atleta assegnato</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated and current_user.id in event.athletes|map(attribute='id')|list %}
+        <div class="card mt-3">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fw-semibold">Conferma convocazione</div>
+                    <div class="text-muted small">Scegli se sei disponibile o non disponibile.</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <form method="post" action="{{ url_for('calendar.respond', event_id=event.id, response='accepted') }}">
+                        {{ csrf_token() }}
+                        <button class="btn btn-success" type="submit">Disponibile</button>
+                    </form>
+                    <form method="post" action="{{ url_for('calendar.respond', event_id=event.id, response='declined') }}">
+                        {{ csrf_token() }}
+                        <button class="btn btn-outline-danger" type="submit">Non disponibile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

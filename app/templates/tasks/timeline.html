@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Timeline - {{ project.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .timeline-item {
+    position: relative; padding-left: 2rem; padding-bottom: 1.5rem;
+    border-left: 3px solid #dee2e6;
+  }
+  .timeline-item:last-child { border-left-color: transparent; }
+  .timeline-dot {
+    position: absolute; left: -8px; top: 4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 3px solid white; box-shadow: 0 0 0 2px #1877f2;
+    background: #1877f2;
+  }
+  .timeline-dot.done { background: #28a745; box-shadow: 0 0 0 2px #28a745; }
+  .timeline-dot.overdue { background: #dc3545; box-shadow: 0 0 0 2px #dc3545; }
+  .tl-card {
+    border: none; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-bar-chart-steps me-2"></i>{{ project.name }}</h1>
+        <p>Timeline del progetto</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('tasks.view_project', project_id=project.id) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Progetto</a>
+        <a href="{{ url_for('tasks.kanban', project_id=project.id) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-kanban"></i> Kanban</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      {% for task in tasks %}
+      <div class="timeline-item">
+        <div class="timeline-dot {{ 'done' if task.status == 'done' else '' }}"></div>
+        <div class="tl-card card p-3 mb-0">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="fw-bold text-decoration-none">{{ task.title }}</a>
+              <div class="text-muted small mt-1">
+                <i class="bi bi-calendar3"></i>
+                {{ task.start_date.strftime('%d/%m/%Y') if task.start_date else '—' }}
+                <i class="bi bi-arrow-right mx-1"></i>
+                {{ task.due_date.strftime('%d/%m/%Y') if task.due_date else '—' }}
+              </div>
+            </div>
+            <span class="badge bg-{{ 'success' if task.status == 'done' else 'primary' if task.status == 'in_progress' else 'warning' if task.status == 'review' else 'danger' if task.status == 'blocked' else 'secondary' }}">{{ task.status|replace('_',' ')|title }}</span>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-5">
+        <i class="bi bi-bar-chart-steps fs-1 d-block mb-2"></i>
+        Nessun task presente in questo progetto.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Crea Sondaggio - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0" style="border-radius: 16px;">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold mb-4"><i class="bi bi-bar-chart-fill me-2" style="color: #1877f2;"></i>Crea Sondaggio</h4>
+
+                    <form method="POST" action="{{ url_for('polls.create') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Titolo <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" required maxlength="200" placeholder="Di cosa vuoi chiedere?">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Descrizione</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Aggiungi dettagli (opzionale)"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Opzioni <span class="text-danger">*</span></label>
+                            <div id="optionsContainer">
+                                <div class="input-group mb-2 option-row">
+                                    <span class="input-group-text"><i class="bi bi-circle"></i></span>
+                                    <input type="text" name="options" class="form-control" placeholder="Opzione 1" required>
+                                </div>
+                                <div class="input-group mb-2 option-row">
+                                    <span class="input-group-text"><i class="bi bi-circle"></i></span>
+                                    <input type="text" name="options" class="form-control" placeholder="Opzione 2" required>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addOptionBtn">
+                                <i class="bi bi-plus me-1"></i> Aggiungi Opzione
+                            </button>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="multiple_choice" id="multipleChoice">
+                                    <label class="form-check-label fw-semibold" for="multipleChoice">
+                                        Scelta multipla
+                                    </label>
+                                    <div class="form-text">Permetti più risposte</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="is_anonymous" id="isAnonymous">
+                                    <label class="form-check-label fw-semibold" for="isAnonymous">
+                                        Anonimo
+                                    </label>
+                                    <div class="form-text">Nascondi i nomi dei votanti</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Data di chiusura</label>
+                            <input type="datetime-local" name="closes_at" class="form-control">
+                            <div class="form-text">Lascia vuoto per un sondaggio senza scadenza</div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('polls.index') }}" class="btn btn-light">Annulla</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i> Crea Sondaggio</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let optionCount = 2;
+document.getElementById('addOptionBtn').addEventListener('click', function() {
+    optionCount++;
+    if (optionCount > 10) {
+        alert('Massimo 10 opzioni');
+        return;
+    }
+    const container = document.getElementById('optionsContainer');
+    const row = document.createElement('div');
+    row.className = 'input-group mb-2 option-row';
+    row.innerHTML = `
+        <span class="input-group-text"><i class="bi bi-circle"></i></span>
+        <input type="text" name="options" class="form-control" placeholder="Opzione ${optionCount}" required>
+        <button type="button" class="btn btn-outline-danger" onclick="removeOption(this)"><i class="bi bi-x"></i></button>
+    `;
+    container.appendChild(row);
+});
+
+function removeOption(btn) {
+    const rows = document.querySelectorAll('.option-row');
+    if (rows.length <= 2) {
+        alert('Servono almeno 2 opzioni');
+        return;
+    }
+    btn.closest('.option-row').remove();
+    optionCount--;
+}
+</script>
+{% endblock %}

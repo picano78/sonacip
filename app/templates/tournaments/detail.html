@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+{% block title %}{{ tournament.name }} | Torneo{% endblock %}
+
+{% block extra_css %}
+<style>
+  .td-gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .td-gradient-header .pill-fmt {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border-radius: 20px;
+    padding: 2px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .td-gradient-header .chip-stat {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+  }
+  .td-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background: #fff;
+  }
+  .td-stat {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 16px;
+    background: #fff;
+  }
+  .td-stat .label { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.06em; }
+  .td-stat .value { font-weight: 700; font-size: 1.1rem; }
+  .td-action-card {
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+    background: #f8fafc;
+  }
+  .td-card:hover {
+    box-shadow: 0 8px 24px rgba(24,119,242,0.12);
+    border-color: #1877f2;
+  }
+  .td-match-item {
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    transition: all 0.25s ease;
+    background: #fff;
+  }
+  .td-match-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-color: #1877f2;
+  }
+  .td-bracket-cell {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.75rem;
+    transition: all 0.25s ease;
+    background: #fff;
+  }
+  .td-bracket-cell:hover {
+    box-shadow: 0 4px 12px rgba(24,119,242,0.12);
+    border-color: #1877f2;
+  }
+  .td-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .td-step {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px;
+    background: #fff;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .td-step .dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e7f0ff;
+    color: #1877f2;
+    font-weight: 700;
+  }
+  .td-step .title { font-weight: 700; }
+  .td-step .desc { font-size: 0.85rem; color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="td-gradient-header">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div class="d-flex gap-3 align-items-center">
+        <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center" style="width:64px;height:64px;">
+          <i class="bi bi-trophy-fill fs-3" style="color:#ffc107;"></i>
+        </div>
+        <div>
+          <span class="pill-fmt mb-2">{{ tournament.format }}</span>
+          <h1 class="h3 mb-0">{{ tournament.name }}</h1>
+          <div class="small" style="opacity:0.85;">Stagione {{ tournament.season or 'n/d' }}</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <span class="badge bg-dark text-uppercase">{{ tournament.status }}</span>
+        <span class="chip-stat">{{ teams|length }} squadre</span>
+        <span class="chip-stat">{{ matches|length }} partite</span>
+        {% if can_manage %}
+          <form method="post" action="{{ url_for('tournaments.publish_tournament', tournament_id=tournament.id) }}" class="d-flex align-items-center gap-2">
+            {{ csrf_token() }}
+            {% if tournament.society_id %}
+              <select name="audience" class="form-select form-select-sm" style="width:auto;">
+                <option value="society">Solo societa</option>
+                <option value="public">Pubblico</option>
+              </select>
+            {% endif %}
+            <button class="btn btn-sm btn-outline-light" type="submit">
+              <i class="bi bi-megaphone"></i> Pubblica torneo
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3">
+      <div class="td-stat">
+        <div class="label">Formato</div>
+        <div class="value">{{ tournament.format }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="td-stat">
+        <div class="label">Stato</div>
+        <div class="value">{{ tournament.status }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="td-stat">
+        <div class="label">Squadre</div>
+        <div class="value">{{ teams|length }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="td-stat">
+        <div class="label">Partite</div>
+        <div class="value">{{ matches|length }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="td-steps mb-4">
+    <a class="td-step text-decoration-none" href="#teams">
+      <div class="dot">1</div>
+      <div>
+        <div class="title">Aggiungi squadre</div>
+        <div class="desc">Crea le squadre e imposta il seeding.</div>
+      </div>
+    </a>
+    <a class="td-step text-decoration-none" href="#matches">
+      <div class="dot">2</div>
+      <div>
+        <div class="title">Programma partite</div>
+        <div class="desc">Crea o genera le partite del torneo.</div>
+      </div>
+    </a>
+    <a class="td-step text-decoration-none" href="#standings">
+      <div class="dot">3</div>
+      <div>
+        <div class="title">Aggiorna classifica</div>
+        <div class="desc">Inserisci risultati e pubblica.</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-8">
+      <div class="td-card h-100 p-3" id="matches">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="fw-semibold"><i class="bi bi-controller me-1"></i> Partite</span>
+          {% if can_manage %}
+            <form class="d-flex flex-wrap gap-2 align-items-center" method="post" action="{{ url_for('tournaments.add_match', tournament_id=tournament.id) }}">
+              {{ csrf_token() }}
+              <select name="home_team_id" class="form-select form-select-sm" required>
+                <option value="">Casa…</option>
+                {% for t in teams %}
+                  <option value="{{ t.id }}">{{ t.seed if t.seed is not none else '' }} {{ t.name }}</option>
+                {% endfor %}
+              </select>
+              <select name="away_team_id" class="form-select form-select-sm" required>
+                <option value="">Trasferta…</option>
+                {% for t in teams %}
+                  <option value="{{ t.id }}">{{ t.seed if t.seed is not none else '' }} {{ t.name }}</option>
+                {% endfor %}
+              </select>
+              <input type="text" name="round_label" class="form-control form-control-sm" placeholder="Turno">
+              <input type="date" name="match_date" class="form-control form-control-sm">
+              <input type="text" name="location" class="form-control form-control-sm" placeholder="Luogo">
+              <button class="btn btn-sm btn-dark" type="submit">Aggiungi</button>
+            </form>
+          {% endif %}
+        </div>
+        <div class="d-flex flex-column gap-3">
+          {% for m in matches %}
+            <div class="td-match-item">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <div class="fw-semibold">{{ m.home_team.name if m.home_team else 'TBD' }} vs {{ m.away_team.name if m.away_team else 'TBD' }}</div>
+                <span class="badge bg-dark text-uppercase">{{ m.status }}</span>
+              </div>
+              <div class="small text-muted mb-2">{{ m.round_label or 'Turno' }} | {{ m.match_date.strftime('%d/%m/%Y') if m.match_date else 'Data da definire' }} | {{ m.location or 'Luogo da definire' }}</div>
+              <div class="d-flex align-items-center gap-3">
+                {% if m.status != 'played' and can_manage and m.home_team and m.away_team %}
+                  <form class="d-flex align-items-center gap-2" method="post" action="{{ url_for('tournaments.set_score', match_id=m.id) }}">
+                    {{ csrf_token() }}
+                    <input type="number" name="home_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol casa" required>
+                    <input type="number" name="away_score" min="0" class="form-control form-control-sm" style="width:80px" placeholder="Gol trasf" required>
+                    <div class="form-check form-check-inline ms-2">
+                      <input class="form-check-input" type="checkbox" name="publish_to_social" value="1" id="pub_{{ m.id }}" checked>
+                      <label class="form-check-label small" for="pub_{{ m.id }}">Pubblica</label>
+                    </div>
+                    <button class="btn btn-sm btn-success" type="submit">Salva</button>
+                  </form>
+                {% else %}
+                  <div class="fw-bold fs-5">{{ m.home_score }} - {{ m.away_score }}</div>
+                  {% if can_manage and m.status == 'played' %}
+                    <form method="post" action="{{ url_for('tournaments.publish_match_result', tournament_id=tournament.id, match_id=m.id) }}" class="d-flex align-items-center gap-2">
+                      {{ csrf_token() }}
+                      {% if tournament.society_id %}
+                        <select name="audience" class="form-select form-select-sm" style="width:auto;">
+                          <option value="society">Solo societa</option>
+                          <option value="public">Pubblico</option>
+                        </select>
+                      {% endif %}
+                      <button class="btn btn-sm btn-outline-primary" type="submit">
+                        <i class="bi bi-send"></i> Pubblica risultato
+                      </button>
+                    </form>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <div class="text-muted">Nessuna partita.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if tournament.format == 'knockout' %}
+        <div class="td-card p-3 mt-3" id="bracket">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold"><i class="bi bi-diagram-3 me-1"></i> Tabellone (piramidale)</span>
+            {% if can_manage %}
+              <form method="post" action="{{ url_for('tournaments.generate_bracket', tournament_id=tournament.id) }}" class="d-flex gap-2 align-items-center">
+                {{ csrf_token() }}
+                <select name="seeding" class="form-select form-select-sm">
+                  <option value="random">Accoppiamenti casuali</option>
+                  <option value="manual">Accoppiamenti decisi (per seed/ordine)</option>
+                </select>
+                <button class="btn btn-sm btn-outline-primary" type="submit">Genera tabellone</button>
+              </form>
+            {% endif %}
+          </div>
+
+          {% if bracket_rounds %}
+            <div class="row g-2">
+              {% for r in bracket_rounds.keys()|list|sort %}
+                <div class="col-md-3">
+                  <div class="fw-semibold mb-2">{{ bracket_rounds[r][0].round_label if bracket_rounds[r] else ('Round ' ~ r) }}</div>
+                  <div class="d-flex flex-column gap-2">
+                    {% for m in bracket_rounds[r] %}
+                      <div class="td-bracket-cell">
+                        <div class="small text-muted">#{{ m.round_number }}.{{ m.position }}</div>
+                        <div class="d-flex justify-content-between">
+                          <span class="{{ 'fw-bold' if m.winner_team_id == m.home_team_id else '' }}">{{ m.home_team.name if m.home_team else 'TBD' }}</span>
+                          <span class="text-muted small">{{ m.home_score if m.home_score is not none else '-' }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                          <span class="{{ 'fw-bold' if m.winner_team_id == m.away_team_id else '' }}">{{ m.away_team.name if m.away_team else 'TBD' }}</span>
+                          <span class="text-muted small">{{ m.away_score if m.away_score is not none else '-' }}</span>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-muted">Genera il tabellone per vedere la piramide.</div>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if tournament.format == 'round_robin' and can_manage %}
+        <div class="td-card p-3 mt-3" id="schedule">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-semibold"><i class="bi bi-calendar3 me-1"></i> Calendario automatico</span>
+          </div>
+          <form method="post" action="{{ url_for('tournaments.generate_schedule', tournament_id=tournament.id) }}" class="row g-2 align-items-end">
+            {{ csrf_token() }}
+            <div class="col-md-4">
+              <label class="form-label">Data inizio</label>
+              <input class="form-control form-control-sm" type="date" name="start_date" value="{{ tournament.start_date.strftime('%Y-%m-%d') if tournament.start_date else '' }}">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Intervallo (giorni)</label>
+              <input class="form-control form-control-sm" type="number" name="interval_days" value="7" min="1">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Seeding</label>
+              <select class="form-select form-select-sm" name="seeding">
+                <option value="random">Casuale</option>
+                <option value="manual">Manuale (seed)</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <button class="btn btn-sm btn-outline-primary w-100" type="submit">Genera</button>
+            </div>
+            <div class="col-12">
+              <div class="text-muted small">Genera automaticamente tutte le partite. Per tornei di società, crea anche eventi nel Calendario Società.</div>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+    <div class="col-md-4">
+      <div class="td-action-card mb-3">
+        <div class="fw-semibold mb-2"><i class="bi bi-lightning me-1"></i> Gestione rapida</div>
+        <div class="d-flex flex-column gap-2">
+          <a class="btn btn-sm btn-outline-primary" href="#matches"><i class="bi bi-flag"></i> Vai alle partite</a>
+          <a class="btn btn-sm btn-outline-primary" href="#teams"><i class="bi bi-people"></i> Vai alle squadre</a>
+          <a class="btn btn-sm btn-outline-primary" href="#standings"><i class="bi bi-bar-chart"></i> Vai alla classifica</a>
+          {% if tournament.format == 'knockout' %}
+            <a class="btn btn-sm btn-outline-primary" href="#bracket"><i class="bi bi-diagram-3"></i> Tabellone</a>
+          {% endif %}
+          {% if tournament.format == 'round_robin' %}
+            <a class="btn btn-sm btn-outline-primary" href="#schedule"><i class="bi bi-calendar3"></i> Calendario</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="td-card p-3 mb-3" id="teams">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold">Squadre</span>
+          {% if can_manage %}
+            <form class="d-flex flex-wrap gap-2" method="post" action="{{ url_for('tournaments.add_team', tournament_id=tournament.id) }}">
+              {{ csrf_token() }}
+              <input type="text" name="name" class="form-control form-control-sm" placeholder="Nome" required>
+              <input type="text" name="category" class="form-control form-control-sm" placeholder="Categoria">
+              <input type="number" name="seed" class="form-control form-control-sm" placeholder="Seed" min="1" style="width:90px;">
+              <button class="btn btn-sm btn-dark" type="submit">+</button>
+            </form>
+          {% endif %}
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for team in teams %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ team.name }}</span>
+              <span class="small text-muted">seed {{ team.seed if team.seed is not none else '-' }} {{ team.category or '' }}</span>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted">Nessuna squadra.</li>
+          {% endfor %}
+        </ul>
+
+        {% if can_manage and teams %}
+          <form class="mt-2" method="post" action="{{ url_for('tournaments.update_seeding', tournament_id=tournament.id) }}">
+            {{ csrf_token() }}
+            <div class="fw-semibold small mb-2">Seeding (manuale)</div>
+            <div class="d-flex flex-column gap-2">
+              {% for t in teams %}
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                  <div class="small">{{ t.name }}</div>
+                  <input class="form-control form-control-sm" style="width:90px;" type="number" min="1" name="seed_{{ t.id }}" value="{{ t.seed if t.seed is not none else '' }}">
+                </div>
+              {% endfor %}
+            </div>
+            <button class="btn btn-sm btn-outline-primary mt-2" type="submit">Salva seeding</button>
+          </form>
+        {% endif %}
+      </div>
+      <div class="td-card p-3" id="standings">
+        <div class="fw-semibold mb-2">Classifica</div>
+        <div class="table-responsive">
+          <table class="table mb-0 align-middle">
+            <thead>
+              <tr><th>Team</th><th>Pt</th><th>GF</th><th>GS</th></tr>
+            </thead>
+            <tbody>
+              {% for s in standings %}
+                <tr>
+                  <td>{{ s.team.name }}</td>
+                  <td>{{ s.points }}</td>
+                  <td>{{ s.goals_for }}</td>
+                  <td>{{ s.goals_against }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4" class="text-muted">Classifica non disponibile.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

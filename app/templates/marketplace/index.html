@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Marketplace{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .pkg-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+    height: 100%;
+  }
+  .pkg-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
+  .price-badge {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-weight: 700;
+    font-size: .95rem;
+    display: inline-block;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-shop me-2"></i>Marketplace</h1>
+        <p>Scopri pacchetti e servizi disponibili</p>
+      </div>
+      {% if current_user.is_authenticated %}
+        <a class="btn btn-light text-primary fw-bold" href="{{ url_for('marketplace.my_purchases') }}">
+          <i class="bi bi-bag-check me-1"></i> I miei acquisti
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-3">
+    {% for p in packages %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card pkg-card">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title fw-bold">{{ p.name }}</h5>
+            {% if p.description %}
+              <p class="card-text text-muted small flex-grow-1">{{ p.description }}</p>
+            {% else %}
+              <div class="flex-grow-1"></div>
+            {% endif %}
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <span class="price-badge">€{{ "%.2f"|format(p.price_one_time or 0) }} {{ p.currency or 'EUR' }}</span>
+              <a class="btn btn-sm btn-outline-primary" style="border-radius: 8px;" href="{{ url_for('marketplace.detail', slug=p.slug) }}">
+                <i class="bi bi-arrow-right-circle me-1"></i> Dettagli
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="text-center py-5">
+          <i class="bi bi-shop display-1 text-muted"></i>
+          <h4 class="mt-3 text-muted">Nessun pacchetto disponibile</h4>
+          <p class="text-muted">Non ci sono pacchetti in vendita al momento.</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

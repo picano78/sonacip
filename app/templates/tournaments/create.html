@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% block title %}Nuovo Torneo{% endblock %}
+
+{% block extra_css %}
+<style>
+  .tc-gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .tc-format-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: #fff;
+  }
+  .tc-format-card.active {
+    border-color: #1877f2;
+    box-shadow: 0 8px 20px rgba(24,119,242,0.12);
+  }
+  .tc-format-card small {
+    color: #6c757d;
+  }
+  .tc-form-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .tc-preview {
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 16px;
+    background: #f8fafc;
+  }
+  .tc-preview .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #e7f0ff;
+    color: #1877f2;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .tc-form-card .form-control:focus,
+  .tc-form-card .form-select:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 0.2rem rgba(24,119,242,0.15);
+  }
+  .btn-fb-gradient {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .btn-fb-gradient:hover {
+    background: linear-gradient(135deg, #155fc7 0%, #1877f2 100%);
+    color: #fff;
+  }
+  .tc-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .tc-step {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px;
+    background: #fff;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .tc-step .dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e7f0ff;
+    color: #1877f2;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .tc-step .title { font-weight: 700; }
+  .tc-step .desc { font-size: 0.85rem; color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="tc-gradient-header">
+    <div class="d-flex align-items-center gap-3">
+      <i class="bi bi-plus-circle fs-3"></i>
+      <div>
+        <h1 class="h3 mb-0">Nuovo Torneo</h1>
+        <p class="mb-0" style="opacity:0.85;">Configura e crea un nuovo torneo</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tc-steps mb-4">
+    <div class="tc-step">
+      <div class="dot">1</div>
+      <div>
+        <div class="title">Dettagli base</div>
+        <div class="desc">Nome, stagione e descrizione.</div>
+      </div>
+    </div>
+    <div class="tc-step">
+      <div class="dot">2</div>
+      <div>
+        <div class="title">Formato</div>
+        <div class="desc">Girone, eliminazione o finale.</div>
+      </div>
+    </div>
+    <div class="tc-step">
+      <div class="dot">3</div>
+      <div>
+        <div class="title">Date</div>
+        <div class="desc">Imposta inizio e fine.</div>
+      </div>
+    </div>
+    <div class="tc-step">
+      <div class="dot">4</div>
+      <div>
+        <div class="title">Conferma</div>
+        <div class="desc">Controlla l'anteprima.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="tc-form-card">
+        <div class="card-body p-4">
+          <form method="post">
+            {{ form.hidden_tag() }}
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="fw-semibold mb-2">Formato torneo</div>
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <div class="tc-format-card" data-format="round_robin">
+                      <div class="fw-semibold"><i class="bi bi-arrow-repeat me-1"></i>Girone</div>
+                      <small>Partite tutti contro tutti</small>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="tc-format-card" data-format="knockout">
+                      <div class="fw-semibold"><i class="bi bi-diagram-3 me-1"></i>Eliminazione</div>
+                      <small>Tabellone a eliminazione diretta</small>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="tc-format-card" data-format="groups_finals">
+                      <div class="fw-semibold"><i class="bi bi-trophy me-1"></i>Gironi + Finali</div>
+                      <small>Fase a gruppi e fase finale</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">{{ form.name.label(class='form-label') }}{{ form.name(class='form-control', id='tcName') }}</div>
+              <div class="col-md-6">{{ form.format.label(class='form-label') }}{{ form.format(class='form-select', id='tcFormat') }}</div>
+              <div class="col-md-6">{{ form.season.label(class='form-label') }}{{ form.season(class='form-control', id='tcSeason') }}</div>
+              <div class="col-md-3">{{ form.start_date.label(class='form-label') }}{{ form.start_date(class='form-control', id='tcStart') }}</div>
+              <div class="col-md-3">{{ form.end_date.label(class='form-label') }}{{ form.end_date(class='form-control', id='tcEnd') }}</div>
+              <div class="col-12">{{ form.description.label(class='form-label') }}{{ form.description(class='form-control', rows=3, id='tcDesc') }}</div>
+              <div class="col-12 form-check ps-4">{{ form.auto_select(class='form-check-input', id='autoSel') }}<label for="autoSel" class="form-check-label">Abilita selezione automatica squadre</label></div>
+              <div class="col-12">{{ form.auto_criteria.label(class='form-label') }}{{ form.auto_criteria(class='form-control', rows=3, placeholder='Esempio: {"category": "U17"}') }}</div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+              <a href="{{ url_for('tournaments.list_tournaments') }}" class="btn btn-outline-secondary">Annulla</a>
+              <button class="btn btn-fb-gradient" type="submit"><i class="bi bi-check-lg me-1"></i>Crea</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="tc-preview">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="pill" id="tcPreviewFormat">Formato</span>
+          <span class="small text-muted">Anteprima</span>
+        </div>
+        <div class="h5 mb-1" id="tcPreviewName">Nome torneo</div>
+        <div class="text-muted small mb-2" id="tcPreviewSeason">Stagione</div>
+        <div class="small text-muted" id="tcPreviewDates">Date torneo</div>
+        <hr>
+        <div class="small text-muted">Descrizione</div>
+        <div class="small" id="tcPreviewDesc">Inserisci una descrizione per mostrare i dettagli del torneo.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  var formatSelect = document.getElementById('tcFormat');
+  var formatCards = document.querySelectorAll('.tc-format-card');
+  var nameInput = document.getElementById('tcName');
+  var seasonInput = document.getElementById('tcSeason');
+  var startInput = document.getElementById('tcStart');
+  var endInput = document.getElementById('tcEnd');
+  var descInput = document.getElementById('tcDesc');
+
+  var previewName = document.getElementById('tcPreviewName');
+  var previewSeason = document.getElementById('tcPreviewSeason');
+  var previewDates = document.getElementById('tcPreviewDates');
+  var previewDesc = document.getElementById('tcPreviewDesc');
+  var previewFormat = document.getElementById('tcPreviewFormat');
+
+  function labelForFormat(value) {
+    if (value === 'round_robin') return 'Girone all\u2019italiana';
+    if (value === 'knockout') return 'Eliminazione diretta';
+    if (value === 'groups_finals') return 'Gironi + Finali';
+    return 'Formato';
+  }
+
+  function updatePreview() {
+    previewName.textContent = nameInput.value || 'Nome torneo';
+    previewSeason.textContent = seasonInput.value ? ('Stagione ' + seasonInput.value) : 'Stagione n/d';
+    var start = startInput.value || 'da definire';
+    var end = endInput.value || 'da definire';
+    previewDates.textContent = 'Date: ' + start + ' 3 ' + end;
+    previewDesc.textContent = descInput.value || 'Inserisci una descrizione per mostrare i dettagli del torneo.';
+    previewFormat.textContent = labelForFormat(formatSelect.value);
+  }
+
+  function syncCards() {
+    var value = formatSelect.value;
+    formatCards.forEach(function(card) {
+      card.classList.toggle('active', card.dataset.format === value);
+    });
+    previewFormat.textContent = labelForFormat(value);
+  }
+
+  formatCards.forEach(function(card) {
+    card.addEventListener('click', function() {
+      formatSelect.value = card.dataset.format;
+      syncCards();
+    });
+  });
+
+  ['input', 'change'].forEach(function(evt) {
+    nameInput.addEventListener(evt, updatePreview);
+    seasonInput.addEventListener(evt, updatePreview);
+    startInput.addEventListener(evt, updatePreview);
+    endInput.addEventListener(evt, updatePreview);
+    descInput.addEventListener(evt, updatePreview);
+    formatSelect.addEventListener(evt, function() {
+      syncCards();
+      updatePreview();
+    });
+  });
+
+  syncCards();
+  updatePreview();
+})();
+</script>
+{% endblock %}

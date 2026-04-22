@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Dettaglio Registrazione #{{ stat.id }} - Statistiche{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('stats.index') }}">Statistiche</a></li>
+                    <li class="breadcrumb-item active">Registrazione #{{ stat.id }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                    <h4 class="fw-bold mb-0"><i class="bi bi-journal-text me-2" style="color: #1877f2;"></i>Dettaglio Registrazione</h4>
+                    {% if stat.created_by == current_user.id or current_user.role in ('super_admin', 'admin') %}
+                    <form method="post" action="{{ url_for('stats.delete_entry', stat_id=stat.id) }}" onsubmit="return confirm('Sei sicuro di voler eliminare questa registrazione?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Elimina</button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-person-fill me-2" style="color: #1877f2; font-size: 1.2rem;"></i>
+                                <div>
+                                    <small class="text-muted d-block">Atleta</small>
+                                    {% if stat.user %}
+                                    <a href="{{ url_for('stats.athlete', user_id=stat.user_id) }}" class="fw-semibold text-decoration-none">
+                                        {{ stat.user.first_name or '' }} {{ stat.user.last_name or stat.user.username }}
+                                    </a>
+                                    {% else %}
+                                    <span class="fw-semibold">ID: {{ stat.user_id }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-calendar-event me-2" style="color: #1877f2; font-size: 1.2rem;"></i>
+                                <div>
+                                    <small class="text-muted d-block">Data</small>
+                                    <span class="fw-semibold">{{ stat.stat_date.strftime('%d/%m/%Y') if stat.stat_date else '-' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-trophy me-2" style="color: #1877f2; font-size: 1.2rem;"></i>
+                                <div>
+                                    <small class="text-muted d-block">Sport</small>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ stat.sport_type or '-' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-tag me-2" style="color: #1877f2; font-size: 1.2rem;"></i>
+                                <div>
+                                    <small class="text-muted d-block">Tipo</small>
+                                    <span class="fw-semibold">{{ stat.stat_type or '-' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-calendar3 me-2" style="color: #1877f2; font-size: 1.2rem;"></i>
+                                <div>
+                                    <small class="text-muted d-block">Stagione</small>
+                                    <span class="fw-semibold">{{ stat.season or '-' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5 class="fw-bold mb-3"><i class="bi bi-speedometer2 me-1" style="color: #1877f2;"></i>Metriche</h5>
+                    {% if stat._parsed_metrics %}
+                    <div class="row g-3">
+                        {% for key, val in stat._parsed_metrics.items() %}
+                        <div class="col-6 col-md-3">
+                            <div class="card bg-light border-0 text-center py-3">
+                                <div class="h4 fw-bold mb-1" style="color: #1877f2;">{{ val }}</div>
+                                <small class="text-muted text-capitalize">{{ key }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Nessuna metrica registrata.</p>
+                    {% endif %}
+
+                    {% if stat.notes %}
+                    <hr>
+                    <h5 class="fw-bold mb-2"><i class="bi bi-chat-text me-1" style="color: #1877f2;"></i>Note</h5>
+                    <p class="text-muted">{{ stat.notes }}</p>
+                    {% endif %}
+
+                    <hr>
+                    <div class="small text-muted">
+                        {% if stat.creator %}
+                        Registrato da {{ stat.creator.first_name or '' }} {{ stat.creator.last_name or stat.creator.username }}
+                        {% endif %}
+                        {% if stat.created_at %}
+                        il {{ stat.created_at.strftime('%d/%m/%Y alle %H:%M') }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 fw-bold">
+                    <i class="bi bi-link-45deg me-1" style="color: #1877f2;"></i>Azioni
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if stat.user %}
+                        <a href="{{ url_for('stats.athlete', user_id=stat.user_id) }}" class="btn btn-outline-primary"><i class="bi bi-person me-1"></i>Profilo Atleta</a>
+                        {% endif %}
+                        <a href="{{ url_for('stats.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-circle me-1"></i>Nuova Registrazione</a>
+                        <a href="{{ url_for('stats.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Torna alla Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Pagine Personalizzabili{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Pagine Personalizzabili (Super Admin)</h1>
+    <a class="btn btn-primary" href="{{ url_for('admin.edit_page') }}">
+      <i class="bi bi-plus"></i> Nuova pagina
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <p class="text-muted mb-3">
+        Lo <strong>slug</strong> deve corrispondere all’endpoint Flask (es: <code>main.index</code>).
+        Qui sotto trovi anche l’elenco degli endpoint reali registrati.
+      </p>
+      {% if pages %}
+        <div class="list-group">
+          {% for p in pages %}
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+               href="{{ url_for('admin.edit_page', slug=p.slug) }}">
+              <div>
+                <div class="fw-semibold">{{ p.title or p.slug }}</div>
+                <div class="small text-muted">{{ p.slug }}</div>
+              </div>
+              <span class="badge bg-secondary">Modifica</span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-info mb-0">Nessuna pagina configurata.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if endpoints %}
+    <div class="card mt-3">
+      <div class="card-header"><strong>Endpoint registrati</strong></div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>URL</th>
+                <th>Personalizzazione</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in endpoints %}
+                <tr>
+                  <td><code>{{ e.endpoint }}</code></td>
+                  <td><code>{{ e.url }}</code></td>
+                  <td>
+                    {% if e.has_custom %}
+                      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.edit_page', slug=e.endpoint) }}">Modifica</a>
+                    {% else %}
+                      <a class="btn btn-sm btn-primary" href="{{ url_for('admin.edit_page', slug=e.endpoint) }}">Crea</a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+

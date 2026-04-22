@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Crea Evento{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .form-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .form-card .form-control:focus,
+  .form-card .form-select:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 .2rem rgba(24,119,242,.25);
+  }
+  .match-details-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fafbfc;
+  }
+  .btn-facebook {
+    background: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .btn-facebook:hover {
+    background: #155fc7;
+    color: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1><i class="bi bi-plus-circle me-2"></i>Crea Evento</h1>
+                <p>Crea un nuovo evento per la community</p>
+            </div>
+            <a href="{{ url_for('events.index') }}" class="btn btn-outline-light">
+                <i class="bi bi-arrow-left me-1"></i> Tutti gli eventi
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card form-card">
+                <div class="card-body p-4">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label fw-semibold") }}
+                            {{ form.title(class="form-control") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.event_type.label(class="form-label fw-semibold") }}
+                            {{ form.event_type(class="form-select", id="event_type") }}
+                        </div>
+                        <div class="card match-details-card mb-3" id="event-detail-card">
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold"><i class="bi bi-trophy me-2" style="color: #1877f2;"></i>Dettagli Partita/Torneo (opzionale)</h5>
+                                <div class="row" data-event-types="torneo">
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.tournament_name.label(class="form-label fw-semibold") }}
+                                        {{ form.tournament_name(class="form-control") }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.tournament_phase.label(class="form-label fw-semibold") }}
+                                        {{ form.tournament_phase(class="form-control") }}
+                                    </div>
+                                </div>
+                                <div class="row" data-event-types="partita">
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.opponent_name.label(class="form-label fw-semibold") }}
+                                        {{ form.opponent_name(class="form-control") }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.home_away.label(class="form-label fw-semibold") }}
+                                        {{ form.home_away(class="form-select") }}
+                                    </div>
+                                </div>
+                                <div class="row" data-event-types="partita">
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.score_for.label(class="form-label fw-semibold") }}
+                                        {{ form.score_for(class="form-control") }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.score_against.label(class="form-label fw-semibold") }}
+                                        {{ form.score_against(class="form-control") }}
+                                    </div>
+                                </div>
+                                <div class="mb-3" data-event-types="torneo">
+                                    {{ form.bracket_url.label(class="form-label fw-semibold") }}
+                                    {{ form.bracket_url(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label fw-semibold") }}
+                            {{ form.description(class="form-control", rows="3") }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.start_date.label(class="form-label fw-semibold") }}
+                                {{ form.start_date(class="form-control") }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.end_date.label(class="form-label fw-semibold") }}
+                                {{ form.end_date(class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.location.label(class="form-label fw-semibold") }}
+                            {{ form.location(class="form-control") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.address.label(class="form-label fw-semibold") }}
+                            {{ form.address(class="form-control") }}
+                        </div>
+                        <div class="card match-details-card mb-3" id="field-planner-card">
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold"><i class="bi bi-geo-alt me-2" style="color: #1877f2;"></i>Planner Campo (per allenamenti e partite)</h5>
+                                <div class="row">
+                                    <div class="col-md-8 mb-3">
+                                        {{ form.facility_id.label(class="form-label fw-semibold") }}
+                                        {{ form.facility_id(class="form-select", id="facility_id") }}
+                                        <small class="form-text text-muted">Seleziona un campo per integrare l'evento nel planner campo e verificare la disponibilità</small>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        {{ form.color.label(class="form-label fw-semibold") }}
+                                        {{ form.color(class="form-control", type="color", id="color_picker") }}
+                                        <small class="form-text text-muted">Colore nel calendario</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-facebook">
+                                <i class="bi bi-check-circle me-1"></i> Crea Evento
+                            </button>
+                            <a href="{{ url_for('events.index') }}" class="btn btn-secondary">Annulla</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        const eventTypeSelect = document.getElementById("event_type");
+        const detailCard = document.getElementById("event-detail-card");
+        const fieldPlannerCard = document.getElementById("field-planner-card");
+        const detailBlocks = document.querySelectorAll("[data-event-types]");
+        if (!eventTypeSelect || !detailCard || detailBlocks.length === 0) {
+            return;
+        }
+
+        const updateDetailVisibility = () => {
+            const selectedType = eventTypeSelect.value;
+            let anyVisible = false;
+            detailBlocks.forEach((block) => {
+                const types = (block.dataset.eventTypes || "").split(",").map((t) => t.trim());
+                const shouldShow = types.includes(selectedType);
+                block.style.display = shouldShow ? "" : "none";
+                if (shouldShow) {
+                    anyVisible = true;
+                }
+            });
+            detailCard.style.display = anyVisible ? "" : "none";
+            
+            // Show field planner card for training and match events
+            const showFieldPlanner = selectedType === "allenamento" || selectedType === "partita";
+            if (fieldPlannerCard) {
+                fieldPlannerCard.style.display = showFieldPlanner ? "" : "none";
+            }
+        };
+
+        eventTypeSelect.addEventListener("change", updateDetailVisibility);
+        updateDetailVisibility();
+    })();
+</script>
+{% endblock %}

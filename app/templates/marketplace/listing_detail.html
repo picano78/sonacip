@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% block title %}{{ listing.title }} - Marketplace{% endblock %}
+{% block content %}
+<style>
+.ld-gallery {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+.ld-gallery-main {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #e4e6eb;
+    cursor: pointer;
+}
+.ld-gallery-main-placeholder {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: linear-gradient(135deg, #e4e6eb, #d8dadf);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bcc0c4;
+    font-size: 5rem;
+}
+.ld-gallery-thumbs {
+    display: flex;
+    gap: 0.5rem;
+}
+.ld-gallery-thumb {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+}
+.ld-gallery-thumb:hover,
+.ld-gallery-thumb.active { border-color: #1877f2; }
+.ld-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+.ld-price {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1c1e21;
+}
+.ld-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1c1e21;
+    margin-bottom: 0.5rem;
+}
+.ld-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+.ld-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: #65676b;
+}
+.ld-meta-item i { color: #1877f2; }
+.ld-seller {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    border-top: 1px solid #dadde1;
+}
+.ld-seller-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #e4e6eb;
+}
+.ld-badge-condition {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: #e7f3ff;
+    color: #1877f2;
+}
+.ld-badge-sold {
+    background: #fce8e6;
+    color: #d93025;
+}
+.ld-similar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+.ld-similar-card {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform 0.2s;
+}
+.ld-similar-card:hover { transform: translateY(-2px); color: inherit; text-decoration: none; }
+.ld-similar-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+.ld-similar-card .price { font-weight: 700; font-size: 0.95rem; padding: 0.5rem; }
+.ld-similar-card .title { font-size: 0.8rem; color: #65676b; padding: 0 0.5rem 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.lightbox-overlay.show { display: flex; }
+.lightbox-overlay img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 8px; }
+.lightbox-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    color: #fff;
+    font-size: 2rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+</style>
+
+<div class="container py-3" style="max-width: 900px;">
+    <div class="mb-3">
+        <a href="{{ url_for('marketplace.index') }}" class="text-decoration-none text-muted">
+            <i class="bi bi-arrow-left me-1"></i> Torna al Marketplace
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-7">
+            <div class="ld-gallery">
+                {% set images = [] %}
+                {% if listing.image_1 %}{% set _ = images.append(listing.image_1) %}{% endif %}
+                {% if listing.image_2 %}{% set _ = images.append(listing.image_2) %}{% endif %}
+                {% if listing.image_3 %}{% set _ = images.append(listing.image_3) %}{% endif %}
+                {% if listing.image_4 %}{% set _ = images.append(listing.image_4) %}{% endif %}
+
+                {% if images %}
+                    <img src="{{ url_for('static', filename='uploads/' + images[0]) }}" 
+                         class="ld-gallery-main" id="mainImage" alt="{{ listing.title }}"
+                         onclick="openLightbox(this.src)">
+                    {% if images|length > 1 %}
+                        <div class="ld-gallery-thumbs">
+                            {% for img in images %}
+                                <img src="{{ url_for('static', filename='uploads/' + img) }}" 
+                                     class="ld-gallery-thumb {{ 'active' if loop.first }}"
+                                     onclick="switchImage(this, '{{ url_for('static', filename='uploads/' + img) }}')"
+                                     alt="Foto {{ loop.index }}">
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="ld-gallery-main-placeholder">
+                        <i class="bi bi-image"></i>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if listing.description %}
+                <div class="ld-card">
+                    <h5 class="fw-bold mb-3">Descrizione</h5>
+                    <p style="white-space: pre-wrap;">{{ listing.description }}</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-5">
+            <div class="ld-card">
+                {% if listing.status == 'sold' %}
+                    <span class="ld-badge-sold mb-2 d-inline-block">VENDUTO</span>
+                {% endif %}
+                <div class="ld-price mb-1">
+                    {% if listing.price == 0 %}
+                        Gratis
+                    {% else %}
+                        &euro;{{ "%.2f"|format(listing.price) }}
+                    {% endif %}
+                </div>
+                <div class="ld-title">{{ listing.title }}</div>
+                <div class="ld-meta">
+                    {% for key, label in listing.CATEGORIES if key == listing.category %}
+                        <span class="ld-meta-item"><i class="bi bi-tag-fill"></i> {{ label }}</span>
+                    {% endfor %}
+                    {% for key, label in listing.CONDITIONS if key == listing.condition %}
+                        <span class="ld-badge-condition">{{ label }}</span>
+                    {% endfor %}
+                    {% if listing.location %}
+                        <span class="ld-meta-item"><i class="bi bi-geo-alt-fill"></i> {{ listing.location }}</span>
+                    {% endif %}
+                    <span class="ld-meta-item"><i class="bi bi-eye-fill"></i> {{ listing.views_count or 0 }} visualizzazioni</span>
+                    <span class="ld-meta-item"><i class="bi bi-clock"></i> {{ listing.created_at.strftime('%d/%m/%Y') }}</span>
+                </div>
+
+                {% if listing.user_id != current_user.id %}
+                    <a href="{{ url_for('messages.chat', user_id=listing.seller.id) }}" 
+                       class="btn btn-primary btn-lg w-100 mb-2">
+                        <i class="bi bi-chat-dots me-1"></i> Contatta il venditore
+                    </a>
+                {% else %}
+                    {% if listing.is_promoted %}
+                    <div class="mb-2 p-2 rounded-3 text-center" style="background: linear-gradient(135deg, #ff9800, #f57c00); color: #fff;">
+                        <i class="bi bi-star-fill me-1"></i> <strong>In Evidenza</strong>
+                        {% if listing.promotion_expires_at %}
+                        <div class="small opacity-75">fino al {{ listing.promotion_expires_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                        {% endif %}
+                    </div>
+                    {% elif listing.status == 'active' %}
+                    <a href="{{ url_for('marketplace.promote_listing', listing_id=listing.id) }}" 
+                       class="btn w-100 mb-2 fw-semibold" style="background: linear-gradient(135deg, #ff9800, #f57c00); color: #fff; border: none;">
+                        <i class="bi bi-star-fill me-1"></i> Metti in Evidenza
+                    </a>
+                    {% endif %}
+                    <div class="d-flex gap-2 mb-2">
+                        <a href="{{ url_for('marketplace.edit_listing', listing_id=listing.id) }}" 
+                           class="btn btn-outline-primary flex-fill">
+                            <i class="bi bi-pencil me-1"></i> Modifica
+                        </a>
+                        {% if listing.status == 'active' %}
+                            <form method="POST" action="{{ url_for('marketplace.mark_sold', listing_id=listing.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle me-1"></i> Venduto
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    {% if listing.expires_at %}
+                    <div class="alert alert-warning py-2 px-3 mb-2 small">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <strong>Scade il {{ listing.expires_at.strftime('%d/%m/%Y') }}</strong> — dopo questa data l'annuncio e le foto verranno cancellati automaticamente.
+                    </div>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('marketplace.delete_listing', listing_id=listing.id) }}" 
+                          onsubmit="return confirm('Sei sicuro di voler eliminare questo annuncio?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                            <i class="bi bi-trash me-1"></i> Elimina annuncio
+                        </button>
+                    </form>
+                {% endif %}
+
+                <div class="ld-seller">
+                    {% if listing.seller.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + listing.seller.avatar) }}" 
+                             class="ld-seller-avatar" alt="avatar">
+                    {% else %}
+                        <div class="ld-seller-avatar d-flex align-items-center justify-content-center" 
+                             style="background: #1877f2; color: #fff; font-weight: 700; font-size: 1.2rem;">
+                            {{ listing.seller.first_name[0] if listing.seller.first_name else listing.seller.username[0] }}
+                        </div>
+                    {% endif %}
+                    <div>
+                        <a href="{{ url_for('social.profile', user_id=listing.seller.id) }}" 
+                           class="fw-semibold text-decoration-none">
+                            {{ listing.seller.get_full_name() }}
+                        </a>
+                        <div class="small text-muted">
+                            {{ listing.seller.marketplace_listings.filter_by(status='active').count() }} annunci attivi
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if seller_listings %}
+                <div class="ld-card">
+                    <h6 class="fw-bold mb-3">Altri annunci di {{ listing.seller.first_name or listing.seller.username }}</h6>
+                    <div class="ld-similar-grid">
+                        {% for item in seller_listings %}
+                            <a href="{{ url_for('marketplace.listing_detail', listing_id=item.id) }}" class="ld-similar-card">
+                                {% if item.image_1 %}
+                                    <img src="{{ url_for('static', filename='uploads/' + item.image_1) }}" alt="{{ item.title }}" loading="lazy">
+                                {% else %}
+                                    <div style="aspect-ratio:1; background: #e4e6eb; display:flex; align-items:center; justify-content:center; color:#bcc0c4; font-size:2rem;">
+                                        <i class="bi bi-image"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="price">&euro;{{ "%.2f"|format(item.price) }}</div>
+                                <div class="title">{{ item.title }}</div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if similar %}
+        <div class="ld-card mt-3">
+            <h5 class="fw-bold mb-3">Annunci simili</h5>
+            <div class="ld-similar-grid">
+                {% for item in similar %}
+                    <a href="{{ url_for('marketplace.listing_detail', listing_id=item.id) }}" class="ld-similar-card">
+                        {% if item.image_1 %}
+                            <img src="{{ url_for('static', filename='uploads/' + item.image_1) }}" alt="{{ item.title }}" loading="lazy">
+                        {% else %}
+                            <div style="aspect-ratio:1; background: #e4e6eb; display:flex; align-items:center; justify-content:center; color:#bcc0c4; font-size:2rem;">
+                                <i class="bi bi-image"></i>
+                            </div>
+                        {% endif %}
+                        <div class="price">&euro;{{ "%.2f"|format(item.price) }}</div>
+                        <div class="title">{{ item.title }}</div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<div class="lightbox-overlay" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <img id="lightboxImg" src="" alt="fullsize">
+</div>
+
+<script>
+function switchImage(thumb, src) {
+    document.getElementById('mainImage').src = src;
+    document.querySelectorAll('.ld-gallery-thumb').forEach(t => t.classList.remove('active'));
+    thumb.classList.add('active');
+}
+function openLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('show');
+}
+</script>
+{% endblock %}

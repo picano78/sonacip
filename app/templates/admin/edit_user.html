@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Modifica Utente - Admin{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <h1 class="mb-4">Modifica Utente: {{ user.get_full_name() }}</h1>
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control") }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.username.label(class="form-label") }}
+                        {{ form.username(class="form-control") }}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.first_name.label(class="form-label") }}
+                        {{ form.first_name(class="form-control") }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.last_name.label(class="form-label") }}
+                        {{ form.last_name(class="form-control") }}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    {{ form.phone.label(class="form-label") }}
+                    {{ form.phone(class="form-control") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.role.label(class="form-label") }}
+                    {{ form.role(class="form-select") }}
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.is_active(class="form-check-input") }}
+                        {{ form.is_active.label(class="form-check-label") }}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.is_verified(class="form-check-input") }}
+                        {{ form.is_verified.label(class="form-check-label") }}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="btn btn-secondary">Annulla</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

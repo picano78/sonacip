@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+{% block title %}{{ stream.title }} - Diretta - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #000;
+        color: #fff;
+    }
+    
+    .broadcast-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .video-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        background: #000;
+    }
+    
+    #localVideo {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        max-height: 80vh;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+    
+    .controls-overlay {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 15px;
+        background: rgba(0,0,0,0.8);
+        padding: 15px 25px;
+        border-radius: 50px;
+    }
+    
+    .control-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .control-btn:hover {
+        background: rgba(255,255,255,0.3);
+        transform: scale(1.1);
+    }
+    
+    .control-btn.danger {
+        background: #dc3545;
+    }
+    
+    .control-btn.danger:hover {
+        background: #c82333;
+    }
+    
+    .stream-stats {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0,0,0,0.8);
+        padding: 15px 20px;
+        border-radius: 12px;
+        min-width: 200px;
+    }
+    
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+    
+    .stat-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .live-indicator {
+        background: #dc3545;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .quality-selector {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(0,0,0,0.8);
+        padding: 10px 15px;
+        border-radius: 8px;
+    }
+    
+    .quality-select {
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    
+    .visibility-toggle {
+        position: absolute;
+        top: 70px;
+        right: 20px;
+        background: rgba(0,0,0,0.8);
+        padding: 10px 15px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .visibility-toggle label {
+        font-size: 13px;
+        cursor: pointer;
+        margin: 0;
+    }
+    
+    .tips-notification {
+        position: absolute;
+        bottom: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        color: #000;
+        padding: 15px 25px;
+        border-radius: 10px;
+        font-weight: 600;
+        display: none;
+        animation: slideIn 0.3s;
+    }
+    
+    .tips-notification.show {
+        display: block;
+    }
+    
+    @keyframes slideIn {
+        from { transform: translate(-50%, 20px); opacity: 0; }
+        to { transform: translate(-50%, 0); opacity: 1; }
+    }
+    
+    @media (max-width: 768px) {
+        .controls-overlay {
+            bottom: 10px;
+            padding: 10px 15px;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            width: 45px;
+            height: 45px;
+            font-size: 18px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="broadcast-container">
+    <div class="video-container">
+        <video id="localVideo" autoplay muted playsinline></video>
+        
+        <div class="stream-stats">
+            <div class="stat-item">
+                <span class="live-indicator">
+                    <i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i>
+                    LIVE
+                </span>
+            </div>
+            <div class="stat-item">
+                <i class="bi bi-eye-fill"></i>
+                <span id="viewerCount">0</span> spettatori
+            </div>
+            <div class="stat-item">
+                <i class="bi bi-graph-up"></i>
+                <span id="peakViewers">0</span> picco
+            </div>
+            <div class="stat-item">
+                <i class="bi bi-clock-fill"></i>
+                <span id="duration">00:00</span>
+            </div>
+            <div class="stat-item">
+                <i class="bi bi-coin"></i>
+                <span id="tipsTotal">€0.00</span> donazioni
+            </div>
+        </div>
+        
+        <div class="quality-selector">
+            <label class="me-2">Qualità:</label>
+            <select class="quality-select" id="qualitySelect">
+                <option value="auto" selected>Auto</option>
+                <option value="high">Alta (720p)</option>
+                <option value="medium">Media (480p)</option>
+                <option value="low">Bassa (360p)</option>
+            </select>
+        </div>
+        
+        <div class="visibility-toggle">
+            <i class="bi {{ 'bi-globe' if stream.is_public else 'bi-lock-fill' }}" id="visibilityIcon"></i>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="visibilityToggle" {{ 'checked' if stream.is_public else '' }}>
+                <label class="form-check-label" for="visibilityToggle" id="visibilityLabel">
+                    {{ 'Pubblica' if stream.is_public else 'Privata' }}
+                </label>
+            </div>
+        </div>
+        
+        <div class="tips-notification" id="tipsNotification">
+            <i class="bi bi-coin"></i>
+            <span id="tipText"></span>
+        </div>
+        
+        <div class="controls-overlay">
+            <button class="control-btn" id="toggleCamera" title="Attiva/Disattiva camera">
+                <i class="bi bi-camera-video-fill"></i>
+            </button>
+            <button class="control-btn" id="toggleMic" title="Attiva/Disattiva microfono">
+                <i class="bi bi-mic-fill"></i>
+            </button>
+            <button class="control-btn" id="switchCamera" title="Cambia camera">
+                <i class="bi bi-arrow-repeat"></i>
+            </button>
+            <button class="control-btn" id="toggleFullscreen" title="Schermo intero">
+                <i class="bi bi-fullscreen"></i>
+            </button>
+            <button class="control-btn" id="showAnalytics" title="Statistiche">
+                <i class="bi bi-bar-chart-fill"></i>
+            </button>
+            <button class="control-btn danger" id="endStream" title="Termina diretta">
+                <i class="bi bi-stop-circle-fill"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+const streamId = {{ stream.id }};
+const roomId = '{{ stream.room_id }}';
+
+let localStream = null;
+let videoEnabled = true;
+let audioEnabled = true;
+let facingMode = 'user';
+let startTime = new Date();
+let socket = null;
+let tipsReceived = 0;
+
+// Initialize Socket.IO
+try {
+    socket = io({
+        transports: ['websocket', 'polling']
+    });
+    
+    socket.on('connect', function() {
+        console.log('WebSocket connected');
+        socket.emit('join_stream', {stream_id: streamId});
+    });
+    
+    socket.on('viewer_joined', function(data) {
+        updateViewerStats(data);
+    });
+    
+    socket.on('viewer_left', function(data) {
+        updateViewerStats(data);
+    });
+    
+    socket.on('new_tip', function(data) {
+        handleNewTip(data);
+    });
+    
+} catch (e) {
+    console.error('WebSocket not available:', e);
+}
+
+function updateViewerStats(data) {
+    if (data.viewer_count !== undefined) {
+        document.getElementById('viewerCount').textContent = data.viewer_count;
+    }
+}
+
+function handleNewTip(data) {
+    tipsReceived += parseFloat(data.amount);
+    document.getElementById('tipsTotal').textContent = `€${tipsReceived.toFixed(2)}`;
+    
+    const notification = document.getElementById('tipsNotification');
+    const tipText = document.getElementById('tipText');
+    tipText.textContent = `${data.tipper_name} ha donato €${data.amount}! ${data.message || ''}`;
+    notification.classList.add('show');
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 5000);
+}
+
+// Initialize camera and microphone
+async function initMedia() {
+    try {
+        const quality = document.getElementById('qualitySelect').value;
+        const constraints = getConstraints(quality);
+        
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        document.getElementById('localVideo').srcObject = localStream;
+        
+        updateDuration();
+        updateViewerCount();
+        
+    } catch (error) {
+        console.error('Error accessing media devices:', error);
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            // Camera permission denied - guide user to enable it
+            const openSettings = confirm(
+                'Permesso fotocamera negato.\n\n' +
+                'Per avviare la diretta è necessario abilitare la fotocamera.\n' +
+                'Vuoi aprire le impostazioni del dispositivo per abilitarla?'
+            );
+            if (openSettings) {
+                // Try to open app settings on mobile devices
+                try {
+                    if (/android/i.test(navigator.userAgent)) {
+                        window.location.href = 'intent://settings#Intent;scheme=android.settings;end';
+                    } else if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                        window.location.href = 'app-settings:';
+                    } else {
+                        alert(
+                            'Apri le impostazioni del tuo dispositivo e abilita il permesso fotocamera per questo sito.\n\n' +
+                            'Su Chrome: Impostazioni > Privacy e sicurezza > Impostazioni sito > Fotocamera\n' +
+                            'Su Safari: Preferenze > Siti web > Fotocamera'
+                        );
+                    }
+                } catch (e) {
+                    alert(
+                        'Apri le impostazioni del tuo dispositivo e abilita il permesso fotocamera per questo sito.'
+                    );
+                }
+            }
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+            alert('Nessuna fotocamera trovata sul dispositivo. Collega una fotocamera e riprova.');
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+            alert('La fotocamera è già in uso da un\'altra applicazione. Chiudi le altre app e riprova.');
+        } else {
+            alert('Impossibile accedere alla fotocamera o al microfono. Verifica i permessi del browser.');
+        }
+    }
+}
+
+function getConstraints(quality) {
+    const resolutions = {
+        high: { width: 1280, height: 720 },
+        medium: { width: 640, height: 480 },
+        low: { width: 640, height: 360 },
+        auto: { width: { ideal: 1280 }, height: { ideal: 720 } }
+    };
+    
+    const resolution = resolutions[quality] || resolutions.auto;
+    
+    return {
+        video: {
+            facingMode: facingMode,
+            ...resolution
+        },
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+        }
+    };
+}
+
+// Quality change handler
+document.getElementById('qualitySelect').addEventListener('change', async function() {
+    const quality = this.value;
+    
+    // Notify viewers about quality change
+    if (socket) {
+        socket.emit('stream_quality_change', {
+            stream_id: streamId,
+            quality: quality
+        });
+    }
+    
+    // Restart stream with new quality
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    await initMedia();
+});
+
+// Visibility toggle handler
+document.getElementById('visibilityToggle').addEventListener('change', async function() {
+    try {
+        const response = await fetch(`/livestream/${streamId}/toggle-visibility`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            const icon = document.getElementById('visibilityIcon');
+            const label = document.getElementById('visibilityLabel');
+            if (data.is_public) {
+                icon.className = 'bi bi-globe';
+                label.textContent = 'Pubblica';
+            } else {
+                icon.className = 'bi bi-lock-fill';
+                label.textContent = 'Privata';
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling visibility:', error);
+    }
+});
+
+// Toggle camera on/off
+document.getElementById('toggleCamera').addEventListener('click', () => {
+    if (localStream) {
+        videoEnabled = !videoEnabled;
+        localStream.getVideoTracks().forEach(track => {
+            track.enabled = videoEnabled;
+        });
+        
+        const btn = document.getElementById('toggleCamera');
+        btn.innerHTML = videoEnabled 
+            ? '<i class="bi bi-camera-video-fill"></i>'
+            : '<i class="bi bi-camera-video-off-fill"></i>';
+        btn.style.background = videoEnabled ? 'rgba(255,255,255,0.2)' : '#dc3545';
+    }
+});
+
+// Toggle microphone on/off
+document.getElementById('toggleMic').addEventListener('click', () => {
+    if (localStream) {
+        audioEnabled = !audioEnabled;
+        localStream.getAudioTracks().forEach(track => {
+            track.enabled = audioEnabled;
+        });
+        
+        const btn = document.getElementById('toggleMic');
+        btn.innerHTML = audioEnabled 
+            ? '<i class="bi bi-mic-fill"></i>'
+            : '<i class="bi bi-mic-mute-fill"></i>';
+        btn.style.background = audioEnabled ? 'rgba(255,255,255,0.2)' : '#dc3545';
+    }
+});
+
+// Switch between front and back camera
+document.getElementById('switchCamera').addEventListener('click', async () => {
+    facingMode = facingMode === 'user' ? 'environment' : 'user';
+    
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    
+    await initMedia();
+});
+
+// Fullscreen toggle
+document.getElementById('toggleFullscreen').addEventListener('click', () => {
+    const videoContainer = document.querySelector('.video-container');
+    
+    if (!document.fullscreenElement) {
+        videoContainer.requestFullscreen().catch(err => {
+            console.error('Error attempting to enable fullscreen:', err);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+});
+
+// Show analytics
+document.getElementById('showAnalytics').addEventListener('click', async () => {
+    try {
+        const response = await fetch(`/livestream/${streamId}/analytics`);
+        const data = await response.json();
+        
+        const avgWatchMin = Math.floor(data.average_watch_time / 60);
+        const avgWatchSec = Math.floor(data.average_watch_time % 60);
+        
+        alert(
+            `Statistiche Diretta:\n\n` +
+            `Spettatori Totali: ${data.total_viewers}\n` +
+            `Spettatori Attuali: ${data.active_viewers}\n` +
+            `Picco Spettatori: ${data.peak_viewers}\n` +
+            `Durata: ${Math.floor(data.duration_seconds / 60)}m ${data.duration_seconds % 60}s\n` +
+            `Tempo Medio Visione: ${avgWatchMin}m ${avgWatchSec}s`
+        );
+    } catch (error) {
+        console.error('Error fetching analytics:', error);
+        alert('Errore nel caricamento delle statistiche');
+    }
+});
+
+// End stream
+document.getElementById('endStream').addEventListener('click', async () => {
+    if (!confirm('Sei sicuro di voler terminare la diretta?')) return;
+    
+    try {
+        const response = await fetch(`/livestream/${streamId}/stop`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            window.location.href = '/livestream';
+        }
+    } catch (error) {
+        console.error('Error ending stream:', error);
+        alert('Errore durante la chiusura della diretta');
+    }
+});
+
+// Update viewer count periodically
+async function updateViewerCount() {
+    try {
+        const response = await fetch(`/livestream/${streamId}/info`);
+        const data = await response.json();
+        document.getElementById('viewerCount').textContent = data.viewer_count;
+        document.getElementById('peakViewers').textContent = data.peak_viewers;
+    } catch (error) {
+        console.error('Error fetching viewer count:', error);
+    }
+    
+    setTimeout(updateViewerCount, 5000);
+}
+
+// Update duration display
+function updateDuration() {
+    const now = new Date();
+    const diff = Math.floor((now - startTime) / 1000);
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+    document.getElementById('duration').textContent = 
+        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    
+    setTimeout(updateDuration, 1000);
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    if (socket) {
+        socket.disconnect();
+    }
+});
+
+// Initialize on load
+initMedia();
+</script>
+{% endblock %}

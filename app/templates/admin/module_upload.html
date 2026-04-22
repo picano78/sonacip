@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Carica Modulo di Sistema{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-4">
+                <a href="{{ url_for('admin.modules') }}" class="btn btn-outline-secondary me-3">
+                    <i class="bi bi-arrow-left"></i> Indietro
+                </a>
+                <h2 class="mb-0"><i class="bi bi-upload"></i> Carica Nuovo Modulo</h2>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.name.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Nome identificativo del modulo (es. "Gestione Avanzata", "Modulo Email")
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.version.label(class="form-label") }}
+                            {{ form.version(class="form-control" + (" is-invalid" if form.version.errors else "")) }}
+                            {% if form.version.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.version.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Versione del modulo (es. "1.0.0", "2.1.5")
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=4) }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.description.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Descrizione breve del modulo e delle sue funzionalità
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.module_file.label(class="form-label") }}
+                            {{ form.module_file(class="form-control" + (" is-invalid" if form.module_file.errors else "")) }}
+                            {% if form.module_file.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.module_file.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                File ZIP contenente il modulo e tutti i suoi file
+                            </small>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <h6><i class="bi bi-exclamation-triangle"></i> Attenzione</h6>
+                            <ul class="mb-0">
+                                <li>Assicurati che il file ZIP contenga tutti i file necessari per il modulo</li>
+                                <li>Il modulo verrà caricato ma NON attivato automaticamente</li>
+                                <li>Dovrai attivarlo manualmente dalla lista moduli dopo il caricamento</li>
+                                <li>Verifica che il modulo sia compatibile con la versione corrente del sistema</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-upload"></i> Carica Modulo
+                            </button>
+                            <a href="{{ url_for('admin.modules') }}" class="btn btn-outline-secondary">
+                                Annulla
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

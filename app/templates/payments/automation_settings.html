@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni Automazione Pagamenti - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4">
+        <h2><i class="bi bi-gear-fill" style="color: #1877f2;"></i> Impostazioni Automazione Pagamenti</h2>
+        <p class="text-muted">Configura le funzionalità automatiche del sistema di pagamento (solo super admin)</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge-fill text-warning"></i> Auto-Approvazione Pagamenti</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        I pagamenti manuali sotto una soglia configurabile vengono approvati automaticamente 
+                        per velocizzare il processo (simile ai moderni social network).
+                    </p>
+                    
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Soglia Auto-Approvazione</label>
+                            <div class="input-group">
+                                <span class="input-group-text">€</span>
+                                <input type="number" 
+                                       name="auto_approve_threshold" 
+                                       class="form-control" 
+                                       value="{{ auto_approve_threshold }}"
+                                       min="0"
+                                       max="500"
+                                       step="0.01">
+                            </div>
+                            <small class="form-text text-muted">
+                                Pagamenti fino a questo importo vengono approvati automaticamente (0 = disabilitato)
+                            </small>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <strong>Nota:</strong> L'auto-approvazione si applica solo ai pagamenti manuali 
+                            (contanti, bonifico, assegno). I pagamenti Stripe sono già automatici.
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Salva Impostazioni
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-bell-fill text-primary"></i> Notifiche Automatiche</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="autoNotifications" checked disabled>
+                        <label class="form-check-label" for="autoNotifications">
+                            <strong>Notifiche stile social</strong>
+                        </label>
+                        <div class="text-muted small mt-1">
+                            Invia notifiche automatiche agli utenti per:
+                            <ul class="mb-0">
+                                <li>Pagamento completato (con emoji celebrative 🎉)</li>
+                                <li>Pagamento approvato dall'admin (✅)</li>
+                                <li>Promemoria pagamenti in scadenza</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="autoReminders" checked disabled>
+                        <label class="form-check-label" for="autoReminders">
+                            <strong>Promemoria automatici</strong>
+                        </label>
+                        <div class="text-muted small mt-1">
+                            Invia promemoria per pagamenti in scadenza (7 giorni prima, il giorno stesso, dopo scadenza)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-graph-up"></i> Funzionalità Attive</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
+                        <div>
+                            <div class="fw-bold">Quick Approve/Reject</div>
+                            <small class="text-muted">Approva o rifiuta con un click</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
+                        <div>
+                            <div class="fw-bold">Auto-Approvazione</div>
+                            <small class="text-muted">Pagamenti piccoli automatici</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
+                        <div>
+                            <div class="fw-bold">Notifiche Social</div>
+                            <small class="text-muted">Feedback immediato agli utenti</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
+                        <div>
+                            <div class="fw-bold">Promemoria Automatici</div>
+                            <small class="text-muted">Riduce i ritardi di pagamento</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-success fs-5 me-2"></i>
+                        <div>
+                            <div class="fw-bold">Analytics in tempo reale</div>
+                            <small class="text-muted">Dashboard aggiornata</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-primary">
+                <div class="card-body">
+                    <h6 class="text-primary mb-2">
+                        <i class="bi bi-stars"></i> Sistema Moderno
+                    </h6>
+                    <p class="small mb-0">
+                        Il sistema di pagamento è stato aggiornato con funzionalità simili ai moderni social network:
+                        <strong>automatico, veloce e completamente controllabile dal super admin</strong>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Guida Rapida</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Come Funziona l'Auto-Approvazione</h6>
+                    <ol class="small">
+                        <li>Un pagamento manuale viene registrato</li>
+                        <li>Se l'importo è sotto la soglia configurata, viene approvato automaticamente</li>
+                        <li>L'utente riceve una notifica immediata</li>
+                        <li>Il pagamento appare come completato</li>
+                    </ol>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold">Quick Actions (Admin)</h6>
+                    <ul class="small">
+                        <li><i class="bi bi-check-circle text-success"></i> Click verde per approvare rapidamente</li>
+                        <li><i class="bi bi-x-circle text-danger"></i> Click rosso per rifiutare (con motivazione)</li>
+                        <li>Bulk actions per approvare più pagamenti contemporaneamente</li>
+                        <li>Notifiche automatiche agli utenti per ogni azione</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

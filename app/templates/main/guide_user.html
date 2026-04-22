@@ -1,0 +1,609 @@
+{% extends "base.html" %}
+
+{% block title %}Guida Utente - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+  --fb-blue: #1877f2;
+  --fb-blue-dark: #155fc7;
+  --fb-blue-light: #e7f3ff;
+}
+
+.guide-hero {
+  background: linear-gradient(135deg, #1877f2 0%, #0a4da6 100%);
+  color: white;
+  padding: 4rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.guide-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(21,95,199,0.2) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.guide-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  position: relative;
+  z-index: 2;
+}
+
+.guide-hero p {
+  font-size: 1.15rem;
+  opacity: 0.95;
+  position: relative;
+  z-index: 2;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: var(--fb-blue-light);
+  color: var(--fb-blue);
+  font-weight: 600;
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(24,119,242,0.25);
+}
+
+.step-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: all 0.3s ease;
+}
+
+.step-card:hover {
+  border-color: var(--fb-blue);
+  box-shadow: 0 4px 12px rgba(24,119,242,0.1);
+}
+
+.step-number {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  background: var(--fb-blue);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.step-content h6 {
+  font-weight: 600;
+  color: #050505;
+  margin-bottom: 0.25rem;
+}
+
+.step-content p {
+  color: #65676b;
+  margin-bottom: 0;
+  font-size: 0.95rem;
+}
+
+.section-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--fb-blue-light);
+  color: var(--fb-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-right: 0.75rem;
+}
+
+.faq-section {
+  background: #f0f2f5;
+  border-radius: 16px;
+  padding: 2.5rem;
+}
+
+.cta-box {
+  background: linear-gradient(135deg, #1877f2 0%, #0a4da6 100%);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  color: white;
+  text-align: center;
+}
+
+.cta-box h3 {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.btn-cta {
+  background: white;
+  color: var(--fb-blue);
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-cta:hover {
+  background: var(--fb-blue-light);
+  color: var(--fb-blue-dark);
+  transform: translateY(-2px);
+}
+
+.btn-contact {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+  padding: 0.65rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.btn-contact:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="guide-hero">
+  <div class="container text-center">
+    <h1><i class="bi bi-book me-2"></i>Guida Utente SONACIP</h1>
+    <p class="mt-3 mx-auto" style="max-width: 650px;">Scopri come utilizzare al meglio tutte le funzionalità della piattaforma. Segui le istruzioni passo dopo passo per iniziare subito.</p>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="accordion" id="guideAccordion">
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRegistrazione">
+                <span class="section-icon"><i class="bi bi-person-plus"></i></span>
+                Come Registrarsi
+              </button>
+            </h2>
+            <div id="collapseRegistrazione" class="accordion-collapse collapse show" data-bs-parent="#guideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Vai alla pagina di registrazione</h6>
+                    <p>Clicca sul pulsante "Registrati" nella pagina principale o nella barra di navigazione.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Compila i tuoi dati personali</h6>
+                    <p>Inserisci nome, cognome, email e scegli una password sicura per il tuo account.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Conferma la registrazione</h6>
+                    <p>Clicca su "Registrati" per completare la procedura. Potrai accedere immediatamente alla piattaforma.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Personalizza il tuo profilo</h6>
+                    <p>Dopo la registrazione, aggiungi una foto profilo, la tua bio e le tue discipline sportive preferite.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSocial">
+                <span class="section-icon"><i class="bi bi-share"></i></span>
+                Come Usare il Social Network
+              </button>
+            </h2>
+            <div id="collapseSocial" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Accedi al Feed</h6>
+                    <p>Dalla dashboard, clicca su "Social" nel menu laterale per vedere il feed con i post della community.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Pubblica un post</h6>
+                    <p>Clicca su "Nuovo Post" per condividere aggiornamenti, foto e contenuti con la tua rete di contatti.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Interagisci con gli altri</h6>
+                    <p>Metti "Mi piace", commenta i post e segui altri utenti per restare aggiornato sulle loro attività.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Cerca e connettiti</h6>
+                    <p>Usa la funzione "Esplora" per trovare atleti, società e appassionati con interessi simili ai tuoi.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMarketplace">
+                <span class="section-icon"><i class="bi bi-bag-check"></i></span>
+                Come Usare il Marketplace
+              </button>
+            </h2>
+            <div id="collapseMarketplace" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Esplora gli annunci</h6>
+                    <p>Vai alla sezione "Marketplace" per vedere tutti gli articoli sportivi in vendita nella community.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Cerca con i filtri</h6>
+                    <p>Utilizza i filtri per categoria, prezzo e posizione per trovare esattamente ciò che cerchi.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Pubblica un annuncio</h6>
+                    <p>Clicca su "Crea Annuncio" per vendere i tuoi articoli. Aggiungi foto, descrizione e prezzo.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Contatta il venditore</h6>
+                    <p>Usa la messaggistica integrata per contattare il venditore e concordare i dettagli della transazione.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePlanner">
+                <span class="section-icon"><i class="bi bi-calendar3"></i></span>
+                Come Usare il Planner/Calendario
+              </button>
+            </h2>
+            <div id="collapsePlanner" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Accedi al Calendario</h6>
+                    <p>Dal menu laterale, seleziona "Calendario" per visualizzare tutti i tuoi impegni e gli eventi della società.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Crea un evento</h6>
+                    <p>Clicca su una data per creare un nuovo evento. Specifica titolo, ora, luogo e partecipanti.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Gestisci le attività</h6>
+                    <p>Usa il Planner per organizzare le tue attività quotidiane con scadenze, priorità e promemoria.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Conferma la partecipazione</h6>
+                    <p>Rispondi agli inviti degli eventi con RSVP per confermare o declinare la tua partecipazione.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMessaggi">
+                <span class="section-icon"><i class="bi bi-chat-dots"></i></span>
+                Come Inviare Messaggi
+              </button>
+            </h2>
+            <div id="collapseMessaggi" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Apri la Messaggistica</h6>
+                    <p>Clicca sull'icona dei messaggi nel menu o vai alla sezione "Messaggi" dalla sidebar.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Avvia una nuova conversazione</h6>
+                    <p>Clicca su "Nuovo Messaggio" e cerca l'utente con cui vuoi comunicare.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Scrivi e invia</h6>
+                    <p>Digita il tuo messaggio e premi "Invia". Puoi anche allegare file e immagini.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Gestisci le conversazioni</h6>
+                    <p>Visualizza tutte le tue conversazioni attive e i messaggi ricevuti dalla sezione "Posta in arrivo".</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProfilo">
+                <span class="section-icon"><i class="bi bi-person-gear"></i></span>
+                Come Gestire il Profilo
+              </button>
+            </h2>
+            <div id="collapseProfilo" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Accedi al tuo profilo</h6>
+                    <p>Clicca sulla tua immagine profilo o sul tuo nome nel menu per visualizzare il tuo profilo.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Modifica le informazioni</h6>
+                    <p>Clicca su "Modifica Profilo" per aggiornare foto, bio, competenze sportive e informazioni di contatto.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Aggiungi esperienze</h6>
+                    <p>Inserisci la tua carriera sportiva, formazione e competenze per un profilo completo e professionale.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Gestisci la privacy</h6>
+                    <p>Controlla chi può vedere le tue informazioni e personalizza le impostazioni di visibilità del profilo.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTornei">
+                <span class="section-icon"><i class="bi bi-trophy"></i></span>
+                Come Partecipare ai Tornei
+              </button>
+            </h2>
+            <div id="collapseTornei" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Esplora i tornei disponibili</h6>
+                    <p>Vai alla sezione "Tornei" per vedere tutti i tornei aperti, le date e le regole di partecipazione.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Iscriviti a un torneo</h6>
+                    <p>Seleziona il torneo e clicca su "Iscriviti" per registrarti. Verifica i requisiti di partecipazione.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Segui il tabellone</h6>
+                    <p>Consulta il tabellone del torneo per vedere i tuoi avversari, gli orari e i risultati delle partite.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <h6>Consulta classifiche e risultati</h6>
+                    <p>Al termine del torneo, visualizza la classifica finale, le statistiche e condividi i tuoi risultati.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion-item border-0 mb-3 shadow-sm rounded-3 overflow-hidden">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNotifiche">
+                <span class="section-icon"><i class="bi bi-bell"></i></span>
+                Come Gestire le Notifiche
+              </button>
+            </h2>
+            <div id="collapseNotifiche" class="accordion-collapse collapse" data-bs-parent="#guideAccordion">
+              <div class="accordion-body">
+                <div class="step-card">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <h6>Visualizza le notifiche</h6>
+                    <p>Clicca sull'icona della campanella nel menu per vedere tutte le tue notifiche recenti.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <h6>Gestisci le preferenze</h6>
+                    <p>Nelle impostazioni, personalizza quali notifiche vuoi ricevere: eventi, messaggi, social o tornei.</p>
+                  </div>
+                </div>
+                <div class="step-card">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <h6>Segna come lette</h6>
+                    <p>Clicca su una notifica per segnarla come letta o usa "Segna tutte come lette" per pulire la lista.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-10">
+        <div class="faq-section">
+          <h2 class="text-center mb-4" style="font-weight: 700; color: #050505;">
+            <i class="bi bi-question-circle me-2" style="color: #1877f2;"></i>Domande Frequenti
+          </h2>
+          <div class="accordion" id="faqAccordion">
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                  La registrazione è gratuita?
+                </button>
+              </h2>
+              <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                  Sì, la registrazione come utente su SONACIP è completamente gratuita. Potrai accedere a tutte le funzionalità base della piattaforma senza alcun costo.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                  Come posso contattare il supporto?
+                </button>
+              </h2>
+              <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                  Puoi contattare il nostro team di supporto tramite la pagina <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a>. Riceverai una risposta entro 24 ore lavorative.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                  Posso iscrivermi a più società contemporaneamente?
+                </button>
+              </h2>
+              <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                  Sì, puoi essere membro di più società sportive contemporaneamente. Ogni società avrà i propri eventi e comunicazioni visibili nel tuo calendario e feed.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                  Come posso eliminare il mio account?
+                </button>
+              </h2>
+              <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                  Per eliminare il tuo account, contatta l'amministratore tramite la pagina <a href="{{ url_for('main.contact_admin') }}">Contatta l'Amministratore</a> specificando la tua richiesta. Il team provvederà alla cancellazione secondo le normative GDPR.
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                  I miei dati sono al sicuro?
+                </button>
+              </h2>
+              <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                  Assolutamente sì. SONACIP utilizza crittografia avanzata e rispetta pienamente il Regolamento GDPR per la protezione dei tuoi dati personali. Per maggiori dettagli, consulta la nostra Privacy Policy.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="cta-box">
+          <i class="bi bi-rocket-takeoff" style="font-size: 3rem; margin-bottom: 1rem; display: block; opacity: 0.9;"></i>
+          <h3>Pronto per Iniziare?</h3>
+          <p class="mb-4" style="opacity: 0.95;">Registrati gratuitamente e inizia subito a esplorare tutte le funzionalità di SONACIP.</p>
+          <div class="d-flex flex-wrap gap-3 justify-content-center">
+            <a href="{{ url_for('auth.register') }}" class="btn-cta">
+              <i class="bi bi-person-plus"></i> Registrati Ora
+            </a>
+            <a href="{{ url_for('main.contact_admin') }}" class="btn-contact">
+              <i class="bi bi-envelope"></i> Contatta l'Amministratore
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

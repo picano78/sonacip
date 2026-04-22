@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Fattura {{ invoice.invoice_number }} - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .invoice-card {
+    border: none; border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+  .detail-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; color: #6c757d; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-receipt me-2"></i>Fattura {{ invoice.invoice_number }}</h1>
+        <p>Dettaglio fattura</p>
+      </div>
+      <div class="d-flex gap-2">
+        {% if invoice.pdf_path %}
+        <a href="{{ invoice.pdf_path }}" class="btn btn-light text-primary fw-bold" target="_blank"><i class="bi bi-download"></i> PDF</a>
+        {% endif %}
+        <a href="{{ url_for('payments.index') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Pagamenti</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="invoice-card card p-4">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+          <div>
+            <h4 class="fw-bold">{{ invoice.invoice_number }}</h4>
+            <span class="badge fs-6 bg-{{ 'success' if invoice.status == 'paid' else 'warning text-dark' if invoice.status == 'pending' else 'danger' if invoice.status == 'overdue' else 'secondary' }}">{{ invoice.status|title }}</span>
+          </div>
+          <div class="text-end">
+            <div class="detail-label">Importo</div>
+            <div class="fs-3 fw-bold text-primary">€{{ '%.2f'|format(invoice.amount) }}</div>
+          </div>
+        </div>
+
+        {% if invoice.description %}
+        <div class="mb-3">
+          <div class="detail-label">Descrizione</div>
+          <p>{{ invoice.description }}</p>
+        </div>
+        {% endif %}
+
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6">
+            <div class="detail-label">Data emissione</div>
+            <div>{{ invoice.created_at.strftime('%d/%m/%Y') if invoice.created_at else '—' }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="detail-label">Utente</div>
+            <div>{{ invoice.user.full_name or invoice.user.username if invoice.user else '—' }}</div>
+          </div>
+        </div>
+
+        {% if invoice.items %}
+        <h6 class="detail-label mb-2">Voci fattura</h6>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr><th>Descrizione</th><th class="text-end">Importo</th></tr>
+            </thead>
+            <tbody>
+              {% for item in invoice.items %}
+              <tr>
+                <td>{{ item.description or item.name or '—' }}</td>
+                <td class="text-end">€{{ '%.2f'|format(item.amount) if item.amount else '—' }}</td>
+              </tr>
+              {% endfor %}
+              <tr class="fw-bold">
+                <td>Totale</td>
+                <td class="text-end">€{{ '%.2f'|format(invoice.amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="invoice-card card p-4">
+        <h6 class="detail-label mb-3">Riepilogo</h6>
+        <ul class="list-unstyled mb-0">
+          <li class="d-flex justify-content-between mb-2"><span class="text-muted">Numero</span><strong>{{ invoice.invoice_number }}</strong></li>
+          <li class="d-flex justify-content-between mb-2"><span class="text-muted">Stato</span><strong>{{ invoice.status|title }}</strong></li>
+          <li class="d-flex justify-content-between mb-2"><span class="text-muted">Importo</span><strong>€{{ '%.2f'|format(invoice.amount) }}</strong></li>
+          <li class="d-flex justify-content-between"><span class="text-muted">Data</span><strong>{{ invoice.created_at.strftime('%d/%m/%Y') if invoice.created_at else '—' }}</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

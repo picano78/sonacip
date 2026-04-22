@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% block title %}Benvenuto - SONACIP{% endblock %}
+{% block extra_css %}
+<style>
+    .onboarding-wrapper {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        background: linear-gradient(135deg, #f0f2f5 0%, #e3e8f0 100%);
+    }
+    [data-theme="dark"] .onboarding-wrapper {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+    .onboarding-card {
+        width: 100%;
+        max-width: 600px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    [data-theme="dark"] .onboarding-card {
+        background: #23243a;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .onboarding-header {
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        color: #fff;
+        padding: 2rem;
+        text-align: center;
+    }
+    .onboarding-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .onboarding-header p {
+        margin: 0.5rem 0 0;
+        opacity: 0.9;
+        font-size: 0.9rem;
+    }
+    .onboarding-body {
+        padding: 2rem;
+    }
+    .progress-dots {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .progress-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #dee2e6;
+        transition: all 0.3s;
+    }
+    [data-theme="dark"] .progress-dot {
+        background: #444;
+    }
+    .progress-dot.active {
+        background: #1877f2;
+        transform: scale(1.2);
+    }
+    .progress-dot.completed {
+        background: #20c997;
+    }
+    .onboarding-step {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+    .onboarding-step.active {
+        display: block;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .step-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem;
+    }
+    .step-title {
+        text-align: center;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #1c1e21;
+    }
+    [data-theme="dark"] .step-title {
+        color: #e0e0e0;
+    }
+    .step-desc {
+        text-align: center;
+        color: #606770;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+    [data-theme="dark"] .step-desc {
+        color: #b0b0b0;
+    }
+    .onboarding-nav {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    .onboarding-progress-bar {
+        height: 4px;
+        background: #dee2e6;
+        border-radius: 2px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    [data-theme="dark"] .onboarding-progress-bar {
+        background: #444;
+    }
+    .onboarding-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1877f2, #42a5f5);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .feature-list li {
+        padding: 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: #444;
+    }
+    [data-theme="dark"] .feature-list li {
+        color: #ccc;
+    }
+    .feature-list li i {
+        color: #1877f2;
+        font-size: 1.1rem;
+    }
+    .interest-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .interest-chip {
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        border: 2px solid #dee2e6;
+        background: transparent;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        color: #444;
+    }
+    [data-theme="dark"] .interest-chip {
+        border-color: #555;
+        color: #ccc;
+    }
+    .interest-chip.selected {
+        border-color: #1877f2;
+        background: rgba(24, 119, 242, 0.1);
+        color: #1877f2;
+    }
+    .interest-chip:hover {
+        border-color: #1877f2;
+    }
+    .action-card {
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: inherit;
+    }
+    [data-theme="dark"] .action-card {
+        border-color: #444;
+    }
+    .action-card:hover {
+        border-color: #1877f2;
+        background: rgba(24, 119, 242, 0.05);
+    }
+    .action-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: rgba(24, 119, 242, 0.1);
+        color: #1877f2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="onboarding-wrapper">
+    <div class="onboarding-card">
+        <div class="onboarding-header">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏆</div>
+            <h2>SONACIP</h2>
+            <p>Piattaforma Gestione Sportiva</p>
+        </div>
+        <div class="onboarding-body">
+            <div class="onboarding-progress-bar">
+                <div class="onboarding-progress-fill" id="progressFill" style="width: 33.3%"></div>
+            </div>
+            <div class="progress-dots">
+                <div class="progress-dot active" data-step="0"></div>
+                <div class="progress-dot" data-step="1"></div>
+                <div class="progress-dot" data-step="2"></div>
+            </div>
+
+            <div class="onboarding-step active" id="step-0">
+                <div class="step-icon"><i class="bi bi-hand-wave"></i></div>
+                <div class="step-title">Benvenuto su SONACIP!</div>
+                <div class="step-desc">La piattaforma completa per gestire la tua vita sportiva. Completiamo il tuo profilo per iniziare.</div>
+                <ul class="feature-list mb-3">
+                    <li><i class="bi bi-check-circle-fill"></i> Gestione società sportive</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Feed sociale e community</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Tornei e classifiche</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Marketplace sportivo</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Calendario eventi</li>
+                </ul>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nome</label>
+                    <input type="text" class="form-control" id="ob-name" placeholder="Il tuo nome" value="{{ current_user.first_name or '' }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Bio</label>
+                    <textarea class="form-control" id="ob-bio" rows="2" placeholder="Raccontaci qualcosa di te...">{{ current_user.bio or '' }}</textarea>
+                </div>
+                <div class="onboarding-nav">
+                    <div></div>
+                    <button class="btn btn-primary" onclick="goToStep(1)">Avanti <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div class="onboarding-step" id="step-1">
+                <div class="step-icon"><i class="bi bi-palette"></i></div>
+                <div class="step-title">Personalizza</div>
+                <div class="step-desc">Scegli i tuoi sport preferiti e personalizza il tuo profilo.</div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Sport preferiti</label>
+                    <div class="interest-chips">
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">⚽ Calcio</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">🏀 Basket</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">🏐 Pallavolo</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">🎾 Tennis</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">🏊 Nuoto</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">🏃 Atletica</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">🚴 Ciclismo</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">🥋 Arti Marziali</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">⛷️ Sci</button>
+                        <button type="button" class="interest-chip" onclick="this.classList.toggle('selected')">🏋️ Fitness</button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Immagine profilo</label>
+                    <input type="file" class="form-control" id="ob-avatar" accept="image/*">
+                </div>
+                <div class="onboarding-nav">
+                    <button class="btn btn-outline-secondary" onclick="goToStep(0)"><i class="bi bi-arrow-left"></i> Indietro</button>
+                    <button class="btn btn-primary" onclick="goToStep(2)">Avanti <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div class="onboarding-step" id="step-2">
+                <div class="step-icon"><i class="bi bi-people"></i></div>
+                <div class="step-title">Connettiti</div>
+                <div class="step-desc">Esplora la community e trova le società sportive nella tua zona.</div>
+                <a href="{{ url_for('social.explore') }}" target="_blank" class="action-card">
+                    <div class="action-icon"><i class="bi bi-search"></i></div>
+                    <div>
+                        <div class="fw-semibold">Esplora la Community</div>
+                        <div class="small text-muted">Cerca atleti, allenatori e società sportive</div>
+                    </div>
+                </a>
+                <a href="{{ url_for('social.feed') }}" target="_blank" class="action-card">
+                    <div class="action-icon"><i class="bi bi-rss"></i></div>
+                    <div>
+                        <div class="fw-semibold">Vai al Feed</div>
+                        <div class="small text-muted">Scopri cosa succede nel mondo sportivo</div>
+                    </div>
+                </a>
+                <a href="{{ url_for('tournaments.list_tournaments') }}" target="_blank" class="action-card">
+                    <div class="action-icon"><i class="bi bi-trophy"></i></div>
+                    <div>
+                        <div class="fw-semibold">Tornei</div>
+                        <div class="small text-muted">Partecipa ai tornei della tua disciplina</div>
+                    </div>
+                </a>
+                <div class="onboarding-nav">
+                    <button class="btn btn-outline-secondary" onclick="goToStep(1)"><i class="bi bi-arrow-left"></i> Indietro</button>
+                    <form method="POST" action="{{ url_for('main.complete_onboarding') }}" style="margin:0;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-rocket-takeoff"></i> Inizia!
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    var currentStep = 0;
+    var totalSteps = 3;
+    var dots = document.querySelectorAll('.progress-dot');
+    var progressFill = document.getElementById('progressFill');
+
+    window.goToStep = function(step) {
+        if (step < 0 || step >= totalSteps) return;
+        document.getElementById('step-' + currentStep).classList.remove('active');
+        document.getElementById('step-' + step).classList.add('active');
+        currentStep = step;
+        dots.forEach(function(dot, i) {
+            dot.classList.remove('active', 'completed');
+            if (i < currentStep) dot.classList.add('completed');
+            if (i === currentStep) dot.classList.add('active');
+        });
+        progressFill.style.width = ((currentStep + 1) / totalSteps * 100) + '%';
+    };
+})();
+</script>
+{% endblock %}

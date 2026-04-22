@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Modifica Impegno Campo - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-pencil-square"></i> Modifica Impegno Campo</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('field_planner.edit', event_id=event.id) }}">
+                        {{ form.hidden_tag() }}
+                        
+                        {% if event.is_recurring %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Nota:</strong> Questo è l'evento principale di una serie ricorrente. 
+                            Le modifiche non verranno applicate automaticamente alle ricorrenze future già create.
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            {{ form.facility_id.label(class="form-label") }}
+                            {{ form.facility_id(class="form-select" + (" is-invalid" if form.facility_id.errors else "")) }}
+                            {% if form.facility_id.errors %}
+                                <div class="invalid-feedback">{{ form.facility_id.errors[0] }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Seleziona il campo da occupare. 
+                                <a href="{{ url_for('calendar.facilities') }}">Gestisci campi</a>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.event_type.label(class="form-label") }}
+                            {{ form.event_type(class="form-select" + (" is-invalid" if form.event_type.errors else "")) }}
+                            {% if form.event_type.errors %}
+                                <div class="invalid-feedback">{{ form.event_type.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else "")) }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback">{{ form.title.errors[0] }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.team.label(class="form-label") }}
+                                    {{ form.team(class="form-control") }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.category.label(class="form-label") }}
+                                    {{ form.category(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.start_date.label(class="form-label") }}
+                                    {{ form.start_date(class="form-control" + (" is-invalid" if form.start_date.errors else "")) }}
+                                    {% if form.start_date.errors %}
+                                        <div class="invalid-feedback">{{ form.start_date.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.start_time.label(class="form-label") }}
+                                    {{ form.start_time(class="form-control" + (" is-invalid" if form.start_time.errors else "")) }}
+                                    {% if form.start_time.errors %}
+                                        <div class="invalid-feedback">{{ form.start_time.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.end_time.label(class="form-label") }}
+                                    {{ form.end_time(class="form-control" + (" is-invalid" if form.end_time.errors else "")) }}
+                                    {% if form.end_time.errors %}
+                                        <div class="invalid-feedback">{{ form.end_time.errors[0] }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows="3") }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.color.label(class="form-label") }}
+                            {{ form.color(class="form-control", type="color") }}
+                            <div class="form-text">Scegli un colore per visualizzare l'evento nel calendario</div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Nota:</strong> Il Planner Campo permette un solo impegno per campo alla volta. 
+                            Se c'è già un evento in questo orario, riceverai un errore di sovraccaricamento.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('field_planner.detail', event_id=event.id) }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Annulla
+                            </a>
+                            {{ form.submit(class="btn btn-success") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

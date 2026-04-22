@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Automazioni - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-robot"></i> Regole Automazione</h1>
+        <a href="{{ url_for('admin.create_automation_rule') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nuova Regola
+        </a>
+    </div>
+
+    {% if rules.items %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Evento</th>
+                            <th>Stato</th>
+                            <th>Esecuzioni</th>
+                            <th>Successi</th>
+                            <th>Errori</th>
+                            <th>Ultima Esecuzione</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rule in rules.items %}
+                        <tr>
+                            <td>
+                                <strong>{{ rule.name }}</strong>
+                                {% if rule.condition %}
+                                <br><small class="text-muted"><i class="fas fa-filter"></i> Con condizione</small>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-info">{{ rule.event_type }}</span></td>
+                            <td>
+                                {% if rule.is_active %}
+                                <span class="badge bg-success">Attiva</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Disattiva</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ rule_stats.get(rule.id, {}).get('total', 0) }}</td>
+                            <td><span class="text-success">{{ rule_stats.get(rule.id, {}).get('success', 0) }}</span></td>
+                            <td><span class="text-danger">{{ rule_stats.get(rule.id, {}).get('failed', 0) }}</span></td>
+                            <td>
+                                {% if rule_stats.get(rule.id, {}).get('last_run') %}
+                                {{ rule_stats[rule.id]['last_run'].strftime('%d/%m/%Y %H:%M') }}
+                                {% else %}
+                                <span class="text-muted">Mai</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('admin.automation_runs', rule_id=rule.id) }}" 
+                                   class="btn btn-sm btn-info" title="Cronologia">
+                                    <i class="fas fa-history"></i>
+                                </a>
+                                <a href="{{ url_for('admin.edit_automation_rule', rule_id=rule.id) }}" 
+                                   class="btn btn-sm btn-warning" title="Modifica">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('admin.delete_automation_rule', rule_id=rule.id) }}" 
+                                      style="display:inline;" onsubmit="return confirm('Eliminare questa regola?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Elimina">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if rules.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if rules.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.automation_rules', page=rules.prev_num) }}">Precedente</a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in rules.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == rules.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.automation_rules', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if rules.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.automation_rules', page=rules.next_num) }}">Successivo</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Nessuna regola di automazione configurata.
+        <a href="{{ url_for('admin.create_automation_rule') }}">Creane una</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

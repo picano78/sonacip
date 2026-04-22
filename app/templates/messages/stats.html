@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Statistiche Messaggi - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white; padding: 2rem; border-radius: 14px; margin-bottom: 24px;
+  }
+  .page-header h1 { margin: 0; font-weight: 700; }
+  .page-header p { margin: .25rem 0 0; opacity: .85; }
+  .stat-card {
+    border: none; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+    text-align: center; padding: 1.5rem;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+  .stat-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; margin-bottom: .5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1><i class="bi bi-bar-chart-line me-2"></i>Statistiche Messaggi</h1>
+        <p>Panoramica delle tue comunicazioni</p>
+      </div>
+      <a href="{{ url_for('messages.inbox') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Posta in arrivo</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    {% set cards = [
+      ('Totali inviati', stats.sent|default(0), 'bi-send', 'primary'),
+      ('Totali ricevuti', stats.received|default(0), 'bi-envelope', 'info'),
+      ('Non letti', stats.unread|default(0), 'bi-envelope-open', 'warning'),
+      ('Conversazioni', stats.conversations|default(0), 'bi-chat-dots', 'success'),
+      ('Questa settimana', stats.this_week|default(0), 'bi-calendar-week', 'secondary'),
+      ('Questo mese', stats.this_month|default(0), 'bi-calendar-month', 'dark')
+    ] %}
+    {% for label, value, icon, color in cards %}
+    <div class="col-6 col-md-4 col-lg-3">
+      <div class="stat-card card">
+        <div class="stat-icon bg-{{ color }} bg-opacity-10 text-{{ color }}"><i class="bi {{ icon }}"></i></div>
+        <div class="fs-3 fw-bold">{{ value }}</div>
+        <small class="text-muted">{{ label }}</small>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if stats.top_contacts is defined and stats.top_contacts %}
+  <h5 class="mt-4 mb-3"><i class="bi bi-people me-1"></i> Contatti più attivi</h5>
+  <div class="card border-0 rounded-3 shadow-sm">
+    <ul class="list-group list-group-flush">
+      {% for contact in stats.top_contacts %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person me-2"></i>{{ contact.name or contact.username }}</span>
+        <span class="badge bg-primary rounded-pill">{{ contact.count }} messaggi</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

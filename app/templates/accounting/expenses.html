@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Expenses - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1><i class="fas fa-receipt"></i> Expenses</h1>
+    
+    <div class="row mt-3">
+        <div class="col-md-8">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('accounting.expenses', status='all') }}" class="btn btn-{% if status == 'all' %}primary{% else %}outline-primary{% endif %}">All</a>
+                <a href="{{ url_for('accounting.expenses', status='pending') }}" class="btn btn-{% if status == 'pending' %}primary{% else %}outline-primary{% endif %}">Pending</a>
+                <a href="{{ url_for('accounting.expenses', status='approved') }}" class="btn btn-{% if status == 'approved' %}primary{% else %}outline-primary{% endif %}">Approved</a>
+                <a href="{{ url_for('accounting.expenses', status='rejected') }}" class="btn btn-{% if status == 'rejected' %}primary{% else %}outline-primary{% endif %}">Rejected</a>
+            </div>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{{ url_for('accounting.create_expense') }}" class="btn btn-success"><i class="fas fa-plus"></i> Add Expense</a>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in pagination.items %}
+                        <tr>
+                            <td>{{ expense.expense_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ expense.category }}</td>
+                            <td>{{ expense.description[:50] }}{% if expense.description|length > 50 %}...{% endif %}</td>
+                            <td>€{{ "%.2f"|format(expense.amount) }}</td>
+                            <td><span class="badge badge-{% if expense.status == 'approved' %}success{% elif expense.status == 'pending' %}warning{% else %}danger{% endif %}">{{ expense.status }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">No expenses found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

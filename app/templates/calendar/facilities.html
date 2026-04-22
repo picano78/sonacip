@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Risorse / Palestre | Calendario Società{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-1"><i class="bi bi-building"></i> Risorse / Palestre</h1>
+      <div class="text-muted">Configura le palestre/risorse per la tua società per gestire occupazione e colori.</div>
+    </div>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calendar.index') }}">Torna al calendario</a>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">Nuova risorsa</div>
+        <div class="card-body">
+          <form method="post">
+            {{ form.hidden_tag() }}
+            <div class="mb-2">
+              <label class="form-label">Nome</label>
+              {{ form.name(class="form-control") }}
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Indirizzo</label>
+              {{ form.address(class="form-control") }}
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Capienza</label>
+              {{ form.capacity(class="form-control") }}
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Colore</label>
+              <div class="d-flex align-items-center gap-2">
+                {{ form.color(class="form-control form-control-color", type="color", value=(form.color.data or '#0d6efd')) }}
+                <input type="text" class="form-control" style="max-width:140px;" id="facilityColorHex" value="{{ form.color.data or '#0d6efd' }}" placeholder="#0d6efd">
+              </div>
+              <div class="mt-2 d-flex flex-wrap gap-2" id="facilityColorSwatches">
+                {% for c in ['#1877f2','#20c997','#ffc107','#dc3545','#6f42c1','#0dcaf0','#198754','#fd7e14','#6c757d','#212529'] %}
+                  <button type="button" class="btn p-0 border rounded" style="width:26px;height:26px;background:{{ c }};" data-color="{{ c }}" title="{{ c }}"></button>
+                {% endfor %}
+              </div>
+              <div class="form-text">Scegli un colore per distinguere la risorsa nel calendario.</div>
+            </div>
+            <button class="btn btn-primary" type="submit">Crea</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Risorse</span>
+          <span class="badge bg-secondary">{{ facilities|length }}</span>
+        </div>
+        <div class="list-group list-group-flush">
+          {% for f in facilities %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-semibold">{{ f.name }}</div>
+                <div class="text-muted small">
+                  {% if f.address %}{{ f.address }}{% else %}—{% endif %}
+                  {% if f.capacity %}&middot; capienza {{ f.capacity }}{% endif %}
+                </div>
+              </div>
+              <span class="badge" style="background-color: {{ f.color or '#0d6efd' }}; color: #fff;">&nbsp;&nbsp;</span>
+            </div>
+          {% else %}
+            <div class="list-group-item text-muted">Nessuna risorsa configurata.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-control-color{width:3.2rem; padding:0.2rem; height:2.4rem;}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const colorInput = document.querySelector('input[name=\"color\"]');
+    const hexInput = document.getElementById('facilityColorHex');
+    const swatches = document.getElementById('facilityColorSwatches');
+    if (!colorInput || !hexInput || !swatches) return;
+
+    function setColor(val) {
+      if (!val) return;
+      if (!val.startsWith('#')) val = '#' + val;
+      colorInput.value = val;
+      hexInput.value = val;
+    }
+
+    colorInput.addEventListener('input', () => setColor(colorInput.value));
+    hexInput.addEventListener('input', () => setColor(hexInput.value));
+    swatches.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-color]');
+      if (!btn) return;
+      setColor(btn.getAttribute('data-color'));
+    });
+  })();
+</script>
+{% endblock %}
+

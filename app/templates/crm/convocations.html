@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Convocazioni - Gestione Società{% endblock %}
+
+{% block extra_css %}
+<style>
+.gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+.convocation-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    transition: transform .2s, box-shadow .2s;
+    overflow: hidden;
+}
+.convocation-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(24,119,242,0.15);
+}
+.convocation-card .card-footer {
+    background: #fafbfc;
+    border-top: 1px solid #f0f0f0;
+}
+.convocation-card .progress {
+    border-radius: 4px;
+}
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(0,0,0,0.5);
+}
+.empty-state i {
+    font-size: 5rem;
+    color: #1877f2;
+    opacity: .2;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="gradient-header">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div>
+        <h1 class="h3 mb-1"><i class="bi bi-megaphone me-2"></i>Convocazioni</h1>
+        <p class="mb-0 opacity-75">Gestisci le convocazioni per gli eventi</p>
+      </div>
+      <a href="{{ url_for('crm.index') }}" class="btn btn-outline-light">Dashboard</a>
+    </div>
+  </div>
+
+  {% if event_data %}
+  <div class="row g-3">
+    {% for item in event_data %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card convocation-card h-100">
+          <div class="card-body">
+            <h6 class="card-title mb-1 fw-bold">{{ item.event.title }}</h6>
+            <p class="text-muted small mb-2">
+              <i class="bi bi-calendar3 me-1"></i>{{ item.event.start_date.strftime('%d/%m/%Y %H:%M') if item.event.start_date else 'TBD' }}
+              {% if item.event.location %}
+                <br><i class="bi bi-geo-alt me-1"></i>{{ item.event.location }}
+              {% endif %}
+            </p>
+            <div class="d-flex gap-2 flex-wrap mb-2">
+              <span class="badge" style="background:#1877f2;">{{ item.total }} convocati</span>
+              <span class="badge bg-success">{{ item.accepted }} accettati</span>
+              <span class="badge bg-warning text-dark">{{ item.pending }} in attesa</span>
+              {% if item.declined > 0 %}
+                <span class="badge bg-danger">{{ item.declined }} rifiutati</span>
+              {% endif %}
+            </div>
+            <div class="progress mb-2" style="height: 6px;">
+              {% set pct_accepted = (item.accepted / item.total * 100) if item.total > 0 else 0 %}
+              {% set pct_pending = (item.pending / item.total * 100) if item.total > 0 else 0 %}
+              {% set pct_declined = (item.declined / item.total * 100) if item.total > 0 else 0 %}
+              <div class="progress-bar bg-success" style="width: {{ pct_accepted }}%"></div>
+              <div class="progress-bar bg-warning" style="width: {{ pct_pending }}%"></div>
+              <div class="progress-bar bg-danger" style="width: {{ pct_declined }}%"></div>
+            </div>
+          </div>
+          {% if can('crm','manage') %}
+          <div class="card-footer">
+            <form method="post" action="{{ url_for('crm.convocation_notify', event_id=item.event.id) }}">
+              {{ csrf_token() }}
+              <button type="submit" class="btn btn-sm btn-outline-primary w-100" style="border-radius:8px;border-color:#1877f2;color:#1877f2;"><i class="bi bi-bell me-1"></i> Invia Notifica</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card" style="border:none;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);">
+    <div class="card-body">
+      <div class="empty-state">
+        <i class="bi bi-calendar-x d-block mb-3"></i>
+        <h4>Nessuna convocazione</h4>
+        <p class="text-muted">Nessun evento con convocazioni in programma</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

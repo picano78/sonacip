@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Le Mie Fatture{% endblock %}
+
+{% block extra_css %}
+<style>
+.invoices-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+.invoice-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.2s;
+}
+.invoice-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+.invoice-number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #667eea;
+}
+.invoice-date {
+    color: #65676b;
+    font-size: 0.9rem;
+}
+.invoice-amount {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+}
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.status-paid {
+    background: #d4edda;
+    color: #155724;
+}
+.status-draft {
+    background: #fff3cd;
+    color: #856404;
+}
+.status-sent {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+.btn-download {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.btn-download:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+    color: white;
+}
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+.empty-state i {
+    font-size: 4rem;
+    color: #ccc;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="invoices-header">
+        <h3 class="mb-2">
+            <i class="bi bi-receipt-cutoff"></i> Le Mie Fatture
+        </h3>
+        <p class="mb-0 opacity-90">Visualizza e scarica le tue fatture</p>
+    </div>
+
+    {% if invoices %}
+        {% for invoice in invoices %}
+        <div class="invoice-card">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="invoice-number">{{ invoice.invoice_number }}</div>
+                    <div class="invoice-date">
+                        <i class="bi bi-calendar3"></i> 
+                        {{ invoice.invoice_date.strftime('%d/%m/%Y') }}
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div style="color: #65676b; font-size: 0.9rem;">{{ invoice.description or 'Fattura' }}</div>
+                    {% if invoice.paid_date %}
+                    <div style="font-size: 0.85rem; color: #28a745;">
+                        <i class="bi bi-check-circle-fill"></i> Pagata il {{ invoice.paid_date.strftime('%d/%m/%Y') }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-2 text-center">
+                    <span class="status-badge status-{{ invoice.status }}">
+                        {% if invoice.status == 'paid' %}
+                            <i class="bi bi-check-circle"></i> Pagata
+                        {% elif invoice.status == 'draft' %}
+                            <i class="bi bi-pencil"></i> Bozza
+                        {% elif invoice.status == 'sent' %}
+                            <i class="bi bi-send"></i> Inviata
+                        {% else %}
+                            {{ invoice.status }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="col-md-2 text-end">
+                    <div class="invoice-amount">€ {{ "%.2f"|format(invoice.total_amount) }}</div>
+                    <div style="font-size: 0.8rem; color: #65676b;">{{ invoice.currency }}</div>
+                </div>
+                
+                <div class="col-md-1 text-end">
+                    <a href="{{ url_for('payments.download_invoice', invoice_id=invoice.id) }}" 
+                       class="btn btn-download btn-sm" title="Scarica PDF">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h4>Nessuna fattura disponibile</h4>
+            <p class="text-muted">Le tue fatture appariranno qui dopo aver effettuato un pagamento.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

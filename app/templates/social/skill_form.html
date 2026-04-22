@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ t('profile_add_skill') }}{% endblock %}
+{% block content %}
+<style>
+.form-card {
+    max-width: 500px;
+    margin: 2rem auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.form-header {
+    background: linear-gradient(135deg, #0a66c2 0%, #0077b5 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+}
+
+.form-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.form-body {
+    padding: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: rgba(0,0,0,0.9);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #dce0e5;
+    padding: 0.75rem 1rem;
+}
+
+.form-control:focus {
+    border-color: #0a66c2;
+    box-shadow: 0 0 0 3px rgba(10,102,194,0.15);
+}
+
+.btn-linkedin {
+    background: #0a66c2;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 24px;
+    font-weight: 600;
+}
+
+.btn-linkedin:hover {
+    background: #004182;
+    color: white;
+}
+</style>
+
+<div class="container py-4">
+    <div class="form-card">
+        <div class="form-header">
+            <h1><i class="bi bi-stars me-2"></i>{{ t('profile_add_skill') }}</h1>
+        </div>
+        <div class="form-body">
+            <form method="POST">
+                <div class="form-group">
+                    <label class="form-label">{{ t('skill_name') }} *</label>
+                    <input type="text" name="name" class="form-control" required placeholder="{{ t('skill_name_placeholder') }}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ t('skill_category') }}</label>
+                    <select name="category" class="form-select">
+                        <option value="">{{ t('common_select') }}</option>
+                        <option value="sport">{{ t('skill_cat_sport') }}</option>
+                        <option value="coaching">{{ t('skill_cat_coaching') }}</option>
+                        <option value="management">{{ t('skill_cat_management') }}</option>
+                        <option value="technical">{{ t('skill_cat_technical') }}</option>
+                        <option value="communication">{{ t('skill_cat_communication') }}</option>
+                        <option value="other">{{ t('skill_cat_other') }}</option>
+                    </select>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-linkedin">
+                        <i class="bi bi-plus-lg me-2"></i>{{ t('profile_add_skill') }}
+                    </button>
+                    <a href="{{ url_for('social.profile', user_id=current_user.id) }}" class="btn btn-outline-secondary">{{ t('common_cancel') }}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

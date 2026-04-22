@@ -1,0 +1,478 @@
+{% extends 'base.html' %}
+{% block title %}Planner | SONACIP{% endblock %}
+
+{% block content %}
+<div data-calendar-create-url="{{ url_for('calendar.create') }}" style="display:none;"></div>
+<div class="container my-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="h4 mb-1"><i class="bi bi-calendar-check"></i> Planner</h1>
+      <div class="text-muted small">Clicca su una cella per aggiungere un evento.</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calendar.index') }}">Vista lista</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('calendar.occupancy') }}">Report</a>
+      {% if can('calendar','manage') %}
+        <a class="btn btn-sm btn-primary" href="{{ url_for('calendar.create') }}"><i class="bi bi-plus-lg"></i> Nuovo</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if view == 'month' %}
+  <div class="gcal-month">
+    <div class="gcal-month-header">
+      <a href="{{ url_for('calendar.grid', view='month', start=prev_month.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-nav-btn">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+      <div class="gcal-month-title">
+        <span class="gcal-month-name">{{ month_name }}</span>
+        <span class="gcal-month-year">{{ month_year }}</span>
+      </div>
+      <a href="{{ url_for('calendar.grid', view='month', start=next_month.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-nav-btn">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+      <a href="{{ url_for('calendar.grid', view='month', start=today.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-today-btn">Oggi</a>
+    </div>
+
+    <div class="gcal-view-switcher">
+      <a href="{{ url_for('calendar.grid', view='day', start=start_date.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-view-btn">Giorno</a>
+      <a href="{{ url_for('calendar.grid', view='week', start=start_date.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-view-btn">Settimana</a>
+      <a href="#" class="gcal-view-btn active">Mese</a>
+      {% if facilities|length > 0 %}
+      <select class="gcal-facility-select" onchange="if(this.value!==''){window.location='{{ url_for('calendar.grid', view='month', start=start_date.strftime('%Y-%m-%d')) }}&facility_id='+this.value}else{window.location='{{ url_for('calendar.grid', view='month', start=start_date.strftime('%Y-%m-%d')) }}'}">
+        <option value="">Tutte le risorse</option>
+        {% for f in facilities %}
+          <option value="{{ f.id }}" {{ 'selected' if facility_id == f.id else '' }}>{{ f.name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+    </div>
+
+    <div class="gcal-weekday-header">
+      <div class="gcal-weekday">lun</div>
+      <div class="gcal-weekday">mar</div>
+      <div class="gcal-weekday">mer</div>
+      <div class="gcal-weekday">gio</div>
+      <div class="gcal-weekday">ven</div>
+      <div class="gcal-weekday">sab</div>
+      <div class="gcal-weekday">dom</div>
+    </div>
+
+    <div class="gcal-grid">
+      {% for ld in leading_days %}
+        <div class="gcal-cell gcal-cell-other">
+          <div class="gcal-day-num">{{ ld }}</div>
+        </div>
+      {% endfor %}
+
+      {% for d in days %}
+        {% set day_events = [] %}
+        {% for h in hours %}
+          {% for ev in grid_map.get((d, h), []) %}
+            {% if ev not in day_events %}
+              {% set _ = day_events.append(ev) %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+        <div class="gcal-cell calendar-cell-clickable {{ 'gcal-cell-today' if d == today else '' }}"
+             data-date="{{ d.strftime('%Y-%m-%d') }}"
+             role="button"
+             tabindex="0">
+          <div class="gcal-day-num {{ 'gcal-today-circle' if d == today else '' }}">{{ d.day }}</div>
+          <div class="gcal-events-wrap">
+            {% for ev in day_events[:2] %}
+              {% if ev.__class__.__name__ == 'FieldPlannerEvent' %}
+                <a href="{{ url_for('field_planner.detail', event_id=ev.id) }}"
+                   class="gcal-event-pill"
+                   style="background-color: {{ ev.color or '#28a745' }}; border-left: 3px solid #155724;"
+                   title="{{ ev.title }} (Planner Campo)"
+                   onclick="event.stopPropagation();">
+                  <i class="bi bi-diagram-3" style="font-size: 0.8em;"></i> {{ ev.title|truncate(12) }}
+                </a>
+              {% else %}
+                <a href="{{ url_for('calendar.detail', event_id=ev.id) }}"
+                   class="gcal-event-pill"
+                   style="background-color: {{ ev.color or '#4285f4' }};"
+                   title="{{ ev.title }}"
+                   onclick="event.stopPropagation();">
+                  {{ ev.title|truncate(14) }}
+                </a>
+              {% endif %}
+            {% endfor %}
+            {% if day_events|length > 2 %}
+              <span class="gcal-more-label">+{{ day_events|length - 2 }}</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+      {% for td in trailing_days %}
+        <div class="gcal-cell gcal-cell-other">
+          <div class="gcal-day-num">{{ td }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if can('calendar','manage') %}
+    <a href="{{ url_for('calendar.create') }}" class="gcal-fab">
+      <i class="bi bi-plus-lg"></i>
+    </a>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <div class="gcal-month">
+    <div class="gcal-month-header">
+      <a href="{{ url_for('calendar.grid', view=view, start=prev_nav.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-nav-btn">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+      <div class="gcal-month-title">
+        <span class="gcal-month-name">{{ nav_title }}</span>
+        <span class="gcal-month-year">{{ nav_subtitle }}</span>
+      </div>
+      <a href="{{ url_for('calendar.grid', view=view, start=next_nav.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-nav-btn">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+      <a href="{{ url_for('calendar.grid', view=view, start=today.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-today-btn">Oggi</a>
+    </div>
+    <div class="gcal-view-switcher">
+      <a href="{{ url_for('calendar.grid', view='day', start=start_date.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-view-btn {{ 'active' if view=='day' else '' }}">Giorno</a>
+      <a href="{{ url_for('calendar.grid', view='week', start=start_date.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-view-btn {{ 'active' if view=='week' else '' }}">Settimana</a>
+      <a href="{{ url_for('calendar.grid', view='month', start=start_date.strftime('%Y-%m-%d'), facility_id=facility_id or '') }}" class="gcal-view-btn {{ 'active' if view=='month' else '' }}">Mese</a>
+      {% if facilities|length > 0 %}
+      <select class="gcal-facility-select" onchange="if(this.value!==''){window.location='{{ url_for('calendar.grid', view=view, start=start_date.strftime('%Y-%m-%d')) }}&facility_id='+this.value}else{window.location='{{ url_for('calendar.grid', view=view, start=start_date.strftime('%Y-%m-%d')) }}'}">
+        <option value="">Tutte le risorse</option>
+        {% for f in facilities %}
+          <option value="{{ f.id }}" {{ 'selected' if facility_id == f.id else '' }}>{{ f.name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+    </div>
+  </div>
+  <div class="mt-3"></div>
+
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle calendar-grid-table">
+      <thead class="table-light">
+        <tr>
+          <th style="width:70px;" class="text-center">Ora</th>
+          {% for d in days %}
+            <th class="text-center">
+              <div class="fw-semibold">{{ d.strftime('%a') }}</div>
+              <div class="small text-muted">{{ d.strftime('%d/%m') }}</div>
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in hours %}
+          <tr>
+            <td class="text-muted small text-center align-middle">{{ '%02d:00'|format(h) }}</td>
+            {% for d in days %}
+              {% set cell_events = grid_map.get((d, h), []) %}
+              <td class="calendar-cell-clickable {{ 'has-events' if cell_events else '' }}"
+                  data-date="{{ d.strftime('%Y-%m-%d') }}"
+                  data-hour="{{ h }}"
+                  role="button"
+                  tabindex="0"
+                  style="min-width:140px; vertical-align:top;">
+                {% for ev in cell_events %}
+                  <a class="text-decoration-none d-block mb-2" href="{{ url_for('calendar.detail', event_id=ev.id) }}">
+                    <div class="calendar-event-card" style="border-left: 4px solid {{ ev.color or '#0d6efd' }};">
+                      <div class="small fw-semibold text-dark">{{ ev.title }}</div>
+                      <div class="small text-muted">
+                        {{ ev.start_datetime.strftime('%H:%M') }}-{{ ev.end_datetime.strftime('%H:%M') }}
+                      </div>
+                      {% if ev.facility %}
+                        <div class="small text-muted"><i class="bi bi-geo-alt"></i> {{ ev.facility.name }}</div>
+                      {% endif %}
+                    </div>
+                  </a>
+                {% endfor %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.gcal-month {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.gcal-month-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px 8px;
+}
+.gcal-nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5f6368;
+  text-decoration: none;
+  transition: background 0.2s;
+  font-size: 1.1rem;
+}
+.gcal-nav-btn:hover {
+  background: #f1f3f4;
+  color: #202124;
+}
+.gcal-month-title {
+  flex: 1;
+  text-align: center;
+}
+.gcal-month-name {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #202124;
+}
+.gcal-month-year {
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: #5f6368;
+  margin-left: 4px;
+}
+.gcal-today-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid #dadce0;
+  color: #1a73e8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.gcal-today-btn:hover {
+  background: #e8f0fe;
+  color: #1a73e8;
+}
+.gcal-view-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 20px 12px;
+  flex-wrap: wrap;
+}
+.gcal-view-btn {
+  padding: 4px 14px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #5f6368;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+.gcal-view-btn:hover {
+  background: #f1f3f4;
+  color: #202124;
+}
+.gcal-view-btn.active {
+  background: #e8f0fe;
+  color: #1a73e8;
+}
+.gcal-facility-select {
+  margin-left: auto;
+  border: 1px solid #dadce0;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  color: #5f6368;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+}
+.gcal-weekday-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid #e8eaed;
+  padding: 0 4px;
+}
+.gcal-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #70757a;
+  padding: 8px 0;
+  text-transform: lowercase;
+}
+.gcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 0 4px 4px;
+}
+.gcal-cell {
+  min-height: 90px;
+  padding: 4px;
+  border-bottom: 1px solid #f1f3f4;
+  border-right: 1px solid #f1f3f4;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.gcal-cell:nth-child(7n) {
+  border-right: none;
+}
+.gcal-cell:hover {
+  background: #f8f9fa;
+}
+.gcal-cell-other {
+  cursor: default;
+}
+.gcal-cell-other .gcal-day-num {
+  color: #bdc1c6;
+}
+.gcal-cell-other:hover {
+  background: transparent;
+}
+.gcal-day-num {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #3c4043;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-bottom: 2px;
+  line-height: 1;
+}
+.gcal-today-circle {
+  background: #1a73e8;
+  color: #fff !important;
+  font-weight: 500;
+}
+.gcal-events-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gcal-event-pill {
+  display: block;
+  font-size: 0.65rem;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  transition: opacity 0.15s;
+}
+.gcal-event-pill:hover {
+  opacity: 0.85;
+  color: #fff;
+}
+.gcal-more-label {
+  font-size: 0.65rem;
+  color: #1a73e8;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+}
+.gcal-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: #fff;
+  color: #1a73e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2), 0 6px 20px rgba(0,0,0,0.1);
+  text-decoration: none;
+  transition: box-shadow 0.2s, transform 0.2s;
+  z-index: 100;
+}
+.gcal-fab:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25), 0 8px 28px rgba(0,0,0,0.15);
+  transform: scale(1.05);
+  color: #1a73e8;
+}
+
+@media (max-width: 767px) {
+  .gcal-cell {
+    min-height: 64px;
+    padding: 2px;
+  }
+  .gcal-day-num {
+    font-size: 0.8rem;
+    width: 28px;
+    height: 28px;
+  }
+  .gcal-event-pill {
+    font-size: 0.55rem;
+    padding: 1px 4px;
+  }
+  .gcal-month-name {
+    font-size: 1.1rem;
+  }
+  .gcal-month-header {
+    padding: 12px 12px 4px;
+  }
+  .gcal-view-switcher {
+    padding: 4px 12px 8px;
+  }
+  .gcal-fab {
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    font-size: 1.3rem;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 400px) {
+  .gcal-cell {
+    min-height: 52px;
+  }
+  .gcal-day-num {
+    font-size: 0.75rem;
+    width: 24px;
+    height: 24px;
+  }
+  .gcal-event-pill {
+    font-size: 0.5rem;
+    padding: 1px 3px;
+    border-radius: 3px;
+  }
+}
+
+.calendar-grid-table td {
+  transition: background-color 0.15s ease;
+}
+.calendar-grid-table td:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+}
+.calendar-event-card {
+  background: #f8f9fa;
+  border-radius: 4px;
+  padding: 6px 8px;
+  transition: box-shadow 0.2s ease;
+}
+.calendar-event-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

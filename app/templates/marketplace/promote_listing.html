@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% block title %}Metti in Evidenza - {{ listing.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.promo-header {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.listing-preview {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+.listing-preview-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+.tier-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    transition: all 0.3s;
+    border: 3px solid transparent;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.tier-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.tier-card.popular {
+    border-color: #ff9800;
+}
+.tier-card.popular::before {
+    content: 'Consigliato';
+    position: absolute;
+    top: 12px;
+    right: -30px;
+    background: #ff9800;
+    color: white;
+    padding: 4px 40px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    transform: rotate(45deg);
+    text-transform: uppercase;
+}
+.tier-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 16px;
+}
+.tier-price {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+.tier-price .currency {
+    font-size: 1.2rem;
+    vertical-align: super;
+}
+.tier-duration {
+    color: #65676b;
+    margin-bottom: 16px;
+    font-size: 0.95rem;
+}
+.tier-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    text-align: left;
+}
+.tier-features li {
+    padding: 6px 0;
+    font-size: 0.9rem;
+    color: #333;
+}
+.tier-features li i {
+    color: #4caf50;
+    margin-right: 8px;
+}
+.btn-promote {
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 1rem;
+    width: 100%;
+}
+.info-banner {
+    background: #fff3e0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border-left: 4px solid #ff9800;
+    margin-bottom: 24px;
+}
+.promo-active-badge {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 900px;">
+    <div class="promo-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-star-fill me-2"></i>Metti in Evidenza</h1>
+                <p class="mb-0 opacity-75">Fai vedere il tuo annuncio a più persone</p>
+            </div>
+            <a href="{{ url_for('marketplace.listing_detail', listing_id=listing.id) }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Torna all'annuncio
+            </a>
+        </div>
+    </div>
+
+    <div class="listing-preview d-flex align-items-center gap-3">
+        {% if listing.image_1 %}
+        <img src="{{ url_for('static', filename='uploads/' + listing.image_1) }}" class="listing-preview-img" alt="">
+        {% else %}
+        <div class="listing-preview-img bg-light d-flex align-items-center justify-content-center">
+            <i class="bi bi-image text-muted fs-3"></i>
+        </div>
+        {% endif %}
+        <div>
+            <h5 class="mb-1">{{ listing.title }}</h5>
+            <p class="mb-0 text-muted">{{ listing.location or 'Posizione non specificata' }} &middot; {{ "€%.2f"|format(listing.price) }}</p>
+            {% if listing.is_promoted %}
+            <span class="promo-active-badge mt-1 d-inline-block"><i class="bi bi-star-fill me-1"></i>In Evidenza fino al {{ listing.promotion_expires_at.strftime('%d/%m/%Y') if listing.promotion_expires_at else '' }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if listing.is_promoted %}
+    <div class="info-banner">
+        <h6 class="mb-1"><i class="bi bi-info-circle me-2"></i>Annuncio già in evidenza</h6>
+        <p class="mb-0 text-muted small">Il tuo annuncio è già in evidenza. Puoi comunque prolungare la promozione scegliendo un nuovo piano.</p>
+    </div>
+    {% endif %}
+
+    <h5 class="mb-3"><i class="bi bi-lightning-fill text-warning me-2"></i>Scegli il tuo piano</h5>
+
+    <div class="row g-4">
+        {% for tier in tiers %}
+        <div class="col-md-4">
+            <div class="tier-card {{ 'popular' if loop.index == 2 }}">
+                <div class="tier-icon" style="background: {{ tier.color }}20; color: {{ tier.color }};">
+                    <i class="bi {{ tier.icon }}"></i>
+                </div>
+                <h5 class="mb-2">{{ tier.name }}</h5>
+                <div class="tier-price">
+                    <span class="currency">€</span>{{ "%.2f"|format(tier.price) }}
+                </div>
+                <div class="tier-duration">per {{ tier.duration_days }} giorni</div>
+                <p class="text-muted small mb-3">{{ tier.description or '' }}</p>
+                <ul class="tier-features">
+                    <li><i class="bi bi-check-circle-fill"></i> Sempre in cima ai risultati</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Badge "In Evidenza"</li>
+                    <li><i class="bi bi-check-circle-fill"></i> {{ tier.duration_days }} giorni di visibilità</li>
+                    {% if tier.duration_days >= 14 %}
+                    <li><i class="bi bi-check-circle-fill"></i> Più visualizzazioni</li>
+                    {% endif %}
+                    {% if tier.duration_days >= 30 %}
+                    <li><i class="bi bi-check-circle-fill"></i> Massima esposizione</li>
+                    {% endif %}
+                </ul>
+                <form method="POST" action="{{ url_for('marketplace.pay_promotion', listing_id=listing.id, tier_id=tier.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-promote" style="background: {{ tier.color }}; color: white; border: none;">
+                        <i class="bi bi-lightning-fill me-1"></i> Scegli
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="info-banner mt-4">
+        <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-shield-check fs-4 text-warning"></i>
+            <div>
+                <h6 class="mb-1">Pagamento sicuro</h6>
+                <p class="mb-0 text-muted small">I pagamenti sono processati in modo sicuro. La promozione si attiva immediatamente dopo il pagamento e scade automaticamente.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

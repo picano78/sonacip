@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Add-on{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="mb-0">Add-on (Admin)</h1>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.dashboard') }}">Admin</a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><strong>Crea add-on</strong></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('subscription.admin_addons') }}" class="row g-2">
+        {{ csrf_token() }}
+        <div class="col-md-3">
+          <label class="form-label">Slug</label>
+          <input class="form-control" name="slug" placeholder="addon-slug" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Nome</label>
+          <input class="form-control" name="name" placeholder="Nome Add-on" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Feature key</label>
+          <input class="form-control" name="feature_key" placeholder="feature_key" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ordine</label>
+          <input class="form-control" name="display_order" value="0">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Descrizione</label>
+          <input class="form-control" name="description" placeholder="..." >
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Prezzo (one-time)</label>
+          <input class="form-control" name="price_one_time" value="0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Valuta</label>
+          <input class="form-control" name="currency" value="EUR">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Stripe price (one-time)</label>
+          <input class="form-control" name="stripe_price_one_time_id" placeholder="price_...">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary" type="submit">Crea</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><strong>Lista</strong></div>
+    <div class="card-body table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Prezzo</th>
+            <th>Stripe</th>
+            <th>Attivo</th>
+            <th class="text-end">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in addons %}
+            <tr>
+              <td>{{ a.name }}<div class="text-muted small">{{ a.slug }}</div></td>
+              <td>€{{ "%.2f"|format(a.price_one_time or 0) }} {{ a.currency or 'EUR' }}</td>
+              <td class="text-muted small">{{ a.stripe_price_one_time_id or '-' }}</td>
+              <td>
+                {% if a.is_active %}
+                  <span class="badge bg-success">ON</span>
+                {% else %}
+                  <span class="badge bg-secondary">OFF</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <form method="post" action="{{ url_for('subscription.admin_addon_toggle', addon_id=a.id) }}" class="d-inline">
+                  {{ csrf_token() }}
+                  <button class="btn btn-sm btn-outline-primary" type="submit">Toggle</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" class="text-muted">Nessun add-on.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

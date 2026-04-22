@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Moderazione Automatica - Admin{% endblock %}
+{% block content %}
+<div class="container my-4">
+    <div class="section-hero mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="pill mb-2"><i class="bi bi-shield-check"></i> Admin</div>
+            <h1 class="h4 mb-0">Moderazione Automatica</h1>
+            <p class="text-muted mb-0">Gestisci le regole per la moderazione automatica dei contenuti sociali.</p>
+        </div>
+        <a href="{{ url_for('admin.add_moderation_rule') }}" class="btn btn-dark">
+            <i class="bi bi-plus-circle"></i> Aggiungi Regola
+        </a>
+    </div>
+    
+    <div class="row g-4">
+        {% for rule in rules %}
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">{{ rule.name }}</h6>
+                    <div class="d-flex gap-2">
+                        <form method="post" action="{{ url_for('admin.toggle_moderation_rule', rule_id=rule.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-sm 
+                                {% if rule.is_active %}btn-success{% else %}btn-secondary{% endif %}">
+                                <i class="bi bi-toggle-{{ 'on' if rule.is_active else 'off' }}"></i>
+                            </button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.delete_moderation_rule', rule_id=rule.id) }}" 
+                              class="d-inline" onsubmit="return confirm('Eliminare questa regola?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">{{ rule.description or 'Nessuna descrizione' }}</p>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <small class="text-muted">Tipo:</small><br>
+                            <span class="badge bg-primary">{{ rule.rule_type }}</span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Azione:</small><br>
+                            <span class="badge 
+                                {% if rule.action == 'flag' %}bg-warning
+                                {% elif rule.action == 'hide' %}bg-info
+                                {% elif rule.action == 'delete' %}bg-danger
+                                {% endif %}">
+                                {{ rule.action }}
+                            </span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Severità:</small><br>
+                            <span class="badge 
+                                {% if rule.severity == 'low' %}bg-success
+                                {% elif rule.severity == 'medium' %}bg-warning
+                                {% elif rule.severity == 'high' %}bg-danger
+                                {% endif %}">
+                                {{ rule.severity }}
+                            </span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Stato:</small><br>
+                            <span class="badge {{ 'bg-success' if rule.is_active else 'bg-secondary' }}">
+                                {{ 'Attiva' if rule.is_active else 'Disattiva' }}
+                            </span>
+                        </div>
+                    </div>
+                    {% if rule.keywords %}
+                    <div class="mt-3">
+                        <small class="text-muted">Parole chiave:</small><br>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for keyword in rule.keywords.split(',') %}
+                            <span class="badge bg-light text-dark">{{ keyword.strip() }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if not rules %}
+    <div class="text-center py-5">
+        <i class="bi bi-shield-x display-4 text-muted mb-3"></i>
+        <h5 class="text-muted">Nessuna regola di moderazione</h5>
+        <p class="text-muted">Crea la tua prima regola per iniziare la moderazione automatica.</p>
+        <a href="{{ url_for('admin.add_moderation_rule') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Aggiungi Regola
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Nuovo Template - Statistiche{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('stats.index') }}">Statistiche</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('stats.templates_list') }}">Template</a></li>
+                    <li class="breadcrumb-item active">Nuovo Template</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold"><i class="bi bi-plus-circle me-2" style="color: #1877f2;"></i>Crea Template</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Nome Template <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required placeholder="es. Statistiche Partita Calcio">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Sport</label>
+                                <select name="sport_type" class="form-select">
+                                    <option value="">Generico</option>
+                                    <option value="Calcio">Calcio</option>
+                                    <option value="Basket">Basket</option>
+                                    <option value="Pallavolo">Pallavolo</option>
+                                    <option value="Nuoto">Nuoto</option>
+                                    <option value="Atletica">Atletica</option>
+                                    <option value="Tennis">Tennis</option>
+                                    <option value="Rugby">Rugby</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Tipo Stat</label>
+                                <input type="text" name="stat_type" class="form-control" placeholder="es. Partita, Allenamento">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Visibilit&agrave;</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="is_global" value="1" id="isGlobal">
+                                    <label class="form-check-label" for="isGlobal">Template globale</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-list-ul me-1" style="color: #1877f2;"></i>Campi del Template</h5>
+                        <p class="text-muted small">Definisci i campi che compongono questo template. Ogni campo ha un nome e un tipo (numerico o testo).</p>
+
+                        <div id="fieldsContainer">
+                            <div class="row g-2 mb-2 align-items-end field-row">
+                                <div class="col-5">
+                                    <label class="form-label small">Nome Campo</label>
+                                    <input type="text" name="field_name" class="form-control" placeholder="es. Gol">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small">Tipo</label>
+                                    <select name="field_type" class="form-select">
+                                        <option value="number">Numerico</option>
+                                        <option value="text">Testo</option>
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <button type="button" class="btn btn-outline-danger w-100 remove-field"><i class="bi bi-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-sm btn-outline-secondary mb-4" id="addField">
+                            <i class="bi bi-plus me-1"></i>Aggiungi Campo
+                        </button>
+
+                        <hr>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i>Crea Template</button>
+                            <a href="{{ url_for('stats.templates_list') }}" class="btn btn-outline-secondary">Annulla</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 fw-bold">
+                    <i class="bi bi-info-circle me-1" style="color: #1877f2;"></i>Info
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted">I template permettono di standardizzare la raccolta dati per ogni sport e tipo di statistica.</p>
+                    <p class="small text-muted mb-0">I template globali sono visibili a tutte le societ&agrave;.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    document.getElementById('addField').addEventListener('click', function() {
+        const container = document.getElementById('fieldsContainer');
+        const row = document.createElement('div');
+        row.className = 'row g-2 mb-2 align-items-end field-row';
+        row.innerHTML = '<div class="col-5"><input type="text" name="field_name" class="form-control" placeholder="es. Gol"></div>' +
+            '<div class="col-4"><select name="field_type" class="form-select"><option value="number">Numerico</option><option value="text">Testo</option></select></div>' +
+            '<div class="col-3"><button type="button" class="btn btn-outline-danger w-100 remove-field"><i class="bi bi-trash"></i></button></div>';
+        container.appendChild(row);
+        row.querySelector('.remove-field').addEventListener('click', function() { row.remove(); });
+    });
+
+    document.querySelectorAll('.remove-field').forEach(btn => {
+        btn.addEventListener('click', function() { this.closest('.field-row').remove(); });
+    });
+})();
+</script>
+{% endblock %}

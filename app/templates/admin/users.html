@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Gestione Utenti{% endblock %}
+
+{% block extra_css %}
+<style>
+.users-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.search-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+.user-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 12px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+}
+.user-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    transform: translateX(4px);
+}
+.user-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: white;
+    margin-right: 16px;
+    flex-shrink: 0;
+}
+.user-info {
+    flex: 1;
+    min-width: 0;
+}
+.user-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #1c1e21;
+    text-decoration: none;
+    display: block;
+}
+.user-name:hover {
+    color: #1877f2;
+}
+.user-email {
+    font-size: 0.85rem;
+    color: #65676b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.user-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.role-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.role-super_admin { background: #fce4ec; color: #c2185b; }
+.role-admin { background: #e3f2fd; color: #1565c0; }
+.role-society { background: #e8f5e9; color: #2e7d32; }
+.role-athlete { background: #fff3e0; color: #ef6c00; }
+.role-enthusiast { background: #f3e5f5; color: #7b1fa2; }
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.status-active { background: #28a745; }
+.status-inactive { background: #dc3545; }
+.user-date {
+    font-size: 0.8rem;
+    color: #65676b;
+    white-space: nowrap;
+}
+.user-actions {
+    display: flex;
+    gap: 8px;
+}
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: #f0f2f5;
+    color: #65676b;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.action-btn:hover {
+    background: #1877f2;
+    color: white;
+}
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #f0f2f5;
+    color: #65676b;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+.filter-chip:hover {
+    background: #e4e6eb;
+}
+.filter-chip.active {
+    background: #e7f3ff;
+    color: #1877f2;
+    border-color: #1877f2;
+}
+.stats-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.stat-mini {
+    background: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.stat-mini-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1c1e21;
+}
+.stat-mini-label {
+    font-size: 0.85rem;
+    color: #65676b;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="users-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-people-fill"></i> Gestione Utenti</h1>
+                <p class="mb-0 opacity-75">Visualizza e gestisci tutti gli utenti della piattaforma</p>
+            </div>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Torna
+            </a>
+        </div>
+    </div>
+
+    <div class="search-card">
+        <form method="GET" id="searchForm">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <div class="input-group position-relative">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        {{ form.query(class="form-control border-start-0", placeholder="Cerca per nome, email...", **{"data-autocomplete": "true", "data-autocomplete-scope": "users"}) }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    {{ form.role(class="form-select") }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.status(class="form-select") }}
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-filter"></i> Filtra
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="text-muted">
+            <strong>{{ users|length }}</strong> utenti trovati
+        </div>
+    </div>
+
+    {% for user in users %}
+    <div class="user-card">
+        {% set colors = ['#1877f2', '#42b72a', '#f02849', '#a855f7', '#f97316', '#06b6d4'] %}
+        {% set color = colors[loop.index0 % 6] %}
+        <div class="user-avatar" style="background: {{ color }};">
+            {{ (user.first_name[0] if user.first_name else user.email[0])|upper }}
+        </div>
+        
+        <div class="user-info">
+            <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="user-name">
+                {{ user.get_full_name() }}
+            </a>
+            <div class="user-email">{{ user.email }}</div>
+        </div>
+        
+        <div class="user-meta d-none d-md-flex">
+            <span class="role-badge role-{{ user.role }}">{{ user.role }}</span>
+            <span class="d-flex align-items-center gap-1">
+                <span class="status-dot {{ 'status-active' if user.is_active else 'status-inactive' }}"></span>
+                {{ 'Attivo' if user.is_active else 'Disattivo' }}
+            </span>
+            <span class="user-date">
+                <i class="bi bi-calendar3 me-1"></i>{{ user.created_at|datetime_format('%d/%m/%Y') }}
+            </span>
+        </div>
+        
+        <div class="user-actions ms-3">
+            <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="action-btn" title="Dettagli">
+                <i class="bi bi-eye"></i>
+            </a>
+            <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="action-btn" title="Modifica">
+                <i class="bi bi-pencil"></i>
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-people" style="font-size: 3rem; color: #dee2e6;"></i>
+        <p class="text-muted mt-3">Nessun utente trovato</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

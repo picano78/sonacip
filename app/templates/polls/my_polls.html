@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}I miei Sondaggi - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h4 class="fw-bold mb-0"><i class="bi bi-person-fill me-2" style="color: #1877f2;"></i>I miei Sondaggi</h4>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('polls.index') }}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left me-1"></i> Tutti
+            </a>
+            <a href="{{ url_for('polls.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i> Nuovo
+            </a>
+        </div>
+    </div>
+
+    {% if polls %}
+    <div class="row g-3">
+        {% for poll in polls %}
+        <div class="col-12">
+            <div class="card shadow-sm border-0" style="border-radius: 12px;">
+                <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <a href="{{ url_for('polls.detail', poll_id=poll.id) }}" class="text-decoration-none">
+                            <h6 class="fw-bold mb-1 text-dark">{{ poll.title }}</h6>
+                        </a>
+                        <div class="d-flex gap-3 text-muted small">
+                            <span><i class="bi bi-calendar me-1"></i>{{ poll.created_at.strftime('%d/%m/%Y') }}</span>
+                            <span><i class="bi bi-people me-1"></i>{{ total_votes(poll) }} voti</span>
+                            {% if poll.closes_at %}
+                            <span><i class="bi bi-clock me-1"></i>{{ poll.closes_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if poll_is_active(poll) %}
+                        <span class="badge rounded-pill" style="background: #1877f2;">Attivo</span>
+                        <form method="POST" action="{{ url_for('polls.close_poll', poll_id=poll.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Chiudere il sondaggio?')">
+                                <i class="bi bi-lock"></i>
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="badge rounded-pill bg-secondary">Chiuso</span>
+                        {% endif %}
+                        <a href="{{ url_for('polls.detail', poll_id=poll.id) }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-bar-chart" style="font-size: 48px; color: #ccc;"></i>
+        <p class="text-muted mt-3">Non hai ancora creato nessun sondaggio.</p>
+        <a href="{{ url_for('polls.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Crea il primo
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

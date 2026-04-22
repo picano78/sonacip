@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+{% block title %}Impostazioni Social{% endblock %}
+
+{% block extra_css %}
+<style>
+.setting-card {
+    background: var(--bs-tertiary-bg);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.setting-row:last-child {
+    border-bottom: none;
+}
+.setting-info {
+    flex: 1;
+}
+.setting-name {
+    font-weight: 600;
+}
+.setting-desc {
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+}
+.form-switch .form-check-input {
+    width: 48px;
+    height: 24px;
+    cursor: pointer;
+}
+.content-type-option {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.content-type-option:hover {
+    border-color: var(--bs-primary);
+}
+.content-type-option.selected {
+    border-color: var(--bs-primary);
+    background: var(--bs-primary-bg-subtle);
+}
+.content-type-option input {
+    margin-right: 12px;
+    width: 18px;
+    height: 18px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 mb-0"><i class="bi bi-people"></i> Impostazioni Social</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Torna al pannello
+        </a>
+    </div>
+    
+    <form method="post">
+        {{ form.hidden_tag() }}
+        
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header"><strong>Funzionalità Social</strong></div>
+                    <div class="card-body">
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Feed Attivo</div>
+                                <div class="setting-desc">Abilita il feed social per tutti gli utenti</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.feed_enabled(class='form-check-input') }}
+                            </div>
+                        </div>
+                        
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Consenti Like</div>
+                                <div class="setting-desc">Gli utenti possono mettere like ai post</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.allow_likes(class='form-check-input') }}
+                            </div>
+                        </div>
+                        
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Consenti Commenti</div>
+                                <div class="setting-desc">Gli utenti possono commentare i post</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.allow_comments(class='form-check-input') }}
+                            </div>
+                        </div>
+                        
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Consenti Condivisioni</div>
+                                <div class="setting-desc">Gli utenti possono condividere i post</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.allow_shares(class='form-check-input') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header"><strong><i class="bi bi-image me-2"></i>Contenuti Multimediali</strong></div>
+                    <div class="card-body">
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name"><i class="bi bi-camera me-2 text-primary"></i>Consenti Foto</div>
+                                <div class="setting-desc">Gli utenti possono pubblicare immagini nei post</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.allow_photos(class='form-check-input') }}
+                            </div>
+                        </div>
+                        
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name"><i class="bi bi-camera-video me-2 text-primary"></i>Consenti Video</div>
+                                <div class="setting-desc">Gli utenti possono pubblicare video nei post</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.allow_videos(class='form-check-input') }}
+                            </div>
+                        </div>
+
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name"><i class="bi bi-clock-history me-2 text-warning"></i>Durata Foto</div>
+                                <div class="setting-desc">Quanto tempo le foto restano visibili nei post. Allo scadere vengono eliminate dal server.</div>
+                            </div>
+                            <div style="width: 160px;">
+                                {{ form.photo_retention_hours(class='form-select form-select-sm') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header"><strong>Moderazione</strong></div>
+                    <div class="card-body">
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Potenzia Post Ufficiali</div>
+                                <div class="setting-desc">I post della società appaiono prima nel feed</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.boost_official(class='form-check-input') }}
+                            </div>
+                        </div>
+                        
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Silenzia Post Utenti</div>
+                                <div class="setting-desc">I post degli utenti generici sono nascosti</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                {{ form.mute_user_posts(class='form-check-input') }}
+                            </div>
+                        </div>
+                        
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Max Post al Giorno</div>
+                                <div class="setting-desc">Limite post giornalieri per ruolo (JSON)</div>
+                            </div>
+                            <div style="width: 120px;">
+                                {{ form.max_posts_per_day(class='form-control form-control-sm') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row g-4 mt-2">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header"><strong><i class="bi bi-arrow-up-circle"></i> Tipi Contenuto Potenziati</strong></div>
+                    <div class="card-body">
+                        <p class="text-muted small">Seleziona i tipi di contenuto che devono apparire in cima al feed</p>
+                        
+                        <label class="content-type-option">
+                            <input type="checkbox" name="boost_announcement" value="announcement">
+                            <div>
+                                <div class="fw-semibold">Annunci</div>
+                                <small class="text-muted">Comunicazioni ufficiali</small>
+                            </div>
+                        </label>
+                        
+                        <label class="content-type-option">
+                            <input type="checkbox" name="boost_event" value="event">
+                            <div>
+                                <div class="fw-semibold">Eventi</div>
+                                <small class="text-muted">Post relativi a eventi</small>
+                            </div>
+                        </label>
+                        
+                        <label class="content-type-option">
+                            <input type="checkbox" name="boost_news" value="news">
+                            <div>
+                                <div class="fw-semibold">Notizie</div>
+                                <small class="text-muted">Novità e aggiornamenti</small>
+                            </div>
+                        </label>
+                        
+                        <label class="content-type-option">
+                            <input type="checkbox" name="boost_result" value="result">
+                            <div>
+                                <div class="fw-semibold">Risultati</div>
+                                <small class="text-muted">Risultati gare e tornei</small>
+                            </div>
+                        </label>
+                        
+                        <input type="hidden" name="boosted_types" id="boostedTypesInput" value="{{ form.boosted_types.data or '[]' }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header"><strong><i class="bi bi-volume-mute"></i> Tipi Contenuto Silenziati</strong></div>
+                    <div class="card-body">
+                        <p class="text-muted small">Seleziona i tipi di contenuto da nascondere o ridurre</p>
+                        
+                        <label class="content-type-option">
+                            <input type="checkbox" name="mute_spam" value="spam">
+                            <div>
+                                <div class="fw-semibold">Spam</div>
+                                <small class="text-muted">Contenuti promozionali non autorizzati</small>
+                            </div>
+                        </label>
+                        
+                        <label class="content-type-option">
+                            <input type="checkbox" name="mute_offtopic" value="offtopic">
+                            <div>
+                                <div class="fw-semibold">Off-Topic</div>
+                                <small class="text-muted">Contenuti non pertinenti</small>
+                            </div>
+                        </label>
+                        
+                        <label class="content-type-option">
+                            <input type="checkbox" name="mute_personal" value="personal">
+                            <div>
+                                <div class="fw-semibold">Personali</div>
+                                <small class="text-muted">Post personali degli utenti</small>
+                            </div>
+                        </label>
+                        
+                        <input type="hidden" name="muted_types" id="mutedTypesInput" value="{{ form.muted_types.data or '[]' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary" onclick="prepareSubmit()">
+                <i class="bi bi-check-lg"></i> Salva Impostazioni
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function initCheckboxes(inputId, prefix) {
+        const input = document.getElementById(inputId);
+        let selected = [];
+        try {
+            selected = JSON.parse(input.value || '[]');
+        } catch(e) {}
+        
+        document.querySelectorAll(`input[name^="${prefix}"]`).forEach(cb => {
+            if (selected.includes(cb.value)) {
+                cb.checked = true;
+                cb.closest('.content-type-option').classList.add('selected');
+            }
+            
+            cb.addEventListener('change', function() {
+                if (this.checked) {
+                    this.closest('.content-type-option').classList.add('selected');
+                } else {
+                    this.closest('.content-type-option').classList.remove('selected');
+                }
+            });
+        });
+    }
+    
+    initCheckboxes('boostedTypesInput', 'boost_');
+    initCheckboxes('mutedTypesInput', 'mute_');
+});
+
+function prepareSubmit() {
+    const boosted = [];
+    document.querySelectorAll('input[name^="boost_"]:checked').forEach(cb => {
+        boosted.push(cb.value);
+    });
+    document.getElementById('boostedTypesInput').value = JSON.stringify(boosted);
+    
+    const muted = [];
+    document.querySelectorAll('input[name^="mute_"]:not([name="mute_user_posts"]):checked').forEach(cb => {
+        muted.push(cb.value);
+    });
+    document.getElementById('mutedTypesInput').value = JSON.stringify(muted);
+}
+</script>
+{% endblock %}

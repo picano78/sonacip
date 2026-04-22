@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+{% block title %}Ordine Menu Sidebar{% endblock %}
+
+{% block extra_css %}
+<style>
+.mo-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 28px;
+    border-radius: 14px;
+    margin-bottom: 28px;
+}
+.mo-header h1 { font-size: 1.5rem; margin-bottom: 4px; }
+.mo-header p  { opacity: .8; margin: 0; font-size: .95rem; }
+
+.mo-section-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1877f2;
+    margin: 24px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.mo-section-title i { font-size: 1.2rem; }
+
+.mo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.mo-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    margin-bottom: 6px;
+    background: #fff;
+    border: 1px solid #e4e6eb;
+    border-radius: 10px;
+    cursor: grab;
+    transition: box-shadow .15s, transform .15s, background .15s;
+    user-select: none;
+}
+.mo-item:active { cursor: grabbing; }
+.mo-item.dragging {
+    opacity: .5;
+    box-shadow: 0 4px 16px rgba(24,119,242,.2);
+    transform: scale(1.02);
+}
+.mo-item.drag-over {
+    border-color: #1877f2;
+    background: #f0f6ff;
+}
+.mo-item.fixed-item {
+    background: #f8f9fa;
+    border-style: dashed;
+    cursor: default;
+}
+.mo-drag-handle {
+    color: #90949c;
+    font-size: 1.2rem;
+    cursor: grab;
+    flex-shrink: 0;
+}
+.mo-item.fixed-item .mo-drag-handle { opacity: .3; cursor: default; }
+.mo-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.mo-label {
+    font-weight: 600;
+    font-size: .95rem;
+    flex: 1;
+}
+.mo-endpoint {
+    font-size: .78rem;
+    color: #90949c;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.mo-toggle {
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+.mo-toggle .form-check-input {
+    width: 40px;
+    height: 22px;
+    cursor: pointer;
+}
+.mo-toggle .form-check-input:checked {
+    background-color: #1877f2;
+    border-color: #1877f2;
+}
+.mo-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+}
+.mo-actions .btn { font-weight: 600; border-radius: 8px; padding: 10px 24px; }
+.mo-save-btn {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    border: none;
+    color: #fff;
+}
+.mo-save-btn:hover { background: linear-gradient(135deg, #1565c0 0%, #1877f2 100%); color: #fff; }
+.mo-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15);
+    display: none;
+    animation: moSlideIn .3s ease;
+}
+.mo-toast.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.mo-toast.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+@keyframes moSlideIn {
+    from { transform: translateX(100px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+.mo-preview {
+    margin-top: 28px;
+    padding: 20px;
+    background: #f0f2f5;
+    border-radius: 12px;
+}
+.mo-preview h5 { font-weight: 700; margin-bottom: 16px; color: #333; }
+.mo-preview-sidebar {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    max-width: 240px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.mo-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: .85rem;
+    font-weight: 500;
+}
+.mo-preview-item:hover { background: #f0f6ff; }
+.mo-preview-item i { font-size: 1rem; color: #1877f2; }
+.mo-preview-item.hidden-item { opacity: .35; text-decoration: line-through; }
+.mo-preview-divider { border-top: 1px solid #e4e6eb; margin: 8px 0; }
+
+@media (prefers-color-scheme: dark) {
+    .mo-item { background: #242526; border-color: #3a3b3c; color: #e4e6eb; }
+    .mo-item.drag-over { background: #1a2740; border-color: #1877f2; }
+    .mo-item.fixed-item { background: #18191a; }
+    .mo-label { color: #e4e6eb; }
+    .mo-preview { background: #18191a; }
+    .mo-preview-sidebar { background: #242526; }
+    .mo-preview-item:hover { background: #1a2740; }
+}
+[data-bs-theme="dark"] .mo-item { background: #242526; border-color: #3a3b3c; color: #e4e6eb; }
+[data-bs-theme="dark"] .mo-item.drag-over { background: #1a2740; border-color: #1877f2; }
+[data-bs-theme="dark"] .mo-item.fixed-item { background: #18191a; }
+[data-bs-theme="dark"] .mo-label { color: #e4e6eb; }
+[data-bs-theme="dark"] .mo-preview { background: #18191a; }
+[data-bs-theme="dark"] .mo-preview-sidebar { background: #242526; }
+[data-bs-theme="dark"] .mo-preview-item:hover { background: #1a2740; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mo-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1><i class="bi bi-list-nested me-2"></i>Ordine Menu Sidebar</h1>
+                <p>Trascina le voci per riordinare il menu. Attiva/disattiva la visibilità di ogni voce.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light">
+                    <i class="bi bi-arrow-left me-1"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="moToast" class="mo-toast"></div>
+
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="mo-section-title">
+                <i class="bi bi-menu-button-wide"></i> Menu Principale
+            </div>
+            <ul class="mo-list" id="mainMenuList" data-section="main">
+                {% for item in main_items %}
+                <li class="mo-item {% if item.get('fixed') %}fixed-item{% endif %}"
+                    draggable="{{ 'false' if item.get('fixed') else 'true' }}"
+                    data-id="{{ item.id }}"
+                    data-section="main"
+                    data-fixed="{{ 'true' if item.get('fixed') else 'false' }}">
+                    <span class="mo-drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                    <span class="mo-icon"><i class="bi {{ item.icon }}"></i></span>
+                    <span class="mo-label">{{ item.label }}</span>
+                    {% if item.feature %}
+                    <span class="badge bg-info bg-opacity-10 text-info" style="font-size:.7rem;">{{ item.feature }}</span>
+                    {% endif %}
+                    <span class="mo-endpoint">{{ item.endpoint }}</span>
+                    <div class="mo-toggle">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input mo-visible-toggle" type="checkbox"
+                                   {% if item.get('visible', true) %}checked{% endif %}
+                                   {% if item.get('fixed') %}disabled{% endif %}
+                                   data-id="{{ item.id }}">
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div class="mo-section-title">
+                <i class="bi bi-menu-button"></i> Menu Inferiore
+            </div>
+            <ul class="mo-list" id="bottomMenuList" data-section="bottom">
+                {% for item in bottom_items %}
+                <li class="mo-item"
+                    draggable="true"
+                    data-id="{{ item.id }}"
+                    data-section="bottom"
+                    data-fixed="false">
+                    <span class="mo-drag-handle"><i class="bi bi-grip-vertical"></i></span>
+                    <span class="mo-icon"><i class="bi {{ item.icon }}"></i></span>
+                    <span class="mo-label">{{ item.label }}</span>
+                    {% if item.feature %}
+                    <span class="badge bg-info bg-opacity-10 text-info" style="font-size:.7rem;">{{ item.feature }}</span>
+                    {% endif %}
+                    <span class="mo-endpoint">{{ item.endpoint }}</span>
+                    <div class="mo-toggle">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input mo-visible-toggle" type="checkbox"
+                                   {% if item.get('visible', true) %}checked{% endif %}
+                                   data-id="{{ item.id }}">
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div class="mo-actions">
+                <button class="btn mo-save-btn" id="moSaveBtn" onclick="saveMenuOrder()">
+                    <i class="bi bi-check-lg me-1"></i> Salva Ordine
+                </button>
+                <form method="POST" action="{{ url_for('admin.menu_order_reset') }}" class="d-inline"
+                      onsubmit="return confirm('Ripristinare l\'ordine predefinito del menu?');">
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Ripristina Predefinito
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="mo-preview">
+                <h5><i class="bi bi-eye me-2"></i>Anteprima Sidebar</h5>
+                <div class="mo-preview-sidebar" id="moPreview">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initDragDrop('mainMenuList');
+    initDragDrop('bottomMenuList');
+    updatePreview();
+
+    document.querySelectorAll('.mo-visible-toggle').forEach(function(toggle) {
+        toggle.addEventListener('change', updatePreview);
+    });
+});
+
+function initDragDrop(listId) {
+    const list = document.getElementById(listId);
+    let dragItem = null;
+
+    list.addEventListener('dragstart', function(e) {
+        const item = e.target.closest('.mo-item');
+        if (!item || item.dataset.fixed === 'true') { e.preventDefault(); return; }
+        dragItem = item;
+        setTimeout(function() { item.classList.add('dragging'); }, 0);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.dataset.id);
+    });
+
+    list.addEventListener('dragend', function(e) {
+        const item = e.target.closest('.mo-item');
+        if (item) item.classList.remove('dragging');
+        list.querySelectorAll('.mo-item').forEach(function(el) { el.classList.remove('drag-over'); });
+        dragItem = null;
+        updatePreview();
+    });
+
+    list.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const afterElement = getDragAfterElement(list, e.clientY);
+        const draggingEl = list.querySelector('.dragging');
+        if (!draggingEl) return;
+
+        list.querySelectorAll('.mo-item').forEach(function(el) { el.classList.remove('drag-over'); });
+
+        if (afterElement == null) {
+            list.appendChild(draggingEl);
+        } else {
+            if (afterElement.dataset.fixed === 'true' && !afterElement.previousElementSibling) return;
+            afterElement.classList.add('drag-over');
+            list.insertBefore(draggingEl, afterElement);
+        }
+    });
+
+    list.addEventListener('drop', function(e) {
+        e.preventDefault();
+        list.querySelectorAll('.mo-item').forEach(function(el) { el.classList.remove('drag-over'); });
+        updatePreview();
+    });
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.mo-item:not(.dragging)')];
+    return draggableElements.reduce(function(closest, child) {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function updatePreview() {
+    const preview = document.getElementById('moPreview');
+    let html = '';
+
+    const mainItems = document.querySelectorAll('#mainMenuList .mo-item');
+    mainItems.forEach(function(item) {
+        const label = item.querySelector('.mo-label').textContent.trim();
+        const icon = item.querySelector('.mo-icon i').className;
+        const toggle = item.querySelector('.mo-visible-toggle');
+        const visible = toggle ? toggle.checked : true;
+        const cls = visible ? '' : ' hidden-item';
+        html += '<div class="mo-preview-item' + cls + '"><i class="' + icon + '"></i><span>' + label + '</span></div>';
+    });
+
+    html += '<div class="mo-preview-divider"></div>';
+
+    const bottomItems = document.querySelectorAll('#bottomMenuList .mo-item');
+    bottomItems.forEach(function(item) {
+        const label = item.querySelector('.mo-label').textContent.trim();
+        const icon = item.querySelector('.mo-icon i').className;
+        const toggle = item.querySelector('.mo-visible-toggle');
+        const visible = toggle ? toggle.checked : true;
+        const cls = visible ? '' : ' hidden-item';
+        html += '<div class="mo-preview-item' + cls + '"><i class="' + icon + '"></i><span>' + label + '</span></div>';
+    });
+
+    preview.innerHTML = html;
+}
+
+function saveMenuOrder() {
+    const btn = document.getElementById('moSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Salvataggio...';
+
+    const items = [];
+
+    document.querySelectorAll('#mainMenuList .mo-item').forEach(function(item) {
+        const toggle = item.querySelector('.mo-visible-toggle');
+        items.push({
+            id: item.dataset.id,
+            section: 'main',
+            visible: toggle ? toggle.checked : true
+        });
+    });
+
+    document.querySelectorAll('#bottomMenuList .mo-item').forEach(function(item) {
+        const toggle = item.querySelector('.mo-visible-toggle');
+        items.push({
+            id: item.dataset.id,
+            section: 'bottom',
+            visible: toggle ? toggle.checked : true
+        });
+    });
+
+    fetch('{{ url_for("admin.menu_order_save") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: items })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Salva Ordine';
+        if (data.success) {
+            showToast('Ordine menu salvato con successo!', 'success');
+        } else {
+            showToast('Errore: ' + (data.error || 'Sconosciuto'), 'error');
+        }
+    })
+    .catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Salva Ordine';
+        showToast('Errore di rete. Riprova.', 'error');
+    });
+}
+
+function showToast(msg, type) {
+    const toast = document.getElementById('moToast');
+    toast.textContent = msg;
+    toast.className = 'mo-toast ' + type;
+    toast.style.display = 'block';
+    setTimeout(function() { toast.style.display = 'none'; }, 3000);
+}
+</script>
+{% endblock %}

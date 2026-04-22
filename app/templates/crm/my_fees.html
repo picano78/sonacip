@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Le mie quote{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Le mie quote</h1>
+    <a class="btn btn-outline-secondary" href="{{ url_for('main.dashboard') }}">Cruscotto</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Società</th>
+            <th>Descrizione</th>
+            <th>Scadenza</th>
+            <th>Importo</th>
+            <th>Stato</th>
+            <th class="text-end">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in fees %}
+            <tr>
+              <td class="text-muted small">{{ f.society.legal_name if f.society else ('Società #' ~ f.society_id) }}</td>
+              <td>{{ f.description or 'Quota' }}</td>
+              <td class="text-muted small">{{ f.due_on.isoformat() }}</td>
+              <td>€{{ "%.2f"|format((f.amount_cents or 0) / 100.0) }}</td>
+              <td>
+                <span class="badge bg-{{ 'success' if f.status == 'paid' else ('warning' if f.status == 'pending' else 'secondary') }}">{{ f.status }}</span>
+              </td>
+              <td class="text-end">
+                {% if f.status == 'pending' %}
+                  <form method="post" action="{{ url_for('crm.pay_fee', fee_id=f.id) }}" class="d-inline">
+                    {{ csrf_token() }}
+                    <button class="btn btn-sm btn-primary" type="submit">Paga</button>
+                  </form>
+                {% else %}
+                  <span class="text-muted small">-</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-muted">Nessuna quota.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

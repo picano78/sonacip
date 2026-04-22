@@ -1,0 +1,624 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }} - Messaggi{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --msg-primary: #1877f2;
+    --msg-primary-dark: #166fe5;
+    --msg-primary-light: #e7f3ff;
+    --msg-accent: #0084ff;
+    --msg-gray: #f0f2f5;
+    --group-green: #42b72a;
+}
+.chat-container {
+    display: flex;
+    height: calc(100vh - 120px);
+    min-height: 500px;
+    background: var(--bs-body-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+.conversations-list {
+    width: 350px;
+    min-width: 300px;
+    border-right: 1px solid var(--bs-border-color);
+    display: flex;
+    flex-direction: column;
+    background: var(--bs-tertiary-bg);
+}
+.conversations-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--msg-primary-dark), var(--msg-primary));
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.conversations-header h5 {
+    margin: 0;
+    font-weight: 600;
+    color: white;
+}
+.conversations-header .btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+}
+.conversations-header .btn:hover {
+    background: rgba(255,255,255,0.3);
+    color: white;
+}
+.conversation-items {
+    flex: 1;
+    overflow-y: auto;
+}
+.conversation-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+.conversation-item:hover, .conversation-item.active {
+    background: var(--bs-primary-bg-subtle);
+}
+.conversation-item.active {
+    border-left: 3px solid var(--bs-primary);
+}
+.conversation-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+.conversation-avatar-placeholder {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+.conversation-info {
+    flex: 1;
+    min-width: 0;
+}
+.conversation-name {
+    font-weight: 600;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.conversation-preview {
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bs-body-bg);
+}
+.chat-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.chat-header-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.message-bubble {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    position: relative;
+    word-wrap: break-word;
+}
+.message-sent {
+    align-self: flex-end;
+    background: var(--msg-primary-light);
+    color: #303030;
+    border-bottom-right-radius: 4px;
+}
+.message-received {
+    align-self: flex-start;
+    background: white;
+    color: #303030;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+.message-system {
+    align-self: center;
+    background: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    font-style: italic;
+    padding: 6px 12px;
+    border-radius: 12px;
+    max-width: 80%;
+    text-align: center;
+}
+.message-sender {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+    color: var(--group-green);
+}
+.message-time {
+    font-size: 0.7rem;
+    margin-top: 4px;
+    text-align: right;
+}
+.chat-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--msg-gray);
+}
+.chat-input-form {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+.chat-input {
+    flex: 1;
+    border-radius: 24px;
+    padding: 10px 20px;
+    border: none;
+    resize: none;
+    max-height: 120px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.chat-send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: var(--group-green);
+    border: none;
+    color: white;
+    transition: background 0.2s;
+}
+.chat-send-btn:hover {
+    background: #36a124;
+    color: white;
+}
+.members-sidebar {
+    width: 300px;
+    border-left: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+    display: flex;
+    flex-direction: column;
+}
+.members-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--bs-border-color);
+    font-weight: 600;
+}
+.members-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+.member-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+.member-item:hover {
+    background: var(--bs-secondary-bg);
+}
+.member-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+}
+.member-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bs-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+}
+.member-info {
+    flex: 1;
+    min-width: 0;
+}
+.member-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.member-role {
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+}
+.admin-badge {
+    background: var(--group-green);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    margin-left: auto;
+}
+@media (max-width: 992px) {
+    .members-sidebar {
+        display: none;
+    }
+}
+@media (max-width: 768px) {
+    .conversations-list {
+        width: 100%;
+        display: none;
+    }
+    .chat-area {
+        display: flex;
+    }
+    .chat-container {
+        height: calc(100vh - 80px);
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-3">
+    <div class="chat-container">
+        <!-- Conversations List -->
+        <div class="conversations-list">
+            <div class="conversations-header">
+                <h5><i class="bi bi-chat-dots-fill"></i> Messaggi</h5>
+                <div class="d-flex gap-1">
+                    <a href="{{ url_for('messages.create_group') }}" class="btn btn-sm" title="Nuovo gruppo">
+                        <i class="bi bi-people-fill"></i>
+                    </a>
+                    <a href="{{ url_for('messages.new_chat') }}" class="btn btn-sm" title="Nuova chat">
+                        <i class="bi bi-plus-lg"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="conversation-items">
+                {% for conv in conversations %}
+                {% if conv.type == 'direct' %}
+                <a href="{{ url_for('messages.chat', user_id=conv.user.id) }}" class="conversation-item">
+                    {% if conv.user.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + conv.user.avatar) }}" class="conversation-avatar" alt="{{ conv.user.get_full_name() }}">
+                    {% else %}
+                        <div class="conversation-avatar-placeholder">
+                            <i class="bi bi-person-fill text-white"></i>
+                        </div>
+                    {% endif %}
+                    <div class="conversation-info">
+                        <div class="conversation-name">{{ conv.user.get_full_name() }}</div>
+                        <div class="conversation-preview">{{ conv.last_message.body|truncate(30) if conv.last_message else 'Inizia una conversazione' }}</div>
+                    </div>
+                </a>
+                {% elif conv.type == 'group' %}
+                <a href="{{ url_for('messages.group_chat', group_id=conv.group.id) }}" 
+                   class="conversation-item {{ 'active' if group and group.id == conv.group.id else '' }}">
+                    {% if conv.group.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + conv.group.avatar) }}" class="conversation-avatar" alt="{{ conv.group.name }}">
+                    {% else %}
+                        <div class="conversation-avatar-placeholder" style="background: var(--group-green);">
+                            <i class="bi bi-people-fill text-white"></i>
+                        </div>
+                    {% endif %}
+                    <div class="conversation-info">
+                        <div class="conversation-name">
+                            {{ conv.group.name }}
+                            <small class="text-muted">({{ conv.member_count }})</small>
+                        </div>
+                        <div class="conversation-preview">
+                            {% if conv.last_message %}
+                                {% if conv.last_message.is_system_message %}
+                                    <i>{{ conv.last_message.body|truncate(30) }}</i>
+                                {% else %}
+                                    {{ conv.last_message.sender.first_name }}: {{ conv.last_message.body|truncate(25) }}
+                                {% endif %}
+                            {% else %}
+                                Nessun messaggio
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <a href="{{ url_for('messages.inbox') }}" class="btn btn-link d-lg-none me-2">
+                        <i class="bi bi-arrow-left"></i>
+                    </a>
+                    {% if group.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + group.avatar) }}" class="conversation-avatar" alt="{{ group.name }}">
+                    {% else %}
+                        <div class="conversation-avatar-placeholder" style="background: var(--group-green);">
+                            <i class="bi bi-people-fill text-white"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <div class="fw-semibold">{{ group.name }}</div>
+                        <small class="text-muted">{{ members|length }} membri</small>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <a href="{{ url_for('messages.group_voice_call', group_id=group.id) }}" class="btn btn-outline-success btn-sm rounded-circle me-2" title="Chiamata vocale di gruppo" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-telephone-fill"></i>
+                    </a>
+                    <a href="{{ url_for('messages.group_video_call', group_id=group.id) }}" class="btn btn-outline-primary btn-sm rounded-circle me-2" title="Videochiamata di gruppo" style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-camera-video-fill"></i>
+                    </a>
+                    <button class="btn btn-link text-dark" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Opzioni Gruppo</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('messages.add_group_members', group_id=group.id) }}">
+                            <i class="bi bi-person-plus"></i> Aggiungi membri
+                        </a></li>
+                        {% if membership.is_admin %}
+                        <li><a class="dropdown-item" href="{{ url_for('messages.edit_group', group_id=group.id) }}">
+                            <i class="bi bi-gear"></i> Modifica gruppo
+                        </a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="POST" action="{{ url_for('messages.leave_group', group_id=group.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Sei sicuro di voler lasciare questo gruppo?')">
+                                    <i class="bi bi-box-arrow-right"></i> Lascia gruppo
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                {% for msg in messages %}
+                {% if msg.is_system_message %}
+                <div class="message-system">
+                    {{ msg.body }}
+                </div>
+                {% else %}
+                <div class="message-bubble {{ 'message-sent' if msg.sender_id == current_user.id else 'message-received' }}">
+                    {% if msg.sender_id != current_user.id %}
+                    <div class="message-sender">{{ msg.sender.get_full_name() }}</div>
+                    {% endif %}
+                    {# Display ephemeral photo if present #}
+                    {% if msg.photo_path %}
+                        {% if not msg.is_photo_expired %}
+                        <div class="message-photo mb-1">
+                            <img src="{{ url_for('messages.view_group_message_photo', message_id=msg.id) }}" 
+                                 alt="Foto" class="img-fluid rounded" style="max-width:260px; max-height:260px; cursor:pointer;"
+                                 onclick="window.open(this.src, '_blank')">
+                            <div class="photo-expiry-notice mt-1">
+                                <small class="text-warning"><i class="bi bi-clock-history"></i> La foto scade il {{ msg.photo_expires_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="message-photo-expired mb-1">
+                            <div class="p-2 bg-light rounded text-center text-muted" style="min-width:160px;">
+                                <i class="bi bi-image" style="font-size:1.5rem;"></i>
+                                <div><small>Foto scaduta</small></div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    <div class="message-text">{{ msg.body }}</div>
+                    <div class="message-time">{{ msg.created_at.strftime('%H:%M') }}</div>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-people" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p class="mt-2">Inizia la conversazione nel gruppo</p>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="chat-input-area">
+                <div class="photo-expiry-warning text-center mb-2" style="display:none;" id="photoExpiryWarning">
+                    <small class="text-warning"><i class="bi bi-exclamation-triangle"></i> La foto rimarrà disponibile solo per 7 giorni, poi verrà automaticamente cancellata dal server.</small>
+                </div>
+                <div id="photoPreviewContainer" style="display:none;" class="mb-2 text-center">
+                    <div class="position-relative d-inline-block">
+                        <img id="photoPreview" src="" alt="Anteprima" class="rounded" style="max-height:120px; max-width:200px;">
+                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" id="removePhotoBtn" style="border-radius:50%; width:24px; height:24px; padding:0; line-height:24px; font-size:0.7rem;">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+                <form action="{{ url_for('messages.send_group_message', group_id=group.id) }}" method="POST" class="chat-input-form" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="file" name="photo" id="photoInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+                    <button type="button" class="emoji-btn" id="photoBtn" title="Invia foto (scade dopo 7 giorni)">
+                        <i class="bi bi-camera"></i>
+                    </button>
+                    <textarea name="body" class="form-control chat-input" id="messageInput" placeholder="Scrivi un messaggio..." rows="1"></textarea>
+                    <button type="submit" class="chat-send-btn">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Members Sidebar -->
+        <div class="members-sidebar">
+            <div class="members-header">
+                <i class="bi bi-people-fill"></i> Membri ({{ members|length }})
+            </div>
+            <div class="members-list">
+                {% for member in members %}
+                <div class="member-item">
+                    {% if member.user.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/' + member.user.avatar) }}" class="member-avatar" alt="{{ member.user.get_full_name() }}">
+                    {% else %}
+                        <div class="member-avatar-placeholder">
+                            <i class="bi bi-person-fill text-white" style="font-size: 0.9rem;"></i>
+                        </div>
+                    {% endif %}
+                    <div class="member-info">
+                        <div class="member-name">{{ member.user.get_full_name() }}</div>
+                        <div class="member-role">@{{ member.user.username }}</div>
+                    </div>
+                    {% if member.is_admin %}
+                    <span class="admin-badge">Admin</span>
+                    {% endif %}
+                    {% if membership.is_admin and member.user.id != current_user.id %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-link text-secondary p-0 ms-2" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <form method="POST" action="{{ url_for('messages.promote_group_member', group_id=group.id, user_id=member.user.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="dropdown-item">
+                                        {% if member.is_admin %}
+                                        <i class="bi bi-arrow-down-circle"></i> Rimuovi admin
+                                        {% else %}
+                                        <i class="bi bi-arrow-up-circle"></i> Promuovi admin
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <form method="POST" action="{{ url_for('messages.remove_group_member', group_id=group.id, user_id=member.user.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Sei sicuro di voler rimuovere questo membro?')">
+                                        <i class="bi bi-person-dash"></i> Rimuovi
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% if membership.is_admin %}
+            <div class="p-3 border-top">
+                <a href="{{ url_for('messages.add_group_members', group_id=group.id) }}" class="btn btn-primary w-100">
+                    <i class="bi bi-person-plus"></i> Aggiungi membri
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    const textarea = document.querySelector('.chat-input');
+    if (textarea) {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.closest('form').submit();
+            }
+        });
+    }
+    
+    // Validate form: require at least text or photo
+    const chatForm = document.querySelector('.chat-input-form');
+    if (chatForm) {
+        chatForm.addEventListener('submit', function(e) {
+            const body = (document.getElementById('messageInput') || {}).value || '';
+            const photo = document.getElementById('photoInput');
+            if (!body.trim() && !(photo && photo.files && photo.files.length > 0)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+    
+    // Photo upload handling
+    const photoBtn = document.getElementById('photoBtn');
+    const photoInput = document.getElementById('photoInput');
+    const photoPreviewContainer = document.getElementById('photoPreviewContainer');
+    const photoPreview = document.getElementById('photoPreview');
+    const removePhotoBtn = document.getElementById('removePhotoBtn');
+    const photoExpiryWarning = document.getElementById('photoExpiryWarning');
+    
+    if (photoBtn && photoInput) {
+        photoBtn.addEventListener('click', function() {
+            photoInput.click();
+        });
+        
+        photoInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photoPreview.src = e.target.result;
+                    photoPreviewContainer.style.display = 'block';
+                    photoExpiryWarning.style.display = 'block';
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+        
+        if (removePhotoBtn) {
+            removePhotoBtn.addEventListener('click', function() {
+                photoInput.value = '';
+                photoPreviewContainer.style.display = 'none';
+                photoExpiryWarning.style.display = 'none';
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

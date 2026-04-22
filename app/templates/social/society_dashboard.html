@@ -1,0 +1,668 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Società - {{ current_user.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.society-header {
+    background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+    color: white;
+    padding: 28px 32px;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    box-shadow: 0 4px 20px rgba(25, 135, 84, 0.3);
+}
+.stat-card {
+    background: white;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+.stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+.stat-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.stat-label {
+    color: #65676b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.action-card {
+    background: white;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+.action-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+    border-color: rgba(25, 135, 84, 0.3);
+}
+.action-card .action-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 16px;
+}
+.action-card .action-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #1c1e21;
+}
+.action-card .action-desc {
+    font-size: 0.9rem;
+    color: #65676b;
+    margin-bottom: 0;
+}
+.section-header {
+    font-weight: 700;
+    color: #198754;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #e8f5e9;
+    font-size: 1.1rem;
+}
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .action-card {
+    background: #242526;
+    border-color: #3a3b3c;
+    color: #e4e6eb;
+}
+[data-theme="dark"] .action-card .action-title {
+    color: #e4e6eb;
+}
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .action-card .action-desc {
+    color: #b0b3b8;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 my-4">
+    <div class="society-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-1"><i class="bi bi-building"></i> Dashboard Società</h1>
+                <p class="mb-0 opacity-75">{{ current_user.company_name or 'Gestisci la tua società' }}</p>
+            </div>
+            <div class="d-none d-md-flex align-items-center gap-2">
+                <a href="{{ url_for('social.society_settings') }}" class="btn btn-light btn-sm" title="Impostazioni Società" style="border-radius: 10px;">
+                    <i class="bi bi-gear-fill"></i> Impostazioni
+                </a>
+                <span class="badge bg-white text-success fs-6 px-3 py-2" style="border-radius: 10px;">SOCIETÀ</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-primary-subtle text-primary me-3">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-primary">{{ stats.followers_count }}</div>
+                        <div class="stat-label">Follower</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-success-subtle text-success me-3">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-success">{{ stats.athletes_count }}</div>
+                        <div class="stat-label">Atleti</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-info-subtle text-info me-3">
+                        <i class="bi bi-person-video3"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-info">{{ stats.staff_count }}</div>
+                        <div class="stat-label">Staff</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-warning-subtle text-warning me-3">
+                        <i class="bi bi-calendar-event"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value text-warning">{{ stats.events_count }}</div>
+                        <div class="stat-label">Eventi</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <h2 class="section-header"><i class="bi bi-lightning-charge-fill me-2"></i>Azioni Rapide</h2>
+    <div class="row g-3 mb-4">
+        {% if feature_enabled('planner') and can('calendar', 'view') %}
+        <div class="col-md-4">
+            <a href="{{ url_for('field_planner.index') }}" class="action-card">
+                <div class="action-icon bg-primary-subtle">
+                    <i class="bi bi-calendar-check text-primary"></i>
+                </div>
+                <div class="action-title">Planner Campo</div>
+                <p class="action-desc">Gestisci allenamenti, partite e disponibilità campi</p>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('field_planner.index') }}" class="action-card">
+                <div class="action-icon bg-purple-subtle" style="background-color: rgba(111, 66, 193, 0.1);">
+                    <i class="bi bi-calendar3-range text-purple" style="color: #6f42c1;"></i>
+                </div>
+                <div class="action-title">Calendario</div>
+                <p class="action-desc">Visualizza e gestisci il calendario eventi della società</p>
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if feature_enabled('crm') and can('crm', 'access') %}
+        <div class="col-md-4">
+            <a href="{{ url_for('crm.index') }}" class="action-card">
+                <div class="action-icon bg-success-subtle">
+                    <i class="bi bi-briefcase text-success"></i>
+                </div>
+                <div class="action-title">CRM Mini</div>
+                <p class="action-desc">Gestisci contatti, membri e relazioni della società</p>
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if feature_enabled('events') and can('events', 'view') %}
+        <div class="col-md-4">
+            <a href="{{ url_for('events.index') }}" class="action-card">
+                <div class="action-icon bg-info-subtle">
+                    <i class="bi bi-calendar-event text-info"></i>
+                </div>
+                <div class="action-title">Eventi</div>
+                <p class="action-desc">Crea e gestisci eventi e tornei della società</p>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Group Operations & Pending Actions -->
+    <h2 class="section-header"><i class="bi bi-people-fill me-2"></i>Operazioni di Gruppo & Azioni Pendenti</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-week text-primary me-2"></i>Prossimi Eventi Planner</h5>
+                    <span class="badge bg-primary">{{ pending_planner_events|length }}</span>
+                </div>
+                {% if pending_planner_events %}
+                <div class="list-group list-group-flush">
+                    {% for event in pending_planner_events[:5] %}
+                    <a href="{{ url_for('field_planner.detail', event_id=event.id) }}" class="list-group-item list-group-item-action border-0 px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">{{ event.title }}</div>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>{{ event.start_datetime.strftime('%d/%m %H:%M') }}
+                                    {% if event.facility %}
+                                    <i class="bi bi-geo-alt ms-2 me-1"></i>{{ event.facility.name }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <span class="badge" style="background-color: {{ event.color or '#212529' }};">{{ event.event_type }}</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                <a href="{{ url_for('field_planner.index') }}" class="btn btn-sm btn-outline-primary mt-3">
+                    <i class="bi bi-calendar-check me-1"></i>Vedi tutti gli eventi
+                </a>
+                {% else %}
+                <p class="text-muted mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Nessun evento pianificato nei prossimi 7 giorni.
+                </p>
+                <a href="{{ url_for('field_planner.create') }}" class="btn btn-sm btn-primary mt-3">
+                    <i class="bi bi-plus-circle me-1"></i>Crea nuovo evento
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-circle text-warning me-2"></i>Risposte Pendenti</h5>
+                    <span class="badge bg-warning text-dark">{{ pending_event_responses|length }}</span>
+                </div>
+                {% if pending_event_responses %}
+                <div class="list-group list-group-flush">
+                    {% for event in pending_event_responses %}
+                    <a href="{{ url_for('events.detail', event_id=event.id) }}" class="list-group-item list-group-item-action border-0 px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">{{ event.title }}</div>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>{{ event.start_date.strftime('%d/%m %H:%M') }}
+                                </small>
+                            </div>
+                            <span class="badge bg-warning text-dark">Da confermare</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">
+                    <i class="bi bi-check-circle me-2"></i>Nessuna risposta pendente alle convocazioni.
+                </p>
+                {% endif %}
+                
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Operatori con Visibilità Completa</span>
+                        <span class="badge bg-info">{{ group_operators_count }}</span>
+                    </div>
+                    <small class="text-muted">
+                        Membri che possono vedere tutti gli eventi della società.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Health, Onboarding and Suggestions Row -->
+    <h2 class="section-header"><i class="bi bi-activity me-2"></i>Stato della Società</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-heart-pulse me-2 text-danger"></i>Health</h5>
+                    {% if health %}
+                      <span class="badge bg-{{ 'success' if health.score >= 75 else ('warning' if health.score >= 50 else 'danger') }} fs-6">{{ health.score }}/100</span>
+                    {% else %}
+                      <span class="badge bg-secondary">n/d</span>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if health %}
+                      <div class="text-muted small">Settimana: {{ health.week_key }}</div>
+                      <div class="small text-muted mt-2">Punteggio di retention e adozione della piattaforma.</div>
+                    {% else %}
+                      <div class="text-muted">In attesa del primo snapshot automatico.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-flag me-2 text-primary"></i>Onboarding</h5>
+                    <span class="badge bg-primary fs-6">{{ onboarding_progress }}%</span>
+                </div>
+                <div>
+                    <div class="progress mb-3" style="height: 12px; border-radius: 10px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ onboarding_progress }}%;" aria-valuenow="{{ onboarding_progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {% for s in onboarding[:3] %}
+                          <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-2">
+                            <div class="d-flex align-items-center">
+                              {% if s.done %}
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                              {% else %}
+                                <i class="bi bi-circle text-secondary me-2"></i>
+                              {% endif %}
+                              <small>{{ s.label }}</small>
+                            </div>
+                            {% if not s.done and s.manual %}
+                              <form method="post" action="{{ url_for('social.society_onboarding_complete', step_key=s.key) }}">
+                                {{ csrf_token() }}
+                                <button class="btn btn-sm btn-outline-primary" type="submit" style="font-size: 0.75rem;">✓</button>
+                              </form>
+                            {% endif %}
+                          </div>
+                        {% endfor %}
+                        {% if onboarding|length > 3 %}
+                          <div class="list-group-item border-0 px-0 py-1">
+                            <small class="text-muted">+ {{ onboarding|length - 3 }} altri passi...</small>
+                          </div>
+                        {% endif %}
+                    </div>
+                    <a class="btn btn-sm btn-outline-secondary mt-2" href="{{ url_for('social.society_permissions') }}">
+                        <i class="bi bi-shield-lock me-1"></i>Permessi Ruoli
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-lightbulb me-2 text-warning"></i>Suggerimenti</h5>
+                    <span class="badge bg-secondary">{{ suggestions|length }}</span>
+                </div>
+                <div>
+                    {% if suggestions and suggestions|length %}
+                      <div class="list-group list-group-flush">
+                        {% for s in suggestions[:3] %}
+                          <div class="list-group-item border-0 px-0 py-2">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                              <div>
+                                <strong class="small">{{ s.title }}</strong>
+                                <div class="text-muted" style="font-size: 0.75rem;">{{ s.body }}</div>
+                                {% if s.action_url %}
+                                  <a class="btn btn-sm btn-outline-primary mt-1" href="{{ s.action_url }}" style="font-size: 0.75rem;">Apri</a>
+                                {% endif %}
+                              </div>
+                              <form method="post" action="{{ url_for('social.society_dismiss_suggestion', key=s.key) }}">
+                                {{ csrf_token() }}
+                                <button class="btn btn-sm btn-link text-muted p-0" type="submit" title="Nascondi">×</button>
+                              </form>
+                            </div>
+                          </div>
+                        {% endfor %}
+                        {% if suggestions|length > 3 %}
+                          <div class="list-group-item border-0 px-0 py-1">
+                            <small class="text-muted">+ {{ suggestions|length - 3 }} altri suggerimenti</small>
+                          </div>
+                        {% endif %}
+                      </div>
+                    {% else %}
+                      <div class="text-muted small">Nessun suggerimento al momento.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff and Athletes Row -->
+    <h2 class="section-header"><i class="bi bi-people me-2"></i>Team</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-video3 me-2 text-info"></i>Staff</h5>
+                    <span class="badge bg-info">{{ staff|length }}</span>
+                </div>
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                    {% for member in staff %}
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-circle text-info me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong class="d-block">{{ member.get_full_name() }}</strong>
+                                    <small class="text-muted">{{ member.staff_role or 'Staff' }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-muted text-center py-3">Nessuno staff registrato</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-badge me-2 text-success"></i>Atleti</h5>
+                    <span class="badge bg-success">{{ athletes|length }}</span>
+                </div>
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                    {% for athlete in athletes %}
+                        <a href="{{ url_for('social.profile', user_id=athlete.id) }}" class="list-group-item list-group-item-action border-0 px-0 py-2 d-flex align-items-center">
+                            <i class="bi bi-person-circle text-success me-2" style="font-size: 1.5rem;"></i>
+                            <span>{{ athlete.get_full_name() }}</span>
+                        </a>
+                    {% else %}
+                        <div class="text-muted text-center py-3">Nessun atleta registrato</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broadcast Communication Card -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="stat-card" style="border: 2px solid #198754; background: linear-gradient(135deg, rgba(25, 135, 84, 0.1), rgba(32, 201, 151, 0.05));">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:56px; height:56px; border-radius:14px; background:#198754; display:flex; align-items:center; justify-content:center;">
+                            <i class="bi bi-megaphone-fill text-white" style="font-size:1.5rem;"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold">Comunicazioni ai Membri</h5>
+                            <p class="text-muted mb-0 small">Invia messaggi broadcast a tutti i membri o per ruolo</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('social.society_broadcast_compose') }}" class="btn btn-success fw-semibold">
+                            <i class="bi bi-pencil-square me-1"></i> Nuovo Messaggio
+                        </a>
+                        <a href="{{ url_for('social.society_broadcasts') }}" class="btn btn-outline-success">
+                            <i class="bi bi-list-ul me-1"></i> Storico
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invite Section -->
+    <h2 class="section-header"><i class="bi bi-person-plus me-2"></i>Gestione Membri</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="stat-card">
+                <h5 class="mb-3 fw-bold"><i class="bi bi-envelope-plus me-2 text-primary"></i>Invita un utente</h5>
+                <form method="post" action="{{ url_for('social.society_invite') }}">
+                    {{ invite_form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ invite_form.user_query.label(class="form-label fw-semibold small") }}
+                        {{ invite_form.user_query(class="form-control", placeholder="email o username") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ invite_form.requested_role.label(class="form-label fw-semibold small") }}
+                        {{ invite_form.requested_role(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ invite_form.note.label(class="form-label fw-semibold small") }}
+                        {{ invite_form.note(class="form-control", rows="2") }}
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="bi bi-send me-1"></i> Invia invito
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-warning"></i>Inviti in attesa</h5>
+                    <span class="badge bg-warning">{{ invites|length }}</span>
+                </div>
+                <div class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
+                    {% for inv in invites %}
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-circle text-warning me-2" style="font-size: 1.5rem;"></i>
+                                <div class="flex-grow-1">
+                                    <strong class="d-block">{{ inv.invited_user.get_full_name() if inv.invited_user else ('User #' ~ inv.invited_user_id) }}</strong>
+                                    <small class="text-muted">Ruolo: {{ inv.requested_role }} — {{ inv.created_at|timeago }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-muted text-center py-3">Nessun invito in attesa</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Members Management Table -->
+    <div class="stat-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-people me-2 text-primary"></i>Membri (ruoli e poteri)</h5>
+            <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('social.society_permissions') }}">
+                    <i class="bi bi-shield-lock"></i> Permessi Ruoli
+                </a>
+                <span class="badge bg-secondary align-self-center">{{ memberships|length }}</span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Utente</th>
+                        <th>Ruolo</th>
+                        <th>Da</th>
+                        <th class="text-end">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in memberships %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-circle text-primary me-2" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <a href="{{ url_for('social.profile', user_id=m.user.id) }}" class="fw-semibold text-decoration-none">{{ m.user.get_full_name() }}</a>
+                                        <div class="text-muted small">{{ m.user.email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ m.role_name }}</span></td>
+                            <td class="text-muted small">{{ m.created_at|datetime_format }}</td>
+                            <td class="text-end">
+                                <form class="d-inline-flex gap-2" method="post" action="{{ url_for('social.society_set_member_role', user_id=m.user.id) }}">
+                                    {{ csrf_token() }}
+                                    <select class="form-select form-select-sm" name="role_name" style="width: 140px;">
+                                        <option value="atleta" {{ 'selected' if m.role_name == 'atleta' else '' }}>Atleta</option>
+                                        <option value="coach" {{ 'selected' if m.role_name == 'coach' else '' }}>Coach</option>
+                                        <option value="staff" {{ 'selected' if m.role_name == 'staff' else '' }}>Staff</option>
+                                        <option value="dirigente" {{ 'selected' if m.role_name == 'dirigente' else '' }}>Dirigente</option>
+                                        <option value="appassionato" {{ 'selected' if m.role_name == 'appassionato' else '' }}>Appassionato</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">Salva</button>
+                                </form>
+                                <form class="d-inline" method="post" action="{{ url_for('social.society_remove_member', user_id=m.user.id) }}" onsubmit="return confirm('Rimuovere questo membro dalla società?');">
+                                    {{ csrf_token() }}
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Rimuovi</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-muted text-center py-3">Nessun membro</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Audit Logs and Events -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-info"></i>Audit Società</h5>
+                    <div class="d-flex gap-2 align-items-center">
+                        {% if current_user.has_feature('enterprise_pack') %}
+                            <a class="btn btn-sm btn-outline-info" href="{{ url_for('social.society_audit_export') }}">
+                                <i class="bi bi-download"></i> Export CSV
+                            </a>
+                        {% endif %}
+                        <span class="badge bg-info">{{ recent_audit|length }}</span>
+                    </div>
+                </div>
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                    {% for log in recent_audit %}
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <span class="badge bg-secondary small">{{ log.action }}</span>
+                            <span class="ms-2">{{ log.details or '' }}</span>
+                            <div class="small text-muted mt-1">{{ log.created_at|timeago }}</div>
+                        </div>
+                    {% else %}
+                        <div class="text-muted text-center py-3">Nessun audit log</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-event me-2 text-warning"></i>Eventi Recenti</h5>
+                    <a href="{{ url_for('events.create') }}" class="btn btn-sm btn-warning">
+                        <i class="bi bi-plus-circle"></i> Nuovo Evento
+                    </a>
+                </div>
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                    {% for event in events %}
+                        <a href="{{ url_for('events.detail', event_id=event.id) }}" class="list-group-item list-group-item-action border-0 px-0 py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center flex-grow-1">
+                                    <i class="bi bi-calendar3 text-warning me-2" style="font-size: 1.3rem;"></i>
+                                    <div>
+                                        <strong class="d-block">{{ event.title }}</strong>
+                                        <small class="text-muted">{{ event.start_date|datetime_format }}</small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-{{ 'primary' if event.event_type == 'allenamento' else 'success' }}">
+                                    {{ event.event_type }}
+                                </span>
+                            </div>
+                        </a>
+                    {% else %}
+                        <div class="text-muted text-center py-3">Nessun evento creato</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

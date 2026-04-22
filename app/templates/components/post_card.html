@@ -1,0 +1,121 @@
+<div class="card mb-3" data-post-id="{{ post.id }}" data-created="{{ post.created_at.isoformat() if post.created_at else '' }}">
+    <div class="card-body">
+        <div class="d-flex align-items-start mb-3">
+            <a href="{{ url_for('social.profile', user_id=post.author.id) }}">
+                {% if post.author.avatar %}
+                    <img src="{{ url_for('static', filename='uploads/' + post.author.avatar) }}" 
+                         class="rounded-circle me-3" width="50" height="50" alt="Avatar" loading="lazy" decoding="async">
+                {% else %}
+                    <div class="bg-secondary text-white rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                         style="width: 50px; height: 50px;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                {% endif %}
+            </a>
+            <div class="flex-grow-1">
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                    <h6 class="mb-0">
+                        <a href="{{ url_for('social.profile', user_id=post.author.id) }}" class="text-decoration-none text-dark">
+                            {{ post.author.get_full_name() }}
+                        </a>
+                    </h6>
+                    {% if current_user.is_authenticated and post.author and current_user.id != post.author.id %}
+                        {% if not post.author.is_admin() %}
+                        {% if followed_ids is defined %}
+                            {% set _is_following = post.author.id in followed_ids %}
+                        {% else %}
+                            {% set _is_following = current_user.is_following(post.author) %}
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('social.unfollow' if _is_following else 'social.follow', user_id=post.author.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm {{ 'btn-outline-secondary' if _is_following else 'btn-outline-primary' }}">
+                                {% if _is_following %}<i class="bi bi-check-lg"></i> Seguendo{% else %}<i class="bi bi-plus-lg"></i> Segui{% endif %}
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <small class="text-muted">{{ post.created_at|timeago }}</small>
+                {% if post.is_promoted %}
+                    <span class="badge bg-warning text-dark ms-2">Sponsorizzato</span>
+                {% endif %}
+                {% if post.post_type == 'official' %}
+                    <span class="badge bg-primary ms-2">Ufficiale</span>
+                {% elif post.post_type == 'tournament' %}
+                    <span class="badge bg-success ms-2">Torneo</span>
+                {% elif post.post_type == 'match' %}
+                    <span class="badge bg-info ms-2">Partita</span>
+                {% elif post.post_type == 'automation' %}
+                    <span class="badge bg-secondary ms-2">Automazione</span>
+                {% endif %}
+                {% if post.audience %}
+                    {% if post.audience == 'society' %}
+                        <span class="badge bg-dark ms-2">Società</span>
+                    {% elif post.audience == 'direct' %}
+                        <span class="badge bg-danger ms-2">Diretto</span>
+                    {% elif post.audience == 'followers' %}
+                        <span class="badge bg-secondary ms-2">Follower</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark ms-2">Pubblico</span>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        <p class="card-text">{{ post.content }}</p>
+        {% if post.link_url and post.link_title %}
+            <div class="card mb-3 border">
+                <div class="row g-0">
+                    {% if post.link_image %}
+                    <div class="col-md-4">
+                        <img src="{{ post.link_image }}" class="img-fluid rounded-start h-100 object-fit-cover" alt="Link preview" loading="lazy" decoding="async" style="max-height: 200px; object-fit: cover;">
+                    </div>
+                    {% endif %}
+                    <div class="col-md-{{ '8' if post.link_image else '12' }}">
+                        <div class="card-body">
+                            <a href="{{ post.link_url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                                <h6 class="card-title text-dark mb-1">{{ post.link_title }}</h6>
+                            </a>
+                            {% if post.link_description %}
+                                <p class="card-text small text-muted mb-2">{{ post.link_description[:150] }}{% if post.link_description|length > 150 %}...{% endif %}</p>
+                            {% endif %}
+                            {% if post.link_provider %}
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <i class="bi bi-link-45deg"></i> {{ post.link_provider|capitalize }}
+                                    </small>
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        {% if post.image %}
+            {% set fn = post.image.lower() %}
+            {% if fn.endswith('.mp4') or fn.endswith('.webm') or fn.endswith('.mov') or fn.endswith('.mkv') %}
+                <video class="w-100 rounded mb-3" controls preload="metadata">
+                    <source src="{{ url_for('static', filename='uploads/' + post.image) }}">
+                </video>
+            {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" class="img-fluid rounded mb-3" alt="Post image" loading="lazy" decoding="async">
+            {% endif %}
+        {% endif %}
+        <div class="d-flex gap-3">
+            <button class="btn btn-sm {{ 'btn-primary' if post.is_liked_by(current_user) else 'btn-outline-primary' }}"
+                    hx-post="{{ url_for('social.like_post', post_id=post.id) }}"
+                    hx-swap="outerHTML"
+                    hx-target="this">
+                <i class="bi bi-heart{{ '-fill' if post.is_liked_by(current_user) else '' }}"></i>
+                <span>{{ post.likes_count }}</span>
+            </button>
+            <a href="{{ url_for('social.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-chat"></i> {{ post.comments_count }}
+            </a>
+            {% if current_user.id == post.user_id or can('admin', 'access') %}
+                <a href="{{ url_for('social.promote_post', post_id=post.id) }}" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-megaphone"></i> Sponsorizza
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>

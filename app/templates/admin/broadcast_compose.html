@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block title %}Nuova Newsletter{% endblock %}
+
+{% block extra_css %}
+<style>
+.compose-header {
+    background: linear-gradient(135deg, #1877f2 0%, #0a4da3 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+.compose-card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.role-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #f0f2f5;
+    margin: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+.role-check:hover {
+    background: #e4e6eb;
+}
+.role-check input:checked + span {
+    color: #1877f2;
+    font-weight: 600;
+}
+.role-check input {
+    accent-color: #1877f2;
+}
+.preview-box {
+    background: #f0f2f5;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+    border: 2px dashed #dadde1;
+}
+.send-btn {
+    background: linear-gradient(135deg, #1877f2, #0a4da3);
+    color: white;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+.send-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(24,119,242,0.4);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 800px;">
+    <div class="compose-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h4 mb-1"><i class="bi bi-pencil-square me-2"></i>Nuova Newsletter</h1>
+                <p class="mb-0 opacity-75">Componi e invia un messaggio a tutti gli utenti</p>
+            </div>
+            <a href="{{ url_for('admin.broadcasts') }}" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left"></i> Indietro
+            </a>
+        </div>
+    </div>
+
+    <div class="compose-card">
+        <form method="POST" id="broadcastForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-4">
+                <label class="form-label fw-bold"><i class="bi bi-envelope me-1"></i> Oggetto</label>
+                <input type="text" name="subject" class="form-control form-control-lg" 
+                       placeholder="Oggetto della newsletter..." value="{{ subject }}" required maxlength="300">
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold"><i class="bi bi-chat-text me-1"></i> Messaggio</label>
+                <textarea name="body" class="form-control" rows="10" 
+                          placeholder="Scrivi il tuo messaggio qui..." required>{{ body }}</textarea>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold"><i class="bi bi-funnel me-1"></i> Destinatari (opzionale)</label>
+                <p class="small text-muted mb-2">Seleziona le categorie di utenti. Se non selezioni nulla, il messaggio verrà inviato a tutti.</p>
+                <div class="d-flex flex-wrap">
+                    {% for role in roles %}
+                    <label class="role-check">
+                        <input type="checkbox" name="target_roles" value="{{ role.name }}" 
+                               {{ 'checked' if role.name in selected_roles }}>
+                        <span>{{ role.display_name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="send_email" id="sendEmail" value="1">
+                    <label class="form-check-label" for="sendEmail">
+                        <i class="bi bi-envelope-at me-1"></i> Invia anche via email (richiede SMTP configurato)
+                    </label>
+                </div>
+            </div>
+
+            <div class="preview-box mb-4" id="previewBox" style="display:none;">
+                <h6 class="fw-bold mb-2"><i class="bi bi-eye me-1"></i> Anteprima</h6>
+                <div class="bg-white rounded-3 p-3 shadow-sm">
+                    <div style="background:#1877f2; color:#fff; padding:12px 16px; border-radius:8px 8px 0 0; font-weight:700;">
+                        SONACIP
+                    </div>
+                    <div class="p-3 border border-top-0 rounded-bottom">
+                        <h5 id="previewSubject" class="fw-bold"></h5>
+                        <div id="previewBody" style="white-space:pre-wrap; color:#333;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-3 align-items-center">
+                <button type="button" class="btn btn-outline-secondary" onclick="togglePreview()">
+                    <i class="bi bi-eye me-1"></i> Anteprima
+                </button>
+                <button type="submit" class="send-btn" onclick="return confirm('Confermi l\'invio della newsletter a tutti i destinatari selezionati?')">
+                    <i class="bi bi-send-fill me-1"></i> Invia Newsletter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function togglePreview() {
+    const box = document.getElementById('previewBox');
+    const subj = document.querySelector('[name=subject]').value;
+    const body = document.querySelector('[name=body]').value;
+    document.getElementById('previewSubject').textContent = subj || '(nessun oggetto)';
+    document.getElementById('previewBody').textContent = body || '(nessun messaggio)';
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

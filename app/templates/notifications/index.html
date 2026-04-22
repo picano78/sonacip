@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Notifiche - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+.gradient-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+.notif-tabs .nav-link {
+    border: none;
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-weight: 600;
+    font-size: .9rem;
+    color: #555;
+    transition: all .2s;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+.notif-tabs .nav-link.active {
+    background: #1877f2;
+    color: white;
+}
+.notif-tabs .nav-link:not(.active):hover {
+    background: #e7f3ff;
+    color: #1877f2;
+}
+.notif-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    margin-bottom: 10px;
+    transition: transform .2s, box-shadow .2s;
+    border-left: 4px solid #e0e0e0;
+    cursor: pointer;
+}
+.notif-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+}
+.notif-card.unread {
+    border-left-color: #1877f2;
+    background: #f0f7ff;
+}
+.notif-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.notif-icon.social { background: linear-gradient(135deg, #1877f2, #42a5f5); color: white; }
+.notif-icon.event { background: linear-gradient(135deg, #28a745, #20c997); color: white; }
+.notif-icon.calendar { background: linear-gradient(135deg, #fd7e14, #ffc107); color: white; }
+.notif-icon.message { background: linear-gradient(135deg, #ffc107, #ffca2c); color: #333; }
+.notif-icon.crm { background: linear-gradient(135deg, #6f42c1, #a855f7); color: white; }
+.notif-icon.system { background: #e4e6eb; color: #65676b; }
+.notif-icon.read { background: #e4e6eb; color: #65676b; }
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(0,0,0,0.5);
+}
+.empty-state i {
+    font-size: 4rem;
+    color: #1877f2;
+    opacity: .25;
+}
+body[data-theme="dark"] .notif-card { background: #242526; border-left-color: #3a3b3c; }
+body[data-theme="dark"] .notif-card.unread { background: #1a2940; border-left-color: #1877f2; }
+body[data-theme="dark"] .notif-tabs .nav-link { color: #e4e6eb; }
+body[data-theme="dark"] .notif-tabs .nav-link:not(.active):hover { background: #3a3b3c; color: #1877f2; }
+body[data-theme="dark"] .empty-state { color: #b0b3b8; }
+body[data-theme="dark"] .notif-icon.system,
+body[data-theme="dark"] .notif-icon.read { background: #3a3b3c; color: #b0b3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 800px;">
+    <div class="gradient-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1 class="mb-1 h3"><i class="bi bi-bell-fill me-2"></i>Notifiche</h1>
+                <p class="mb-0 opacity-75">
+                    {% if pagination.total > 0 %}{{ pagination.total }} notifiche totali{% else %}Nessuna notifica{% endif %}
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <form method="POST" action="{{ url_for('notifications.mark_all_read') }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-light btn-sm" style="border-radius: 10px;"><i class="bi bi-check2-all me-1"></i>Segna tutte lette</button>
+                </form>
+                <form method="POST" action="{{ url_for('notifications.clear_all') }}" class="d-inline" data-confirm-submit="Vuoi eliminare tutte le notifiche già lette?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-light text-danger btn-sm" style="border-radius: 10px;"><i class="bi bi-trash me-1"></i>Pulisci</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav notif-tabs mb-4 gap-2 flex-wrap">
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if filter_type == 'all' }}" href="{{ url_for('notifications.index') }}">
+                <i class="bi bi-inbox me-1"></i>Tutte
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if filter_type == 'unread' }}" href="{{ url_for('notifications.index', filter='unread') }}">
+                <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i>Non lette
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ 'active' if filter_type == 'read' }}" href="{{ url_for('notifications.index', filter='read') }}">
+                <i class="bi bi-check2 me-1"></i>Lette
+            </a>
+        </li>
+    </ul>
+
+    {% for notification in notifications %}
+        <div class="card notif-card {{ 'unread' if not notification.is_read }}" onclick="handleNotifClick(this, '{{ notification.link|default('', true) }}', {{ notification.id }}, {{ 'true' if notification.is_read else 'false' }})">
+            <div class="card-body py-3">
+                <div class="d-flex align-items-start gap-3">
+                    {% set ntype = notification.notification_type or 'system' %}
+                    <div class="notif-icon {{ ntype if not notification.is_read else 'read' }}">
+                        {% if 'messag' in (notification.title|lower) or ntype == 'message' %}
+                            <i class="bi bi-chat-dots-fill"></i>
+                        {% elif 'like' in (notification.title|lower) or 'piace' in (notification.title|lower) %}
+                            <i class="bi bi-heart-fill"></i>
+                        {% elif 'comment' in (notification.title|lower) or 'commento' in (notification.title|lower) %}
+                            <i class="bi bi-chat-square-text-fill"></i>
+                        {% elif 'follow' in (notification.title|lower) or 'segui' in (notification.title|lower) %}
+                            <i class="bi bi-person-plus-fill"></i>
+                        {% elif ntype == 'calendar' or 'planner' in (notification.title|lower) %}
+                            <i class="bi bi-calendar-week-fill"></i>
+                        {% elif 'event' in (notification.title|lower) or 'evento' in (notification.title|lower) or ntype == 'event' %}
+                            <i class="bi bi-calendar-event-fill"></i>
+                        {% elif 'connessione' in (notification.title|lower) or 'amiciz' in (notification.title|lower) %}
+                            <i class="bi bi-people-fill"></i>
+                        {% elif ntype == 'crm' %}
+                            <i class="bi bi-building-fill"></i>
+                        {% else %}
+                            <i class="bi bi-bell-fill"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1 min-width-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h6 class="mb-1 {{ 'fw-bold' if not notification.is_read }}" style="font-size: 0.95rem;">{{ notification.title }}</h6>
+                            <small class="text-muted ms-2 text-nowrap" style="font-size: 0.8rem;">{{ notification.created_at|timeago }}</small>
+                        </div>
+                        <p class="mb-0 text-muted" style="font-size: 0.875rem; line-height: 1.4;">{{ notification.message }}</p>
+                    </div>
+                    <form method="POST" action="{{ url_for('notifications.delete', notification_id=notification.id) }}" class="d-inline" onclick="event.stopPropagation();">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm text-muted p-1" style="opacity:0.5; min-width:32px; min-height:32px;" title="Elimina">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-bell-slash d-block mb-3"></i>
+            <h4>Nessuna notifica</h4>
+            <p class="text-muted">
+                {% if filter_type == 'unread' %}Non hai notifiche non lette
+                {% elif filter_type == 'read' %}Non hai notifiche lette
+                {% else %}Le notifiche appariranno qui quando riceverai interazioni o aggiornamenti{% endif %}
+            </p>
+        </div>
+    {% endfor %}
+
+    {% if pagination.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('notifications.index', page=pagination.prev_num, filter=filter_type) }}" style="border-radius: 10px;">&laquo;</a>
+            </li>
+            {% endif %}
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                <li class="page-item {{ 'active' if p == pagination.page }}">
+                    <a class="page-link" href="{{ url_for('notifications.index', page=p, filter=filter_type) }}" style="border-radius: 10px;">{{ p }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link" style="border-radius: 10px;">...</span></li>
+                {% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('notifications.index', page=pagination.next_num, filter=filter_type) }}" style="border-radius: 10px;">&raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function handleNotifClick(card, link, notifId, isRead) {
+    if (!isRead) {
+        var token = '';
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) token = meta.content;
+        var inp = card.querySelector('input[name="csrf_token"]');
+        if (!token && inp) token = inp.value;
+
+        fetch('/notifications/' + notifId + '/read', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': token }
+        }).then(function() {
+            card.classList.remove('unread');
+        });
+    }
+    if (link) {
+        window.location.href = link;
+    }
+}
+</script>
+{% endblock %}

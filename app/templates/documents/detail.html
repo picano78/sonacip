@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.title }} - Documenti - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <a href="{{ url_for('documents.folder_view', folder_id=doc.folder_id) if doc.folder_id else url_for('documents.index') }}" class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left"></i> Torna indietro
+    </a>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="{{ file_icon(doc.file_type) }}"></i> {{ doc.title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if is_image %}
+                    <div class="text-center mb-3">
+                        <img src="{{ url_for('documents.download', doc_id=doc.id) }}" alt="{{ doc.title }}" class="img-fluid rounded" style="max-height: 500px;">
+                    </div>
+                    {% elif is_pdf %}
+                    <div class="ratio ratio-16x9 mb-3">
+                        <embed src="{{ url_for('documents.download', doc_id=doc.id) }}" type="application/pdf">
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="{{ file_icon(doc.file_type) }}" style="font-size: 5rem;"></i>
+                        <p class="text-muted mt-2">Anteprima non disponibile per questo tipo di file.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Informazioni</h6>
+                </div>
+                <div class="card-body">
+                    {% if doc.description %}
+                    <div class="mb-3">
+                        <small class="text-muted">Descrizione</small>
+                        <p class="mb-0">{{ doc.description }}</p>
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <small class="text-muted">Tipo file</small>
+                        <p class="mb-0 fw-bold">.{{ doc.file_type or 'sconosciuto' }}</p>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Dimensione</small>
+                        <p class="mb-0 fw-bold">{{ format_size(doc.file_size) }}</p>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Data caricamento</small>
+                        <p class="mb-0 fw-bold">{{ doc.created_at.strftime('%d/%m/%Y %H:%M') if doc.created_at else '-' }}</p>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Caricato da</small>
+                        <p class="mb-0 fw-bold">{{ doc.uploader.get_full_name() if doc.uploader else '-' }}</p>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Download</small>
+                        <p class="mb-0 fw-bold"><i class="bi bi-download"></i> {{ doc.download_count or 0 }}</p>
+                    </div>
+                    {% if doc.is_public %}
+                    <span class="badge bg-info"><i class="bi bi-globe"></i> Pubblico</span>
+                    {% else %}
+                    <span class="badge bg-secondary"><i class="bi bi-lock"></i> Privato</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('documents.download', doc_id=doc.id) }}" class="btn text-white" style="background-color: #1877f2;">
+                    <i class="bi bi-download"></i> Scarica File
+                </a>
+                {% if can_delete %}
+                <form action="{{ url_for('documents.delete_document', doc_id=doc.id) }}" method="post" onsubmit="return confirm('Sei sicuro di voler eliminare questo documento?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-trash"></i> Elimina Documento
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

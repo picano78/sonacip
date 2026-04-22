@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Pagamento Completato - SONACIP{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="card shadow-sm">
+                <div class="card-body py-5">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h3 class="text-success mb-3">Pagamento Completato!</h3>
+                    <p class="text-muted mb-4">Il tuo pagamento è stato elaborato con successo.</p>
+
+                    {% if payment %}
+                    <div class="bg-light rounded p-3 mb-4 text-start">
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">Importo</small>
+                                <p class="fw-bold mb-1">&euro; {{ '%.2f'|format(payment.amount) }}</p>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Data</small>
+                                <p class="fw-bold mb-1">{{ payment.paid_at.strftime('%d/%m/%Y %H:%M') if payment.paid_at else '-' }}</p>
+                            </div>
+                        </div>
+                        {% if payment.fee %}
+                        <small class="text-muted">Descrizione</small>
+                        <p class="fw-bold mb-0">{{ payment.fee.description or ('Quota #' ~ payment.fee.id) }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-center">
+                        {% if invoice %}
+                        <a href="{{ url_for('payments.download_invoice', invoice_id=invoice.id) }}" class="btn btn-success">
+                            <i class="bi bi-download"></i> Scarica Fattura
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('payments.receipt', payment_id=payment.id) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-receipt"></i> Visualizza Ricevuta
+                        </a>
+                        <a href="{{ url_for('payments.index') }}" class="btn text-white" style="background-color: #1877f2;">
+                            <i class="bi bi-arrow-left"></i> I Miei Pagamenti
+                        </a>
+                    </div>
+                    {% else %}
+                    <a href="{{ url_for('payments.index') }}" class="btn text-white" style="background-color: #1877f2;">
+                        <i class="bi bi-arrow-left"></i> I Miei Pagamenti
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

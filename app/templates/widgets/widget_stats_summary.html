@@ -1,0 +1,17 @@
+<div class="card shadow-sm border-0 h-100">
+    <div class="card-header bg-white border-bottom" style="border-color: #1877f2 !important;">
+        <h6 class="mb-0"><i class="bi bi-graph-up-arrow text-primary"></i> Statistiche Rapide</h6>
+    </div>
+    <div class="card-body">
+        <div class="row text-center g-2">
+            {% for stat in stats %}
+            <div class="col-6">
+                <div class="p-2 rounded bg-primary bg-opacity-10">
+                    <div class="fw-bold fs-5 text-primary">{{ stat.value }}</div>
+                    <small class="text-muted">{{ stat.label }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Gestione Post - Admin{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-file-post"></i> Gestione Post</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+                <li class="breadcrumb-item active">Post</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Autore</th>
+                            <th>Contenuto</th>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for post in posts %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if post.author.avatar %}
+                                        <img src="{{ url_for('static', filename='uploads/' + post.author.avatar) }}" class="rounded-circle me-2" width="32" height="32">
+                                    {% else %}
+                                        <i class="bi bi-person-circle fs-4 me-2"></i>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-bold">{{ post.author.get_full_name() }}</div>
+                                        <small class="text-muted">@{{ post.author.username }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 300px;">
+                                    {{ post.content }}
+                                </div>
+                            </td>
+                            <td>{{ post.created_at|timeago }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ post.post_type or 'Standard' }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('social.view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal{{ post.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Delete Modal -->
+                                <div class="modal fade" id="deleteModal{{ post.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Conferma Eliminazione</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Sei sicuro di voler eliminare questo post di <strong>{{ post.author.username }}</strong>?
+                                                <p class="mt-2 small text-muted"><em>{{ post.content[:100] }}...</em></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                                                <form action="{{ url_for('admin.delete_post', post_id=post.id) }}" method="POST">
+                                                    {{ csrf_token() }}
+                                                    <button type="submit" class="btn btn-danger">Elimina Post</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">Nessun post trovato.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if pagination and pagination.pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% for page in pagination.iter_pages() %}
+                        {% if page %}
+                            <li class="page-item {{ 'active' if page == pagination.page else '' }}">
+                                <a class="page-link" href="{{ url_for('admin.posts', page=page) }}">{{ page }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

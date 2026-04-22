@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Controllo Funzionalità{% endblock %}
+
+{% block extra_css %}
+<style>
+.fc-header {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: white;
+    padding: 28px;
+    border-radius: 14px;
+    margin-bottom: 28px;
+}
+.fc-header h1 { font-size: 1.5rem; margin-bottom: 4px; }
+.fc-header p  { opacity: .8; margin: 0; font-size: .95rem; }
+.fc-actions { display: flex; gap: 10px; }
+.fc-actions .btn { font-weight: 600; border-radius: 8px; }
+
+.fc-legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.fc-legend-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: .85rem;
+}
+.legend-free  { background: #e6f4ea; color: #137333; }
+.legend-premium { background: #fef7e0; color: #b06000; }
+.legend-off   { background: #f0f0f0; color: #666; }
+
+.cat-section {
+    margin-bottom: 28px;
+}
+.cat-title {
+    font-weight: 700; font-size: 1.1rem; color: #1c1e21;
+    padding-bottom: 8px; margin-bottom: 14px;
+    border-bottom: 2px solid #e4e6eb;
+    display: flex; align-items: center; gap: 8px;
+}
+
+.feature-card {
+    background: white;
+    border: 1px solid #e4e6eb;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: box-shadow .2s, border-color .2s;
+}
+.feature-card:hover {
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    border-color: #1877f2;
+}
+.feature-card.disabled-feature {
+    opacity: .55;
+    background: #fafafa;
+}
+.feature-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+.feature-icon.free-icon    { background: #e6f4ea; color: #137333; }
+.feature-icon.premium-icon { background: #fef7e0; color: #b06000; }
+.feature-icon.off-icon     { background: #f0f0f0; color: #999; }
+.feature-info { flex: 1; min-width: 0; }
+.feature-name { font-weight: 700; font-size: 1rem; color: #1c1e21; margin-bottom: 2px; }
+.feature-desc { font-size: .85rem; color: #65676b; line-height: 1.4; }
+
+.feature-controls {
+    display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+}
+
+.toggle-group {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.toggle-label {
+    font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #65676b;
+}
+
+.switch {
+    position: relative;
+    width: 48px; height: 26px;
+}
+.switch input {
+    opacity: 0; width: 0; height: 0;
+}
+.slider {
+    position: absolute; cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #ccc; border-radius: 26px;
+    transition: .3s;
+}
+.slider:before {
+    content: "";
+    position: absolute;
+    height: 20px; width: 20px;
+    left: 3px; bottom: 3px;
+    background: white; border-radius: 50%;
+    transition: .3s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+input:checked + .slider { background: #1877f2; }
+input:checked + .slider:before { transform: translateX(22px); }
+
+.switch-premium input:checked + .slider { background: #f5a623; }
+.switch-enabled input:checked + .slider { background: #34a853; }
+
+.badge-free {
+    background: #e6f4ea; color: #137333;
+    padding: 4px 12px; border-radius: 12px;
+    font-size: .75rem; font-weight: 700; text-transform: uppercase;
+}
+.badge-premium {
+    background: #fef7e0; color: #b06000;
+    padding: 4px 12px; border-radius: 12px;
+    font-size: .75rem; font-weight: 700; text-transform: uppercase;
+}
+
+.fc-stats {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
+}
+.fc-stat-card {
+    background: white; border-radius: 12px; padding: 16px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    display: flex; align-items: center; gap: 12px;
+}
+.fc-stat-num { font-size: 1.6rem; font-weight: 800; }
+.fc-stat-label { font-size: .85rem; color: #65676b; }
+
+@media (max-width: 768px) {
+    .feature-card { flex-wrap: wrap; }
+    .feature-controls { width: 100%; justify-content: flex-end; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="fc-header">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h1><i class="bi bi-sliders"></i> Controllo Funzionalità</h1>
+                <p>Decidi quali funzioni sono gratuite e quali premium per tutti gli utenti della piattaforma</p>
+            </div>
+            <div class="fc-actions">
+                <form method="POST" action="{{ url_for('admin.feature_control_reset') }}" onsubmit="return confirm('Ripristinare tutte le funzionalità ai valori predefiniti?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Ripristina Default</button>
+                </form>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-light btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    {% set free_count = features|selectattr('is_premium', 'false')|selectattr('is_enabled', 'true')|list|length %}
+    {% set premium_count = features|selectattr('is_premium', 'true')|selectattr('is_enabled', 'true')|list|length %}
+    {% set disabled_count = features|rejectattr('is_enabled', 'true')|list|length %}
+
+    <div class="fc-stats">
+        <div class="fc-stat-card">
+            <div>
+                <div class="fc-stat-num text-success">{{ free_count }}</div>
+                <div class="fc-stat-label">Funzioni Gratuite</div>
+            </div>
+        </div>
+        <div class="fc-stat-card">
+            <div>
+                <div class="fc-stat-num" style="color:#f5a623;">{{ premium_count }}</div>
+                <div class="fc-stat-label">Funzioni Premium</div>
+            </div>
+        </div>
+        <div class="fc-stat-card">
+            <div>
+                <div class="fc-stat-num text-muted">{{ disabled_count }}</div>
+                <div class="fc-stat-label">Disattivate</div>
+            </div>
+        </div>
+        <div class="fc-stat-card">
+            <div>
+                <div class="fc-stat-num text-primary">{{ features|length }}</div>
+                <div class="fc-stat-label">Totale Funzionalità</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fc-legend">
+        <div class="fc-legend-item legend-free"><i class="bi bi-check-circle-fill"></i> Gratuita per tutti</div>
+        <div class="fc-legend-item legend-premium"><i class="bi bi-star-fill"></i> Solo abbonamento Premium</div>
+        <div class="fc-legend-item legend-off"><i class="bi bi-x-circle"></i> Disattivata</div>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.feature_control_update') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% for cat_name, cat_features in categories.items() %}
+        <div class="cat-section">
+            <div class="cat-title">
+                {% if cat_name == 'Social' %}<i class="bi bi-people-fill text-primary"></i>
+                {% elif cat_name == 'Media' %}<i class="bi bi-images text-info"></i>
+                {% elif cat_name == 'Business' %}<i class="bi bi-briefcase-fill text-warning"></i>
+                {% elif cat_name == 'Organizzazione' %}<i class="bi bi-calendar-check text-success"></i>
+                {% elif cat_name == 'Comunicazione' %}<i class="bi bi-chat-square-text-fill text-primary"></i>
+                {% elif cat_name == 'Supporto' %}<i class="bi bi-life-preserver text-danger"></i>
+                {% elif cat_name == 'Sicurezza' %}<i class="bi bi-shield-fill-check text-success"></i>
+                {% else %}<i class="bi bi-gear-fill text-secondary"></i>{% endif %}
+                {{ cat_name }}
+                <span class="ms-auto" style="font-size:.8rem;color:#65676b;font-weight:400;">{{ cat_features|length }} funzionalità</span>
+            </div>
+
+            {% for f in cat_features %}
+            <div class="feature-card {% if not f.is_enabled %}disabled-feature{% endif %}" id="feature-{{ f.id }}">
+                <div class="feature-icon {% if not f.is_enabled %}off-icon{% elif f.is_premium %}premium-icon{% else %}free-icon{% endif %}" id="icon-{{ f.id }}">
+                    <i class="{{ f.icon }}"></i>
+                </div>
+                <div class="feature-info">
+                    <div class="feature-name">
+                        {{ f.name }}
+                        <span class="ms-2 {% if not f.is_enabled %}badge-free{% elif f.is_premium %}badge-premium{% else %}badge-free{% endif %}" id="badge-{{ f.id }}">
+                            {% if not f.is_enabled %}OFF{% elif f.is_premium %}PREMIUM{% else %}FREE{% endif %}
+                        </span>
+                    </div>
+                    <div class="feature-desc">{{ f.description }}</div>
+                </div>
+                <div class="feature-controls">
+                    <div class="toggle-group">
+                        <span class="toggle-label">Attiva</span>
+                        <label class="switch switch-enabled">
+                            <input type="checkbox" name="enabled_{{ f.id }}" {% if f.is_enabled %}checked{% endif %}
+                                   onchange="toggleFeature({{ f.id }}, 'enabled', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-group">
+                        <span class="toggle-label">Premium</span>
+                        <label class="switch switch-premium">
+                            <input type="checkbox" name="premium_{{ f.id }}" {% if f.is_premium %}checked{% endif %}
+                                   onchange="toggleFeature({{ f.id }}, 'premium', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div class="d-flex justify-content-between align-items-center mt-4 mb-4 p-3 bg-white rounded-3 shadow-sm">
+            <div class="text-muted"><i class="bi bi-info-circle"></i> Le modifiche verranno applicate immediatamente a tutti gli utenti</div>
+            <button type="submit" class="btn btn-primary btn-lg px-4" style="background:#1877f2;border:none;border-radius:10px;font-weight:700;">
+                <i class="bi bi-check-lg"></i> Salva Configurazione
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function toggleFeature(id, type, checked) {
+    const card = document.getElementById('feature-' + id);
+    const icon = document.getElementById('icon-' + id);
+    const badge = document.getElementById('badge-' + id);
+
+    const enabledCheck = card.querySelector('input[name="enabled_' + id + '"]');
+    const premiumCheck = card.querySelector('input[name="premium_' + id + '"]');
+
+    const isEnabled = enabledCheck.checked;
+    const isPremium = premiumCheck.checked;
+
+    card.classList.toggle('disabled-feature', !isEnabled);
+
+    icon.className = 'feature-icon';
+    badge.className = 'ms-2';
+    if (!isEnabled) {
+        icon.classList.add('off-icon');
+        badge.classList.add('badge-free');
+        badge.textContent = 'OFF';
+    } else if (isPremium) {
+        icon.classList.add('premium-icon');
+        badge.classList.add('badge-premium');
+        badge.textContent = 'PREMIUM';
+    } else {
+        icon.classList.add('free-icon');
+        badge.classList.add('badge-free');
+        badge.textContent = 'FREE';
+    }
+
+    fetch('{{ url_for("admin.feature_toggle", feature_id=0) }}'.replace('/0', '/' + id), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: 'action=toggle_' + type
+    });
+}
+</script>
+{% endblock %}

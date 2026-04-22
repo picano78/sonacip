@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Registrazione - SONACIP{% endblock %}
+
+{% block extra_css %}
+<style>
+  .register-wrapper {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+  }
+  .register-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(24,119,242,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    overflow: hidden;
+    max-width: 560px;
+    width: 100%;
+  }
+  .register-brand {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    padding: 2rem;
+    text-align: center;
+    color: #fff;
+  }
+  .register-brand .brand-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+  .register-card .form-control {
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+  }
+  .register-card .form-control:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 0.2rem rgba(24,119,242,0.18);
+  }
+  .btn-register {
+    background: linear-gradient(135deg, #1877f2 0%, #42a5f5 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+  .btn-register:hover {
+    background: linear-gradient(135deg, #155fc7 0%, #1877f2 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(24,119,242,0.3);
+  }
+  .register-links {
+    background: #f8f9fa;
+    border-top: 1px solid #e5e7eb;
+    padding: 1.25rem 2rem;
+    text-align: center;
+  }
+  .register-links a {
+    color: #1877f2;
+    font-weight: 500;
+  }
+  .register-links a:hover {
+    color: #155fc7;
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-wrapper">
+  <div class="register-card">
+    <div class="register-brand">
+      <div class="brand-icon">
+        <i class="bi bi-person-plus-fill fs-3"></i>
+      </div>
+      <h2 class="h4 mb-1">Crea il tuo account</h2>
+      <p class="mb-0" style="opacity:0.85;">Unisciti alla piattaforma SONACIP</p>
+    </div>
+    <div class="p-4">
+      <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.first_name.label(class="form-label") }}
+            {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else ""), autocomplete="given-name") }}
+            {% if form.first_name.errors %}
+              <div class="invalid-feedback">{{ form.first_name.errors[0] }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.last_name.label(class="form-label") }}
+            {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else ""), autocomplete="family-name") }}
+            {% if form.last_name.errors %}
+              <div class="invalid-feedback">{{ form.last_name.errors[0] }}</div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          {{ form.email.label(class="form-label") }}
+          {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), autocomplete="email") }}
+          {% if form.email.errors %}
+            <div class="invalid-feedback">{{ form.email.errors[0] }}</div>
+          {% endif %}
+        </div>
+        
+        <div class="mb-3">
+          {{ form.username.label(class="form-label") }}
+          {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), autocomplete="username") }}
+          {% if form.username.errors %}
+            <div class="invalid-feedback">{{ form.username.errors[0] }}</div>
+          {% endif %}
+        </div>
+        
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.phone.label(class="form-label") }}
+            {{ form.phone(class="form-control", autocomplete="tel") }}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.language.label(class="form-label") }}
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="language" id="lang_it" value="it" checked>
+                <label class="form-check-label" for="lang_it">
+                  🇮🇹 Italiano
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="language" id="lang_en" value="en">
+                <label class="form-check-label" for="lang_en">
+                  🇬🇧 English
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          {{ form.password.label(class="form-label") }}
+          {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), autocomplete="new-password") }}
+          {% if form.password.errors %}
+            <div class="invalid-feedback">{{ form.password.errors[0] }}</div>
+          {% endif %}
+        </div>
+        
+        <div class="mb-3">
+          {{ form.password2.label(class="form-label") }}
+          {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else ""), autocomplete="new-password") }}
+          {% if form.password2.errors %}
+            <div class="invalid-feedback">{{ form.password2.errors[0] }}</div>
+          {% endif %}
+        </div>
+        
+        <button type="submit" class="btn btn-register w-100">
+          <i class="bi bi-person-plus me-1"></i> Registrati
+        </button>
+      </form>
+    </div>
+    <div class="register-links">
+      Hai già un account? <a href="{{ url_for('auth.login') }}">Login</a><br>
+      Sei una società? <a href="{{ url_for('auth.register_society') }}">Registrati qui</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -6,7 +6,10 @@ from datetime import datetime, timezone
 from typing import Tuple
 import shutil
 import subprocess
-import magic
+try:
+    import magic
+except ImportError:
+    magic = None
 
 from flask import current_app
 from werkzeug.utils import secure_filename

@@ -2000,7 +2000,7 @@ DEFAULT_PLATFORM_FEATURES = [
     {'key': 'polls', 'name': 'Sondaggi', 'description': 'Sistema di sondaggi e votazioni', 'category': 'Social', 'icon': 'bi-bar-chart-line', 'is_premium': False, 'display_order': 32},
     {'key': 'sports_stats', 'name': 'Statistiche Sportive', 'description': 'Tracking prestazioni e statistiche atleti', 'category': 'Organizzazione', 'icon': 'bi-activity', 'is_premium': False, 'display_order': 33},
     {'key': 'documents', 'name': 'Gestione Documenti', 'description': 'Archivio documenti condiviso con cartelle', 'category': 'Organizzazione', 'icon': 'bi-folder2-open', 'is_premium': False, 'display_order': 34},
-    {'key': 'payments_online', 'name': 'Pagamenti Online', 'description': 'Pagamento quote con carta via Stripe', 'category': 'Business', 'icon': 'bi-credit-card', 'is_premium': True, 'display_order': 35},
+    {'key': 'payments_online', 'name': 'Pagamenti Online', 'description': 'Pagamento quote con carta via Stripe', 'category': 'Business', 'icon': 'bi-credit-card', 'is_premium': False, 'display_order': 35},
     {'key': 'gamification', 'name': 'Gamification', 'description': 'Badge, punti, livelli e classifiche', 'category': 'Social', 'icon': 'bi-trophy-fill', 'is_premium': False, 'display_order': 36},
     {'key': 'custom_dashboard', 'name': 'Dashboard Personalizzabile', 'description': 'Dashboard con widget drag-and-drop', 'category': 'Organizzazione', 'icon': 'bi-grid-1x2', 'is_premium': False, 'display_order': 37},
     {'key': 'multi_language', 'name': 'Multi-lingua', 'description': 'Supporto multilingua (IT/EN/ES/FR/DE)', 'category': 'Comunicazione', 'icon': 'bi-translate', 'is_premium': False, 'display_order': 38},

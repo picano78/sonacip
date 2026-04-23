@@ -126,6 +126,21 @@ def index():
     return render_template('main/index.html', pb_sections=sections, landing_stats=landing_stats)
 
 
+@bp.route('/schedule')
+@login_required
+def schedule():
+    """Schedule page - redirects to calendar"""
+    try:
+        return redirect(url_for('calendar.index'))
+    except Exception:
+        # Fallback if blueprint not registered
+        try:
+            return redirect('/scheduler/calendar')
+        except Exception:
+            flash('Pagina calendario non disponibile.', 'warning')
+            return redirect(url_for('main.dashboard'))
+
+
 @bp.route('/login')
 def login_redirect():
     """

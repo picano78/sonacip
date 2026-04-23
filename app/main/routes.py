@@ -151,6 +151,16 @@ def schedule():
                 return redirect('/')
 
 
+@bp.route('/prezzi')
+def prezzi():
+    """Pricing page - redirect to subscription plans"""
+    try:
+        return redirect(url_for('subscription.plans'), code=302)
+    except Exception:
+        flash('Pagina prezzi non disponibile.', 'warning')
+        return redirect(url_for('main.dashboard'))
+
+
 @bp.route('/login')
 def login_redirect():
     """

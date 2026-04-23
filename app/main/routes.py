@@ -129,16 +129,26 @@ def index():
 @bp.route('/schedule')
 @login_required
 def schedule():
-    """Schedule page - redirects to calendar"""
+    """Schedule page - redirects to calendar with full error protection"""
     try:
+        # Try primary redirect using url_for
         return redirect(url_for('calendar.index'))
-    except Exception:
-        # Fallback if blueprint not registered
+    except Exception as e:
+        # Log error internally but don't expose details
+        import logging
+        logging.getLogger(__name__).warning(f"Schedule redirect failed: {type(e).__name__}")
+        
+        # Fallback: direct URL redirect
         try:
             return redirect('/scheduler/calendar')
         except Exception:
-            flash('Pagina calendario non disponibile.', 'warning')
-            return redirect(url_for('main.dashboard'))
+            # Ultimate fallback: dashboard
+            try:
+                flash('Calendario non disponibile.', 'warning')
+                return redirect(url_for('main.dashboard'))
+            except Exception:
+                # Absolute last resort - redirect to root
+                return redirect('/')
 
 
 @bp.route('/login')

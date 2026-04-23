@@ -328,6 +328,10 @@ class User(UserMixin, db.Model):
     def get_primary_society(self):
         """Return Society entity for this user, if any."""
         try:
+            # First check if user has a society profile directly
+            if self.society_profile:
+                return self.society_profile
+            # Also check legacy relationships
             if self.is_society() and self.society_profile:
                 return self.society_profile
             # Prefer explicit memberships (canonical) when present.

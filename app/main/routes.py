@@ -153,7 +153,8 @@ def health():
     try:
         # Test database connection
         from app.models import User
-        db.session.execute('SELECT 1').fetchone()
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1')).fetchone()
         
         return jsonify({
             'status': 'healthy',

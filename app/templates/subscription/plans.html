@@ -81,7 +81,8 @@
                             </form>
                             {% endif %}
                         {% else %}
-                        <a href="{{ url_for('auth.register') }}" class="btn btn-primary w-100">Inizia Ora</a>
+                        <a href="{{ url_for('auth.register') }}?plan={{ plan.id }}" class="btn btn-primary w-100"><i class="bi bi-rocket"></i> Inizia Ora</a>
+                        <p class="text-muted small text-center mt-2">o <a href="{{ url_for('auth.login') }}">accedi</a> se hai già un account</p>
                         {% endif %}
                     </div>
                 </div>

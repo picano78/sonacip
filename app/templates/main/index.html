@@ -348,6 +348,7 @@
       <p>La piattaforma completa per la gestione delle società sportive, atleti e appassionati di sport in Italia.</p>
       <div class="cta-buttons">
         <a href="{{ url_for('auth.login') }}" class="btn-facebook"><i class="bi bi-arrow-right"></i> Accedi</a>
+        <a href="{{ url_for('subscription.plans') }}" class="btn-facebook"><i class="bi bi-credit-card"></i> Vedi Prezzi</a>
         <a href="{{ url_for('auth.register') }}" class="btn-facebook-outline">Registrati come Appassionato</a>
         <a href="{{ url_for('auth.register_society') }}" class="btn-facebook-outline"><i class="bi bi-building"></i> Registra Società</a>
       </div>
@@ -484,7 +485,8 @@
       <h2>Pronto a iniziare?</h2>
       <p>Unisciti alle società sportive che hanno scelto SONACIP per semplificare la gestione e far crescere la propria community.</p>
       <div class="cta-buttons">
-        <a href="{{ url_for('auth.register_society') }}" class="btn-facebook"><i class="bi bi-building"></i> Registra la tua Società</a>
+        <a href="{{ url_for('subscription.plans') }}" class="btn-facebook"><i class="bi bi-credit-card"></i> Vedi Piani e Prezzi</a>
+        <a href="{{ url_for('auth.register_society') }}" class="btn-facebook-outline"><i class="bi bi-building"></i> Registra la tua Società</a>
         <a href="{{ url_for('auth.register') }}" class="btn-facebook-outline"><i class="bi bi-person-plus"></i> Registrati Gratis</a>
       </div>
     </div>

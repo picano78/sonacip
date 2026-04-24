@@ -212,8 +212,17 @@ def create():
                 pass
 
     if form.validate_on_submit():
-        start_dt = datetime.combine(form.start_date.data, form.start_time.data)
-        end_dt = datetime.combine(form.start_date.data, form.end_time.data)
+        # Validate required fields before accessing data
+        if not form.facility_id.data or not form.event_type.data or not form.title.data:
+            flash('Compila tutti i campi obbligatori.', 'warning')
+            return render_template('field_planner/create.html', form=form, facilities=facilities)
+        
+        try:
+            start_dt = datetime.combine(form.start_date.data, form.start_time.data)
+            end_dt = datetime.combine(form.start_date.data, form.end_time.data)
+        except (ValueError, TypeError) as e:
+            flash('Date non valide. Compila data e orari correttamente.', 'warning')
+            return render_template('field_planner/create.html', form=form, facilities=facilities)
         
         # Check for conflicts on the same facility
         conflict = (
@@ -414,8 +423,17 @@ def edit(event_id):
             'end_datetime': event.end_datetime.strftime('%Y-%m-%d %H:%M')
         }
         
-        start_dt = datetime.combine(form.start_date.data, form.start_time.data)
-        end_dt = datetime.combine(form.start_date.data, form.end_time.data)
+        # Validate required fields before accessing data
+        if not form.facility_id.data or not form.event_type.data or not form.title.data:
+            flash('Compila tutti i campi obbligatori.', 'warning')
+            return render_template('field_planner/edit.html', form=form, event=event, facilities=facilities)
+        
+        try:
+            start_dt = datetime.combine(form.start_date.data, form.start_time.data)
+            end_dt = datetime.combine(form.start_date.data, form.end_time.data)
+        except (ValueError, TypeError) as e:
+            flash('Date non valide. Compila data e orari correttamente.', 'warning')
+            return render_template('field_planner/edit.html', form=form, event=event, facilities=facilities)
         
         # Check for conflicts on the same facility (excluding current event)
         conflict = (

@@ -447,21 +447,29 @@ def seed_defaults(app) -> dict:
         db.session.commit()
 
         # ---------------------------------------------------------------------
-        # Super admin user - FIXED CREDENTIALS FROM ENV ONLY
+        # Super admin user - CREDENTIALS FROM ENV ONLY (NO FALLBACK)
         # ---------------------------------------------------------------------
-        email = app.config.get("SUPERADMIN_EMAIL") or os.environ.get("SUPERADMIN_EMAIL")
-        password = app.config.get("SUPERADMIN_PASSWORD") or os.environ.get("SUPERADMIN_PASSWORD")
+        email = os.environ.get("SUPERADMIN_EMAIL")
+        password = os.environ.get("SUPERADMIN_PASSWORD")
         
-        # FIXED: Use hardcoded fallback only if env is completely missing
-        if not email:
-            email = "picano78@gmail.com"
-        if not password:
-            password = "Simone78"
+        # SECURITY: Require env vars - no fallback allowed
+        if not email or not password:
+            app.logger.warning("SUPERADMIN_EMAIL/PASSWORD not set in environment - skipping admin creation")
+            return summary
         
         # Login form uses email, but we keep username aligned to avoid confusion in admin UI.
         username = email
 
-        existing_admin = User.query.filter_by(email=email).first()
+        # IDEMPOTENT: Only create if no admin exists
+        existing_admin = User.query.filter(
+            (User.email == email) | (User.role_id.in_([r.id for r in Role.query.filter(Role.name == "super_admin").all()]))
+        ).first()
+        
+        # Use more specific check - filter by role name
+        if not existing_admin:
+            super_admin_role = Role.query.filter_by(name="super_admin").first()
+            existing_admin = User.query.filter_by(role=super_admin_role).first() if super_admin_role else None
+        
         if not existing_admin:
             role = Role.query.filter_by(name="super_admin").first()
             if not role:
@@ -484,42 +492,11 @@ def seed_defaults(app) -> dict:
             summary["admin_created"] += 1
             app.logger.info(f"Superadmin ready: {email}")
         else:
-            # Update existing admin password if needed
-            password_updated = False
-            try:
-                if not existing_admin.check_password(password):
-                    existing_admin.set_password(password)
-                    password_updated = True
-            except Exception:
-                # If check fails, try to set anyway
-                existing_admin.set_password(password)
-                password_updated = True
-            
-            # Keep the seeded super admin consistent on re-runs (idempotent).
-            changed = False
-            try:
-                role = Role.query.filter_by(name="super_admin").first()
-                if role and existing_admin.role_id != role.id:
-                    existing_admin.role_id = role.id  # 🔥 CHIAVE: Imposta role_id
-                    existing_admin.role_obj = role
-                    existing_admin.role_legacy = role.name
-                    changed = True
-            except Exception:
-                pass
-            
-            if existing_admin.username != username:
-                existing_admin.username = username
-                changed = True
-            
-            # Ensure email_confirmed is True for super admin
-            if not getattr(existing_admin, 'email_confirmed', False):
-                existing_admin.email_confirmed = True
-                changed = True
-            
-            if password_updated or changed:
-                db.session.add(existing_admin)
-                db.session.commit()
-                app.logger.info(f"Superadmin updated: {email}")
+            # SECURITY: Admin already exists - DO NOT update password
+            # This prevents automatic overwrites and maintains security
+            app.logger.info("Superadmin already exists - skipping update (idempotent)")
+        
+        db.session.commit()
 
     return summary
 

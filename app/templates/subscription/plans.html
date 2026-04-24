@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Piani di Sottoscrizione{% endblock %}
+{% block title %}Piani e Prezzi - SONACIP{% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <div class="text-center mb-5">
+    <div class="text-center mb-4">
         <h1>Scegli il Piano Perfetto per Te</h1>
-        <p class="lead text-muted">Trova il piano che si adatta alle tue esigenze</p>
+        <p class="lead text-muted">Tutto incluso: CRM, Calendario, Pagamenti e Supporto</p>
+        <p class="text-success small"><i class="bi bi-shield-check"></i> Pagamento sicuro con Stripe • Annulla quando vuoi</p>
     </div>
 
     <div class="row g-4">
@@ -15,7 +16,7 @@
             <div class="card h-100 {% if plan.is_featured %}border-primary shadow-lg{% endif %}">
                 {% if plan.is_featured %}
                 <div class="card-header bg-primary text-white text-center">
-                    <strong>⭐ PIÙ POPOLARE</strong>
+                    <strong>🏆 PIÙ SCELTO</strong>
                 </div>
                 {% endif %}
                 

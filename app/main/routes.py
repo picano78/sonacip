@@ -111,9 +111,13 @@ def manifest():
 @bp.route('/')
 def index():
     """Homepage - redirect based on auth status"""
-    if current_user.is_authenticated:
-        return redirect(url_for('social.feed'))
-    sections = _page_sections('main.index')
+    try:
+        if current_user.is_authenticated:
+            return redirect(url_for('social.feed'))
+    except Exception:
+        pass
+    
+    sections = []
     landing_stats = {'users': 0, 'societies': 0, 'events': 0, 'posts': 0}
     try:
         from app.models import User, SportsSociety, Event, Post

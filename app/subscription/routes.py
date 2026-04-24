@@ -56,11 +56,17 @@ def _apply_coupon(plan: Plan, amount: float, coupon_code: str | None) -> tuple[f
 @bp.route('/plans')
 def plans():
     """Display available subscription plans"""
-    active_plans = Plan.query.filter_by(is_active=True).order_by(Plan.display_order).all()
+    try:
+        active_plans = Plan.query.filter_by(is_active=True).order_by(Plan.display_order).all()
+    except Exception:
+        active_plans = []
     
     current_subscription = None
     if current_user.is_authenticated:
-        current_subscription = current_user.get_active_subscription()
+        try:
+            current_subscription = current_user.get_active_subscription()
+        except Exception:
+            current_subscription = None
     
     return render_template('subscription/plans.html', 
                          plans=active_plans,
